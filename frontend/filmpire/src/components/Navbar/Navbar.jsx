@@ -16,7 +16,13 @@ const Navbar = () => {
       <AppBar position="fixed">
         <Toolbar className={classes.toolbar}>
           {isMobile && (
-            <IconButton color="inherit" edge="start" style={{ outline: 'none' }} onClick={() => {}} className={classes.menuButton}>
+            <IconButton
+              color="inherit"
+              edge="start"
+              style={{ outline: 'none' }}
+              onClick={() => {}}
+              className={classes.menuButton}
+            >
               <Menu />
             </IconButton>
           )}
@@ -26,10 +32,24 @@ const Navbar = () => {
           </IconButton>
           {!isMobile && 'Search...'}
           <div>
-            {!isAuthenticated ? <Button color="inherit" onClick={() => {}}>Login &npsp; <AccountCircle /></Button> : (
-              <Button color="inherit" component={Link} to="/profile/:id" className={classes.linkButton} onClick={() => {}}>
+            {!isAuthenticated ? (
+              <Button color="inherit" onClick={() => {}}>
+                Login &npsp; <AccountCircle />
+              </Button>
+            ) : (
+              <Button
+                color="inherit"
+                component={Link}
+                to="/profile/:id"
+                className={classes.linkButton}
+                onClick={() => {}}
+              >
                 {!isMobile && <>My Movies &nbsp; </>}
-                <Avatar style={{ width: 30, height: 30 }} alt="Profile" src="https://media.istockphoto.com/id/587805156/de/vektor/profilbildvektor-illustration.jpg?s=2048x2048&w=is&k=20&c=tpy1jmyRqBdwTLV2nOKNMH-tytpQWnRtg_m3AtXg7gE=" />
+                <Avatar
+                  style={{ width: 30, height: 30 }}
+                  alt="Profile"
+                  src="https://media.istockphoto.com/id/587805156/de/vektor/profilbildvektor-illustration.jpg"
+                />
               </Button>
             )}
           </div>
