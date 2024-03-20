@@ -1,8 +1,8 @@
 import React from 'react';
-import { AppBar, Avatar, IconButton, Toolbar, useMediaQuery, Button } from '@mui/material'; // Drawer
+import { AppBar, Avatar, IconButton, Toolbar, useMediaQuery, Button } from '@mui/material';
 import { Menu, Brightness4, Brightness7, AccountCircle } from '@mui/icons-material';
 import { Link } from 'react-router-dom';
-import useTheme from '@mui/material/styles';
+import { useTheme } from '@mui/material/styles';
 import useStyles from './styles';
 
 const Navbar = () => {
@@ -28,7 +28,7 @@ const Navbar = () => {
           )}
 
           <IconButton color="inherit" sx={{ ml: 1 }} style={{ outline: 'none' }} onClick={() => {}}>
-            {theme.pallete.mode === 'dark' ? <Brightness7 /> : <Brightness4 />}
+            {theme.palette.mode === 'dark' ? <Brightness7 /> : <Brightness4 />}
           </IconButton>
           {!isMobile && 'Search...'}
           <div>

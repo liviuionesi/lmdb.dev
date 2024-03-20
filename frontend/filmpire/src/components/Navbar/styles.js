@@ -8,8 +8,8 @@ export default makeStyles((theme) => ({
     justifyContent: 'space-between',
     marginLeft: '224px',
     // On mobile devices only
-    [theme.breakpoint.down('sm')]: {
-      marginLeft: 0,
+    [theme.breakpoints.down('sm')]: {
+      marginLeft: '0',
       flexWrap: 'wrap',
     },
   },
@@ -18,7 +18,7 @@ export default makeStyles((theme) => ({
     // this ensure equal spacing on every device
     marginRight: theme.spacing(2),
     // on non mobile devices it's hidden
-    [theme.breakpoint.up('sm')]: {
+    [theme.breakpoints.up('sm')]: {
       display: 'none',
     },
   },
