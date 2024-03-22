@@ -1,9 +1,9 @@
 import { makeStyles } from '@mui/styles';
-// the () => ({}) means instantly return an object, instead of defining a callback function, which makestyles expects as argument
+
 export default makeStyles((theme) => ({
   imageLink: {
     display: 'flex',
-    justifyContent: 'content',
+    justifyContent: 'center',
     padding: '10% 0',
   },
   image: {
@@ -14,6 +14,6 @@ export default makeStyles((theme) => ({
     textDecoration: 'none',
   },
   genreImage: {
-    filter: theme.palette.mode === 'dark' ? 'dark' : 'invert(1)',
+    filter: theme.palette.mode === 'dark' && 'invert(1)',
   },
 }));
