@@ -54,9 +54,9 @@ const Sidebar = () => {
         ) : data.genres.map(({ name }) => (
           <Link key={name} className={classes.links} to="/">
             <ListItem onClick={() => {}} button>
-              {/* <ListItemIcon>
-                <img src={redLogo} className={classes.genreImages} height={30} />
-              </ListItemIcon> */}
+              <ListItemIcon>
+                <img src={genreIcons[name.toLowerCase()]} className={classes.genreImages} height={30} />
+              </ListItemIcon>
               <ListItemText primary={name} />
             </ListItem>
           </Link>
