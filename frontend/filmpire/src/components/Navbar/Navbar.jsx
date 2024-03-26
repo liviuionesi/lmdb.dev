@@ -4,7 +4,7 @@ import { Menu, Brightness4, Brightness7, AccountCircle } from '@mui/icons-materi
 import { Link } from 'react-router-dom';
 import { useTheme } from '@mui/material/styles';
 import useStyles from './styles';
-import { Sidebar } from '..';
+import { Sidebar, Search } from '..';
 
 const Navbar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -22,7 +22,7 @@ const Navbar = () => {
               color="inherit"
               edge="start"
               style={{ outline: 'none' }}
-              onClose={() => setMobileOpen((prevMobileOpen) => !prevMobileOpen)}
+              onClick={() => setMobileOpen((prevMobileOpen) => !prevMobileOpen)}
               className={classes.menuButton}
             >
               <Menu />
@@ -32,7 +32,7 @@ const Navbar = () => {
           <IconButton color="inherit" sx={{ ml: 1 }} style={{ outline: 'none' }} onClick={() => {}}>
             {theme.palette.mode === 'dark' ? <Brightness7 /> : <Brightness4 />}
           </IconButton>
-          {!isMobile && 'Search...'}
+          {!isMobile && <Search />}
           <div>
             {!isAuthenticated ? (
               <Button color="inherit" onClick={() => {}}>
@@ -55,7 +55,7 @@ const Navbar = () => {
               </Button>
             )}
           </div>
-          {isMobile && 'Search...'}
+          {isMobile && <Search />}
         </Toolbar>
       </AppBar>
       <div>
