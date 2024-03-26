@@ -2,7 +2,6 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 //      --url 'https://api.themoviedb.org/3/search/movie?query=Jack+Reacher&api_key=***REDACTED_TMDB_KEY***'
 
 const tmdbApiKey = process.env.REACT_APP_TMDB_KEY;
-const page = 1;
 
 export const tmdbApi = createApi({
   reducerPath: 'tmdbApi',
@@ -15,7 +14,20 @@ export const tmdbApi = createApi({
 
     //* Get Movies by [Type]
     getMovies: builder.query({
-      query: () => `/movie/popular?page=${page}&api_key=${tmdbApiKey}`,
+      query: ({ genreIdOrCategoryName, page }) => {
+        //* Get Movies by [Category]
+        if (genreIdOrCategoryName && typeof genreIdOrCategoryName === 'string') {
+          return `movie/${genreIdOrCategoryName}?page=${page}&api_key=${tmdbApiKey}`;
+        }
+
+        //* Get Movies by [Category]
+        if (genreIdOrCategoryName && typeof genreIdOrCategoryName === 'number') {
+          return `discover/movie?with_genres=${genreIdOrCategoryName}&page=${page}&api_key=${tmdbApiKey}`;
+        }
+
+        //* Get Popular Movies by [Page]
+        return `/movie/popular?page=${page}&api_key=${tmdbApiKey}`;
+      },
     }),
   }),
 });

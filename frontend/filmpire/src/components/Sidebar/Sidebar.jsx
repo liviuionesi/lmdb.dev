@@ -2,7 +2,7 @@ import React from 'react';
 import { Box, CircularProgress, Divider, List, ListItem, ListItemIcon, ListItemText, ListSubheader } from '@mui/material';
 import { Link } from 'react-router-dom';
 import { useTheme } from '@mui/material/styles';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 
 import { selectGenreOrCategory } from '../../features/currentGenreOrCategory';
 import useStyles from './styles';
@@ -20,7 +20,8 @@ const blueLogo = 'https://fontmeme.com/permalink/210930/6854ae5c7f76597cf8680e48
 const Sidebar = () => {
   const theme = useTheme();
   const classes = useStyles();
-  const { data, isFetching } = useGetGenresQuery();
+  const { genreIdOrCategoryName } = useSelector((state) => state.currentGenreOrCategory);
+  const { data, isFetching } = useGetGenresQuery({ genreIdOrCategoryName });
   const dispatch = useDispatch();
 
   return (
