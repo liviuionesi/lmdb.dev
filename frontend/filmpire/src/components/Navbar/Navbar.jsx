@@ -11,7 +11,7 @@ import { fetchToken, createSessionId, moviesApi } from '../../utils';
 import useStyles from './styles';
 
 const Navbar = () => {
-  // eslint-disable-next-line
+
   const { isAuthenticated, user } = useSelector(userSelector);
   const [mobileOpen, setMobileOpen] = useState(false);
   const classes = useStyles();
