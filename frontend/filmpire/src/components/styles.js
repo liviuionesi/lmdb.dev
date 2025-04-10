@@ -1,5 +1,5 @@
 import { makeStyles } from '@mui/styles';
-// the () => ({}) means instantly return an object, instead of defining a callback function, which makestyles expects as argument
+
 export default makeStyles(() => ({
   root: {
     display: 'flex',
