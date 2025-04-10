@@ -11,7 +11,6 @@ import { fetchToken, createSessionId, moviesApi } from '../../utils';
 import useStyles from './styles';
 
 const Navbar = () => {
-
   const { isAuthenticated, user } = useSelector(userSelector);
   const [mobileOpen, setMobileOpen] = useState(false);
   const classes = useStyles();
