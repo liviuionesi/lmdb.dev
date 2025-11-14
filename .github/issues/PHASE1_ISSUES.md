@@ -93,7 +93,7 @@ backend/<service-name>/
 **Labels:** `task`, `P0-critical`, `sprint-0`, `backend`
 
 **Description:**
-Configure Gradle multi-module build system for all backend microservices with Spring Boot 3.5.7, Spring Cloud 2024.0.0, and Java 25.
+Configure Gradle multi-module build system for all backend microservices with Spring Boot 3.5.8, Spring Cloud 2025.0.0, and Java 25.
 
 **Implementation Checklist:**
 - [ ] Create root `settings.gradle` with correct order (pluginManagement first)
@@ -114,9 +114,9 @@ Configure Gradle multi-module build system for all backend microservices with Sp
 
 **Dependencies to Configure:**
 ```properties
-springBootVersion=3.5.7
-springCloudVersion=2024.0.0
-springAiVersion=1.0.0-M6
+springBootVersion=3.5.8
+springCloudVersion=2025.0.0
+springAiVersion=1.1.0
 lombokVersion=1.18.42
 ```
 
@@ -124,7 +124,7 @@ lombokVersion=1.18.42
 - [ ] `./gradlew build` runs successfully
 - [ ] All modules recognized by Gradle
 - [ ] Java 25 toolchain configured
-- [ ] Spring Boot 3.5.7 dependency management working
+- [ ] Spring Boot 3.5.8 dependency management working
 - [ ] Shared library can be imported by services
 - [ ] Build completes without errors
 

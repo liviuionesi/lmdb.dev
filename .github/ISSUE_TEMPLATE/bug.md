@@ -31,7 +31,7 @@ paste error logs here
 - **Service:** movie-service / user-service / etc.
 - **OS:** Linux / macOS / Windows
 - **Java Version:** 25
-- **Spring Boot Version:** 3.5.7
+- **Spring Boot Version:** 3.5.8
 - **Browser** (if frontend): Chrome / Firefox / Safari
 
 ## Possible Solution
