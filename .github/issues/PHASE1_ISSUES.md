@@ -96,14 +96,14 @@ backend/<service-name>/
 Configure Gradle multi-module build system for all backend microservices with Spring Boot 3.5.8, Spring Cloud 2025.0.0, and Java 25.
 
 **Implementation Checklist:**
-- [ ] Create root `settings.gradle` with correct order (pluginManagement first)
-- [ ] Create root `build.gradle` with common configuration
-- [ ] Create `gradle.properties` with version management
-- [ ] Configure each service's `build.gradle`
-- [ ] Setup Spring Boot and Spring Cloud dependencies
-- [ ] Configure Java 25 toolchain
-- [ ] Add common plugins (spotless, jacoco, etc.)
-- [ ] Create shared-library module
+- [x] Create root `settings.gradle` with correct order (pluginManagement first)
+- [x] Create root `build.gradle` with common configuration
+- [x] Create `gradle.properties` with version management
+- [x] Configure each service's `build.gradle`
+- [x] Setup Spring Boot and Spring Cloud dependencies
+- [x] Configure Java 25 toolchain
+- [x] Add common plugins (spotless, jacoco, etc.)
+- [x] Create shared-library module
 
 **Files to Create/Modify:**
 - `settings.gradle` - Module definitions
@@ -121,12 +121,12 @@ lombokVersion=1.18.42
 ```
 
 **Acceptance Criteria:**
-- [ ] `./gradlew build` runs successfully
-- [ ] All modules recognized by Gradle
-- [ ] Java 25 toolchain configured
-- [ ] Spring Boot 3.5.8 dependency management working
-- [ ] Shared library can be imported by services
-- [ ] Build completes without errors
+- [x] `./gradlew build` runs successfully
+- [x] All modules recognized by Gradle
+- [x] Java 25 toolchain configured
+- [x] Spring Boot 3.5.8 dependency management working
+- [x] Shared library can be imported by services
+- [x] Build completes without errors
 
 **Testing:**
 ```bash
