@@ -1,6 +1,6 @@
 plugins {
     id 'java'
-    id 'org.springframework.boot' version '3.5.8' apply false
+    id 'org.springframework.boot' version '3.5.8-SNAPSHOT' apply false
     id 'io.spring.dependency-management' version '1.1.7' apply false
 }
 
@@ -12,6 +12,7 @@ allprojects {
 subprojects {
     apply plugin: 'java'
     apply plugin: 'io.spring.dependency-management'
+    apply plugin: 'jacoco'
 
     java {
         toolchain {
@@ -26,6 +27,35 @@ subprojects {
 
     tasks.withType(Test) {
         useJUnitPlatform()
+    }
+    
+    dependencyManagement {
+        imports {
+            mavenBom "org.springframework.boot:spring-boot-dependencies:${springBootVersion}"
+        }
+    }
+    
+    // JaCoco configuration for test coverage
+    jacoco {
+        toolVersion = "0.8.11"
+    }
+    
+    jacocoTestReport {
+        dependsOn test
+        reports {
+            xml.required = true
+            html.required = true
+        }
+    }
+    
+    test {
+        finalizedBy jacocoTestReport
+    }
+    
+    // Common test dependencies
+    dependencies {
+        testImplementation 'org.springframework.boot:spring-boot-starter-test'
+        testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     }
 }
 
