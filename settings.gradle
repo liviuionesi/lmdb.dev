@@ -1,0 +1,31 @@
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        mavenCentral()
+        maven { url 'https://repo.spring.io/milestone' }
+        maven { url 'https://repo.spring.io/release' }
+    }
+}
+
+dependencyResolutionManagement {
+    repositoriesMode = RepositoriesMode.FAIL_ON_PROJECT_REPOS
+    repositories {
+        mavenCentral()
+        maven { url 'https://repo.spring.io/milestone' }
+        maven { url 'https://repo.spring.io/release' }
+    }
+}
+
+rootProject.name = 'filmpire-microservices'
+
+include(
+    'backend:api-gateway',
+    'backend:discovery-service',
+    'backend:config-service',
+    'backend:movie-service',
+    'backend:user-service',
+    'backend:actor-service',
+    'backend:ai-service',
+    'backend:media-service',
+    'backend:shared-library'
+)

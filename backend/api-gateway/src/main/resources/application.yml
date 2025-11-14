@@ -1,0 +1,48 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      routes:
+        - id: movie-service
+          uri: lb://MOVIE-SERVICE
+          predicates:
+            - Path=/api/v1/movies/**
+          filters:
+            - RewritePath=/api/v1/movies/(?<segment>.*), /${segment}
+        - id: user-service
+          uri: lb://USER-SERVICE
+          predicates:
+            - Path=/api/v1/users/**, /api/v1/auth/**
+          filters:
+            - RewritePath=/api/v1/(?<segment>.*), /${segment}
+        - id: actor-service
+          uri: lb://ACTOR-SERVICE
+          predicates:
+            - Path=/api/v1/actors/**
+        - id: ai-service
+          uri: lb://AI-SERVICE
+          predicates:
+            - Path=/api/v1/ai/**, /api/v1/recommendations/**
+      discovery:
+        locator:
+          enabled: true
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+
