@@ -16,8 +16,8 @@ AI-powered features including movie recommendations, voice recognition, and chat
 
 ## Technology Stack
 
-- Spring Boot 3.5.7
-- Spring AI 1.0.0-M6
+- Spring Boot 3.5.8
+- Spring AI 1.1.0
 - OpenAI API / Ollama
 - Spring Data MongoDB
 - gRPC

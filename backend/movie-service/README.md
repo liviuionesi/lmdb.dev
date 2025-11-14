@@ -16,7 +16,7 @@ Core service for movie catalog, search, and discovery operations.
 
 ## Technology Stack
 
-- Spring Boot 3.5.7
+- Spring Boot 3.5.8
 - Spring Data MongoDB
 - Spring Cache (Redis)
 - Eureka Client

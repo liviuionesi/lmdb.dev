@@ -1,0 +1,21 @@
+{
+  "java.configuration.updateBuildConfiguration": "automatic",
+  "java.import.gradle.enabled": true,
+  "java.import.gradle.wrapper.enabled": true,
+  "java.jdt.ls.java.home": "/home/liviu/.sdkman/candidates/java/25-open",
+  "java.configuration.runtimes": [
+    {
+      "name": "JavaSE-25",
+      "path": "/home/liviu/.sdkman/candidates/java/25-open",
+      "default": true
+    }
+  ],
+  "files.exclude": {
+    "**/bin": true,
+    "**/build": true,
+    "**/.gradle": true,
+    "**/.idea": true,
+    "**/*.class": true
+  }
+}
+

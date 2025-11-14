@@ -89,7 +89,7 @@ git add .
 git commit -m "feat(setup): implement gradle configuration
 
 - Add multi-module build setup
-- Configure Spring Boot 3.5.7
+- Configure Spring Boot 3.5.8
 - Add dependency management
 
 Closes #123"
