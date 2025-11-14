@@ -63,8 +63,6 @@ updates:
           - "@types/*"
           - "eslint*"
           - "typescript"
-        update-types:
-          - "development"
 
   # Frontend - React Native Mobile App
   - package-ecosystem: "npm"
@@ -93,8 +91,6 @@ updates:
         patterns:
           - "@types/*"
           - "typescript"
-        update-types:
-          - "development"
 
   # GitHub Actions workflows
   - package-ecosystem: "github-actions"
@@ -112,8 +108,6 @@ updates:
     commit-message:
       prefix: "chore(ci)"
       include: "scope"
-    reviewers:
-      - "pehlivanu"
 
   # Docker dependencies (if we add Dockerfiles)
   - package-ecosystem: "docker"
@@ -128,6 +122,4 @@ updates:
       - "automated"
     commit-message:
       prefix: "chore(docker)"
-    reviewers:
-      - "pehlivanu"
 
