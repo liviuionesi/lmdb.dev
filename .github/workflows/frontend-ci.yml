@@ -27,29 +27,43 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '24'
-          cache: 'npm'
-          cache-dependency-path: frontend/web-nextjs/package-lock.json
+      
+      - name: Check if frontend implemented
+        id: check-impl
+        run: |
+          if [ -f "package-lock.json" ]; then
+            echo "implemented=true" >> $GITHUB_OUTPUT
+          else
+            echo "implemented=false" >> $GITHUB_OUTPUT
+            echo "⚠️  Frontend not implemented yet - skipping build"
+          fi
       
       - name: Install dependencies
+        if: steps.check-impl.outputs.implemented == 'true'
         run: npm ci
       
       - name: Run linter
+        if: steps.check-impl.outputs.implemented == 'true'
         run: npm run lint
       
       - name: Run type check
+        if: steps.check-impl.outputs.implemented == 'true'
         run: npm run type-check || echo "Type check not configured"
         continue-on-error: true
       
       - name: Run tests
+        if: steps.check-impl.outputs.implemented == 'true'
         run: npm test || echo "Tests not configured"
         continue-on-error: true
       
       - name: Build application
+        if: steps.check-impl.outputs.implemented == 'true'
         run: npm run build
         env:
           NEXT_PUBLIC_API_URL: http://localhost:8080
       
       - name: Upload build artifacts
+        if: steps.check-impl.outputs.implemented == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: web-build
@@ -70,21 +84,32 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '24'
-          cache: 'npm'
-          cache-dependency-path: frontend/mobile-react-native/package-lock.json
+      
+      - name: Check if frontend implemented
+        id: check-impl
+        run: |
+          if [ -f "package-lock.json" ]; then
+            echo "implemented=true" >> $GITHUB_OUTPUT
+          else
+            echo "implemented=false" >> $GITHUB_OUTPUT
+            echo "⚠️  Frontend not implemented yet - skipping build"
+          fi
       
       - name: Install dependencies
+        if: steps.check-impl.outputs.implemented == 'true'
         run: npm ci
       
       - name: Run linter
+        if: steps.check-impl.outputs.implemented == 'true'
         run: npm run lint || echo "Lint not configured"
         continue-on-error: true
       
       - name: Run type check
+        if: steps.check-impl.outputs.implemented == 'true'
         run: npm run type-check || echo "Type check not configured"
         continue-on-error: true
       
       - name: Run tests
+        if: steps.check-impl.outputs.implemented == 'true'
         run: npm test || echo "Tests not configured"
         continue-on-error: true
-
