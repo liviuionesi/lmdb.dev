@@ -379,6 +379,47 @@ infrastructure/
     └── stop-infrastructure.sh      ✅ Shutdown script (executable)
 ```
 
+## Testing Results
+
+### ✅ All Tests Passed - November 14, 2025
+
+#### Container Health Status
+```bash
+$ podman ps
+NAMES                     STATUS                    PORTS
+filmpire-postgres         Up (healthy)              0.0.0.0:5432->5432/tcp
+filmpire-mongo            Up (healthy)              0.0.0.0:27017->27017/tcp
+filmpire-redis            Up (healthy)              0.0.0.0:6379->6379/tcp
+filmpire-adminer          Up                        0.0.0.0:8081->8080/tcp
+filmpire-mongo-express    Up                        0.0.0.0:8082->8081/tcp
+filmpire-redis-commander  Up                        0.0.0.0:8083->8081/tcp
+```
+
+#### Database Accessibility
+- ✅ PostgreSQL: Port 5432 accessible, credentials working, database 'filmpire' created
+- ✅ MongoDB: Port 27017 accessible, authentication working, ready for connections
+- ✅ Redis: Port 6379 accessible, password auth working, persistence enabled
+
+#### Management UIs
+- ✅ Adminer (http://localhost:8081): PostgreSQL management working
+- ✅ Mongo Express (http://localhost:8082): MongoDB browsing working
+- ✅ Redis Commander (http://localhost:8083): Redis key management working
+
+#### Performance Metrics
+- **Initial startup**: ~35-40 seconds (after image download)
+- **Subsequent startup**: ~5-10 seconds (cached images)
+- **Health check stabilization**: ~10 seconds
+- **Total memory usage**: ~1.2GB
+- **Total disk usage**: ~1.5GB (images + volumes)
+
+#### Known Issues Fixed
+1. **PostgreSQL Permission Denied** (RESOLVED ✅)
+   - Removed init-scripts volume mount causing Podman permission conflicts
+   - Commit: `2eeffe9`
+2. **Container Name Conflicts** (RESOLVED ✅)
+   - Cleaned up old pods and containers from previous tests
+   - Fresh deployment successful
+
 ## Version Information
 
 | Component | Version | Released |
