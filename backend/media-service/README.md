@@ -16,7 +16,7 @@ File upload and media management service for images and videos.
 
 ## Technology Stack
 
-- Spring Boot 3.5.7
+- Spring Boot 3.5.8
 - Spring Data MongoDB
 - MinIO Client
 - Eureka Client

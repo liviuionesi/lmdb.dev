@@ -16,7 +16,7 @@ User authentication, authorization, and profile management service.
 
 ## Technology Stack
 
-- Spring Boot 3.5.7
+- Spring Boot 3.5.8
 - Spring Security
 - Spring Data JPA
 - PostgreSQL

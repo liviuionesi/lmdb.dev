@@ -6,7 +6,7 @@ Enterprise-grade microservices platform for movie discovery and management, demo
 
 This project implements a comprehensive microservices architecture with:
 
-- **8 Backend Microservices** (Spring Boot 3.5.7, Java 25)
+- **8 Backend Microservices** (Spring Boot 3.5.8, Java 25)
 - **2 Frontend Applications** (Next.js 16, React Native 0.76.3)
 - **Hybrid Database Strategy** (PostgreSQL + MongoDB)
 - **Spring Cloud Infrastructure** (Eureka, Config Server, API Gateway)
@@ -103,9 +103,9 @@ filmpire-microservices/
 
 ### Backend
 - Java 25
-- Spring Boot 3.5.7
-- Spring Cloud 2024.0.0
-- Spring AI 1.0.0-M6
+- Spring Boot 3.5.8
+- Spring Cloud 2025.0.0
+- Spring AI 1.1.0
 - PostgreSQL 17
 - MongoDB 8.0
 - Redis 7.4
