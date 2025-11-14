@@ -5,20 +5,26 @@ on:
     branches: [main, develop]
     paths:
       - 'backend/**'
+      - 'build.gradle'
+      - 'settings.gradle'
+      - 'gradle.properties'
+      - '.github/workflows/backend-ci.yml'
   pull_request:
     branches: [main, develop]
     paths:
       - 'backend/**'
+      - 'build.gradle'
+      - 'settings.gradle'
+      - 'gradle.properties'
 
 jobs:
-  test:
+  build:
+    name: Build & Test
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        service: [movie-service, user-service, actor-service, ai-service, media-service]
     
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
       
       - name: Setup Java 25
         uses: actions/setup-java@v4
@@ -27,13 +33,36 @@ jobs:
           java-version: '25'
           cache: 'gradle'
       
-      - name: Run Tests
-        working-directory: backend/${{ matrix.service }}
-        run: |
-          chmod +x ../../gradlew
-          ../../gradlew clean test
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
       
-      - name: Build
-        working-directory: backend/${{ matrix.service }}
-        run: ../../gradlew build
+      - name: Build all services
+        run: ./gradlew clean build -x test
+        env:
+          GRADLE_OPTS: "-Dorg.gradle.daemon=false"
+      
+      - name: Run tests
+        run: ./gradlew test
+        env:
+          GRADLE_OPTS: "-Dorg.gradle.daemon=false"
+      
+      - name: Generate test coverage report
+        run: ./gradlew jacocoTestReport
+        env:
+          GRADLE_OPTS: "-Dorg.gradle.daemon=false"
+      
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            backend/*/build/test-results/test/**/*.xml
+            backend/*/build/reports/tests/test/
+      
+      - name: Upload coverage reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-reports
+          path: backend/*/build/reports/jacoco/test/
 

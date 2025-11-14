@@ -1,0 +1,139 @@
+version: 2
+updates:
+  # Backend - Gradle dependencies
+  - package-ecosystem: "gradle"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 10
+    target-branch: "develop"
+    labels:
+      - "dependencies"
+      - "backend"
+      - "automated"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+    reviewers:
+      - "pehlivanu"
+    groups:
+      spring-boot:
+        patterns:
+          - "org.springframework.boot:*"
+      spring-cloud:
+        patterns:
+          - "org.springframework.cloud:*"
+      spring-ai:
+        patterns:
+          - "org.springframework.ai:*"
+      test-dependencies:
+        patterns:
+          - "org.junit.jupiter:*"
+          - "org.mockito:*"
+          - "org.testcontainers:*"
+
+  # Frontend - Next.js Web App
+  - package-ecosystem: "npm"
+    directory: "/frontend/web-nextjs"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 10
+    target-branch: "develop"
+    labels:
+      - "dependencies"
+      - "frontend"
+      - "web"
+      - "automated"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+    reviewers:
+      - "pehlivanu"
+    groups:
+      react:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "next"
+      mui:
+        patterns:
+          - "@mui/*"
+      dev-dependencies:
+        patterns:
+          - "@types/*"
+          - "eslint*"
+          - "typescript"
+        update-types:
+          - "development"
+
+  # Frontend - React Native Mobile App
+  - package-ecosystem: "npm"
+    directory: "/frontend/mobile-react-native"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 10
+    target-branch: "develop"
+    labels:
+      - "dependencies"
+      - "frontend"
+      - "mobile"
+      - "automated"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+    reviewers:
+      - "pehlivanu"
+    groups:
+      react-native:
+        patterns:
+          - "react-native"
+          - "expo"
+          - "@expo/*"
+      dev-dependencies:
+        patterns:
+          - "@types/*"
+          - "typescript"
+        update-types:
+          - "development"
+
+  # GitHub Actions workflows
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    target-branch: "develop"
+    labels:
+      - "dependencies"
+      - "github-actions"
+      - "automated"
+    commit-message:
+      prefix: "chore(ci)"
+      include: "scope"
+    reviewers:
+      - "pehlivanu"
+
+  # Docker dependencies (if we add Dockerfiles)
+  - package-ecosystem: "docker"
+    directory: "/backend/discovery-service"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 5
+    target-branch: "develop"
+    labels:
+      - "dependencies"
+      - "docker"
+      - "automated"
+    commit-message:
+      prefix: "chore(docker)"
+    reviewers:
+      - "pehlivanu"
+
