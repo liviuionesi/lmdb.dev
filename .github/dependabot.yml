@@ -16,8 +16,6 @@ updates:
     commit-message:
       prefix: "chore(deps)"
       include: "scope"
-    reviewers:
-      - "pehlivanu"
     groups:
       spring-boot:
         patterns:
@@ -51,8 +49,6 @@ updates:
     commit-message:
       prefix: "chore(deps)"
       include: "scope"
-    reviewers:
-      - "pehlivanu"
     groups:
       react:
         patterns:
@@ -87,8 +83,6 @@ updates:
     commit-message:
       prefix: "chore(deps)"
       include: "scope"
-    reviewers:
-      - "pehlivanu"
     groups:
       react-native:
         patterns:
