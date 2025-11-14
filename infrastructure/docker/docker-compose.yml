@@ -3,7 +3,7 @@ version: '3.9'
 services:
   # PostgreSQL 17 - For User Service, Actor Service
   postgres:
-    image: postgres:17-alpine
+    image: docker.io/library/postgres:17-alpine
     container_name: filmpire-postgres
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-filmpire}
@@ -14,7 +14,6 @@ services:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init-scripts:/docker-entrypoint-initdb.d
     networks:
       - filmpire-network
     healthcheck:
@@ -27,7 +26,7 @@ services:
 
   # MongoDB 8.0 - For Movie Service, AI Service, Media Service
   mongodb:
-    image: mongo:8.0
+    image: docker.io/library/mongo:8.0
     container_name: filmpire-mongo
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:-admin}
@@ -50,7 +49,7 @@ services:
 
   # Redis 7.4 - For API Gateway (rate limiting, session)
   redis:
-    image: redis:7.4-alpine
+    image: docker.io/library/redis:7.4-alpine
     container_name: filmpire-redis
     command: redis-server --requirepass ${REDIS_PASSWORD:-redis123} --appendonly yes
     ports:
@@ -92,7 +91,7 @@ services:
 
   # Adminer - Database Management UI (Optional)
   adminer:
-    image: adminer:latest
+    image: docker.io/library/adminer:latest
     container_name: filmpire-adminer
     ports:
       - "${ADMINER_PORT:-8081}:8080"
@@ -107,7 +106,7 @@ services:
 
   # Mongo Express - MongoDB Management UI (Optional)
   mongo-express:
-    image: mongo-express:latest
+    image: docker.io/library/mongo-express:latest
     container_name: filmpire-mongo-express
     environment:
       ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_ROOT_USER:-admin}
@@ -125,7 +124,7 @@ services:
 
   # Redis Commander - Redis Management UI (Optional)
   redis-commander:
-    image: rediscommander/redis-commander:latest
+    image: docker.io/rediscommander/redis-commander:latest
     container_name: filmpire-redis-commander
     environment:
       REDIS_HOSTS: local:redis:6379:0:${REDIS_PASSWORD:-redis123}
