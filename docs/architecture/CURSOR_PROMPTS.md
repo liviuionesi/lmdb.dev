@@ -83,7 +83,7 @@ Create a Gradle multi-module build configuration for the backend microservices:
 - Configure plugins with 'apply false' for subprojects
 - Define common dependencies and versions in gradle.properties
 - Configure Java 25 toolchain for all subprojects
-- Set up Spring Boot 3.5.7 and Spring Cloud 2024.0.0
+- Set up Spring Boot 3.5.8 and Spring Cloud 2025.0.0
 - Configure common plugins: spring-boot, spring-dependency-management
 - Set up code quality plugins: spotless, jacoco, sonarqube
 

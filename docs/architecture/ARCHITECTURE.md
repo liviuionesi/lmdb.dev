@@ -1223,14 +1223,14 @@ podman-compose down -v
 javaVersion=25
 
 # Spring Boot
-springBootVersion=3.5.7
+springBootVersion=3.5.8
 springDependencyManagementVersion=1.1.7
 
 # Spring Cloud
-springCloudVersion=2024.0.0
+springCloudVersion=2025.0.0
 
 # Spring AI
-springAiVersion=1.0.0-M6
+springAiVersion=1.1.0
 
 # Dependencies
 lombokVersion=1.18.34
@@ -1975,7 +1975,7 @@ management:
 
 **Demonstrated Skills:**
 - Enterprise microservices architecture
-- Spring Boot 3.5.7 + Spring Cloud
+- Spring Boot 3.5.8 + Spring Cloud 2025.0.0
 - Java 25 latest features (records, pattern matching, virtual threads)
 - REST + gRPC APIs
 - PostgreSQL + MongoDB hybrid strategy
