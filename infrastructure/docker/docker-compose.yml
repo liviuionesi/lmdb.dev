@@ -1,57 +1,156 @@
 version: '3.9'
 
 services:
-  # PostgreSQL
+  # PostgreSQL 17 - For User Service, Actor Service
   postgres:
-    image: postgres:18-alpine
+    image: postgres:17-alpine
     container_name: filmpire-postgres
     environment:
-      POSTGRES_DB: filmpire
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: admin123
+      POSTGRES_DB: ${POSTGRES_DB:-filmpire}
+      POSTGRES_USER: ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-admin123}
+      POSTGRES_MULTIPLE_DATABASES: filmpire_users,filmpire_actors
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
     networks:
       - filmpire-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U admin"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-admin} -d ${POSTGRES_DB:-filmpire}"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 10s
+    restart: unless-stopped
 
-  # MongoDB
+  # MongoDB 8.0 - For Movie Service, AI Service, Media Service
   mongodb:
-    image: mongo:8.2
+    image: mongo:8.0
     container_name: filmpire-mongo
     environment:
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: admin123
-      MONGO_INITDB_DATABASE: filmpire
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-admin123}
+      MONGO_INITDB_DATABASE: ${MONGO_DATABASE:-filmpire}
     ports:
-      - "27017:27017"
+      - "${MONGO_PORT:-27017}:27017"
     volumes:
       - mongo_data:/data/db
+      - mongo_config:/data/configdb
     networks:
       - filmpire-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
 
-  # Redis
+  # Redis 7.4 - For API Gateway (rate limiting, session)
   redis:
-    image: redis:8.2-alpine
+    image: redis:7.4-alpine
     container_name: filmpire-redis
+    command: redis-server --requirepass ${REDIS_PASSWORD:-redis123} --appendonly yes
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
     networks:
       - filmpire-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+
+  # MinIO - For Media Service (object storage)
+  minio:
+    image: minio/minio:RELEASE.2024-11-07T00-52-20Z
+    container_name: filmpire-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - filmpire-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  # Adminer - Database Management UI (Optional)
+  adminer:
+    image: adminer:latest
+    container_name: filmpire-adminer
+    ports:
+      - "${ADMINER_PORT:-8081}:8080"
+    networks:
+      - filmpire-network
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # Mongo Express - MongoDB Management UI (Optional)
+  mongo-express:
+    image: mongo-express:latest
+    container_name: filmpire-mongo-express
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_ROOT_USER:-admin}
+      ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_ROOT_PASSWORD:-admin123}
+      ME_CONFIG_MONGODB_URL: mongodb://${MONGO_ROOT_USER:-admin}:${MONGO_ROOT_PASSWORD:-admin123}@mongodb:27017/
+      ME_CONFIG_BASICAUTH: "false"
+    ports:
+      - "${MONGO_EXPRESS_PORT:-8082}:8081"
+    networks:
+      - filmpire-network
+    restart: unless-stopped
+    depends_on:
+      mongodb:
+        condition: service_healthy
+
+  # Redis Commander - Redis Management UI (Optional)
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: filmpire-redis-commander
+    environment:
+      REDIS_HOSTS: local:redis:6379:0:${REDIS_PASSWORD:-redis123}
+    ports:
+      - "${REDIS_COMMANDER_PORT:-8083}:8081"
+    networks:
+      - filmpire-network
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
 
 volumes:
   postgres_data:
+    driver: local
   mongo_data:
+    driver: local
+  mongo_config:
+    driver: local
   redis_data:
+    driver: local
+  minio_data:
+    driver: local
 
 networks:
   filmpire-network:
     driver: bridge
+    name: filmpire-network
