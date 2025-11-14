@@ -19,9 +19,9 @@ Complete Docker Compose configuration for local development environment with all
 
 | Service | Image | Port | Purpose |
 |---------|-------|------|---------|
-| **Adminer** | adminer:latest | 8081 | PostgreSQL Web UI |
-| **Mongo Express** | mongo-express:latest | 8082 | MongoDB Web UI |
-| **Redis Commander** | rediscommander/redis-commander:latest | 8083 | Redis Web UI |
+| **Adminer** | adminer:latest | 9081 | PostgreSQL Web UI |
+| **Mongo Express** | mongo-express:latest | 9082 | MongoDB Web UI |
+| **Redis Commander** | rediscommander/redis-commander:latest | 9083 | Redis Web UI |
 
 ## Quick Start
 
@@ -160,7 +160,7 @@ minio:
 ## Management UIs
 
 ### Adminer (PostgreSQL)
-- **URL:** http://localhost:8081
+- **URL:** http://localhost:9081
 - **System:** PostgreSQL
 - **Server:** postgres
 - **Username:** admin
@@ -168,11 +168,11 @@ minio:
 - **Database:** filmpire
 
 ### Mongo Express (MongoDB)
-- **URL:** http://localhost:8082
+- **URL:** http://localhost:9082
 - **No authentication required** (disabled for development)
 
 ### Redis Commander
-- **URL:** http://localhost:8083
+- **URL:** http://localhost:9083
 - **No authentication required**
 
 ### MinIO Console
@@ -390,9 +390,9 @@ NAMES                     STATUS                    PORTS
 filmpire-postgres         Up (healthy)              0.0.0.0:5432->5432/tcp
 filmpire-mongo            Up (healthy)              0.0.0.0:27017->27017/tcp
 filmpire-redis            Up (healthy)              0.0.0.0:6379->6379/tcp
-filmpire-adminer          Up                        0.0.0.0:8081->8080/tcp
-filmpire-mongo-express    Up                        0.0.0.0:8082->8081/tcp
-filmpire-redis-commander  Up                        0.0.0.0:8083->8081/tcp
+filmpire-adminer          Up                        0.0.0.0:9081->8080/tcp
+filmpire-mongo-express    Up                        0.0.0.0:9082->8081/tcp
+filmpire-redis-commander  Up                        0.0.0.0:9083->8081/tcp
 ```
 
 #### Database Accessibility
