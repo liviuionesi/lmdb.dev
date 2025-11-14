@@ -115,3 +115,4 @@ echo "3. Build backend: ./gradlew clean build"
 echo "4. Install frontend deps: cd frontend/web-nextjs && npm install"
 echo ""
 
+

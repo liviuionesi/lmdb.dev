@@ -237,15 +237,29 @@ org.gradle.caching=true
 ✅ All 9 modules recognized  
 ✅ `./gradlew clean build` completes successfully  
 ✅ Java 25 toolchain configured  
-✅ Spring Boot 3.5.7 operational  
+✅ Spring Boot 3.5.8-SNAPSHOT operational  
 ✅ Spring Cloud 2025.0.0 operational  
+✅ TestContainers BOM configured (1.21.2)  
 ✅ Shared library imports working  
 ✅ All service tasks available  
 
 ### Test Results
 ```bash
-BUILD SUCCESSFUL in 3s
+BUILD SUCCESSFUL in 1m 42s
+55 actionable tasks: 44 executed, 11 up-to-date
 ```
+
+### Verified Artifacts
+All services built successfully:
+- ✅ `actor-service-1.0.0-SNAPSHOT.jar`
+- ✅ `ai-service-1.0.0-SNAPSHOT.jar`
+- ✅ `api-gateway-1.0.0-SNAPSHOT.jar`
+- ✅ `config-service-1.0.0-SNAPSHOT.jar`
+- ✅ `discovery-service-1.0.0-SNAPSHOT.jar`
+- ✅ `media-service-1.0.0-SNAPSHOT.jar`
+- ✅ `movie-service-1.0.0-SNAPSHOT.jar`
+- ✅ `shared-library-1.0.0-SNAPSHOT.jar`
+- ✅ `user-service-1.0.0-SNAPSHOT.jar`
 
 ## Troubleshooting
 
@@ -266,11 +280,65 @@ BUILD SUCCESSFUL in 3s
 **Issue**: Java version mismatch  
 **Solution**: Verify Java 25 installed: `java -version`
 
-## Next Steps
+**Issue**: `Resolution of configuration ':backend:annotationProcessor' was attempted without an exclusive lock`  
+**Root Cause**: Gradle 9.2.0 has stricter locking requirements. IDE Gradle plugin and terminal daemons can lock each other.  
+**Solution**:
+```bash
+# 1. Kill all Gradle processes
+pkill -9 -f "java.*gradle"
 
-1. ✅ Task #3 Complete: Gradle multi-module build configured
-2. ⏭️ Task #4: Create GitHub repository structure
-3. ⏭️ Task #5: Setup CI/CD pipeline
+# 2. Delete all caches
+rm -rf ~/.gradle/caches ~/.gradle/daemon .gradle
+
+# 3. Disable parallel/caching in gradle.properties
+org.gradle.parallel=false
+org.gradle.caching=false
+org.gradle.configuration-cache=false
+
+# 4. Reload IDE window (Ctrl+Shift+P → "Developer: Reload Window")
+```
+
+**Issue**: Unresolved testcontainers dependencies  
+**Solution**: Add testcontainers BOM to root `build.gradle`:
+```groovy
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.boot:spring-boot-dependencies:${springBootVersion}"
+        mavenBom "org.testcontainers:testcontainers-bom:${testcontainersVersion}"
+    }
+}
+```
+
+## Task Completion Status
+
+### ✅ Task #3: Setup Gradle Multi-Module Build - COMPLETE
+
+**Acceptance Criteria Met:**
+- ✅ `./gradlew build` runs successfully (1m 42s)
+- ✅ All 9 modules recognized by Gradle
+- ✅ Java 25 toolchain configured and active
+- ✅ Spring Boot 3.5.8-SNAPSHOT working
+- ✅ Spring Cloud 2025.0.0 working
+- ✅ Shared library imports functional (5 services using it)
+- ✅ Build completes without errors
+- ✅ Tasks visible via `./gradlew tasks`
+- ✅ TestContainers BOM configured
+- ✅ All JARs built (9 artifacts)
+
+**Files Created/Modified:**
+- ✅ `settings.gradle` - Module definitions & repository management
+- ✅ `build.gradle` - Root build config with common plugins
+- ✅ `gradle.properties` - Centralized version management
+- ✅ `backend/*/build.gradle` - All 9 service build files
+
+**Story Points:** 5  
+**Actual Time:** ~5 hours  
+**Status:** ✅ COMPLETE
+
+### Next Steps
+
+1. ⏭️ Task #4: Create GitHub repository structure
+2. ⏭️ Task #5: Setup CI/CD pipeline
 
 ## References
 
