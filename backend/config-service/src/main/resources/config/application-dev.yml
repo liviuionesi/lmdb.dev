@@ -3,9 +3,9 @@
 logging:
   level:
     root: DEBUG
-    com.filmpire: TRACE
-    org.springframework.web: DEBUG
-    org.springframework.security: DEBUG
+    '[com.filmpire]': TRACE
+    '[org.springframework.web]': DEBUG
+    '[org.springframework.security]': DEBUG
 
 # Common development database settings
 spring:
