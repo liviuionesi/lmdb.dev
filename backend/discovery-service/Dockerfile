@@ -20,6 +20,9 @@ RUN ./gradlew :backend:discovery-service:bootJar --no-daemon -x test
 FROM eclipse-temurin:25-jre-alpine
 WORKDIR /app
 
+# Install wget for healthcheck
+RUN apk add --no-cache wget
+
 # Add non-root user
 RUN addgroup -S spring && adduser -S spring -G spring
 USER spring:spring

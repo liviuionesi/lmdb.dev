@@ -137,6 +137,28 @@ services:
       redis:
         condition: service_healthy
 
+  # Discovery Service (Eureka Server) - Service Registry
+  discovery-service:
+    build:
+      context: ../../..
+      dockerfile: backend/discovery-service/Dockerfile
+    container_name: filmpire-discovery-service
+    ports:
+      - "${DISCOVERY_SERVICE_PORT:-8761}:8761"
+    networks:
+      - filmpire-network
+    environment:
+      SPRING_APPLICATION_NAME: discovery-service
+      EUREKA_INSTANCE_HOSTNAME: discovery-service
+      EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://discovery-service:8761/eureka/
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8761/actuator/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
 volumes:
   postgres_data:
     driver: local

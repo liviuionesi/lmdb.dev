@@ -16,6 +16,19 @@ NC='\033[0m' # No Color
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOCKER_DIR="$SCRIPT_DIR/../docker"
 
+# Detect container runtime (Docker or Podman)
+COMPOSE_CMD=""
+if command -v docker &> /dev/null && docker compose version &> /dev/null; then
+    COMPOSE_CMD="docker compose"
+elif command -v podman &> /dev/null && podman compose version &> /dev/null 2>&1; then
+    COMPOSE_CMD="podman compose"
+elif command -v podman-compose &> /dev/null; then
+    COMPOSE_CMD="podman-compose"
+else
+    echo -e "${RED}❌ Neither Docker Compose nor Podman Compose is available!${NC}"
+    exit 1
+fi
+
 echo -e "${BLUE}================================================${NC}"
 echo -e "${BLUE}  Stopping Filmpire Infrastructure${NC}"
 echo -e "${BLUE}================================================${NC}"
@@ -41,12 +54,12 @@ fi
 
 # Stop services
 echo -e "${BLUE}🛑 Stopping services...${NC}"
-docker compose down
+$COMPOSE_CMD down
 
 if [ "$REMOVE_VOLUMES" = true ]; then
     echo ""
     echo -e "${BLUE}🗑  Removing volumes...${NC}"
-    docker compose down -v
+    $COMPOSE_CMD down -v
     echo -e "${GREEN}✅ Services stopped and volumes removed${NC}"
 else
     echo -e "${GREEN}✅ Services stopped (data preserved)${NC}"
