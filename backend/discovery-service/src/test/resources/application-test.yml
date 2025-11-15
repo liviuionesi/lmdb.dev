@@ -21,6 +21,6 @@ management:
 
 logging:
   level:
-    com.netflix.eureka: WARN
-    com.netflix.discovery: WARN
+    '[com.netflix.eureka]': WARN
+    '[com.netflix.discovery]': WARN
 

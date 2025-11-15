@@ -1,6 +1,7 @@
 plugins {
     id 'org.springframework.boot'
     id 'io.spring.dependency-management'
+    id 'jacoco'
 }
 
 dependencies {
@@ -8,6 +9,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.boot:spring-boot-starter-web'
 }
 
 dependencyManagement {
@@ -16,6 +18,59 @@ dependencyManagement {
     }
 }
 
+// JaCoCo configuration for code coverage
+jacoco {
+    toolVersion = "${jacocoVersion}"
+}
+
+// Configure JaCoCo test report
+jacocoTestReport {
+    dependsOn test
+    
+    reports {
+        xml.required = true
+        html.required = true
+        csv.required = false
+    }
+    
+    afterEvaluate {
+        classDirectories.setFrom(files(classDirectories.files.collect {
+            fileTree(dir: it, exclude: [
+                '**/DiscoveryServiceApplication.class'  // Exclude main application class
+            ])
+        }))
+    }
+}
+
+// Configure JaCoCo test coverage verification
+jacocoTestCoverageVerification {
+    violationRules {
+        rule {
+            limit {
+                minimum = 0.70  // 70% minimum coverage
+            }
+        }
+        
+        rule {
+            element = 'CLASS'
+            limit {
+                counter = 'LINE'
+                value = 'COVEREDRATIO'
+                minimum = 0.60
+            }
+            excludes = [
+                'com.filmpire.discovery.DiscoveryServiceApplication'
+            ]
+        }
+    }
+}
+
+// Run coverage verification after test
+test {
+    finalizedBy jacocoTestReport
+}
+
+// Build configuration
 bootJar {
     archiveBaseName = 'discovery-service'
     archiveVersion = project.version
