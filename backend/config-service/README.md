@@ -18,10 +18,26 @@ The Config Service provides centralized configuration management for all microse
 
 ## Running Locally
 
+### Setup Environment Variables
+
+**First time setup:**
+
+```bash
+# Copy environment template
+cp backend/config-service/.env.example backend/config-service/.env
+
+# Edit .env with your actual credentials
+# IMPORTANT: Never commit .env file!
+nano backend/config-service/.env
+
+# Load environment variables
+export $(cat backend/config-service/.env | xargs)
+```
+
 ### Using Gradle
 
 ```bash
-# From project root
+# From project root (with env vars loaded)
 ./gradlew :backend:config-service:bootRun
 
 # Or from service directory
@@ -265,11 +281,30 @@ The Config Service monitors:
 
 ## Security Notes
 
-- Never commit sensitive data (passwords, API keys) unencrypted
-- Use encryption for all sensitive values
-- Restrict access to Config Service in production
-- Use private Git repository for configurations
-- Rotate encryption keys periodically
+⚠️ **CRITICAL: All sensitive data uses environment variables**
+
+- ❌ **NO hardcoded passwords in config files**
+- ✅ All sensitive values use `${ENV_VAR}` placeholders
+- ✅ `.env` file is gitignored (never committed)
+- ✅ `.env.example` provided as template
+- ✅ Production uses encrypted values or secret management
+
+**Required Environment Variables:**
+- `POSTGRES_PASSWORD` - PostgreSQL password (user/actor services)
+- `MONGODB_URI` - MongoDB connection string (movie/ai/media services)
+- `JWT_SECRET` - JWT signing key (min 64 chars, user service)
+- `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY` - Object storage (media service)
+
+**See `SECURITY.md` for complete security guide**
+
+Generate secure secrets:
+```bash
+# JWT secret (512 bits)
+openssl rand -base64 64
+
+# Database password
+openssl rand -base64 32
+```
 
 ## Performance
 

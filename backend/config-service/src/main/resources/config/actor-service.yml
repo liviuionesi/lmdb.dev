@@ -4,9 +4,9 @@ spring:
   application:
     name: actor-service
   datasource:
-    url: jdbc:postgresql://localhost:5432/filmpire
-    username: admin
-    password: admin123
+    url: ${POSTGRES_URL:jdbc:postgresql://localhost:5432/filmpire}
+    username: ${POSTGRES_USERNAME:postgres}
+    password: ${POSTGRES_PASSWORD}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:

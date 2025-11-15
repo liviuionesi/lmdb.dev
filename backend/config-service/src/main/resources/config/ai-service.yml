@@ -5,8 +5,8 @@ spring:
     name: ai-service
   data:
     mongodb:
-      uri: mongodb://admin:admin123@localhost:27017/filmpire?authSource=admin
-      database: filmpire
+      uri: ${MONGODB_URI:mongodb://localhost:27017/filmpire}
+      database: ${MONGODB_DATABASE:filmpire}
 
 # AI service specific settings (Spring AI temporarily disabled)
 # ai:

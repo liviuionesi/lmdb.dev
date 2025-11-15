@@ -5,15 +5,15 @@ spring:
     name: media-service
   data:
     mongodb:
-      uri: mongodb://admin:admin123@localhost:27017/filmpire?authSource=admin
-      database: filmpire
+      uri: ${MONGODB_URI:mongodb://localhost:27017/filmpire}
+      database: ${MONGODB_DATABASE:filmpire}
 
 # MinIO configuration
 minio:
-  endpoint: http://localhost:9000
-  access-key: minioadmin
-  secret-key: minioadmin123
-  bucket-name: filmpire-media
+  endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+  access-key: ${MINIO_ACCESS_KEY}
+  secret-key: ${MINIO_SECRET_KEY}
+  bucket-name: ${MINIO_BUCKET:filmpire-media}
 
 # Media service specific settings
 media:
