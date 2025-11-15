@@ -1,5 +1,5 @@
 # Multi-stage build for Discovery Service
-FROM eclipse-temurin:25-jdk-alpine AS build
+FROM docker.io/library/eclipse-temurin:25-jdk-alpine AS build
 WORKDIR /workspace/app
 
 # Copy Gradle wrapper and build files
@@ -9,22 +9,21 @@ COPY build.gradle .
 COPY settings.gradle .
 COPY gradle.properties .
 
-# Copy backend modules
-COPY backend/discovery-service backend/discovery-service
+# Copy backend modules (all services needed for Gradle multi-project build)
+COPY backend backend
 
 # Build the application
 RUN chmod +x gradlew
 RUN ./gradlew :backend:discovery-service:bootJar --no-daemon -x test
 
 # Production stage
-FROM eclipse-temurin:25-jre-alpine
+FROM docker.io/library/eclipse-temurin:25-jre-alpine
 WORKDIR /app
 
-# Install wget for healthcheck
-RUN apk add --no-cache wget
-
-# Add non-root user
-RUN addgroup -S spring && adduser -S spring -G spring
+# Install wget for healthcheck and add non-root user
+RUN apk add --no-cache wget && \
+    addgroup -S spring && \
+    adduser -S spring -G spring
 USER spring:spring
 
 # Copy the built JAR

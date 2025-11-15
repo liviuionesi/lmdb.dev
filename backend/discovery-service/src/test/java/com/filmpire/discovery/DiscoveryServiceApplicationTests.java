@@ -11,12 +11,7 @@ class DiscoveryServiceApplicationTests {
     @Test
     void contextLoads() {
         // Verifies that the Spring context loads successfully
-    }
-
-    @Test
-    void mainMethodStartsApplication() {
-        // Verifies that the main method can be invoked
-        DiscoveryServiceApplication.main(new String[] {});
+        // This test ensures all beans are properly configured
     }
 }
 

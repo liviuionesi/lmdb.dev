@@ -1,8 +1,5 @@
 package com.filmpire.discovery;
 
-import com.netflix.appinfo.InstanceInfo;
-import com.netflix.discovery.EurekaClient;
-import com.netflix.discovery.shared.Application;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -12,13 +9,17 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
 
-import java.util.List;
-
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 class EurekaServerIntegrationTest {
+
+    private static final String LOCALHOST_URL_PREFIX = "http://localhost:";
+    private static final String ACTUATOR_HEALTH_PATH = "/actuator/health";
+    private static final String ACTUATOR_INFO_PATH = "/actuator/info";
+    private static final String EUREKA_APPS_PATH = "/eureka/apps";
+    private static final String ROOT_PATH = "/";
 
     @LocalServerPort
     private int port;
@@ -28,7 +29,7 @@ class EurekaServerIntegrationTest {
 
     @Test
     void eurekaServerIsUp() {
-        String url = "http://localhost:" + port + "/";
+        String url = LOCALHOST_URL_PREFIX + port + ROOT_PATH;
         ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
         
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -37,7 +38,7 @@ class EurekaServerIntegrationTest {
 
     @Test
     void actuatorHealthEndpointIsAccessible() {
-        String url = "http://localhost:" + port + "/actuator/health";
+        String url = LOCALHOST_URL_PREFIX + port + ACTUATOR_HEALTH_PATH;
         ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
         
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -46,7 +47,7 @@ class EurekaServerIntegrationTest {
 
     @Test
     void actuatorInfoEndpointIsAccessible() {
-        String url = "http://localhost:" + port + "/actuator/info";
+        String url = LOCALHOST_URL_PREFIX + port + ACTUATOR_INFO_PATH;
         ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
         
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -54,7 +55,7 @@ class EurekaServerIntegrationTest {
 
     @Test
     void eurekaAppsEndpointIsAccessible() {
-        String url = "http://localhost:" + port + "/eureka/apps";
+        String url = LOCALHOST_URL_PREFIX + port + EUREKA_APPS_PATH;
         ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
         
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);

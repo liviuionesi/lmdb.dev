@@ -68,7 +68,7 @@ services:
 
   # MinIO - For Media Service (object storage)
   minio:
-    image: minio/minio:RELEASE.2024-11-07T00-52-20Z
+    image: docker.io/minio/minio:RELEASE.2024-11-07T00-52-20Z
     container_name: filmpire-minio
     command: server /data --console-address ":9001"
     environment:
@@ -140,7 +140,7 @@ services:
   # Discovery Service (Eureka Server) - Service Registry
   discovery-service:
     build:
-      context: ../../..
+      context: ../..
       dockerfile: backend/discovery-service/Dockerfile
     container_name: filmpire-discovery-service
     ports:
