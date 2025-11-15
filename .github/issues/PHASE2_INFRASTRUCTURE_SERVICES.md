@@ -28,7 +28,7 @@ Establishes the foundation for microservices architecture with service discovery
 - Spring Cloud Netflix Eureka
 - Spring Cloud Config
 - Spring Cloud Gateway
-- Spring Boot 3.5.8
+- Spring Boot 3.5.8-SNAPSHOT
 - Java 25
 
 **Story Points:** 21  

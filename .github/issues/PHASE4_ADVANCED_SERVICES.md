@@ -25,7 +25,7 @@ Delivers intelligent movie recommendations, conversational AI assistant, voice s
 - #20 - Implement Advanced Service Integration
 
 **Technical Stack:**
-- Spring AI 1.1.0
+- Spring AI 1.0.0-SNAPSHOT
 - OpenAI API / Ollama
 - MinIO Object Storage
 - gRPC 1.76.0

@@ -11,10 +11,10 @@
 ## 📋 Project Overview
 
 Complete GitHub Issues roadmap for building an enterprise-grade microservices platform for movie discovery with:
-- 8 Backend Microservices (Spring Boot 3.5.8, Java 25)
+- 8 Backend Microservices (Spring Boot 3.5.8-SNAPSHOT, Java 25)
 - Web Frontend (Next.js 16, React 19)
 - Mobile App (React Native 0.76, Expo 52)
-- AI Features (Spring AI 1.1.0)
+- AI Features (Spring AI 1.0.0-SNAPSHOT)
 - Comprehensive Testing & Deployment
 
 ---

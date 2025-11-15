@@ -37,10 +37,10 @@ This document outlines the complete architecture for Filmpire, a production-read
 | Technology | Version | Installation Method | Purpose |
 |------------|---------|---------------------|---------|
 | Java | 25 | SDKMAN | Programming language |
-| Spring Boot | 3.5.8 | Gradle | Framework |
+| Spring Boot | 3.5.8-SNAPSHOT | Gradle | Framework |
 | Gradle | 9.2.0 | SDKMAN | Build tool |
 | Spring Cloud | 2025.0.0 | Gradle | Microservices infrastructure |
-| Spring AI | 1.1.0 | Gradle | AI/ML integration |
+| Spring AI | 1.0.0-SNAPSHOT | Gradle | AI/ML integration |
 | PostgreSQL | 18.1 | Docker/Podman | Relational database |
 | MongoDB | 8.2 | Docker/Podman | Document database |
 | Redis | 8.2 | Docker/Podman | Caching layer |
@@ -48,10 +48,12 @@ This document outlines the complete architecture for Filmpire, a production-read
 | JWT (jjwt) | 0.13.0 | Gradle | Authentication |
 | MapStruct | 1.6.3 | Gradle | DTO mapping |
 | Lombok | 1.18.42 | Gradle | Boilerplate reduction |
-| JUnit | 5.11.x | Gradle | Testing framework |
-| Mockito | 5.19 | Gradle | Mocking framework |
-| TestContainers | 2.0.2 | Gradle | Integration testing |
+| MinIO | 8.5.7 | Gradle | Object storage client |
+| JUnit | 5.11.3 | Gradle | Testing framework |
+| Mockito | 5.19.0 | Gradle | Mocking framework |
+| TestContainers | 1.21.2 | Gradle | Integration testing |
 | Springdoc OpenAPI | 2.8.14 | Gradle | API documentation |
+| JaCoCo | 0.8.11 | Gradle | Code coverage |
 
 ### 1.2 Frontend Web (Exact Versions)
 
@@ -1223,26 +1225,28 @@ podman-compose down -v
 javaVersion=25
 
 # Spring Boot
-springBootVersion=3.5.8
+springBootVersion=3.5.8-SNAPSHOT
 springDependencyManagementVersion=1.1.7
 
 # Spring Cloud
 springCloudVersion=2025.0.0
 
 # Spring AI
-springAiVersion=1.1.0
+springAiVersion=1.0.0-SNAPSHOT
 
 # Dependencies
-lombokVersion=1.18.34
+lombokVersion=1.18.42
 mapstructVersion=1.6.3
-jjwtVersion=0.12.6
-grpcVersion=1.65.1
-springdocVersion=2.6.0
+jjwtVersion=0.13.0
+grpcVersion=1.76.0
+springdocVersion=2.8.14
+minioVersion=8.5.7
 
 # Testing
 junitVersion=5.11.3
-mockitoVersion=5.14.2
-testcontainersVersion=1.20.4
+mockitoVersion=5.19.0
+testcontainersVersion=1.21.2
+jacocoVersion=0.8.11
 ```
 
 **Frontend: `package.json`**

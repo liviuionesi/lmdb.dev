@@ -90,16 +90,18 @@ Create a Gradle multi-module build configuration for the backend microservices:
 **gradle.properties:**
 ```
 javaVersion=25
-springBootVersion=3.5.8
+springBootVersion=3.5.8-SNAPSHOT
 springCloudVersion=2025.0.0
-springAiVersion=1.1.0
+springAiVersion=1.0.0-SNAPSHOT
 lombokVersion=1.18.42
 mapstructVersion=1.6.3
 jjwtVersion=0.13.0
 grpcVersion=1.76.0
-mockitoVersion=5.19
-testcontainersVersion=2.0.2
 springdocVersion=2.8.14
+minioVersion=8.5.7
+mockitoVersion=5.19.0
+testcontainersVersion=1.21.2
+jacocoVersion=0.8.11
 ```
 
 **Shared Library:**

@@ -114,9 +114,9 @@ Configure Gradle multi-module build system for all backend microservices with Sp
 
 **Dependencies to Configure:**
 ```properties
-springBootVersion=3.5.8
+springBootVersion=3.5.8-SNAPSHOT
 springCloudVersion=2025.0.0
-springAiVersion=1.1.0
+springAiVersion=1.0.0-SNAPSHOT
 lombokVersion=1.18.42
 ```
 
@@ -124,7 +124,7 @@ lombokVersion=1.18.42
 - [x] `./gradlew build` runs successfully
 - [x] All modules recognized by Gradle
 - [x] Java 25 toolchain configured
-- [x] Spring Boot 3.5.8 dependency management working
+- [x] Spring Boot 3.5.8-SNAPSHOT dependency management working
 - [x] Shared library can be imported by services
 - [x] Build completes without errors
 

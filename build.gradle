@@ -38,7 +38,7 @@ subprojects {
     
     // JaCoco configuration for test coverage
     jacoco {
-        toolVersion = "0.8.11"
+        toolVersion = "${jacocoVersion}"
     }
     
     jacocoTestReport {
