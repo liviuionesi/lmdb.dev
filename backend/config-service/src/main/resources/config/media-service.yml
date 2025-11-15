@@ -1,0 +1,32 @@
+# Media Service specific configuration
+
+spring:
+  application:
+    name: media-service
+  data:
+    mongodb:
+      uri: mongodb://admin:admin123@localhost:27017/filmpire?authSource=admin
+      database: filmpire
+
+# MinIO configuration
+minio:
+  endpoint: http://localhost:9000
+  access-key: minioadmin
+  secret-key: minioadmin123
+  bucket-name: filmpire-media
+
+# Media service specific settings
+media:
+  upload:
+    max-file-size: 10485760  # 10MB
+    allowed-extensions: jpg,jpeg,png,gif,webp,mp4,webm
+  storage:
+    temp-dir: /tmp/filmpire-uploads
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true
+

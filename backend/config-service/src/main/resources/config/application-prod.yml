@@ -1,0 +1,27 @@
+# Production environment configuration
+
+logging:
+  level:
+    root: WARN
+    com.filmpire: INFO
+
+# Common production database settings
+spring:
+  datasource:
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 10
+  data:
+    mongodb:
+      auto-index-creation: false
+
+# Common production actuator settings (restricted)
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: never
+

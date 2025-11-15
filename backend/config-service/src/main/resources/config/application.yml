@@ -1,9 +1,27 @@
 # Default configuration for all services
-# This file is served by the Config Service in native mode
+# This file is served by the Config Service
 
+# Common logging configuration
+logging:
+  level:
+    root: INFO
+    com.filmpire: DEBUG
+  pattern:
+    console: '%d{yyyy-MM-dd HH:mm:ss} - %msg%n'
+
+# Common management endpoints
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+
+# Common info
 info:
   app:
     name: Filmpire Microservices
     description: Centralized configuration
     version: 1.0.0
-

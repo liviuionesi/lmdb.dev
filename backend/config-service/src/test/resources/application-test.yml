@@ -1,0 +1,30 @@
+server:
+  port: 0  # Random port for tests
+
+spring:
+  application:
+    name: config-service-test
+  cloud:
+    config:
+      server:
+        native:
+          search-locations: classpath:/config
+
+eureka:
+  client:
+    enabled: false  # Disable Eureka for unit tests
+    register-with-eureka: false
+    fetch-registry: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+logging:
+  level:
+    '[com.netflix.eureka]': WARN
+    '[com.netflix.discovery]': WARN
+    '[org.springframework.cloud.config]': DEBUG
+

@@ -1,0 +1,35 @@
+# AI Service specific configuration
+
+spring:
+  application:
+    name: ai-service
+  data:
+    mongodb:
+      uri: mongodb://admin:admin123@localhost:27017/filmpire?authSource=admin
+      database: filmpire
+
+# AI service specific settings (Spring AI temporarily disabled)
+# ai:
+#   openai:
+#     api-key: ${OPENAI_API_KEY:your-api-key-here}
+#     chat:
+#       options:
+#         model: gpt-4
+#         temperature: 0.7
+#     embeddings:
+#       model: text-embedding-ada-002
+
+ai:
+  recommendations:
+    max-results: 10
+    similarity-threshold: 0.75
+  conversation:
+    history-limit: 50
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true
+

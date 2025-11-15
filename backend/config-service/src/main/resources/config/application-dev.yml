@@ -1,0 +1,28 @@
+# Development environment configuration
+
+logging:
+  level:
+    root: DEBUG
+    com.filmpire: TRACE
+    org.springframework.web: DEBUG
+    org.springframework.security: DEBUG
+
+# Common development database settings
+spring:
+  datasource:
+    hikari:
+      maximum-pool-size: 5
+  data:
+    mongodb:
+      auto-index-creation: true
+
+# Common development actuator settings
+management:
+  endpoints:
+    web:
+      exposure:
+        include: '*'
+  endpoint:
+    health:
+      show-details: always
+
