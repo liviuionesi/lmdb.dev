@@ -9,10 +9,11 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
     implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
-    implementation "org.springframework.ai:spring-ai-openai-spring-boot-starter:${springAiVersion}"
-    implementation "io.grpc:grpc-netty-shaded:${grpcVersion}"
-    implementation "io.grpc:grpc-protobuf:${grpcVersion}"
-    implementation "io.grpc:grpc-stub:${grpcVersion}"
+    // Spring AI temporarily disabled - will be enabled when stable version is available
+    // implementation "org.springframework.ai:spring-ai-openai-spring-boot-starter:${springAiVersion}"
+    // implementation "io.grpc:grpc-netty-shaded:${grpcVersion}"
+    // implementation "io.grpc:grpc-protobuf:${grpcVersion}"
+    // implementation "io.grpc:grpc-stub:${grpcVersion}"
     implementation "org.springdoc:springdoc-openapi-starter-webmvc-ui:${springdocVersion}"
     implementation "org.projectlombok:lombok:${lombokVersion}"
     annotationProcessor "org.projectlombok:lombok:${lombokVersion}"

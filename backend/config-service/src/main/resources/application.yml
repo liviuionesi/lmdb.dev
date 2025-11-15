@@ -4,13 +4,18 @@ server:
 spring:
   application:
     name: config-service
+  profiles:
+    active: native
   cloud:
     config:
       server:
-        git:
-          uri: https://github.com/yourusername/filmpire-config-repo
-          default-label: main
-          clone-on-start: true
+        native:
+          search-locations: classpath:/config
+        # Git mode disabled - using native/filesystem mode instead
+        # git:
+        #   uri: https://github.com/yourusername/filmpire-config-repo
+        #   default-label: main
+        #   clone-on-start: true
 
 eureka:
   client:
