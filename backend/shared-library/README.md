@@ -22,6 +22,19 @@ dependencies {
 }
 ```
 
+### Using as Java Module (JPMS)
+
+The shared-library can also be used as a Java module. In your service's `module-info.java`:
+
+```java
+module com.filmpire.movie {
+    requires com.filmpire.shared;
+    // ... other requires
+}
+```
+
+**Note:** The library works both as a Java module and as a regular classpath dependency (backward compatible). You can use either approach depending on your project's needs.
+
 ### Usage Example
 
 ```java
