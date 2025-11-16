@@ -4,17 +4,38 @@ plugins {
 }
 
 dependencies {
+    // Shared Library
     implementation project(':backend:shared-library')
+    
+    // Spring Cloud Gateway
     implementation 'org.springframework.cloud:spring-cloud-starter-gateway'
     implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
+    
+    // Circuit Breaker with Resilience4j
+    implementation 'org.springframework.cloud:spring-cloud-starter-circuitbreaker-reactor-resilience4j'
+    
+    // Rate Limiting with Redis
     implementation 'org.springframework.boot:spring-boot-starter-data-redis-reactive'
+    
+    // Security and JWT
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation "io.jsonwebtoken:jjwt-api:${jjwtVersion}"
     implementation "io.jsonwebtoken:jjwt-impl:${jjwtVersion}"
     implementation "io.jsonwebtoken:jjwt-jackson:${jjwtVersion}"
     
+    // Actuator for health checks
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    
+    // Lombok for cleaner code
+    compileOnly "org.projectlombok:lombok:${lombokVersion}"
+    annotationProcessor "org.projectlombok:lombok:${lombokVersion}"
+    
+    // Testing
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
+    testImplementation 'io.projectreactor:reactor-test'
+    testImplementation "org.testcontainers:testcontainers:${testcontainersVersion}"
+    testImplementation "org.testcontainers:junit-jupiter:${testcontainersVersion}"
 }
 
 dependencyManagement {

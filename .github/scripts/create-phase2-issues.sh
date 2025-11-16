@@ -349,13 +349,12 @@ shared-library/
 - ApiResponse<T>
 - ErrorResponse
 - PageResponse<T>
-- GlobalExceptionHandler
 - ResourceNotFoundException
 - ValidationException
 
 ## Acceptance Criteria
 - [ ] All common DTOs implemented
-- [ ] Exception handling framework complete
+- [ ] Exception classes and error DTOs implemented (exception handling framework)
 - [ ] Utility classes tested
 - [ ] Constants defined
 - [ ] Annotations working

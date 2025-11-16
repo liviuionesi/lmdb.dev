@@ -1,0 +1,48 @@
+server:
+  port: 0  # Random port for testing
+
+spring:
+  application:
+    name: api-gateway-test
+  
+  # Disable Redis-dependent features for tests
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisReactiveAutoConfiguration
+  
+  cloud:
+    gateway:
+      routes:
+        - id: test-route
+          uri: http://localhost:8080
+          predicates:
+            - Path=/test/**
+      discovery:
+        locator:
+          enabled: false  # Disable for unit tests
+
+eureka:
+  client:
+    enabled: false  # Disable Eureka for unit tests
+    register-with-eureka: false
+    fetch-registry: false
+
+# JWT Configuration for tests
+jwt:
+  secret: test-secret-key-for-jwt-token-validation-must-be-long-enough-for-tests
+  expiration: 86400000
+
+# Disable actuator endpoints in tests
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+
+# Logging for tests
+logging:
+  level:
+    root: INFO
+    com.filmpire.gateway: DEBUG
+

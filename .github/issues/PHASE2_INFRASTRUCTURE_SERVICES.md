@@ -269,8 +269,7 @@ shared-library/
     │   └── PageResponse.java
     ├── exception/
     │   ├── ResourceNotFoundException.java
-    │   ├── ValidationException.java
-    │   └── GlobalExceptionHandler.java
+    │   └── ValidationException.java
     ├── util/
     │   ├── DateUtils.java
     │   ├── StringUtils.java
@@ -299,21 +298,9 @@ public class ApiResponse<T> {
 }
 ```
 
-**GlobalExceptionHandler.java:**
-```java
-@RestControllerAdvice
-public class GlobalExceptionHandler {
-    @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleResourceNotFound(ResourceNotFoundException ex);
-    
-    @ExceptionHandler(ValidationException.class)
-    public ResponseEntity<ErrorResponse> handleValidation(ValidationException ex);
-}
-```
-
 **Acceptance Criteria:**
 - [ ] All common DTOs implemented
-- [ ] Exception handling framework complete
+- [ ] Exception classes and error DTOs implemented (exception handling framework)
 - [ ] Utility classes tested
 - [ ] Constants defined
 - [ ] Annotations working

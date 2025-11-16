@@ -1,48 +1,264 @@
 server:
   port: 8080
+  # Additional request size and connection limits
+  max-http-header-size: 16KB  # Maximum HTTP header size
+  netty:
+    connection-timeout: 5s    # Connection timeout for Netty
+    idle-timeout: 30s         # Idle connection timeout
 
 spring:
   application:
     name: api-gateway
+  
+  # Request size limits to prevent large payload attacks
+  codec:
+    max-in-memory-size: 10MB  # Maximum request body size
+  
   cloud:
     gateway:
+      # HTTP client configuration for connection limits and timeouts
+      httpclient:
+        pool:
+          max-connections: 1000  # Global max connections to prevent exhaustion
+          max-idle-time: 30s     # Close idle connections after 30 seconds
+          max-life-time: 60s     # Close connections after 60 seconds
+        connect-timeout: 5000    # 5 second connection timeout
+        response-timeout: 10s    # 10 second response timeout
+      # Global CORS configuration
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowed-origins:
+              - "http://localhost:3000"
+              - "http://localhost:3001"
+              - "http://localhost:5173"
+            allowed-methods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - PATCH
+              - OPTIONS
+            allowed-headers:
+              - "*"
+            allow-credentials: true
+            max-age: 3600
+      
+      # Default filters for all routes
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_UNIQUE
+        - name: Retry
+          args:
+            retries: 3
+            statuses: BAD_GATEWAY,SERVICE_UNAVAILABLE
+            methods: GET
+            backoff:
+              firstBackoff: 50ms
+              maxBackoff: 500ms
+              factor: 2
+              basedOnPreviousValue: false
+      
+      # Route definitions
       routes:
+        # Movie Service Routes
         - id: movie-service
-          uri: lb://MOVIE-SERVICE
+          uri: lb://movie-service
           predicates:
             - Path=/api/v1/movies/**
           filters:
-            - RewritePath=/api/v1/movies/(?<segment>.*), /${segment}
+            - name: CircuitBreaker
+              args:
+                name: movieServiceCircuitBreaker
+                fallbackUri: forward:/fallback/movies
+            - name: RequestRateLimiter
+              args:
+                key-resolver: "#{@ipKeyResolver}"
+                redis-rate-limiter.replenishRate: 10
+                redis-rate-limiter.burstCapacity: 20
+                redis-rate-limiter.requestedTokens: 1
+        
+        # User Service Routes
         - id: user-service
-          uri: lb://USER-SERVICE
+          uri: lb://user-service
           predicates:
-            - Path=/api/v1/users/**, /api/v1/auth/**
+            - Path=/api/v1/users/**
           filters:
-            - RewritePath=/api/v1/(?<segment>.*), /${segment}
+            - name: CircuitBreaker
+              args:
+                name: userServiceCircuitBreaker
+                fallbackUri: forward:/fallback/users
+            - name: RequestRateLimiter
+              args:
+                key-resolver: "#{@ipKeyResolver}"
+                redis-rate-limiter.replenishRate: 10
+                redis-rate-limiter.burstCapacity: 20
+        
+        # Authentication Routes (strict rate limiting to prevent brute force)
+        - id: auth-service
+          uri: lb://user-service
+          predicates:
+            - Path=/api/v1/auth/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: authServiceCircuitBreaker
+                fallbackUri: forward:/fallback/auth
+            - name: RequestRateLimiter
+              args:
+                key-resolver: "#{@ipKeyResolver}"
+                redis-rate-limiter.replenishRate: 5
+                redis-rate-limiter.burstCapacity: 10
+        
+        # Actor Service Routes
         - id: actor-service
-          uri: lb://ACTOR-SERVICE
+          uri: lb://actor-service
           predicates:
             - Path=/api/v1/actors/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: actorServiceCircuitBreaker
+                fallbackUri: forward:/fallback/actors
+            - name: RequestRateLimiter
+              args:
+                key-resolver: "#{@ipKeyResolver}"
+                redis-rate-limiter.replenishRate: 10
+                redis-rate-limiter.burstCapacity: 20
+        
+        # AI Service Routes
         - id: ai-service
-          uri: lb://AI-SERVICE
+          uri: lb://ai-service
           predicates:
             - Path=/api/v1/ai/**, /api/v1/recommendations/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: aiServiceCircuitBreaker
+                fallbackUri: forward:/fallback/ai
+            - name: RequestRateLimiter
+              args:
+                key-resolver: "#{@ipKeyResolver}"
+                redis-rate-limiter.replenishRate: 5
+                redis-rate-limiter.burstCapacity: 10
+        
+        # Media Service Routes
+        - id: media-service
+          uri: lb://media-service
+          predicates:
+            - Path=/api/v1/media/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: mediaServiceCircuitBreaker
+                fallbackUri: forward:/fallback/media
+            - name: RequestRateLimiter
+              args:
+                key-resolver: "#{@ipKeyResolver}"
+                redis-rate-limiter.replenishRate: 20
+                redis-rate-limiter.burstCapacity: 40
+      
+      # Service discovery
       discovery:
         locator:
           enabled: true
+          lower-case-service-id: true
+  
+  # Redis configuration for rate limiting
   data:
     redis:
-      host: localhost
-      port: 6379
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
 
+# Eureka client configuration
 eureka:
   client:
     service-url:
-      defaultZone: http://localhost:8761/eureka/
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka/}
+    registry-fetch-interval-seconds: 5
+    instance-info-replication-interval-seconds: 5
+  instance:
+    prefer-ip-address: true
+    lease-renewal-interval-in-seconds: 5
+    lease-expiration-duration-in-seconds: 10
 
+# Resilience4j Circuit Breaker configuration
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        permitted-number-of-calls-in-half-open-state: 3
+        wait-duration-in-open-state: 10s
+        failure-rate-threshold: 50
+        slow-call-duration-threshold: 2s
+        slow-call-rate-threshold: 50
+    instances:
+      movieServiceCircuitBreaker:
+        base-config: default
+      userServiceCircuitBreaker:
+        base-config: default
+      authServiceCircuitBreaker:
+        base-config: default
+      actorServiceCircuitBreaker:
+        base-config: default
+      aiServiceCircuitBreaker:
+        base-config: default
+      mediaServiceCircuitBreaker:
+        base-config: default
+  
+  timelimiter:
+    configs:
+      default:
+        timeout-duration: 5s
+
+# JWT Configuration
+jwt:
+  secret: ${JWT_SECRET:filmpire-secret-key-change-in-production}
+  expiration: 86400000 # 24 hours in milliseconds
+  refresh-expiration: 604800000 # 7 days in milliseconds
+
+# Management and Actuator configuration
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health,info,metrics,prometheus,gateway
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: always
+      show-components: always
+    gateway:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+    export:
+      prometheus:
+        enabled: true
+  health:
+    circuitbreakers:
+      enabled: true
+    ratelimiters:
+      enabled: true
+
+# Logging configuration
+logging:
+  level:
+    root: INFO
+    com.filmpire.gateway: DEBUG
+    org.springframework.cloud.gateway: DEBUG
+    org.springframework.security: DEBUG
+    io.github.resilience4j: DEBUG
+  pattern:
+    console: '%d{yyyy-MM-dd HH:mm:ss} - %msg%n'
+    file: '%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n'
 
