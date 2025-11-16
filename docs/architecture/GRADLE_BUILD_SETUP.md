@@ -174,7 +174,19 @@ filmpire-microservices/
 - No project-level repositories allowed (FAIL_ON_PROJECT_REPOS)
 
 ### Inter-Module Dependencies
-Services depend on shared-library:
+**Services with shared-library dependency:**
+- `actor-service` - REST APIs, error handling
+- `movie-service` - REST APIs, pagination, error handling  
+- `user-service` - REST APIs, validation, authentication
+- `ai-service` - REST APIs, error handling
+- `media-service` - REST APIs, file handling, error handling
+- `api-gateway` - REST endpoints, error handling, security
+
+**Services without shared-library dependency:**
+- `config-service` - Infrastructure only (Config Server)
+- `discovery-service` - Infrastructure only (Eureka Server)
+
+Dependency declaration:
 ```groovy
 implementation project(':backend:shared-library')
 ```

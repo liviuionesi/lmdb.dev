@@ -2,7 +2,6 @@ package com.filmpire.config;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
 
 /**
  * Basic smoke tests for Config Service application context.
