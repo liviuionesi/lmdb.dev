@@ -631,7 +631,41 @@ Documentation: `build/docs/javadoc/index.html`
 
 ## 🔧 Configuration
 
-No configuration required - this is a pure Java library.
+### MapStruct Configuration
+
+MapStruct is pre-configured with sensible defaults:
+
+- **Component Model:** `spring` (mappers are Spring components)
+- **Unmapped Target Policy:** `WARN` (warns about unmapped properties)
+- **Unmapped Source Policy:** `IGNORE` (ignores extra source properties)
+
+Configuration files:
+- `src/main/resources/mapstruct.properties` - Default mapper settings
+- `build.gradle` - Compiler arguments
+
+**Example Mapper:**
+```java
+@Mapper(componentModel = "spring")
+public interface MovieMapper {
+    MovieDTO toDTO(Movie movie);
+    Movie toEntity(MovieDTO dto);
+}
+```
+
+### Lombok Configuration
+
+Lombok is configured with project-wide settings:
+
+- Generated annotations included in javadoc
+- Builder pattern enabled with `toBuilder()` support
+- Lazy getters enabled
+- Log annotations enabled (SLF4J)
+
+Configuration file:
+- `src/main/resources/lombok.config` - Project-wide Lombok settings
+
+**Lombok-MapStruct Integration:**
+The library includes `lombok-mapstruct-binding` for seamless integration between Lombok and MapStruct.
 
 ## 📦 Dependencies
 

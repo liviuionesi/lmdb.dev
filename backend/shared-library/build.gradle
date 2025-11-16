@@ -9,10 +9,22 @@ dependencies {
     api "org.mapstruct:mapstruct:${mapstructVersion}"
     api "org.projectlombok:lombok:${lombokVersion}"
     
+    // Annotation processors with proper configuration
     annotationProcessor "org.mapstruct:mapstruct-processor:${mapstructVersion}"
     annotationProcessor "org.projectlombok:lombok:${lombokVersion}"
+    // Lombok must be before MapStruct for proper integration
+    annotationProcessor "org.projectlombok:lombok-mapstruct-binding:0.2.0"
     
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
+
+// MapStruct compiler options
+// These are defaults for all MapStruct mappers in this project
+tasks.withType(JavaCompile) {
+    options.compilerArgs += [
+        '-Amapstruct.defaultComponentModel=spring',
+        '-Amapstruct.unmappedTargetPolicy=WARN'
+    ]
 }
 
 dependencyManagement {
