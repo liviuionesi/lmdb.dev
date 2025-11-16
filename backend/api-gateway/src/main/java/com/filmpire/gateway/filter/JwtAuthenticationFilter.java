@@ -10,13 +10,14 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
 import org.springframework.stereotype.Component;
+import org.springframework.lang.NonNull;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebFilter;
 import org.springframework.web.server.WebFilterChain;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Objects;
 
 /**
  * JWT Authentication Filter for Spring Cloud Gateway.
@@ -40,7 +41,8 @@ public class JwtAuthenticationFilter implements WebFilter {
      * @return Mono<Void> representing the completion of filter processing
      */
     @Override
-    public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
+    @NonNull
+    public Mono<Void> filter(@NonNull ServerWebExchange exchange, @NonNull WebFilterChain chain) {
         ServerHttpRequest request = exchange.getRequest();
         String path = request.getURI().getPath();
 
@@ -76,7 +78,7 @@ public class JwtAuthenticationFilter implements WebFilter {
             // Convert roles to Spring Security authorities
             List<SimpleGrantedAuthority> authorities = roles.stream()
                     .map(role -> new SimpleGrantedAuthority("ROLE_" + role.toUpperCase()))
-                    .collect(Collectors.toList());
+                    .toList();
 
             // Create authentication token
             UsernamePasswordAuthenticationToken authentication =
@@ -94,8 +96,10 @@ public class JwtAuthenticationFilter implements WebFilter {
                     .build();
 
             // Set authentication in security context and continue filter chain
-            return chain.filter(mutatedExchange)
-                    .contextWrite(ReactiveSecurityContextHolder.withAuthentication(authentication));
+            return Objects.requireNonNull(
+                    chain.filter(mutatedExchange)
+                            .contextWrite(ReactiveSecurityContextHolder.withAuthentication(authentication)),
+                    "Filter chain result must not be null");
 
         } catch (Exception e) {
             log.error("Error processing JWT token: {}", e.getMessage(), e);

@@ -54,12 +54,11 @@ public class IpFilterGlobalFilter implements GlobalFilter, Ordered {
         String clientIp = getClientIp(exchange);
 
         // Check whitelist mode (if enabled, only whitelisted IPs are allowed)
-        if (whitelistModeEnabled && !whitelist.isEmpty()) {
-            if (!whitelist.contains(clientIp)) {
+        if (whitelistModeEnabled && !whitelist.isEmpty() && !whitelist.contains(clientIp)) {
                 log.warn("Access denied for non-whitelisted IP: {}", clientIp);
                 return denyAccess(exchange, "IP not in whitelist");
             }
-        }
+        
 
         // Check blacklist
         if (blacklist.contains(clientIp)) {
@@ -100,10 +99,14 @@ public class IpFilterGlobalFilter implements GlobalFilter, Ordered {
             return forwardedFor.split(",")[0].trim();
         }
 
-        return exchange.getRequest()
-                .getRemoteAddress()
-                .getAddress()
-                .getHostAddress();
+        var remoteAddress = exchange.getRequest().getRemoteAddress();
+        if (remoteAddress != null && remoteAddress.getAddress() != null) {
+            return remoteAddress.getAddress().getHostAddress();
+        }
+
+        // Fallback to unknown if remote address cannot be determined
+        log.warn("Unable to determine client IP address, using fallback");
+        return "0.0.0.0";
     }
 
     /**

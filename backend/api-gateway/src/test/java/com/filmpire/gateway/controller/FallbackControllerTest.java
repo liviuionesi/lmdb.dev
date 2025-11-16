@@ -9,6 +9,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
 
+import java.util.Objects;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -30,9 +32,9 @@ class FallbackControllerTest {
 
         // Then
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
-        assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().isSuccess()).isFalse();
-        assertThat(response.getBody().getMessage()).contains("Movie Service");
+        ApiResponse<Void> body = Objects.requireNonNull(response.getBody(), "Response body must not be null");
+        assertThat(body.isSuccess()).isFalse();
+        assertThat(body.getMessage()).contains("Movie Service");
     }
 
     @Test
@@ -43,9 +45,9 @@ class FallbackControllerTest {
 
         // Then
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
-        assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().isSuccess()).isFalse();
-        assertThat(response.getBody().getMessage()).contains("User Service");
+        ApiResponse<Void> body = Objects.requireNonNull(response.getBody(), "Response body must not be null");
+        assertThat(body.isSuccess()).isFalse();
+        assertThat(body.getMessage()).contains("User Service");
     }
 
     @Test
@@ -56,9 +58,9 @@ class FallbackControllerTest {
 
         // Then
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
-        assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().isSuccess()).isFalse();
-        assertThat(response.getBody().getMessage()).contains("Authentication Service");
+        ApiResponse<Void> body = Objects.requireNonNull(response.getBody(), "Response body must not be null");
+        assertThat(body.isSuccess()).isFalse();
+        assertThat(body.getMessage()).contains("Authentication Service");
     }
 
     @Test
@@ -69,9 +71,9 @@ class FallbackControllerTest {
 
         // Then
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
-        assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().isSuccess()).isFalse();
-        assertThat(response.getBody().getMessage()).contains("Actor Service");
+        ApiResponse<Void> body = Objects.requireNonNull(response.getBody(), "Response body must not be null");
+        assertThat(body.isSuccess()).isFalse();
+        assertThat(body.getMessage()).contains("Actor Service");
     }
 
     @Test
@@ -82,9 +84,9 @@ class FallbackControllerTest {
 
         // Then
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
-        assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().isSuccess()).isFalse();
-        assertThat(response.getBody().getMessage()).contains("AI Service");
+        ApiResponse<Void> body = Objects.requireNonNull(response.getBody(), "Response body must not be null");
+        assertThat(body.isSuccess()).isFalse();
+        assertThat(body.getMessage()).contains("AI Service");
     }
 
     @Test
@@ -95,9 +97,9 @@ class FallbackControllerTest {
 
         // Then
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
-        assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().isSuccess()).isFalse();
-        assertThat(response.getBody().getMessage()).contains("Media Service");
+        ApiResponse<Void> body = Objects.requireNonNull(response.getBody(), "Response body must not be null");
+        assertThat(body.isSuccess()).isFalse();
+        assertThat(body.getMessage()).contains("Media Service");
     }
 }
 

@@ -5,6 +5,7 @@ import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.stereotype.Component;
@@ -87,7 +88,8 @@ public class LoggingFilter implements GlobalFilter, Ordered {
     private void logResponse(ServerHttpRequest request, ServerHttpResponse response, long duration) {
         String method = request.getMethod().toString();
         String path = request.getURI().getPath();
-        int statusCode = response.getStatusCode() != null ? response.getStatusCode().value() : 0;
+        HttpStatusCode status = response.getStatusCode();
+        int statusCode = status != null ? status.value() : 0;
 
         log.info("<== Outgoing Response: {} {} - Status: {} - Duration: {}ms",
                 method, path, statusCode, duration);

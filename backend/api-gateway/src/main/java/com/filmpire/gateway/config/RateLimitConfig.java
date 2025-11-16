@@ -47,13 +47,16 @@ public class RateLimitConfig {
             }
 
             // Fallback to remote address if no X-Forwarded-For header
-            String remoteAddress = exchange.getRequest()
-                    .getRemoteAddress()
-                    .getAddress()
-                    .getHostAddress();
+            var remoteAddressObj = exchange.getRequest().getRemoteAddress();
+            if (remoteAddressObj != null && remoteAddressObj.getAddress() != null) {
+                String remoteAddress = remoteAddressObj.getAddress().getHostAddress();
+                log.debug("Rate limiting key from remote address: {}", remoteAddress);
+                return Mono.just(remoteAddress);
+            }
             
-            log.debug("Rate limiting key from remote address: {}", remoteAddress);
-            return Mono.just(remoteAddress);
+            // Fallback to "unknown" if remote address is not available
+            log.warn("Unable to determine client IP address, using 'unknown' as rate limit key");
+            return Mono.just("unknown");
         };
     }
 
@@ -84,10 +87,12 @@ public class RateLimitConfig {
     @Bean
     public KeyResolver pathKeyResolver() {
         return exchange -> {
-            String ip = exchange.getRequest()
-                    .getRemoteAddress()
-                    .getAddress()
-                    .getHostAddress();
+            String ip = "unknown";
+            var remoteAddressObj = exchange.getRequest().getRemoteAddress();
+            if (remoteAddressObj != null && remoteAddressObj.getAddress() != null) {
+                ip = remoteAddressObj.getAddress().getHostAddress();
+            }
+            
             String path = exchange.getRequest().getURI().getPath();
             String key = ip + ":" + path;
             

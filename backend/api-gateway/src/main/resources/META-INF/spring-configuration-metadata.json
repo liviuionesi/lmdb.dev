@@ -1,0 +1,30 @@
+{
+  "groups": [
+    {
+      "name": "jwt",
+      "type": "com.filmpire.gateway.config.JwtProperties",
+      "description": "JWT configuration properties for token generation and validation."
+    }
+  ],
+  "properties": [
+    {
+      "name": "jwt.secret",
+      "type": "java.lang.String",
+      "description": "Secret key used for signing and verifying JWT tokens. Should be changed in production.",
+      "defaultValue": "filmpire-secret-key-change-in-production"
+    },
+    {
+      "name": "jwt.expiration",
+      "type": "java.lang.Long",
+      "description": "JWT token expiration time in milliseconds.",
+      "defaultValue": 86400000
+    },
+    {
+      "name": "jwt.refresh-expiration",
+      "type": "java.lang.Long",
+      "description": "JWT refresh token expiration time in milliseconds.",
+      "defaultValue": 604800000
+    }
+  ]
+}
+

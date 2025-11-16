@@ -1,6 +1,5 @@
 package com.filmpire.gateway.util;
 
-import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,7 +26,7 @@ class JwtUtilTest {
 
     @BeforeEach
     void setUp() {
-        jwtUtil = new JwtUtil(testSecret, 86400000); // 24 hours
+        jwtUtil = new JwtUtil(testSecret);
         secretKey = Keys.hmacShaKeyFor(testSecret.getBytes(StandardCharsets.UTF_8));
     }
 

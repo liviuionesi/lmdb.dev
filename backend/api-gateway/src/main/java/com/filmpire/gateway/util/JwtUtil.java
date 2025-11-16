@@ -24,14 +24,11 @@ import java.util.List;
 public class JwtUtil {
 
     private final SecretKey secretKey;
-    private final long expiration;
 
     public JwtUtil(
-            @Value("${jwt.secret}") String secret,
-            @Value("${jwt.expiration}") long expiration
+            @Value("${jwt.secret}") String secret
     ) {
         this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
-        this.expiration = expiration;
     }
 
     /**
@@ -74,9 +71,14 @@ public class JwtUtil {
      * @param token the JWT token
      * @return list of roles
      */
-    @SuppressWarnings("unchecked")
     public List<String> extractRoles(String token) {
-        return extractAllClaims(token).get("roles", List.class);
+        Object rolesObj = extractAllClaims(token).get("roles");
+        if (rolesObj instanceof List<?> rolesList) {
+            return rolesList.stream()
+                    .map(obj -> obj instanceof String str ? str : String.valueOf(obj))
+                    .toList();
+        }
+        return List.of();
     }
 
     /**

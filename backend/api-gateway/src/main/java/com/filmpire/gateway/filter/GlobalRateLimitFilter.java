@@ -12,6 +12,8 @@ import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
+import java.util.Objects;
+import java.util.Optional;
 
 /**
  * Global rate limiting filter to prevent DDoS attacks.
@@ -38,6 +40,7 @@ public class GlobalRateLimitFilter implements GlobalFilter, Ordered {
     // Global rate limit: 100 requests per second per IP
     private static final long GLOBAL_LIMIT = 100;
     private static final String REDIS_KEY_PREFIX = "global-rate-limit:";
+    private static final Optional<Duration> EXPIRE_DURATION = Optional.of(Duration.ofSeconds(1L));
 
     /**
      * Filters requests to enforce global rate limiting
@@ -67,7 +70,10 @@ public class GlobalRateLimitFilter implements GlobalFilter, Ordered {
                 .flatMap(count -> {
                     // Set expiration on first increment
                     if (count == 1) {
-                        redisTemplate.expire(redisKey, Duration.ofSeconds(1)).subscribe();
+                        Duration expireDuration = Objects.requireNonNull(
+                                EXPIRE_DURATION.orElseGet(() -> Duration.ofSeconds(1L)),
+                                "Expire duration must not be null");
+                        redisTemplate.expire(redisKey, expireDuration).subscribe();
                     }
 
                     // Check if limit exceeded
@@ -121,10 +127,14 @@ public class GlobalRateLimitFilter implements GlobalFilter, Ordered {
         }
 
         // Fallback to remote address
-        return exchange.getRequest()
-                .getRemoteAddress()
-                .getAddress()
-                .getHostAddress();
+        var remoteAddress = exchange.getRequest().getRemoteAddress();
+        if (remoteAddress != null && remoteAddress.getAddress() != null) {
+            return remoteAddress.getAddress().getHostAddress();
+        }
+
+        // Fallback to unknown if remote address cannot be determined
+        log.warn("Unable to determine client IP address, using fallback");
+        return "0.0.0.0";
     }
 
     /**

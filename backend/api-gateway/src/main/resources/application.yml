@@ -1,7 +1,7 @@
 server:
   port: 8080
   # Additional request size and connection limits
-  max-http-header-size: 16KB  # Maximum HTTP header size
+  max-http-request-header-size: 16KB  # Maximum HTTP header size
   netty:
     connection-timeout: 5s    # Connection timeout for Netty
     idle-timeout: 30s         # Idle connection timeout
@@ -11,8 +11,9 @@ spring:
     name: api-gateway
   
   # Request size limits to prevent large payload attacks
-  codec:
-    max-in-memory-size: 10MB  # Maximum request body size
+  http:
+    codecs:
+      max-in-memory-size: 10MB  # Maximum request body size
   
   cloud:
     gateway:
@@ -237,12 +238,13 @@ management:
       show-details: always
       show-components: always
     gateway:
-      enabled: true
+      access: unrestricted
   metrics:
     tags:
       application: ${spring.application.name}
-    export:
-      prometheus:
+  prometheus:
+    metrics:
+      export:
         enabled: true
   health:
     circuitbreakers:
@@ -254,10 +256,10 @@ management:
 logging:
   level:
     root: INFO
-    com.filmpire.gateway: DEBUG
-    org.springframework.cloud.gateway: DEBUG
-    org.springframework.security: DEBUG
-    io.github.resilience4j: DEBUG
+    "[com.filmpire.gateway]": DEBUG
+    "[org.springframework.cloud.gateway]": DEBUG
+    "[org.springframework.security]": DEBUG
+    "[io.github.resilience4j]": DEBUG
   pattern:
     console: '%d{yyyy-MM-dd HH:mm:ss} - %msg%n'
     file: '%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n'
