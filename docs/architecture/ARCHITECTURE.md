@@ -41,9 +41,9 @@ This document outlines the complete architecture for Filmpire, a production-read
 | Gradle | 9.2.0 | SDKMAN | Build tool |
 | Spring Cloud | 2025.0.0 | Gradle | Microservices infrastructure |
 | Spring AI | 1.0.0-SNAPSHOT | Gradle | AI/ML integration |
-| PostgreSQL | 18.1 | Docker/Podman | Relational database |
-| MongoDB | 8.2 | Docker/Podman | Document database |
-| Redis | 8.2 | Docker/Podman | Caching layer |
+| PostgreSQL | 17-alpine | Docker/Podman | Relational database |
+| MongoDB | 8.0 | Docker/Podman | Document database |
+| Redis | 7.4-alpine | Docker/Podman | Caching layer |
 | gRPC | 1.76.0 | Gradle | Service communication |
 | JWT (jjwt) | 0.13.0 | Gradle | Authentication |
 | MapStruct | 1.6.3 | Gradle | DTO mapping |
@@ -53,7 +53,7 @@ This document outlines the complete architecture for Filmpire, a production-read
 | Mockito | 5.19.0 | Gradle | Mocking framework |
 | TestContainers | 1.21.2 | Gradle | Integration testing |
 | Springdoc OpenAPI | 2.8.14 | Gradle | API documentation |
-| JaCoCo | 0.8.11 | Gradle | Code coverage |
+| JaCoCo | 0.8.14 | Gradle | Code coverage |
 
 ### 1.2 Frontend Web (Exact Versions)
 
@@ -986,7 +986,8 @@ sdk install java 25-open
 sdk default java 25-open
 java -version
 
-sdk install gradle 8.12
+# Gradle is managed via wrapper (gradle-9.2.0)
+# No need to install separately
 gradle -version
 
 # Step 3: Install NVM and Node.js 22
@@ -1246,7 +1247,7 @@ minioVersion=8.5.7
 junitVersion=5.11.3
 mockitoVersion=5.19.0
 testcontainersVersion=1.21.2
-jacocoVersion=0.8.11
+jacocoVersion=0.8.14
 ```
 
 **Frontend: `package.json`**
@@ -1536,11 +1537,11 @@ class MovieServiceTest {
 class MovieServiceIntegrationTest {
     
     @Container
-    static MongoDBContainer mongodb = new MongoDBContainer("mongo:7.0")
+    static MongoDBContainer mongodb = new MongoDBContainer("mongo:8.0")
         .withExposedPorts(27017);
     
     @Container
-    static GenericContainer<?> redis = new GenericContainer<>("redis:7.2-alpine")
+    static GenericContainer<?> redis = new GenericContainer<>("redis:7.4-alpine")
         .withExposedPorts(6379);
     
     @DynamicPropertySource

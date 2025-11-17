@@ -159,6 +159,61 @@ services:
       start_period: 60s
     restart: unless-stopped
 
+  # Config Service (Spring Cloud Config Server)
+  config-service:
+    build:
+      context: ../..
+      dockerfile: backend/config-service/Dockerfile
+    container_name: filmpire-config-service
+    ports:
+      - "${CONFIG_SERVICE_PORT:-8888}:8888"
+    networks:
+      - filmpire-network
+    environment:
+      SPRING_APPLICATION_NAME: config-service
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
+      SPRING_CLOUD_CONFIG_SERVER_NATIVE_SEARCHLOCATIONS: file:/app/config
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8888/actuator/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
+  # API Gateway (Spring Cloud Gateway)
+  api-gateway:
+    build:
+      context: ../..
+      dockerfile: backend/api-gateway/Dockerfile
+    container_name: filmpire-api-gateway
+    ports:
+      - "${API_GATEWAY_PORT:-8080}:8080"
+    networks:
+      - filmpire-network
+    environment:
+      SPRING_APPLICATION_NAME: api-gateway
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis123}
+      JWT_SECRET: ${JWT_SECRET:-filmpire-secret-key-change-in-production}
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 90s
+    restart: unless-stopped
+
 volumes:
   postgres_data:
     driver: local

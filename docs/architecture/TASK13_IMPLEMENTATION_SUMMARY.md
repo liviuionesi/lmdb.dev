@@ -299,7 +299,7 @@ Configured Eureka client for service discovery:
 Created multi-stage Dockerfile:
 
 **Stage 1: Build**
-- Base image: `gradle:8.12.0-jdk25`
+- Base image: `gradle:9.2.0-jdk25`
 - Copies Gradle configuration and source code
 - Builds shared-library and api-gateway
 - Creates bootJar

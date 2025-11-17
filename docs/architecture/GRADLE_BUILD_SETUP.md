@@ -38,9 +38,10 @@ filmpire-microservices/
 - JJWT: 0.13.0
 - gRPC: 1.76.0
 - Springdoc OpenAPI: 2.8.14
-- TestContainers: 2.0.2
+- TestContainers: 1.21.2
 - JUnit: 5.11.3
 - Mockito: 5.19.0
+- JaCoCo: 0.8.14
 
 ## Configuration Details
 

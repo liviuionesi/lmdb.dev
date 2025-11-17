@@ -6,7 +6,7 @@ Enterprise-grade microservices platform for movie discovery and management, demo
 
 This project implements a comprehensive microservices architecture with:
 
-- **8 Backend Microservices** (Spring Boot 3.5.8, Java 25)
+- **8 Backend Microservices** (Spring Boot 3.5.8-SNAPSHOT, Java 25)
 - **2 Frontend Applications** (Next.js 16, React Native 0.76.3)
 - **Hybrid Database Strategy** (PostgreSQL + MongoDB)
 - **Spring Cloud Infrastructure** (Eureka, Config Server, API Gateway)
@@ -16,7 +16,7 @@ This project implements a comprehensive microservices architecture with:
 ## 📋 Prerequisites
 
 - **Java 25** (via SDKMAN)
-- **Gradle 8.11.1** (via SDKMAN)
+- **Gradle 9.2.0** (via Gradle Wrapper)
 - **Node.js 24.11.1 LTS** (via NVM)
 - **Docker/Podman** (for containerization)
 - **PostgreSQL 17** (via Docker)
@@ -103,9 +103,9 @@ filmpire-microservices/
 
 ### Backend
 - Java 25
-- Spring Boot 3.5.8
+- Spring Boot 3.5.8-SNAPSHOT
 - Spring Cloud 2025.0.0
-- Spring AI 1.1.0
+- Spring AI 1.0.0-SNAPSHOT
 - PostgreSQL 17
 - MongoDB 8.0
 - Redis 7.4

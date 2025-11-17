@@ -57,7 +57,7 @@ Create a multi-module microservices project structure for Filmpire with the foll
 - Spring Boot 3.5.8
 - Gradle 9.2.0
 - Spring Cloud 2025.0.0
-- Spring AI 1.1.0
+- Spring AI 1.0.0-SNAPSHOT
 - Lombok 1.18.42 (Java 25 support)
 - Node.js 24.11.1 LTS
 - Next.js 16.0.0
@@ -101,7 +101,7 @@ springdocVersion=2.8.14
 minioVersion=8.5.7
 mockitoVersion=5.19.0
 testcontainersVersion=1.21.2
-jacocoVersion=0.8.11
+jacocoVersion=0.8.14
 ```
 
 **Shared Library:**
@@ -1651,10 +1651,10 @@ class MovieServiceTest {
 class MovieServiceIntegrationTest {
     
     @Container
-    static MongoDBContainer mongodb = new MongoDBContainer("mongo:7.0");
+    static MongoDBContainer mongodb = new MongoDBContainer("mongo:8.0");
     
     @Container
-    static GenericContainer<?> redis = new GenericContainer<>("redis:7.2-alpine")
+    static GenericContainer<?> redis = new GenericContainer<>("redis:7.4-alpine")
         .withExposedPorts(6379);
     
     @DynamicPropertySource
@@ -1910,7 +1910,7 @@ services:
       retries: 5
 
   mongodb:
-    image: mongo:7.0
+    image: mongo:8.0
     container_name: filmpire-mongo
     environment:
       MONGO_INITDB_ROOT_USERNAME: admin
@@ -1923,7 +1923,7 @@ services:
       - filmpire-network
 
   redis:
-    image: redis:7.2-alpine
+    image: redis:7.4-alpine
     container_name: filmpire-redis
     ports:
       - "6379:6379"

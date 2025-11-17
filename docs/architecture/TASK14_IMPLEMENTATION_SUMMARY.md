@@ -337,7 +337,7 @@ Comprehensive README (`backend/shared-library/README.md`) includes:
 - JAR configuration
 
 **Dependencies:**
-- Spring Boot 3.5.8
+- Spring Boot 3.5.8-SNAPSHOT
 - Spring Boot Starter Validation
 - MapStruct 1.6.3
 - Lombok 1.18.42
