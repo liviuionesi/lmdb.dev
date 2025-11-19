@@ -1,0 +1,17 @@
+{
+  "rules": {
+    "java:S100": {
+      "level": "off",
+      "filePathPattern": "**/src/test/**"
+    },
+    "java:S3305": {
+      "level": "off",
+      "filePathPattern": "**/src/test/**"
+    },
+    "java:S1192": {
+      "level": "off",
+      "filePathPattern": "**/src/test/**"
+    }
+  }
+}
+

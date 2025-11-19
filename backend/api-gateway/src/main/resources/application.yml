@@ -65,7 +65,7 @@ spring:
         - id: movie-service
           uri: lb://movie-service
           predicates:
-            - Path=/api/v1/movies/**
+            - Path=/api/v1/movies/**,/api/v1/genres/**
           filters:
             - name: CircuitBreaker
               args:

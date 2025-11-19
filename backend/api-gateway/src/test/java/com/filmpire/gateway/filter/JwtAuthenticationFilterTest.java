@@ -79,18 +79,17 @@ class JwtAuthenticationFilterTest {
     })
     @DisplayName("Should allow public paths without authentication")
     @SuppressWarnings("null")
-    void filter_shouldAllowPublicPaths(@NonNull String path) {
+    void filter_shouldAllowPublicPaths(String path) {
         // Given
         MockServerHttpRequest request = Objects.requireNonNull(
                 MockServerHttpRequest.get(path).build(),
                 "Request must not be null");
         ServerWebExchange exchange = TestNullSafety.createExchange(request);
-        doReturn(Mono.empty()).when(filterChain).filter(any(ServerWebExchange.class));
+        WebFilterChain chain = TestNullSafety.requireNonNull(filterChain);
+        doReturn(Mono.empty()).when(chain).filter(any(ServerWebExchange.class));
 
         // When
-        Mono<Void> result = jwtAuthenticationFilter.filter(
-                exchange,
-                TestNullSafety.requireNonNull(filterChain));
+        Mono<Void> result = jwtAuthenticationFilter.filter(exchange, chain);
 
         // Then
         StepVerifier.create(result)
@@ -143,7 +142,7 @@ class JwtAuthenticationFilterTest {
         when(jwtUtil.extractUsername(validToken)).thenReturn("testuser");
         when(jwtUtil.extractUserId(validToken)).thenReturn("user123");
         when(jwtUtil.extractRoles(validToken)).thenReturn(Arrays.asList("USER"));
-        doReturn(Mono.empty()).when(filterChain).filter(any());
+        doReturn(Mono.empty()).when(chain).filter(any());
 
         // When
         Mono<Void> result = jwtAuthenticationFilter.filter(exchange, chain);

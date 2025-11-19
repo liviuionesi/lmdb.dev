@@ -1,0 +1,200 @@
+Excluding []
+Tasks to be executed: [task ':backend:shared-library:compileJava', task ':backend:movie-service:compileJava', task ':backend:movie-service:processResources', task ':backend:movie-service:classes', task ':backend:movie-service:compileTestJava', task ':backend:movie-service:ensurePodmanSocket', task ':backend:movie-service:processTestResources', task ':backend:movie-service:testClasses', task ':backend:shared-library:processResources', task ':backend:shared-library:classes', task ':backend:shared-library:jar', task ':backend:movie-service:test', task ':backend:movie-service:jacocoTestReport']
+Tasks that were excluded: []
+Resolve mutations for :backend:shared-library:compileJava (Thread[#1830,Execution worker Thread 2,5,main]) started.
+:backend:shared-library:compileJava (Thread[#1835,Execution worker Thread 7,5,main]) started.
+
+> Task :backend:shared-library:compileJava UP-TO-DATE
+Caching disabled for task ':backend:shared-library:compileJava' because:
+  Build cache is disabled
+Skipping task ':backend:shared-library:compileJava' as it is up-to-date.
+work action resolve main (project :backend:shared-library) (Thread[#1835,Execution worker Thread 7,5,main]) started.
+Resolve mutations for :backend:movie-service:compileJava (Thread[#1835,Execution worker Thread 7,5,main]) started.
+:backend:movie-service:compileJava (Thread[#1835,Execution worker Thread 7,5,main]) started.
+
+> Task :backend:movie-service:compileJava UP-TO-DATE
+Downloading https://repo.spring.io/snapshot/org/springframework/boot/spring-boot-starter-data-redis/3.5.8-SNAPSHOT/spring-boot-starter-data-redis-3.5.8-20251119.153706-65.jar to /home/liviu/.gradle/.tmp/gradle_download10751792659469591791bin
+Downloading https://repo.spring.io/snapshot/org/springframework/boot/spring-boot-starter-data-mongodb/3.5.8-SNAPSHOT/spring-boot-starter-data-mongodb-3.5.8-20251119.153706-65.jar to /home/liviu/.gradle/.tmp/gradle_download14038421137528416151bin
+Custom actions are attached to task ':backend:movie-service:compileJava'.
+Caching disabled for task ':backend:movie-service:compileJava' because:
+  Build cache is disabled
+Skipping task ':backend:movie-service:compileJava' as it is up-to-date.
+Resolve mutations for :backend:movie-service:processResources (Thread[#1835,Execution worker Thread 7,5,main]) started.
+:backend:movie-service:processResources (Thread[#1835,Execution worker Thread 7,5,main]) started.
+
+> Task :backend:movie-service:processResources UP-TO-DATE
+Caching disabled for task ':backend:movie-service:processResources' because:
+  Build cache is disabled
+  Not worth caching
+Skipping task ':backend:movie-service:processResources' as it is up-to-date.
+Resolve mutations for :backend:movie-service:classes (Thread[#1835,Execution worker Thread 7,5,main]) started.
+:backend:movie-service:classes (Thread[#1841,Execution worker Thread 13,5,main]) started.
+
+> Task :backend:movie-service:classes UP-TO-DATE
+Skipping task ':backend:movie-service:classes' as it has no actions.
+Resolve mutations for :backend:movie-service:compileTestJava (Thread[#1841,Execution worker Thread 13,5,main]) started.
+:backend:movie-service:compileTestJava (Thread[#1838,Execution worker Thread 10,5,main]) started.
+
+> Task :backend:movie-service:compileTestJava UP-TO-DATE
+Custom actions are attached to task ':backend:movie-service:compileTestJava'.
+Caching disabled for task ':backend:movie-service:compileTestJava' because:
+  Build cache is disabled
+Skipping task ':backend:movie-service:compileTestJava' as it is up-to-date.
+Resolve mutations for :backend:movie-service:ensurePodmanSocket (Thread[#1838,Execution worker Thread 10,5,main]) started.
+:backend:movie-service:ensurePodmanSocket (Thread[#1839,Execution worker Thread 11,5,main]) started.
+
+> Task :backend:movie-service:ensurePodmanSocket
+Caching disabled for task ':backend:movie-service:ensurePodmanSocket' because:
+  Build cache is disabled
+Task ':backend:movie-service:ensurePodmanSocket' is not up-to-date because:
+  Task has not declared any outputs despite executing actions.
+Podman socket is already active
+Podman socket verified and ready for TestContainers at /run/user/1000/podman/podman.sock
+Resolve mutations for :backend:movie-service:processTestResources (Thread[#1839,Execution worker Thread 11,5,main]) started.
+:backend:movie-service:processTestResources (Thread[#1839,Execution worker Thread 11,5,main]) started.
+
+> Task :backend:movie-service:processTestResources UP-TO-DATE
+Caching disabled for task ':backend:movie-service:processTestResources' because:
+  Build cache is disabled
+  Not worth caching
+Skipping task ':backend:movie-service:processTestResources' as it is up-to-date.
+Resolve mutations for :backend:movie-service:testClasses (Thread[#1839,Execution worker Thread 11,5,main]) started.
+:backend:movie-service:testClasses (Thread[#1830,Execution worker Thread 2,5,main]) started.
+
+> Task :backend:movie-service:testClasses UP-TO-DATE
+Skipping task ':backend:movie-service:testClasses' as it has no actions.
+Resolve mutations for :backend:shared-library:processResources (Thread[#1830,Execution worker Thread 2,5,main]) started.
+:backend:shared-library:processResources (Thread[#1830,Execution worker Thread 2,5,main]) started.
+
+> Task :backend:shared-library:processResources UP-TO-DATE
+Caching disabled for task ':backend:shared-library:processResources' because:
+  Build cache is disabled
+  Not worth caching
+Skipping task ':backend:shared-library:processResources' as it is up-to-date.
+Resolve mutations for :backend:shared-library:classes (Thread[#1830,Execution worker Thread 2,5,main]) started.
+:backend:shared-library:classes (Thread[#1830,Execution worker Thread 2,5,main]) started.
+
+> Task :backend:shared-library:classes UP-TO-DATE
+Skipping task ':backend:shared-library:classes' as it has no actions.
+Resolve mutations for :backend:shared-library:jar (Thread[#1830,Execution worker Thread 2,5,main]) started.
+:backend:shared-library:jar (Thread[#1830,Execution worker Thread 2,5,main]) started.
+
+> Task :backend:shared-library:jar UP-TO-DATE
+Caching disabled for task ':backend:shared-library:jar' because:
+  Build cache is disabled
+  Not worth caching
+Skipping task ':backend:shared-library:jar' as it is up-to-date.
+work action resolve shared-library-1.0.0-SNAPSHOT.jar (project :backend:shared-library) (Thread[#1830,Execution worker Thread 2,5,main]) started.
+Resolve mutations for :backend:movie-service:test (Thread[#1830,Execution worker Thread 2,5,main]) started.
+:backend:movie-service:test (Thread[#1830,Execution worker Thread 2,5,main]) started.
+Gradle Test Executor 8 started executing tests.
+
+> Task :backend:movie-service:test
+Custom actions are attached to task ':backend:movie-service:test'.
+Caching disabled for task ':backend:movie-service:test' because:
+  Build cache is disabled
+Task ':backend:movie-service:test' is not up-to-date because:
+  Task has failed previously.
+Starting process 'Gradle Test Executor 8'. Working directory: /home/liviu/Desktop/filmpire-microservices/backend/movie-service Command: /home/liviu/.sdkman/candidates/java/25-open/bin/java -Dorg.gradle.internal.worker.tmpdir=/home/liviu/Desktop/filmpire-microservices/backend/movie-service/build/tmp/test/work -javaagent:/home/liviu/Desktop/filmpire-microservices/backend/movie-service/build/tmp/.cache/expanded/zip_27729b840c216bdc69a9315e04b27ab1/jacocoagent.jar=destfile=build/jacoco/test.exec,append=true,inclnolocationclasses=false,dumponexit=true,output=file,jmx=false @/home/liviu/.gradle/.tmp/gradle-worker-classpath16526450778846932331txt -Xmx512m -Dfile.encoding=UTF-8 -Duser.country=US -Duser.language=en -Duser.variant -ea worker.org.gradle.process.internal.worker.GradleWorkerMain 'Gradle Test Executor 8'
+Successfully started process 'Gradle Test Executor 8'
+
+End-to-End Integration Tests > E2E: Complete movie discovery workflow STARTED
+
+End-to-End Integration Tests > E2E: Complete movie discovery workflow FAILED
+    org.junit.jupiter.api.extension.ParameterResolutionException: Failed to resolve parameter [org.springframework.test.web.servlet.MockMvc mockMvc] in constructor [com.filmpire.movie.integration.EndToEndIntegrationTest(org.springframework.test.web.servlet.MockMvc,com.filmpire.movie.repository.MovieRepository)]: Failed to load ApplicationContext for [WebMergedContextConfiguration@7507a7ae testClass = com.filmpire.movie.integration.EndToEndIntegrationTest, locations = [], classes = [com.filmpire.movie.MovieServiceApplication], contextInitializerClasses = [], activeProfiles = [], propertySourceDescriptors = [], propertySourceProperties = ["spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration,org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration", "org.springframework.boot.test.context.SpringBootTestContextBootstrapper=true", "server.port=0"], contextCustomizers = [org.springframework.boot.test.autoconfigure.OnFailureConditionReportContextCustomizerFactory$OnFailureConditionReportContextCustomizer@55e42449, org.springframework.boot.test.autoconfigure.actuate.observability.ObservabilityContextCustomizerFactory$DisableObservabilityContextCustomizer@1f, org.springframework.boot.test.autoconfigure.properties.PropertyMappingContextCustomizer@4b3fa0b3, org.springframework.boot.test.autoconfigure.web.servlet.WebDriverContextCustomizer@5e5af8e1, [ImportsContextCustomizer@7ad71646 key = [org.springframework.boot.autoconfigure.security.oauth2.client.servlet.OAuth2ClientWebSecurityAutoConfiguration, org.springframework.boot.autoconfigure.security.saml2.Saml2RelyingPartyAutoConfiguration, org.springframework.boot.test.autoconfigure.web.servlet.MockMvcSecurityConfiguration, com.filmpire.movie.config.TmdbClientTestStubConfig, org.springframework.boot.test.autoconfigure.web.servlet.MockMvcWebClientAutoConfiguration, org.springframework.boot.test.autoconfigure.web.reactive.WebTestClientAutoConfiguration, org.springframework.boot.test.autoconfigure.web.servlet.MockMvcWebDriverAutoConfiguration, org.springframework.boot.test.autoconfigure.web.servlet.MockMvcAutoConfiguration, org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration, org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration, org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration, org.springframework.boot.autoconfigure.security.oauth2.resource.servlet.OAuth2ResourceServerAutoConfiguration, org.springframework.boot.autoconfigure.security.oauth2.client.OAuth2ClientAutoConfiguration]], org.springframework.boot.test.context.filter.ExcludeFilterContextCustomizer@748d2277, org.springframework.boot.test.json.DuplicateJsonObjectContextCustomizerFactory$DuplicateJsonObjectContextCustomizer@2f4c2cd4, org.springframework.boot.test.mock.mockito.MockitoContextCustomizer@0, org.springframework.boot.test.web.client.TestRestTemplateContextCustomizer@eac3a26, org.springframework.boot.test.web.reactor.netty.DisableReactorResourceFactoryGlobalResourcesContextCustomizerFactory$DisableReactorResourceFactoryGlobalResourcesContextCustomizerCustomizer@74170687, org.springframework.test.context.support.DynamicPropertiesContextCustomizer@8c8ed12d, org.springframework.boot.test.context.SpringBootTestAnnotation@af4c5e58], resourceBasePath = "src/main/webapp", contextLoader = org.springframework.boot.test.context.SpringBootContextLoader, parent = null]
+        at java.base@25/java.util.Optional.orElseGet(Optional.java:364)
+        at java.base@25/java.util.ArrayList.forEach(ArrayList.java:1604)
+        at java.base@25/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+        Caused by:
+        java.lang.IllegalStateException: Failed to load ApplicationContext for [WebMergedContextConfiguration@7507a7ae testClass = com.filmpire.movie.integration.EndToEndIntegrationTest, locations = [], classes = [com.filmpire.movie.MovieServiceApplication], contextInitializerClasses = [], activeProfiles = [], propertySourceDescriptors = [], propertySourceProperties = ["spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration,org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration", "org.springframework.boot.test.context.SpringBootTestContextBootstrapper=true", "server.port=0"], contextCustomizers = [org.springframework.boot.test.autoconfigure.OnFailureConditionReportContextCustomizerFactory$OnFailureConditionReportContextCustomizer@55e42449, org.springframework.boot.test.autoconfigure.actuate.observability.ObservabilityContextCustomizerFactory$DisableObservabilityContextCustomizer@1f, org.springframework.boot.test.autoconfigure.properties.PropertyMappingContextCustomizer@4b3fa0b3, org.springframework.boot.test.autoconfigure.web.servlet.WebDriverContextCustomizer@5e5af8e1, [ImportsContextCustomizer@7ad71646 key = [org.springframework.boot.autoconfigure.security.oauth2.client.servlet.OAuth2ClientWebSecurityAutoConfiguration, org.springframework.boot.autoconfigure.security.saml2.Saml2RelyingPartyAutoConfiguration, org.springframework.boot.test.autoconfigure.web.servlet.MockMvcSecurityConfiguration, com.filmpire.movie.config.TmdbClientTestStubConfig, org.springframework.boot.test.autoconfigure.web.servlet.MockMvcWebClientAutoConfiguration, org.springframework.boot.test.autoconfigure.web.reactive.WebTestClientAutoConfiguration, org.springframework.boot.test.autoconfigure.web.servlet.MockMvcWebDriverAutoConfiguration, org.springframework.boot.test.autoconfigure.web.servlet.MockMvcAutoConfiguration, org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration, org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration, org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration, org.springframework.boot.autoconfigure.security.oauth2.resource.servlet.OAuth2ResourceServerAutoConfiguration, org.springframework.boot.autoconfigure.security.oauth2.client.OAuth2ClientAutoConfiguration]], org.springframework.boot.test.context.filter.ExcludeFilterContextCustomizer@748d2277, org.springframework.boot.test.json.DuplicateJsonObjectContextCustomizerFactory$DuplicateJsonObjectContextCustomizer@2f4c2cd4, org.springframework.boot.test.mock.mockito.MockitoContextCustomizer@0, org.springframework.boot.test.web.client.TestRestTemplateContextCustomizer@eac3a26, org.springframework.boot.test.web.reactor.netty.DisableReactorResourceFactoryGlobalResourcesContextCustomizerFactory$DisableReactorResourceFactoryGlobalResourcesContextCustomizerCustomizer@74170687, org.springframework.test.context.support.DynamicPropertiesContextCustomizer@8c8ed12d, org.springframework.boot.test.context.SpringBootTestAnnotation@af4c5e58], resourceBasePath = "src/main/webapp", contextLoader = org.springframework.boot.test.context.SpringBootContextLoader, parent = null]
+            at org.springframework.test.context.cache.DefaultCacheAwareContextLoaderDelegate.loadContext(DefaultCacheAwareContextLoaderDelegate.java:180)
+            at org.springframework.test.context.support.DefaultTestContext.getApplicationContext(DefaultTestContext.java:130)
+            at org.springframework.test.context.junit.jupiter.SpringExtension.getApplicationContext(SpringExtension.java:351)
+            at org.springframework.test.context.junit.jupiter.SpringExtension.resolveParameter(SpringExtension.java:337)
+            ... 3 more
+
+            Caused by:
+            org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'genreController' defined in file [/home/liviu/Desktop/filmpire-microservices/backend/movie-service/build/classes/java/main/com/filmpire/movie/controller/GenreController.class]: Unsatisfied dependency expressed through constructor parameter 0: Error creating bean with name 'movieService' defined in file [/home/liviu/Desktop/filmpire-microservices/backend/movie-service/build/classes/java/main/com/filmpire/movie/service/MovieService.class]: Unsatisfied dependency expressed through constructor parameter 1: No qualifying bean of type 'com.filmpire.movie.client.TmdbClient' available: more than one 'primary' bean found among candidates: [tmdbClientStub, com.filmpire.movie.client.TmdbClient]
+                at app//org.springframework.beans.factory.support.ConstructorResolver.createArgumentArray(ConstructorResolver.java:804)
+                at app//org.springframework.beans.factory.support.ConstructorResolver.autowireConstructor(ConstructorResolver.java:240)
+                at app//org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.autowireConstructor(AbstractAutowireCapableBeanFactory.java:1395)
+                at app//org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBeanInstance(AbstractAutowireCapableBeanFactory.java:1232)
+                at app//org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:569)
+                at app//org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:529)
+                at app//org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:339)
+                at app//org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:373)
+                at app//org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:337)
+                at app//org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:202)
+                at app//org.springframework.beans.factory.support.DefaultListableBeanFactory.instantiateSingleton(DefaultListableBeanFactory.java:1228)
+                at app//org.springframework.beans.factory.support.DefaultListableBeanFactory.preInstantiateSingleton(DefaultListableBeanFactory.java:1194)
+                at app//org.springframework.beans.factory.support.DefaultListableBeanFactory.preInstantiateSingletons(DefaultListableBeanFactory.java:1130)
+                at app//org.springframework.context.support.AbstractApplicationContext.finishBeanFactoryInitialization(AbstractApplicationContext.java:990)
+                at app//org.springframework.context.support.AbstractApplicationContext.refresh(AbstractApplicationContext.java:627)
+                at app//org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.refresh(ServletWebServerApplicationContext.java:146)
+                at app//org.springframework.boot.SpringApplication.refresh(SpringApplication.java:752)
+                at app//org.springframework.boot.SpringApplication.refreshContext(SpringApplication.java:439)
+                at app//org.springframework.boot.SpringApplication.run(SpringApplication.java:318)
+                at app//org.springframework.boot.test.context.SpringBootContextLoader.lambda$loadContext$3(SpringBootContextLoader.java:144)
+                at app//org.springframework.util.function.ThrowingSupplier.get(ThrowingSupplier.java:58)
+                at app//org.springframework.util.function.ThrowingSupplier.get(ThrowingSupplier.java:46)
+                at app//org.springframework.boot.SpringApplication.withHook(SpringApplication.java:1461)
+                at app//org.springframework.boot.test.context.SpringBootContextLoader$ContextLoaderHook.run(SpringBootContextLoader.java:563)
+                at app//org.springframework.boot.test.context.SpringBootContextLoader.loadContext(SpringBootContextLoader.java:144)
+                at app//org.springframework.boot.test.context.SpringBootContextLoader.loadContext(SpringBootContextLoader.java:110)
+                at app//org.springframework.test.context.cache.DefaultCacheAwareContextLoaderDelegate.loadContextInternal(DefaultCacheAwareContextLoaderDelegate.java:225)
+                at app//org.springframework.test.context.cache.DefaultCacheAwareContextLoaderDelegate.loadContext(DefaultCacheAwareContextLoaderDelegate.java:152)
+                ... 6 more
+
+                Caused by:
+                org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'movieService' defined in file [/home/liviu/Desktop/filmpire-microservices/backend/movie-service/build/classes/java/main/com/filmpire/movie/service/MovieService.class]: Unsatisfied dependency expressed through constructor parameter 1: No qualifying bean of type 'com.filmpire.movie.client.TmdbClient' available: more than one 'primary' bean found among candidates: [tmdbClientStub, com.filmpire.movie.client.TmdbClient]
+                    at app//org.springframework.beans.factory.support.ConstructorResolver.createArgumentArray(ConstructorResolver.java:804)
+                    at app//org.springframework.beans.factory.support.ConstructorResolver.autowireConstructor(ConstructorResolver.java:240)
+                    at app//org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.autowireConstructor(AbstractAutowireCapableBeanFactory.java:1395)
+                    at app//org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBeanInstance(AbstractAutowireCapableBeanFactory.java:1232)
+                    at app//org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:569)
+                    at app//org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:529)
+                    at app//org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:339)
+                    at app//org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:373)
+                    at app//org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:337)
+                    at app//org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:202)
+                    at app//org.springframework.beans.factory.support.DefaultListableBeanFactory.doResolveDependency(DefaultListableBeanFactory.java:1708)
+                    at app//org.springframework.beans.factory.support.DefaultListableBeanFactory.resolveDependency(DefaultListableBeanFactory.java:1653)
+                    at app//org.springframework.beans.factory.support.ConstructorResolver.resolveAutowiredArgument(ConstructorResolver.java:913)
+                    at app//org.springframework.beans.factory.support.ConstructorResolver.createArgumentArray(ConstructorResolver.java:791)
+                    ... 33 more
+
+                    Caused by:
+                    org.springframework.beans.factory.NoUniqueBeanDefinitionException: No qualifying bean of type 'com.filmpire.movie.client.TmdbClient' available: more than one 'primary' bean found among candidates: [tmdbClientStub, com.filmpire.movie.client.TmdbClient]
+                        at app//org.springframework.beans.factory.support.DefaultListableBeanFactory.determinePrimaryCandidate(DefaultListableBeanFactory.java:2114)
+                        at app//org.springframework.beans.factory.support.DefaultListableBeanFactory.determineAutowireCandidate(DefaultListableBeanFactory.java:2049)
+                        at app//org.springframework.beans.factory.support.DefaultListableBeanFactory.doResolveDependency(DefaultListableBeanFactory.java:1743)
+                        at app//org.springframework.beans.factory.support.DefaultListableBeanFactory.resolveDependency(DefaultListableBeanFactory.java:1653)
+                        at app//org.springframework.beans.factory.support.ConstructorResolver.resolveAutowiredArgument(ConstructorResolver.java:913)
+                        at app//org.springframework.beans.factory.support.ConstructorResolver.createArgumentArray(ConstructorResolver.java:791)
+                        ... 46 more
+
+Gradle Test Executor 8 finished executing tests.
+
+> Task :backend:movie-service:test FAILED
+
+===============================================================
+|  Results: FAILURE (1 tests, 0 passed, 1 failed, 0 skipped)  |
+===============================================================
+
+1 test completed, 1 failed
+Finished generating test XML results (0.005 secs) into: /home/liviu/Desktop/filmpire-microservices/backend/movie-service/build/test-results/test
+Generating HTML test report...
+Finished generating test html results (0.006 secs) into: /home/liviu/Desktop/filmpire-microservices/backend/movie-service/build/reports/tests/test
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':backend:movie-service:test'.
+> There were failing tests. See the report at: file:///home/liviu/Desktop/filmpire-microservices/backend/movie-service/build/reports/tests/test/index.html
+
+* Try:
+> Run with --scan to generate a Build Scan (powered by Develocity).
+
+BUILD FAILED in 8s
+9 actionable tasks: 2 executed, 7 up-to-date

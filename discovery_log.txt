@@ -1,0 +1,60 @@
+> Task :backend:discovery-service:compileJava UP-TO-DATE
+> Task :backend:discovery-service:processResources UP-TO-DATE
+> Task :backend:discovery-service:classes UP-TO-DATE
+> Task :backend:discovery-service:resolveMainClassName UP-TO-DATE
+
+> Task :backend:discovery-service:bootRun
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::       (v3.5.8-SNAPSHOT)
+
+2025-11-19T16:30:11.435+01:00  INFO 23274 --- [discovery-service] [           main] c.f.d.DiscoveryServiceApplication        : Starting DiscoveryServiceApplication using Java 25 with PID 23274 (/home/liviu/Desktop/filmpire-microservices/backend/discovery-service/build/classes/java/main started by liviu in /home/liviu/Desktop/filmpire-microservices/backend/discovery-service)
+2025-11-19T16:30:11.437+01:00  INFO 23274 --- [discovery-service] [           main] c.f.d.DiscoveryServiceApplication        : No active profile set, falling back to 1 default profile: "default"
+2025-11-19T16:30:11.909+01:00  INFO 23274 --- [discovery-service] [           main] o.s.cloud.context.scope.GenericScope     : BeanFactory id=eae182e3-8f34-3d2b-a7ae-b0f4121f238c
+2025-11-19T16:30:12.074+01:00  INFO 23274 --- [discovery-service] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8761 (http)
+2025-11-19T16:30:12.084+01:00  INFO 23274 --- [discovery-service] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2025-11-19T16:30:12.084+01:00  INFO 23274 --- [discovery-service] [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.49]
+2025-11-19T16:30:12.113+01:00  INFO 23274 --- [discovery-service] [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2025-11-19T16:30:12.114+01:00  INFO 23274 --- [discovery-service] [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 653 ms
+2025-11-19T16:30:12.541+01:00  INFO 23274 --- [discovery-service] [           main] c.n.d.provider.DiscoveryJerseyProvider   : Using JSON encoding codec LegacyJacksonJson
+2025-11-19T16:30:12.541+01:00  INFO 23274 --- [discovery-service] [           main] c.n.d.provider.DiscoveryJerseyProvider   : Using JSON decoding codec LegacyJacksonJson
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by com.thoughtworks.xstream.converters.reflection.SunUnsafeReflectionProvider (file:/home/liviu/.gradle/caches/modules-2/files-2.1/com.thoughtworks.xstream/xstream/1.4.20/e2315b8b2e95e9f21697833c8e56cdd9c98a5ee/xstream-1.4.20.jar)
+WARNING: Please consider reporting this to the maintainers of class com.thoughtworks.xstream.converters.reflection.SunUnsafeReflectionProvider
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+2025-11-19T16:30:12.672+01:00  INFO 23274 --- [discovery-service] [           main] c.n.d.provider.DiscoveryJerseyProvider   : Using XML encoding codec XStreamXml
+2025-11-19T16:30:12.672+01:00  INFO 23274 --- [discovery-service] [           main] c.n.d.provider.DiscoveryJerseyProvider   : Using XML decoding codec XStreamXml
+2025-11-19T16:30:12.757+01:00  INFO 23274 --- [discovery-service] [           main] o.s.v.b.OptionalValidatorFactoryBean     : Failed to set up a Bean Validation provider: jakarta.validation.NoProviderFoundException: Unable to create a Configuration, because no Jakarta Bean Validation provider could be found. Add a provider like Hibernate Validator (RI) to your classpath.
+2025-11-19T16:30:13.086+01:00  WARN 23274 --- [discovery-service] [           main] iguration$LoadBalancerCaffeineWarnLogger : Spring Cloud LoadBalancer is currently working with the default cache. While this cache implementation is useful for development and tests, it's recommended to use Caffeine cache in production.You can switch to using Caffeine cache, by adding it and org.springframework.cache.caffeine.CaffeineCacheManager to the classpath.
+2025-11-19T16:30:13.098+01:00  INFO 23274 --- [discovery-service] [           main] o.s.c.n.eureka.InstanceInfoFactory       : Setting initial instance status as: STARTING
+2025-11-19T16:30:13.109+01:00  INFO 23274 --- [discovery-service] [           main] com.netflix.discovery.DiscoveryClient    : Initializing Eureka in region us-east-1
+2025-11-19T16:30:13.109+01:00  INFO 23274 --- [discovery-service] [           main] com.netflix.discovery.DiscoveryClient    : Client configured to neither register nor query for data.
+2025-11-19T16:30:13.110+01:00  INFO 23274 --- [discovery-service] [           main] com.netflix.discovery.DiscoveryClient    : Discovery Client initialized at timestamp 1763566213110 with initial instances count: 0
+2025-11-19T16:30:13.130+01:00  INFO 23274 --- [discovery-service] [           main] c.n.eureka.DefaultEurekaServerContext    : Initializing ...
+2025-11-19T16:30:13.131+01:00  WARN 23274 --- [discovery-service] [           main] c.n.eureka.cluster.PeerEurekaNodes       : The replica size seems to be empty. Check the route 53 DNS Registry
+2025-11-19T16:30:13.136+01:00  INFO 23274 --- [discovery-service] [           main] c.n.e.registry.AbstractInstanceRegistry  : Finished initializing remote region registries. All known remote regions: []
+2025-11-19T16:30:13.136+01:00  INFO 23274 --- [discovery-service] [           main] c.n.eureka.DefaultEurekaServerContext    : Initialized
+2025-11-19T16:30:13.143+01:00  INFO 23274 --- [discovery-service] [           main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 3 endpoints beneath base path '/actuator'
+2025-11-19T16:30:13.174+01:00  INFO 23274 --- [discovery-service] [           main] o.s.c.n.e.s.EurekaServiceRegistry        : Registering application DISCOVERY-SERVICE with eureka with status UP
+2025-11-19T16:30:13.179+01:00  INFO 23274 --- [discovery-service] [       Thread-9] o.s.c.n.e.server.EurekaServerBootstrap   : isAws returned false
+2025-11-19T16:30:13.180+01:00  INFO 23274 --- [discovery-service] [       Thread-9] o.s.c.n.e.server.EurekaServerBootstrap   : Initialized server context
+2025-11-19T16:30:13.180+01:00  INFO 23274 --- [discovery-service] [       Thread-9] c.n.e.r.PeerAwareInstanceRegistryImpl    : Got 1 instances from neighboring DS node
+2025-11-19T16:30:13.180+01:00  INFO 23274 --- [discovery-service] [       Thread-9] c.n.e.r.PeerAwareInstanceRegistryImpl    : Renew threshold is: 1
+2025-11-19T16:30:13.180+01:00  INFO 23274 --- [discovery-service] [       Thread-9] c.n.e.r.PeerAwareInstanceRegistryImpl    : Changing status to UP
+2025-11-19T16:30:13.181+01:00  INFO 23274 --- [discovery-service] [       Thread-9] e.s.EurekaServerInitializerConfiguration : Started Eureka Server
+2025-11-19T16:30:13.183+01:00  INFO 23274 --- [discovery-service] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8761 (http) with context path '/'
+2025-11-19T16:30:13.184+01:00  INFO 23274 --- [discovery-service] [           main] .s.c.n.e.s.EurekaAutoServiceRegistration : Updating port to 8761
+2025-11-19T16:30:13.194+01:00  INFO 23274 --- [discovery-service] [           main] c.f.d.DiscoveryServiceApplication        : Started DiscoveryServiceApplication in 2.0 seconds (process running for 2.273)
+2025-11-19T16:30:28.180+01:00  INFO 23274 --- [discovery-service] [a-EvictionTimer] c.n.e.registry.AbstractInstanceRegistry  : Running the evict task with compensationTime 0ms
+2025-11-19T16:30:43.180+01:00  INFO 23274 --- [discovery-service] [a-EvictionTimer] c.n.e.registry.AbstractInstanceRegistry  : Running the evict task with compensationTime 0ms
+2025-11-19T16:30:47.886+01:00  INFO 23274 --- [discovery-service] [nio-8761-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2025-11-19T16:30:47.886+01:00  INFO 23274 --- [discovery-service] [nio-8761-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2025-11-19T16:30:47.887+01:00  INFO 23274 --- [discovery-service] [nio-8761-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 1 ms
+2025-11-19T16:30:48.038+01:00  INFO 23274 --- [discovery-service] [nio-8761-exec-2] c.n.e.registry.AbstractInstanceRegistry  : Registered instance CONFIG-SERVICE/INSPIRON:config-service:8888 with status UP (replication=false)
+2025-11-19T16:30:58.180+01:00  INFO 23274 --- [discovery-service] [a-EvictionTimer] c.n.e.registry.AbstractInstanceRegistry  : Running the evict task with compensationTime 0ms

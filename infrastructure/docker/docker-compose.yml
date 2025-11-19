@@ -214,6 +214,40 @@ services:
       start_period: 90s
     restart: unless-stopped
 
+  # Movie Service - Movie Discovery and Search
+  movie-service:
+    build:
+      context: ../..
+      dockerfile: backend/movie-service/Dockerfile
+    container_name: filmpire-movie-service
+    ports:
+      - "${MOVIE_SERVICE_PORT:-8081}:8081"
+    networks:
+      - filmpire-network
+    environment:
+      SPRING_APPLICATION_NAME: movie-service
+      SPRING_PROFILES_ACTIVE: prod
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
+      MONGODB_URI: mongodb://${MONGO_ROOT_USER:-admin}:${MONGO_ROOT_PASSWORD:-admin123}@mongodb:27017/filmpire?authSource=admin
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis123}
+      TMDB_API_KEY: ${TMDB_API_KEY}
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8081/actuator/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 90s
+    restart: unless-stopped
+
 volumes:
   postgres_data:
     driver: local

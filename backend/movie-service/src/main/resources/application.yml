@@ -4,32 +4,124 @@ server:
 spring:
   application:
     name: movie-service
+  
+  # Spring Cloud Config
+  config:
+    import: optional:configserver:http://localhost:8888
+  
+  # MongoDB Configuration
   data:
     mongodb:
-      uri: mongodb://admin:admin123@localhost:27017/filmpire?authSource=admin
+      uri: ${MONGODB_URI:mongodb://admin:admin123@localhost:27017/filmpire?authSource=admin}
       database: filmpire
+  
+  # Redis Configuration
   cache:
     type: redis
     redis:
-      time-to-live: 3600000
+      time-to-live: 300000  # 5 minutes (300,000 ms)
   redis:
-    host: localhost
-    port: 6379
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+    password: ${REDIS_PASSWORD:redis123}
+    timeout: 2000ms
+    lettuce:
+      pool:
+        max-active: 8
+        max-idle: 8
+        min-idle: 0
 
+# TMDB API Configuration
+tmdb:
+  api:
+    key: ${TMDB_API_KEY:}
+    base-url: https://api.themoviedb.org/3
+
+# Eureka Client Configuration
 eureka:
   client:
     service-url:
-      defaultZone: http://localhost:8761/eureka/
+      defaultZone: ${EUREKA_SERVER_URL:http://localhost:8761/eureka/}
+    registry-fetch-interval-seconds: 5
+    healthcheck:
+      enabled: true
+  instance:
+    prefer-ip-address: true
+    lease-renewal-interval-in-seconds: 5
+    lease-expiration-duration-in-seconds: 10
+    metadata-map:
+      zone: primary
+      version: 1.0.0
 
+# Actuator Configuration
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+  health:
+    mongo:
+      enabled: true
+    redis:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+  tracing:
+    sampling:
+      probability: 1.0  # 100% sampling for development
 
+# Logging Configuration
+logging:
+  level:
+    root: INFO
+    com.filmpire.movie: DEBUG
+    org.springframework.web: INFO
+    org.springframework.data.mongodb: DEBUG
+    org.springframework.cache: DEBUG
+    feign: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+# OpenAPI/Swagger Documentation
 springdoc:
   api-docs:
     path: /v3/api-docs
   swagger-ui:
     path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha
+  info:
+    title: Movie Service API
+    description: API for movie discovery, search, and details
+    version: 1.0.0
+    contact:
+      name: Filmpire Team
+      email: support@filmpire.com
 
+# Feign Client Configuration
+feign:
+  client:
+    config:
+      default:
+        connectTimeout: 5000
+        readTimeout: 10000
+        loggerLevel: BASIC
+  compression:
+    request:
+      enabled: true
+      mime-types: application/json
+    response:
+      enabled: true
+
+# Application Info
+info:
+  app:
+    name: ${spring.application.name}
+    description: Movie Service for Filmpire platform
+    version: 1.0.0
+    java-version: ${java.version}

@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.io.Serializable;
 import java.util.List;
 
 /**
@@ -19,7 +20,8 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class PageResponse<T> {
+public class PageResponse<T> implements Serializable {
+    private static final long serialVersionUID = 1L;
 
     /**
      * List of items in the current page
@@ -126,6 +128,7 @@ public class PageResponse<T> {
                 .build();
     }
 }
+
 
 
 

@@ -18,12 +18,14 @@ import java.util.Objects;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 /**
  * Unit tests for GlobalRateLimitFilter.
  */
 @DisplayName("GlobalRateLimitFilter Tests")
+@SuppressWarnings("null")
 class GlobalRateLimitFilterTest {
 
     private GlobalRateLimitFilter globalRateLimitFilter;
@@ -95,7 +97,6 @@ class GlobalRateLimitFilterTest {
 
     @Test
     @DisplayName("Should allow request when under rate limit")
-    @SuppressWarnings("null")
     void filter_shouldAllowRequestUnderLimit() throws Exception {
         // Given
         Field enabledField = GlobalRateLimitFilter.class.getDeclaredField("enabled");
@@ -109,7 +110,7 @@ class GlobalRateLimitFilterTest {
                 "Request must not be null");
         MockServerWebExchange exchange = MockServerWebExchange.from(request);
 
-        when(valueOperations.increment(any(String.class))).thenReturn(Mono.just(50L));
+        when(valueOperations.increment(anyString())).thenReturn(Mono.just(50L));
 
         // When
         Mono<Void> result = globalRateLimitFilter.filter(exchange, filterChain);
@@ -118,14 +119,18 @@ class GlobalRateLimitFilterTest {
         StepVerifier.create(result)
                 .verifyComplete();
         
-        assertThat(exchange.getResponse().getHeaders().getFirst("X-RateLimit-Limit")).isEqualTo("100");
-        assertThat(exchange.getResponse().getHeaders().getFirst("X-RateLimit-Remaining")).isEqualTo("50");
+        String limitHeader = Objects.requireNonNull(
+                exchange.getResponse().getHeaders().getFirst("X-RateLimit-Limit"));
+        String remainingHeader = Objects.requireNonNull(
+                exchange.getResponse().getHeaders().getFirst("X-RateLimit-Remaining"));
+        
+        assertThat(limitHeader).isEqualTo("100");
+        assertThat(remainingHeader).isEqualTo("50");
         assertThat(exchange.getResponse().getStatusCode()).isNull();
     }
 
     @Test
     @DisplayName("Should reject request when rate limit exceeded")
-    @SuppressWarnings("null")
     void filter_shouldRejectWhenLimitExceeded() throws Exception {
         // Given
         Field enabledField = GlobalRateLimitFilter.class.getDeclaredField("enabled");
@@ -139,7 +144,7 @@ class GlobalRateLimitFilterTest {
                 "Request must not be null");
         MockServerWebExchange exchange = MockServerWebExchange.from(request);
 
-        when(valueOperations.increment(any(String.class))).thenReturn(Mono.just(101L));
+        when(valueOperations.increment(anyString())).thenReturn(Mono.just(101L));
 
         // When
         Mono<Void> result = globalRateLimitFilter.filter(exchange, filterChain);
@@ -149,16 +154,23 @@ class GlobalRateLimitFilterTest {
                 .verifyComplete();
         
         assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
-        assertThat(exchange.getResponse().getHeaders().getFirst("X-RateLimit-Limit")).isEqualTo("100");
-        assertThat(exchange.getResponse().getHeaders().getFirst("X-RateLimit-Remaining")).isEqualTo("0");
-        assertThat(exchange.getResponse().getHeaders().getFirst("X-RateLimit-Reset")).isEqualTo("1");
+        
+        String limitHeader = Objects.requireNonNull(
+                exchange.getResponse().getHeaders().getFirst("X-RateLimit-Limit"));
+        String remainingHeader = Objects.requireNonNull(
+                exchange.getResponse().getHeaders().getFirst("X-RateLimit-Remaining"));
+        String resetHeader = Objects.requireNonNull(
+                exchange.getResponse().getHeaders().getFirst("X-RateLimit-Reset"));
+        
+        assertThat(limitHeader).isEqualTo("100");
+        assertThat(remainingHeader).isEqualTo("0");
+        assertThat(resetHeader).isEqualTo("1");
         
         verify(filterChain, never()).filter(any());
     }
 
     @Test
     @DisplayName("Should handle Redis errors gracefully")
-    @SuppressWarnings("null")
     void filter_shouldHandleRedisErrors() throws Exception {
         // Given
         Field enabledField = GlobalRateLimitFilter.class.getDeclaredField("enabled");
@@ -172,7 +184,7 @@ class GlobalRateLimitFilterTest {
                 "Request must not be null");
         MockServerWebExchange exchange = MockServerWebExchange.from(request);
 
-        when(valueOperations.increment(any(String.class)))
+        when(valueOperations.increment(anyString()))
                 .thenReturn(Mono.error(new RuntimeException("Redis connection failed")));
 
         // When
@@ -187,7 +199,6 @@ class GlobalRateLimitFilterTest {
 
     @Test
     @DisplayName("Should extract client IP from X-Forwarded-For header")
-    @SuppressWarnings("null")
     void filter_shouldExtractIpFromForwardedFor() throws Exception {
         // Given
         Field enabledField = GlobalRateLimitFilter.class.getDeclaredField("enabled");
@@ -201,7 +212,7 @@ class GlobalRateLimitFilterTest {
                 "Request must not be null");
         MockServerWebExchange exchange = MockServerWebExchange.from(request);
 
-        when(valueOperations.increment(any(String.class))).thenReturn(Mono.just(1L));
+        when(valueOperations.increment(anyString())).thenReturn(Mono.just(1L));
 
         // When
         Mono<Void> result = globalRateLimitFilter.filter(exchange, filterChain);

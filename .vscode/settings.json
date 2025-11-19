@@ -1,21 +1,31 @@
 {
+  "java.test.defaultConfig": "Movie Service Tests",
+
+  "java.test.config": [
+    {
+      "name": "Movie Service Tests",
+      "testKind": "junit",
+      "workingDirectory": "${workspaceFolder}/backend/movie-service",
+      "preLaunchTask": "gradle-ensure-podman"
+    }
+  ],
+
   "java.configuration.updateBuildConfiguration": "automatic",
   "java.import.gradle.enabled": true,
   "java.import.gradle.wrapper.enabled": true,
-  "java.jdt.ls.java.home": "/home/liviu/.sdkman/candidates/java/25-open",
+  "java.import.gradle.java.home": "/home/liviu/.sdkman/candidates/java/current",
+
+  "java.jdt.ls.java.home": "/home/liviu/.sdkman/candidates/java/current",
   "java.configuration.runtimes": [
     {
       "name": "JavaSE-25",
-      "path": "/home/liviu/.sdkman/candidates/java/25-open",
+      "path": "/home/liviu/.sdkman/candidates/java/current",
       "default": true
     }
   ],
-  "files.exclude": {
-    "**/bin": true,
-    "**/build": true,
-    "**/.gradle": true,
-    "**/.idea": true,
-    "**/*.class": true
-  }
-}
 
+  "java.test.editor.enableShortcuts": true,
+  "java.test.log.level": "info",
+  "java.format.settings.url": ".vscode/java-formatter.xml",
+  "java.compile.nullAnalysis.mode": "automatic"
+}

@@ -56,6 +56,7 @@ public class SecurityConfig {
                         
                         // Public GET endpoints (read-only access)
                         .pathMatchers(HttpMethod.GET, "/api/v1/movies/**").permitAll()
+                        .pathMatchers(HttpMethod.GET, "/api/v1/genres/**").permitAll()
                         .pathMatchers(HttpMethod.GET, "/api/v1/actors/**").permitAll()
                         
                         // Admin endpoints (require authentication - should add role check in production)

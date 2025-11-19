@@ -1,34 +1,79 @@
-# Movie Service specific configuration
+# Movie Service Configuration
+# This file is served by Spring Cloud Config Server
+
+# Common settings for all profiles
+tmdb:
+  api:
+    base-url: https://api.themoviedb.org/3
 
 spring:
-  application:
-    name: movie-service
-  data:
-    mongodb:
-      uri: ${MONGODB_URI:mongodb://localhost:27017/filmpire}
-      database: ${MONGODB_DATABASE:filmpire}
   cache:
-    type: redis
+    cache-names:
+      - movies
+      - movieLists
+      - movieVideos
+      - movieCredits
+      - genres
     redis:
-      time-to-live: 3600000
-  redis:
-    host: ${REDIS_HOST:localhost}
-    port: ${REDIS_PORT:6379}
-    password: ${REDIS_PASSWORD:}
+      time-to-live: 300000  # 5 minutes
 
-# Movie service specific settings
-movie:
-  cache:
-    ttl: 3600
-  pagination:
-    default-size: 20
-    max-size: 100
-
-eureka:
+feign:
   client:
-    service-url:
-      defaultZone: http://localhost:8761/eureka/
-  instance:
-    prefer-ip-address: true
-    lease-renewal-interval-in-seconds: 30
+    config:
+      tmdb-client:
+        connectTimeout: 5000
+        readTimeout: 10000
+        loggerLevel: BASIC
 
+logging:
+  level:
+    com.filmpire.movie: DEBUG
+
+---
+# Development Profile
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+tmdb:
+  api:
+    # TMDB API key for development
+    key: ${TMDB_API_KEY:ae8fa6e23866cb34a49337b233547834}
+
+mongodb:
+  uri: mongodb://admin:admin123@localhost:27017/filmpire?authSource=admin
+
+redis:
+  host: localhost
+  port: 6379
+  password: redis123
+
+logging:
+  level:
+    com.filmpire.movie: DEBUG
+    feign: DEBUG
+
+---
+# Production Profile
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+tmdb:
+  api:
+    key: ${TMDB_API_KEY:}  # Must be set via environment variable
+
+mongodb:
+  uri: ${MONGODB_URI:}  # Must be set via environment variable
+
+redis:
+  host: ${REDIS_HOST:}  # Must be set via environment variable
+  port: ${REDIS_PORT:6379}
+  password: ${REDIS_PASSWORD:}  # Must be set via environment variable
+
+logging:
+  level:
+    com.filmpire.movie: INFO
+    feign: INFO

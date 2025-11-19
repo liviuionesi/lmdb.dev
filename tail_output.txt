@@ -1,0 +1,20 @@
+> Task :backend:media-service:test NO-SOURCE
+> Task :backend:media-service:jacocoTestReport SKIPPED
+> Task :backend:movie-service:compileJava UP-TO-DATE
+> Task :backend:movie-service:processResources UP-TO-DATE
+> Task :backend:movie-service:classes UP-TO-DATE
+> Task :backend:discovery-service:jacocoTestReport
+> Task :backend:movie-service:compileTestJava
+
+> Task :backend:movie-service:ensurePodmanSocket
+Podman socket is not active (status: inactive). Starting it...
+Podman socket started successfully
+Podman socket verified and ready for TestContainers at /run/user/1000/podman/podman.sock
+
+> Task :backend:movie-service:processTestResources
+> Task :backend:movie-service:testClasses
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::allocateMemory has been called by io.netty.util.internal.PlatformDependent0$2 (file:/home/liviu/.gradle/caches/modules-2/files-2.1/io.netty/netty-common/4.1.128.Final/da61c7f6318a1a1170e5f2f4daa45657bc9be423/netty-common-4.1.128.Final.jar)
+WARNING: Please consider reporting this to the maintainers of class io.netty.util.internal.PlatformDependent0$2
+WARNING: sun.misc.Unsafe::allocateMemory will be removed in a future release
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
