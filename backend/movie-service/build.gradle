@@ -1,4 +1,5 @@
 plugins {
+    id 'java'
     id 'org.springframework.boot'
     id 'io.spring.dependency-management'
 }
@@ -22,62 +23,19 @@ dependencies {
     implementation 'org.springframework.cloud:spring-cloud-starter-config'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation "org.springdoc:springdoc-openapi-starter-webmvc-ui:${springdocVersion}"
-    implementation "org.projectlombok:lombok:${lombokVersion}"
     implementation "org.mapstruct:mapstruct:${mapstructVersion}"
+    
+    // Lombok
+    compileOnly "org.projectlombok:lombok:${lombokVersion}"
     annotationProcessor "org.projectlombok:lombok:${lombokVersion}"
     annotationProcessor "org.mapstruct:mapstruct-processor:${mapstructVersion}"
     annotationProcessor "org.projectlombok:lombok-mapstruct-binding:0.2.0"
     
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.boot:spring-boot-testcontainers'
     testImplementation "org.testcontainers:mongodb:${testcontainersVersion}"
     testImplementation "org.testcontainers:junit-jupiter:${testcontainersVersion}"
-}
-
-// Compute user ID and socket path at configuration time
-def userId = System.getenv('USER_ID') ?: ['id', '-u'].execute().text.trim()
-def podmanSocketPath = "/run/user/${userId}/podman/podman.sock"
-
-// Task to ensure Podman socket is running before tests
-task ensurePodmanSocket {
-    description = 'Ensures Podman socket is running for TestContainers'
-    group = 'verification'
-    
-    doLast {
-        def socketStatus = ['systemctl', '--user', 'is-active', 'podman.socket'].execute().text.trim()
-        
-        if (socketStatus != 'active') {
-            println "Podman socket is not active (status: ${socketStatus}). Starting it..."
-            def startResult = ['systemctl', '--user', 'start', 'podman.socket'].execute().waitFor()
-            
-            if (startResult != 0) {
-                throw new GradleException("Failed to start Podman socket. Exit code: ${startResult}")
-            }
-            
-            // Wait a moment for socket to be ready
-            sleep(1000)
-            println "Podman socket started successfully"
-        } else {
-            println "Podman socket is already active"
-        }
-        
-        // Verify socket file exists
-        def socketFile = new File(podmanSocketPath)
-        if (!socketFile.exists()) {
-            throw new GradleException("Podman socket file not found at ${podmanSocketPath}. " +
-                    "Make sure Podman socket service is running: systemctl --user start podman.socket")
-        }
-        
-        println "Podman socket verified and ready for TestContainers at ${podmanSocketPath}"
-    }
-}
-
-test {
-    // Ensure DOCKER_HOST is set for TestContainers to use Podman
-    environment 'DOCKER_HOST', "unix://${podmanSocketPath}"
-    useJUnitPlatform()
-    
-    // Ensure Podman socket is running before tests
-    dependsOn ensurePodmanSocket
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
 dependencyManagement {
@@ -86,9 +44,12 @@ dependencyManagement {
     }
 }
 
+tasks.named('test') {
+    useJUnitPlatform()
+    jvmArgs(['--enable-preview'])
+}
+
 bootJar {
     archiveBaseName = 'movie-service'
     archiveVersion = project.version
 }
-
-

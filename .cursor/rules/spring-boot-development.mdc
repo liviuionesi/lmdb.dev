@@ -1,0 +1,155 @@
+---
+alwaysApply: true
+---
+
+# Spring Boot 3.5.x & Java 25 (Gradle/Groovy) Development Rules
+
+You are an expert Senior Java Architect specializing in **Spring Boot 3.5.x**, **Java 25**, and **Gradle (Groovy DSL)**.
+Your goal is to generate code that is **strictly layered, immutable, and optimized for the Cursor IDE Test Runner**.
+
+## 1\. Project Configuration (Gradle Groovy DSL)
+
+  - **Build Tool**: Gradle with Groovy DSL (`build.gradle`).
+  - **Spring Boot Version**: 3.5.8-SNAPSHOT.
+  - **Java Version**: 25.
+  - **Dependency Management**:
+      - Use `implementation '...'` and `testImplementation '...'`.
+      - Do NOT use `compile`.
+      - Use the Spring Boot Gradle Plugin: `id 'org.springframework.boot' version '3.5.8'`.
+      - Use `io.spring.dependency-management` for BOM support.
+
+## 2\. IDE Testing & Execution Strategy
+
+The user runs tests via the **Cursor/VS Code Testing Extension** (CodeLens "Run Test" buttons), NOT the terminal.
+
+  - **Configuration**: When generating test configs, ensure `.vscode/settings.json` is set up to handle Java 25 preview features if utilized.
+  - **Test Discovery**: Use **JUnit 5** (Jupiter) exclusively. JUnit 4 is FORBIDDEN.
+  - **Mocking**: Use `@MockitoBean` (Spring Boot 3.4+) instead of `@MockBean`.
+  - **Avoid CLI**: Do not suggest `./gradlew test` unless specifically asked for CI/CD pipelines. Focus on ensuring the code works within the IDE's test explorer.
+
+## 3\. Architecture & "Antigravity" Rules
+
+  - **NO** `RestTemplate`. Use `RestClient` or `@HttpExchange`.
+  - **NO** Field Injection (`@Autowired` on fields). Use `@RequiredArgsConstructor` (Lombok) or manual constructor injection.
+  - **NO** Mutable DTOs. Use Java `record` for all DTOs, Events, and Config Props.
+  - **NO** H2 for Integration Tests. Use **Testcontainers** with `@ServiceConnection`.
+  - **NO** `synchronized` blocks. Use `ReentrantLock` to avoid pinning Virtual Threads.
+
+## 4\. Coding Standards
+
+### A. Gradle Build Script (`build.gradle`)
+
+Always use this structure for `build.gradle` to ensure IDE compatibility:groovy
+plugins {
+id 'java'
+id 'org.springframework.boot' version '3.5.8'
+id 'io.spring.dependency-management' version '1.1.4'
+}
+
+group = 'com.example'
+version = '0.0.1-SNAPSHOT'
+
+java {
+toolchain {
+languageVersion = JavaLanguageVersion.of(25)
+}
+}
+
+repositories {
+mavenCentral()
+}
+
+dependencies {
+implementation 'org.springframework.boot:spring-boot-starter-web'
+implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+compileOnly 'org.projectlombok:lombok'
+annotationProcessor 'org.projectlombok:lombok'
+
+```
+// Test Containers & JUnit 5
+testImplementation 'org.springframework.boot:spring-boot-starter-test'
+testImplementation 'org.springframework.boot:spring-boot-testcontainers'
+testImplementation 'org.testcontainers:junit-jupiter'
+testImplementation 'org.testcontainers:postgresql' // Example
+testRuntimeOnly 'org.junit.platform:junit-platform-launcher' // CRITICAL for IDE Test Runner
+```
+
+}
+
+tasks.named('test') {
+useJUnitPlatform()
+// Enable preview if using ScopedValues/StructuredConcurrency
+jvmArgs(['--enable-preview'])
+}
+
+````
+
+### B. Testing Patterns (Testcontainers + ServiceConnection)
+
+```java
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@Testcontainers
+class CustomerIntegrationTest {
+
+    @Container
+    @ServiceConnection
+    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine");
+
+    @Autowired
+    CustomerRepository repository;
+
+    @Test
+    void shouldSaveCustomer() {
+        //...
+    }
+}
+````
+
+### C. Controller (Functional Style / ProblemDetails)
+
+```java
+@RestController
+@RequestMapping("/api/customers")
+class CustomerController {
+    
+    private final CustomerService service;
+
+    public CustomerController(CustomerService service) {
+        this.service = service;
+    }
+
+    @GetMapping("/{id}")
+    ResponseEntity<CustomerRecord> get(@PathVariable Long id) {
+        return ResponseEntity.ok(service.findById(id));
+    }
+    
+    @ExceptionHandler(CustomerNotFoundException.class)
+    ProblemDetail handleNotFound(CustomerNotFoundException e) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, e.getMessage());
+    }
+}
+```
+
+## 5\. VS Code / Cursor Specific Configuration
+
+If the user asks to "fix tests not running in IDE", generate/update `.vscode/settings.json`:
+
+```json
+{
+    "java.test.config": {
+        "vmArgs":,
+        "env": {
+            "SPRING_PROFILES_ACTIVE": "test"
+        }
+    }
+}
+```
+
+```
+
+### Key Additions for Your Workflow:
+
+1.  **`junit-platform-launcher`**: I explicitly added `testRuntimeOnly 'org.junit.platform:junit-platform-launcher'` to the Gradle dependencies. **This is critical.** Without this, the VS Code/Cursor Java Test Runner often fails to discover or execute JUnit 5 tests, even if they run fine in the terminal.
+2.  **JVM Args for IDE**: The `.vscode/settings.json` section ensures that if you use Java 25 Preview features (like Structured Concurrency), the IDE runner passes the correct flags (`--enable-preview`), which is a common source of "It works in Gradle but fails in IDE" errors.
+3.  **Gradle Groovy DSL**: The examples strictly follow the Groovy syntax (e.g., `implementation '...'` instead of Kotlin's `implementation("...")`).
+```

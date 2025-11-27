@@ -44,10 +44,10 @@ class MovieDtoTest {
 
         // Assert
         assertThat(dto).isNotNull();
-        assertThat(dto.getId()).isEqualTo("mongo123");
-        assertThat(dto.getTmdbId()).isEqualTo(550L);
-        assertThat(dto.getTitle()).isEqualTo("Fight Club");
-        assertThat(dto.getVoteAverage()).isEqualTo(8.4);
+        assertThat(dto.id()).isEqualTo("mongo123");
+        assertThat(dto.tmdbId()).isEqualTo(550L);
+        assertThat(dto.title()).isEqualTo("Fight Club");
+        assertThat(dto.voteAverage()).isEqualTo(8.4);
     }
 
     @Test
@@ -76,10 +76,10 @@ class MovieDtoTest {
 
         // Assert
         assertThat(deserialized).isNotNull();
-        assertThat(deserialized.getId()).isEqualTo(original.getId());
-        assertThat(deserialized.getTmdbId()).isEqualTo(original.getTmdbId());
-        assertThat(deserialized.getTitle()).isEqualTo(original.getTitle());
-        assertThat(deserialized.getVoteAverage()).isEqualTo(original.getVoteAverage());
+        assertThat(deserialized.id()).isEqualTo(original.id());
+        assertThat(deserialized.tmdbId()).isEqualTo(original.tmdbId());
+        assertThat(deserialized.title()).isEqualTo(original.title());
+        assertThat(deserialized.voteAverage()).isEqualTo(original.voteAverage());
     }
 
     @Test
@@ -127,9 +127,9 @@ class MovieDtoTest {
                 .build();
 
         // Assert
-        assertThat(dto.getGenres()).hasSize(2);
-        assertThat(dto.getGenres().get(0).getId()).isEqualTo(28L);
-        assertThat(dto.getGenres().get(0).getName()).isEqualTo("Action");
+        assertThat(dto.genres()).hasSize(2);
+        assertThat(dto.genres().get(0).id()).isEqualTo(28L);
+        assertThat(dto.genres().get(0).name()).isEqualTo("Action");
     }
 
     @Test
@@ -142,11 +142,11 @@ class MovieDtoTest {
                 .build();
 
         // Assert
-        assertThat(dto.getTmdbId()).isEqualTo(550L);
-        assertThat(dto.getTitle()).isEqualTo("Fight Club");
-        assertThat(dto.getOverview()).isNull();
-        assertThat(dto.getGenres()).isNull();
-        assertThat(dto.getPosterPath()).isNull();
+        assertThat(dto.tmdbId()).isEqualTo(550L);
+        assertThat(dto.title()).isEqualTo("Fight Club");
+        assertThat(dto.overview()).isNull();
+        assertThat(dto.genres()).isNull();
+        assertThat(dto.posterPath()).isNull();
     }
 
     @Test

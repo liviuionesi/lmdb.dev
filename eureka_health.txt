@@ -1,23 +1,0 @@
-* Host localhost:8761 was resolved.
-* IPv6: ::1
-* IPv4: 127.0.0.1
-  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
-                                 Dload  Upload   Total   Spent    Left  Speed
-  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0*   Trying [::1]:8761...
-* Connected to localhost (::1) port 8761
-* using HTTP/1.x
-> GET /actuator/health HTTP/1.1
-> Host: localhost:8761
-> User-Agent: curl/8.15.0
-> Accept: */*
-> 
-* Request completely sent off
-< HTTP/1.1 200 
-< Content-Type: application/vnd.spring-boot.actuator.v3+json
-< Transfer-Encoding: chunked
-< Date: Wed, 19 Nov 2025 15:31:11 GMT
-< 
-{ [20 bytes data]
-100    15    0    15    0     0    467      0 --:--:-- --:--:-- --:--:--   468
-* Connection #0 to host localhost left intact
-{"status":"UP"}

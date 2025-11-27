@@ -25,43 +25,95 @@ filmpire-microservices/
 
 ## Technology Stack
 
-### Versions
-- **Java**: 25
+### Versions (Managed in gradle.properties)
+**IMPORTANT:** All versions are centralized in `gradle.properties` at the root level for easy updates.
+
+- **Java**: 25 (via SDKMAN)
+- **Gradle**: 9.2.0 (via Gradle Wrapper)
 - **Spring Boot**: 3.5.8-SNAPSHOT
 - **Spring Cloud**: 2025.0.0
 - **Spring AI**: 1.0.0-SNAPSHOT
-- **Gradle**: 9.2.0
+- **Spring Dependency Management**: 1.1.7
 
-### Key Dependencies
+### Key Dependencies (gradle.properties)
 - Lombok: 1.18.42
 - MapStruct: 1.6.3
 - JJWT: 0.13.0
 - gRPC: 1.76.0
 - Springdoc OpenAPI: 2.8.14
-- TestContainers: 1.21.2
-- JUnit: 5.11.3
+- MinIO: 8.5.7
+
+### Testing Dependencies (gradle.properties)
+- JUnit: 5.11.3 **(Jupiter ONLY - JUnit 4 FORBIDDEN)**
 - Mockito: 5.19.0
+- TestContainers: 1.21.2
 - JaCoCo: 0.8.14
+
+### Critical Testing Requirements
+- ✅ `testRuntimeOnly 'org.junit.platform:junit-platform-launcher'` - **REQUIRED for Cursor IDE Test Runner**
+- ✅ JUnit 5 (Jupiter) exclusively - NO JUnit 4
+- ✅ Testcontainers with `@ServiceConnection` - NO H2
+- ✅ Tests run via Cursor IDE (CodeLens "Run Test" buttons)
 
 ## Configuration Details
 
 ### Root Build Configuration
+
+#### gradle.properties ⭐ **VERSION MANAGEMENT HUB**
+**THIS IS THE SINGLE SOURCE OF TRUTH FOR ALL DEPENDENCY VERSIONS**
+
+```properties
+# Java
+javaVersion=25
+
+# Spring Boot  
+springBootVersion=3.5.8-SNAPSHOT
+springDependencyManagementVersion=1.1.7
+
+# Spring Cloud
+springCloudVersion=2025.0.0
+
+# Spring AI
+springAiVersion=1.0.0-SNAPSHOT
+
+# Dependencies
+lombokVersion=1.18.42
+mapstructVersion=1.6.3
+jjwtVersion=0.13.0
+grpcVersion=1.76.0
+springdocVersion=2.8.14
+minioVersion=8.5.7
+
+# Testing
+junitVersion=5.11.3
+mockitoVersion=5.19.0
+testcontainersVersion=1.21.2
+jacocoVersion=0.8.14
+
+# Build
+org.gradle.jvmargs=-Xmx2048m -XX:MaxMetaspaceSize=512m
+org.gradle.parallel=false
+org.gradle.caching=false
+org.gradle.configuration-cache=false
+```
+
+**To update a dependency across the entire project:**
+1. Edit version in `gradle.properties`
+2. Run `./gradlew clean build`
+3. All modules automatically use the new version
 
 #### settings.gradle
 - Configures plugin management with Spring repositories (milestone, snapshot, release)
 - Enables dependency resolution management (FAIL_ON_PROJECT_REPOS mode)
 - Includes all 9 modules
 
-#### build.gradle
+#### build.gradle (Root - Groovy DSL)
 - Applies Spring Boot & dependency management plugins to root
 - Configures Java 25 toolchain for all subprojects
 - Sets up JaCoco for test coverage
-- Configures common test dependencies
+- Configures common test dependencies (including `junit-platform-launcher`)
 - UTF-8 encoding for all Java compilation
-
-#### gradle.properties
-- Centralized version management for all dependencies
-- Gradle optimization: parallel execution, caching, 2GB heap
+- **Uses Groovy DSL, NOT Kotlin DSL**
 
 ### Service-Specific Configurations
 
@@ -152,19 +204,40 @@ filmpire-microservices/
 ./gradlew tasks --all
 ```
 
-## Testing Configuration
+## Testing Configuration (Spring Boot 3.5.x Standards)
 
-### Test Framework
-- JUnit Jupiter Platform
-- Spring Boot Test
-- Spring Security Test (where applicable)
-- Mockito for mocking
-- TestContainers for integration tests
+### Test Framework Requirements
+**CRITICAL for Cursor IDE Test Runner compatibility:**
+
+1. **JUnit 5 (Jupiter) ONLY** - JUnit 4 is **FORBIDDEN**
+2. **junit-platform-launcher** - Required in every service:
+   ```groovy
+   testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+   ```
+3. **@MockitoBean** instead of `@MockBean` (Spring Boot 3.4+)
+4. **Testcontainers with @ServiceConnection** - NO H2 databases
+5. **Tests run via Cursor IDE Test Runner** - NOT terminal
+
+### Test Dependencies (Common to all services)
+```groovy
+dependencies {
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.security:spring-security-test'  // if security enabled
+    testImplementation 'org.testcontainers:junit-jupiter'
+    testImplementation 'org.testcontainers:postgresql'  // or mongodb
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'  // CRITICAL!
+}
+
+tasks.named('test') {
+    useJUnitPlatform()  // Enable JUnit 5
+}
+```
 
 ### Coverage
 - JaCoco plugin enabled on all modules
 - Reports in XML and HTML formats
 - Test coverage reports auto-generated after tests
+- Minimum 85% coverage required
 
 ## Dependency Management
 
@@ -208,6 +281,23 @@ implementation project(':backend:shared-library')
 
 ## Important Notes
 
+### Version Management Strategy ⭐
+**ALWAYS use gradle.properties for version management:**
+```groovy
+// In service build.gradle - reference properties from gradle.properties
+dependencies {
+    implementation "org.projectlombok:lombok:${lombokVersion}"
+    testImplementation "org.junit.jupiter:junit-jupiter:${junitVersion}"
+    testImplementation "org.testcontainers:testcontainers-bom:${testcontainersVersion}"
+}
+```
+
+**Benefits:**
+- ✅ Single source of truth for all versions
+- ✅ Easy project-wide updates
+- ✅ Consistent versions across all modules
+- ✅ No version conflicts
+
 ### Version Notes
 ⚠️ **Using SNAPSHOT versions:**
 - Spring Boot 3.5.8-SNAPSHOT (from Spring snapshot repository)
@@ -218,13 +308,22 @@ implementation project(':backend:shared-library')
 - Configured in root `build.gradle`
 - Applied to all subprojects automatically
 - Release target set to Java 25
+- Installed via SDKMAN: `sdk install java 25-open`
+
+### Gradle Groovy DSL (NOT Kotlin)
+- All build files use Groovy syntax
+- `build.gradle` (NOT `build.gradle.kts`)
+- String properties: `'dependency'` not `"dependency"`
+- No parentheses in many places
 
 ### Shared Library
 - Produces plain JAR (not executable)
 - `bootJar` disabled, `jar` enabled
 - Must be built before services that depend on it
 
-### TestContainers
+### TestContainers with @ServiceConnection
+- ✅ Modern approach (Spring Boot 3.1+): Use `@ServiceConnection`
+- ❌ Old approach: `@DynamicPropertySource` not needed
 - Enabled for services with databases
 - PostgreSQL containers: user-service, actor-service
 - MongoDB containers: movie-service, ai-service, media-service

@@ -23,7 +23,6 @@ import static org.hamcrest.Matchers.*;
  */
 @WebMvcTest(GenreController.class)
 @DisplayName("GenreController Tests")
-@SuppressWarnings("null")
 class GenreControllerTest {
 
     @Autowired
@@ -43,15 +42,13 @@ class GenreControllerTest {
         mockMvc.perform(get("/api/v1/genres")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.message").value("Genres retrieved successfully"))
-                .andExpect(jsonPath("$.data", hasSize(5)))
-                .andExpect(jsonPath("$.data[0].id").value(28))
-                .andExpect(jsonPath("$.data[0].name").value("Action"))
-                .andExpect(jsonPath("$.data[1].id").value(12))
-                .andExpect(jsonPath("$.data[1].name").value("Adventure"))
-                .andExpect(jsonPath("$.data[2].id").value(16))
-                .andExpect(jsonPath("$.data[2].name").value("Animation"));
+                .andExpect(jsonPath("$", hasSize(5)))
+                .andExpect(jsonPath("$[0].id").value(28))
+                .andExpect(jsonPath("$[0].name").value("Action"))
+                .andExpect(jsonPath("$[1].id").value(12))
+                .andExpect(jsonPath("$[1].name").value("Adventure"))
+                .andExpect(jsonPath("$[2].id").value(16))
+                .andExpect(jsonPath("$[2].name").value("Animation"));
     }
 
     @Test
@@ -64,8 +61,7 @@ class GenreControllerTest {
         mockMvc.perform(get("/api/v1/genres")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data", hasSize(0)));
+                .andExpect(jsonPath("$", hasSize(0)));
     }
 
     private List<GenreDto> createTestGenres() {
@@ -78,4 +74,3 @@ class GenreControllerTest {
         );
     }
 }
-

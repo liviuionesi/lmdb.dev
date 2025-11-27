@@ -1,37 +1,32 @@
 package com.filmpire.movie.client;
 
-import feign.Logger;
-import feign.RequestInterceptor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.client.support.RestClientAdapter;
+import org.springframework.web.service.invoker.HttpServiceProxyFactory;
 
 /**
- * Configuration for TMDB Feign client.
+ * Configuration for TMDB Http Client.
  */
 @Configuration
 public class TmdbClientConfig {
 
-    /**
-     * Configure Feign logging level.
-     *
-     * @return Logger level
-     */
-    @Bean
-    Logger.Level feignLoggerLevel() {
-        return Logger.Level.BASIC;
-    }
+    @Value("${tmdb.api.base-url}")
+    private String baseUrl;
 
-    /**
-     * Request interceptor to add custom headers.
-     *
-     * @return Request interceptor
-     */
     @Bean
-    public RequestInterceptor requestInterceptor() {
-        return requestTemplate -> {
-            requestTemplate.header("Accept", "application/json");
-            requestTemplate.header("Content-Type", "application/json");
-        };
+    public TmdbClient tmdbClient(RestClient.Builder builder) {
+        RestClient restClient = builder
+            .baseUrl(baseUrl)
+            .defaultHeader("Accept", "application/json")
+            .defaultHeader("Content-Type", "application/json")
+            .build();
+
+        RestClientAdapter adapter = RestClientAdapter.create(restClient);
+        HttpServiceProxyFactory factory = HttpServiceProxyFactory.builderFor(adapter).build();
+
+        return factory.createClient(TmdbClient.class);
     }
 }
-

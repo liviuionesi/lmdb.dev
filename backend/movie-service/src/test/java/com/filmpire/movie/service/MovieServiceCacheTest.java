@@ -29,7 +29,6 @@ import static org.mockito.Mockito.*;
  */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("MovieService Cache Tests")
-@SuppressWarnings("null")
 class MovieServiceCacheTest {
 
     @Mock
@@ -81,7 +80,9 @@ class MovieServiceCacheTest {
         Movie savedMovie = createTestMovie(tmdbId);
         MovieDto movieDto = createTestMovieDto(tmdbId);
 
-        when(movieRepository.findByTmdbId(tmdbId)).thenReturn(Optional.empty());
+        when(movieRepository.findByTmdbId(tmdbId))
+                .thenReturn(Optional.empty())
+                .thenReturn(Optional.empty());
         when(tmdbClient.getMovieDetails(tmdbId, tmdbApiKey)).thenReturn(tmdbResponse);
         when(movieRepository.save(any(Movie.class))).thenReturn(savedMovie);
         when(movieMapper.toDto(savedMovie)).thenReturn(movieDto);
@@ -91,7 +92,7 @@ class MovieServiceCacheTest {
 
         // Assert
         assertThat(result).isNotNull();
-        verify(movieRepository, times(1)).findByTmdbId(tmdbId);
+        verify(movieRepository, times(2)).findByTmdbId(tmdbId);
         verify(tmdbClient, times(1)).getMovieDetails(tmdbId, tmdbApiKey);
         verify(movieRepository, times(1)).save(any(Movie.class));
         verify(movieMapper, times(1)).toDto(savedMovie);
@@ -130,8 +131,9 @@ class MovieServiceCacheTest {
 
         // First call - not in cache
         when(movieRepository.findByTmdbId(tmdbId))
-                .thenReturn(Optional.empty())
-                .thenReturn(Optional.of(savedMovie));
+                .thenReturn(Optional.empty()) // 1. First call (outside lock) -> Empty
+                .thenReturn(Optional.empty()) // 2. Second call (inside lock) -> Empty -> Call API
+                .thenReturn(Optional.of(savedMovie)); // 3. Second service call -> Found
         when(tmdbClient.getMovieDetails(tmdbId, tmdbApiKey)).thenReturn(tmdbResponse);
         when(movieRepository.save(any(Movie.class))).thenReturn(savedMovie);
         when(movieMapper.toDto(savedMovie)).thenReturn(movieDto);
@@ -143,7 +145,7 @@ class MovieServiceCacheTest {
         // Assert
         assertThat(firstCall).isNotNull();
         assertThat(secondCall).isNotNull();
-        verify(movieRepository, times(2)).findByTmdbId(tmdbId);
+        verify(movieRepository, times(3)).findByTmdbId(tmdbId);
         verify(tmdbClient, times(1)).getMovieDetails(tmdbId, tmdbApiKey); // Only once
         verify(movieRepository, times(1)).save(any(Movie.class));
     }
@@ -182,21 +184,29 @@ class MovieServiceCacheTest {
     }
 
     private TmdbMovieResponse createTestTmdbMovieResponse(Long tmdbId) {
-        TmdbMovieResponse response = new TmdbMovieResponse();
-        response.setId(tmdbId);
-        response.setTitle("Fight Club");
-        response.setOverview("An insomniac office worker...");
-        response.setPosterPath("/poster.jpg");
-        response.setReleaseDate(LocalDate.of(1999, 10, 15));
-        response.setVoteAverage(8.4);
-        response.setVoteCount(25000);
-        response.setRuntime(139);
-        response.setStatus("Released");
-        response.setBudget(63000000L);
-        response.setRevenue(100853753L);
-        response.setPopularity(450.5);
-        response.setAdult(false);
-        return response;
+        return new TmdbMovieResponse(
+            tmdbId,
+            "Fight Club",
+            "An insomniac office worker...",
+            "/poster.jpg",
+            null,
+            LocalDate.of(1999, 10, 15),
+            8.4,
+            25000,
+            null,
+            139,
+            "Released",
+            63000000L,
+            100853753L,
+            null,
+            null,
+            "en",
+            450.5,
+            false,
+            null,
+            null,
+            null
+        );
     }
 }
 

@@ -2,7 +2,8 @@ package com.filmpire.movie.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
@@ -17,7 +18,9 @@ import java.util.List;
  * Stored in MongoDB with hybrid caching strategy (MongoDB + Redis).
  */
 @Document(collection = "movies")
-@Data
+@Getter
+@Setter
+@lombok.EqualsAndHashCode
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

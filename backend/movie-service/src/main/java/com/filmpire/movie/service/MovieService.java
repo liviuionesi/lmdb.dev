@@ -42,6 +42,17 @@ public class MovieService {
      * @param tmdbId TMDB movie ID
      * @return Movie DTO
      */
+    private final java.util.concurrent.locks.ReentrantLock lock = new java.util.concurrent.locks.ReentrantLock();
+
+    /**
+     * Get movie by ID with hybrid caching.
+     * 1. Check Redis cache (via @Cacheable)
+     * 2. Check MongoDB
+     * 3. Fetch from TMDB API and store in MongoDB + Redis
+     *
+     * @param tmdbId TMDB movie ID
+     * @return Movie DTO
+     */
     @Cacheable(value = "movies", key = "#tmdbId")
     public MovieDto getMovieById(Long tmdbId) {
         log.info("Fetching movie with TMDB ID: {}", tmdbId);
@@ -53,11 +64,21 @@ public class MovieService {
                 return movieMapper.toDto(movie);
             })
             .orElseGet(() -> {
-                // Fetch from TMDB API
-                log.info("Movie not in MongoDB, fetching from TMDB: {}", tmdbId);
-                TmdbMovieResponse tmdbMovie = tmdbClient.getMovieDetails(tmdbId, tmdbApiKey);
-                Movie movie = convertAndSaveMovie(tmdbMovie);
-                return movieMapper.toDto(movie);
+                // Fetch from TMDB API with rate limiting/locking
+                lock.lock();
+                try {
+                    // Double-check MongoDB inside lock
+                    return movieRepository.findByTmdbId(tmdbId)
+                        .map(movieMapper::toDto)
+                        .orElseGet(() -> {
+                            log.info("Movie not in MongoDB, fetching from TMDB: {}", tmdbId);
+                            TmdbMovieResponse tmdbMovie = tmdbClient.getMovieDetails(tmdbId, tmdbApiKey);
+                            Movie movie = convertAndSaveMovie(tmdbMovie);
+                            return movieMapper.toDto(movie);
+                        });
+                } finally {
+                    lock.unlock();
+                }
             });
     }
 
@@ -80,11 +101,11 @@ public class MovieService {
             tmdbApiKey, page, "popularity.desc", genreId, year, minRating
         );
 
-        List<MovieListDto> movies = response.getResults().stream()
+        List<MovieListDto> movies = response.results().stream()
             .map(this::convertTmdbItemToListDto)
             .toList();
 
-        return PageResponse.of(movies, page - 1, size, (long) response.getTotalResults());
+        return PageResponse.of(movies, page - 1, size, (long) response.totalResults());
     }
 
     /**
@@ -101,11 +122,11 @@ public class MovieService {
 
         TmdbMovieListResponse response = tmdbClient.searchMovies(tmdbApiKey, query, page);
 
-        List<MovieListDto> movies = response.getResults().stream()
+        List<MovieListDto> movies = response.results().stream()
             .map(this::convertTmdbItemToListDto)
             .toList();
 
-        return PageResponse.of(movies, page - 1, size, (long) response.getTotalResults());
+        return PageResponse.of(movies, page - 1, size, (long) response.totalResults());
     }
 
     /**
@@ -122,11 +143,11 @@ public class MovieService {
 
         TmdbMovieListResponse response = tmdbClient.getTrendingMovies(timeWindow, tmdbApiKey, page);
 
-        List<MovieListDto> movies = response.getResults().stream()
+        List<MovieListDto> movies = response.results().stream()
             .map(this::convertTmdbItemToListDto)
             .toList();
 
-        return PageResponse.of(movies, page - 1, size, (long) response.getTotalResults());
+        return PageResponse.of(movies, page - 1, size, (long) response.totalResults());
     }
 
     /**
@@ -142,11 +163,11 @@ public class MovieService {
 
         TmdbMovieListResponse response = tmdbClient.getPopularMovies(tmdbApiKey, page);
 
-        List<MovieListDto> movies = response.getResults().stream()
+        List<MovieListDto> movies = response.results().stream()
             .map(this::convertTmdbItemToListDto)
             .toList();
 
-        return PageResponse.of(movies, page - 1, size, (long) response.getTotalResults());
+        return PageResponse.of(movies, page - 1, size, (long) response.totalResults());
     }
 
     /**
@@ -162,11 +183,11 @@ public class MovieService {
 
         TmdbMovieListResponse response = tmdbClient.getTopRatedMovies(tmdbApiKey, page);
 
-        List<MovieListDto> movies = response.getResults().stream()
+        List<MovieListDto> movies = response.results().stream()
             .map(this::convertTmdbItemToListDto)
             .toList();
 
-        return PageResponse.of(movies, page - 1, size, (long) response.getTotalResults());
+        return PageResponse.of(movies, page - 1, size, (long) response.totalResults());
     }
 
     /**
@@ -181,7 +202,7 @@ public class MovieService {
 
         TmdbVideosResponse response = tmdbClient.getMovieVideos(tmdbId, tmdbApiKey);
 
-        return response.getResults().stream()
+        return response.results().stream()
             .map(this::convertTmdbVideo)
             .toList();
     }
@@ -198,11 +219,11 @@ public class MovieService {
 
         TmdbCreditsResponse response = tmdbClient.getMovieCredits(tmdbId, tmdbApiKey);
 
-        List<CastDto> cast = response.getCast().stream()
+        List<CastDto> cast = response.cast().stream()
             .map(this::convertTmdbCast)
             .toList();
 
-        List<CrewDto> crew = response.getCrew().stream()
+        List<CrewDto> crew = response.crew().stream()
             .map(this::convertTmdbCrew)
             .toList();
 
@@ -227,11 +248,11 @@ public class MovieService {
 
         TmdbMovieListResponse response = tmdbClient.getSimilarMovies(tmdbId, tmdbApiKey, page);
 
-        List<MovieListDto> movies = response.getResults().stream()
+        List<MovieListDto> movies = response.results().stream()
             .map(this::convertTmdbItemToListDto)
             .toList();
 
-        return PageResponse.of(movies, page - 1, size, (long) response.getTotalResults());
+        return PageResponse.of(movies, page - 1, size, (long) response.totalResults());
     }
 
     /**
@@ -248,11 +269,11 @@ public class MovieService {
 
         TmdbMovieListResponse response = tmdbClient.getRecommendedMovies(tmdbId, tmdbApiKey, page);
 
-        List<MovieListDto> movies = response.getResults().stream()
+        List<MovieListDto> movies = response.results().stream()
             .map(this::convertTmdbItemToListDto)
             .toList();
 
-        return PageResponse.of(movies, page - 1, size, (long) response.getTotalResults());
+        return PageResponse.of(movies, page - 1, size, (long) response.totalResults());
     }
 
     /**
@@ -266,7 +287,7 @@ public class MovieService {
 
         TmdbGenresResponse response = tmdbClient.getGenres(tmdbApiKey);
 
-        return response.getGenres().stream()
+        return response.genres().stream()
             .map(movieMapper::toDto)
             .toList();
     }
@@ -275,30 +296,30 @@ public class MovieService {
 
     private Movie convertAndSaveMovie(TmdbMovieResponse tmdbMovie) {
         Movie movie = Movie.builder()
-            .tmdbId(tmdbMovie.getId())
-            .title(tmdbMovie.getTitle())
-            .overview(tmdbMovie.getOverview())
-            .posterPath(tmdbMovie.getPosterPath())
-            .backdropPath(tmdbMovie.getBackdropPath())
-            .releaseDate(tmdbMovie.getReleaseDate())
-            .voteAverage(tmdbMovie.getVoteAverage())
-            .voteCount(tmdbMovie.getVoteCount())
-            .genres(tmdbMovie.getGenres())
-            .runtime(tmdbMovie.getRuntime())
-            .status(tmdbMovie.getStatus())
-            .budget(tmdbMovie.getBudget())
-            .revenue(tmdbMovie.getRevenue())
-            .spokenLanguages(tmdbMovie.getSpokenLanguages() != null ? 
-                tmdbMovie.getSpokenLanguages().stream()
-                    .map(TmdbMovieResponse.SpokenLanguage::getName)
+            .tmdbId(tmdbMovie.id())
+            .title(tmdbMovie.title())
+            .overview(tmdbMovie.overview())
+            .posterPath(tmdbMovie.posterPath())
+            .backdropPath(tmdbMovie.backdropPath())
+            .releaseDate(tmdbMovie.releaseDate())
+            .voteAverage(tmdbMovie.voteAverage())
+            .voteCount(tmdbMovie.voteCount())
+            .genres(tmdbMovie.genres())
+            .runtime(tmdbMovie.runtime())
+            .status(tmdbMovie.status())
+            .budget(tmdbMovie.budget())
+            .revenue(tmdbMovie.revenue())
+            .spokenLanguages(tmdbMovie.spokenLanguages() != null ? 
+                tmdbMovie.spokenLanguages().stream()
+                    .map(TmdbMovieResponse.SpokenLanguage::name)
                     .toList() : null)
-            .productionCompanies(tmdbMovie.getProductionCompanies())
-            .originalLanguage(tmdbMovie.getOriginalLanguage())
-            .popularity(tmdbMovie.getPopularity())
-            .adult(tmdbMovie.getAdult())
-            .imdbId(tmdbMovie.getImdbId())
-            .tagline(tmdbMovie.getTagline())
-            .homepage(tmdbMovie.getHomepage())
+            .productionCompanies(tmdbMovie.productionCompanies())
+            .originalLanguage(tmdbMovie.originalLanguage())
+            .popularity(tmdbMovie.popularity())
+            .adult(tmdbMovie.adult())
+            .imdbId(tmdbMovie.imdbId())
+            .tagline(tmdbMovie.tagline())
+            .homepage(tmdbMovie.homepage())
             .createdAt(LocalDateTime.now())
             .updatedAt(LocalDateTime.now())
             .tmdbSyncVersion(1)
@@ -309,50 +330,50 @@ public class MovieService {
 
     private MovieListDto convertTmdbItemToListDto(TmdbMovieListResponse.TmdbMovieItem item) {
         return MovieListDto.builder()
-            .tmdbId(item.getId())
-            .title(item.getTitle())
-            .overview(item.getOverview())
-            .posterPath(item.getPosterPath())
-            .backdropPath(item.getBackdropPath())
-            .releaseDate(item.getReleaseDate() != null && !item.getReleaseDate().isEmpty() ? 
-                LocalDate.parse(item.getReleaseDate()) : null)
-            .voteAverage(item.getVoteAverage())
-            .voteCount(item.getVoteCount())
-            .popularity(item.getPopularity())
-            .adult(item.getAdult())
+            .tmdbId(item.id())
+            .title(item.title())
+            .overview(item.overview())
+            .posterPath(item.posterPath())
+            .backdropPath(item.backdropPath())
+            .releaseDate(item.releaseDate() != null && !item.releaseDate().isEmpty() ? 
+                LocalDate.parse(item.releaseDate()) : null)
+            .voteAverage(item.voteAverage())
+            .voteCount(item.voteCount())
+            .popularity(item.popularity())
+            .adult(item.adult())
             .build();
     }
 
     private VideoDto convertTmdbVideo(TmdbVideosResponse.TmdbVideo video) {
         return VideoDto.builder()
-            .id(video.getId())
-            .key(video.getKey())
-            .name(video.getName())
-            .site(video.getSite())
-            .size(video.getSize())
-            .type(video.getType())
-            .official(video.getOfficial())
-            .publishedAt(video.getPublishedAt())
+            .id(video.id())
+            .key(video.key())
+            .name(video.name())
+            .site(video.site())
+            .size(video.size())
+            .type(video.type())
+            .official(video.official())
+            .publishedAt(video.publishedAt())
             .build();
     }
 
     private CastDto convertTmdbCast(TmdbCreditsResponse.TmdbCast cast) {
         return CastDto.builder()
-            .id(cast.getId())
-            .name(cast.getName())
-            .character(cast.getCharacter())
-            .profilePath(cast.getProfilePath())
-            .order(cast.getOrder())
+            .id(cast.id())
+            .name(cast.name())
+            .character(cast.character())
+            .profilePath(cast.profilePath())
+            .order(cast.order())
             .build();
     }
 
     private CrewDto convertTmdbCrew(TmdbCreditsResponse.TmdbCrew crew) {
         return CrewDto.builder()
-            .id(crew.getId())
-            .name(crew.getName())
-            .job(crew.getJob())
-            .department(crew.getDepartment())
-            .profilePath(crew.getProfilePath())
+            .id(crew.id())
+            .name(crew.name())
+            .job(crew.job())
+            .department(crew.department())
+            .profilePath(crew.profilePath())
             .build();
     }
 }

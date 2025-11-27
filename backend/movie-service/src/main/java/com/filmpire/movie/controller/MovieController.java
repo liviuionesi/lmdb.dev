@@ -2,13 +2,15 @@ package com.filmpire.movie.controller;
 
 import com.filmpire.movie.dto.*;
 import com.filmpire.movie.service.MovieService;
-import com.filmpire.shared.dto.ApiResponse;
 import com.filmpire.shared.dto.PageResponse;
+import com.filmpire.shared.exception.ResourceNotFoundException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -35,13 +37,12 @@ public class MovieController {
      */
     @GetMapping("/{id}")
     @Operation(summary = "Get movie by ID", description = "Retrieve detailed movie information by TMDB ID")
-    public ResponseEntity<ApiResponse<MovieDto>> getMovieById(
+    public ResponseEntity<MovieDto> getMovieById(
         @Parameter(description = "TMDB movie ID", example = "550")
         @PathVariable("id") Long id
     ) {
         log.info("GET /api/v1/movies/{} - Fetching movie details", id);
-        MovieDto movie = movieService.getMovieById(id);
-        return ResponseEntity.ok(ApiResponse.success(movie, "Movie retrieved successfully", 200));
+        return ResponseEntity.ok(movieService.getMovieById(id));
     }
 
     /**
@@ -56,7 +57,7 @@ public class MovieController {
      */
     @GetMapping("/discover")
     @Operation(summary = "Discover movies", description = "Discover movies with various filters")
-    public ResponseEntity<ApiResponse<PageResponse<MovieListDto>>> discoverMovies(
+    public ResponseEntity<PageResponse<MovieListDto>> discoverMovies(
         @Parameter(description = "Page number", example = "1")
         @RequestParam(value = "page", defaultValue = "1") int page,
         
@@ -74,8 +75,7 @@ public class MovieController {
     ) {
         log.info("GET /api/v1/movies/discover - page={}, size={}, genre={}, year={}, minRating={}", 
                  page, size, genreId, year, minRating);
-        PageResponse<MovieListDto> movies = movieService.discoverMovies(page, size, genreId, year, minRating);
-        return ResponseEntity.ok(ApiResponse.success(movies, "Movies discovered successfully", 200));
+        return ResponseEntity.ok(movieService.discoverMovies(page, size, genreId, year, minRating));
     }
 
     /**
@@ -88,7 +88,7 @@ public class MovieController {
      */
     @GetMapping("/search")
     @Operation(summary = "Search movies", description = "Search movies by title or keywords")
-    public ResponseEntity<ApiResponse<PageResponse<MovieListDto>>> searchMovies(
+    public ResponseEntity<PageResponse<MovieListDto>> searchMovies(
         @Parameter(description = "Search query", example = "Inception", required = true)
         @RequestParam(value = "query") String query,
         
@@ -99,8 +99,7 @@ public class MovieController {
         @RequestParam(value = "size", defaultValue = "20") int size
     ) {
         log.info("GET /api/v1/movies/search - query={}, page={}", query, page);
-        PageResponse<MovieListDto> movies = movieService.searchMovies(query, page, size);
-        return ResponseEntity.ok(ApiResponse.success(movies, "Search completed successfully", 200));
+        return ResponseEntity.ok(movieService.searchMovies(query, page, size));
     }
 
     /**
@@ -113,7 +112,7 @@ public class MovieController {
      */
     @GetMapping("/trending")
     @Operation(summary = "Get trending movies", description = "Get trending movies for the day or week")
-    public ResponseEntity<ApiResponse<PageResponse<MovieListDto>>> getTrendingMovies(
+    public ResponseEntity<PageResponse<MovieListDto>> getTrendingMovies(
         @Parameter(description = "Time window (day or week)", example = "week")
         @RequestParam(value = "timeWindow", defaultValue = "week") String timeWindow,
         
@@ -124,8 +123,7 @@ public class MovieController {
         @RequestParam(value = "size", defaultValue = "20") int size
     ) {
         log.info("GET /api/v1/movies/trending - timeWindow={}, page={}", timeWindow, page);
-        PageResponse<MovieListDto> movies = movieService.getTrendingMovies(timeWindow, page, size);
-        return ResponseEntity.ok(ApiResponse.success(movies, "Trending movies retrieved successfully", 200));
+        return ResponseEntity.ok(movieService.getTrendingMovies(timeWindow, page, size));
     }
 
     /**
@@ -137,7 +135,7 @@ public class MovieController {
      */
     @GetMapping("/popular")
     @Operation(summary = "Get popular movies", description = "Get currently popular movies")
-    public ResponseEntity<ApiResponse<PageResponse<MovieListDto>>> getPopularMovies(
+    public ResponseEntity<PageResponse<MovieListDto>> getPopularMovies(
         @Parameter(description = "Page number", example = "1")
         @RequestParam(value = "page", defaultValue = "1") int page,
         
@@ -145,8 +143,7 @@ public class MovieController {
         @RequestParam(value = "size", defaultValue = "20") int size
     ) {
         log.info("GET /api/v1/movies/popular - page={}", page);
-        PageResponse<MovieListDto> movies = movieService.getPopularMovies(page, size);
-        return ResponseEntity.ok(ApiResponse.success(movies, "Popular movies retrieved successfully", 200));
+        return ResponseEntity.ok(movieService.getPopularMovies(page, size));
     }
 
     /**
@@ -158,7 +155,7 @@ public class MovieController {
      */
     @GetMapping("/top-rated")
     @Operation(summary = "Get top-rated movies", description = "Get highest-rated movies of all time")
-    public ResponseEntity<ApiResponse<PageResponse<MovieListDto>>> getTopRatedMovies(
+    public ResponseEntity<PageResponse<MovieListDto>> getTopRatedMovies(
         @Parameter(description = "Page number", example = "1")
         @RequestParam(value = "page", defaultValue = "1") int page,
         
@@ -166,8 +163,7 @@ public class MovieController {
         @RequestParam(value = "size", defaultValue = "20") int size
     ) {
         log.info("GET /api/v1/movies/top-rated - page={}", page);
-        PageResponse<MovieListDto> movies = movieService.getTopRatedMovies(page, size);
-        return ResponseEntity.ok(ApiResponse.success(movies, "Top-rated movies retrieved successfully", 200));
+        return ResponseEntity.ok(movieService.getTopRatedMovies(page, size));
     }
 
     /**
@@ -178,13 +174,12 @@ public class MovieController {
      */
     @GetMapping("/{id}/videos")
     @Operation(summary = "Get movie videos", description = "Get trailers and clips for a movie")
-    public ResponseEntity<ApiResponse<List<VideoDto>>> getMovieVideos(
+    public ResponseEntity<List<VideoDto>> getMovieVideos(
         @Parameter(description = "TMDB movie ID", example = "550")
         @PathVariable("id") Long id
     ) {
         log.info("GET /api/v1/movies/{}/videos - Fetching videos", id);
-        List<VideoDto> videos = movieService.getMovieVideos(id);
-        return ResponseEntity.ok(ApiResponse.success(videos, "Videos retrieved successfully", 200));
+        return ResponseEntity.ok(movieService.getMovieVideos(id));
     }
 
     /**
@@ -195,13 +190,12 @@ public class MovieController {
      */
     @GetMapping("/{id}/credits")
     @Operation(summary = "Get movie credits", description = "Get cast and crew information for a movie")
-    public ResponseEntity<ApiResponse<CreditsDto>> getMovieCredits(
+    public ResponseEntity<CreditsDto> getMovieCredits(
         @Parameter(description = "TMDB movie ID", example = "550")
         @PathVariable("id") Long id
     ) {
         log.info("GET /api/v1/movies/{}/credits - Fetching credits", id);
-        CreditsDto credits = movieService.getMovieCredits(id);
-        return ResponseEntity.ok(ApiResponse.success(credits, "Credits retrieved successfully", 200));
+        return ResponseEntity.ok(movieService.getMovieCredits(id));
     }
 
     /**
@@ -214,7 +208,7 @@ public class MovieController {
      */
     @GetMapping("/{id}/similar")
     @Operation(summary = "Get similar movies", description = "Get movies similar to the specified movie")
-    public ResponseEntity<ApiResponse<PageResponse<MovieListDto>>> getSimilarMovies(
+    public ResponseEntity<PageResponse<MovieListDto>> getSimilarMovies(
         @Parameter(description = "TMDB movie ID", example = "550")
         @PathVariable("id") Long id,
         
@@ -225,8 +219,7 @@ public class MovieController {
         @RequestParam(value = "size", defaultValue = "20") int size
     ) {
         log.info("GET /api/v1/movies/{}/similar - page={}", id, page);
-        PageResponse<MovieListDto> movies = movieService.getSimilarMovies(id, page, size);
-        return ResponseEntity.ok(ApiResponse.success(movies, "Similar movies retrieved successfully", 200));
+        return ResponseEntity.ok(movieService.getSimilarMovies(id, page, size));
     }
 
     /**
@@ -239,7 +232,7 @@ public class MovieController {
      */
     @GetMapping("/{id}/recommendations")
     @Operation(summary = "Get movie recommendations", description = "Get recommended movies based on the specified movie")
-    public ResponseEntity<ApiResponse<PageResponse<MovieListDto>>> getRecommendedMovies(
+    public ResponseEntity<PageResponse<MovieListDto>> getRecommendedMovies(
         @Parameter(description = "TMDB movie ID", example = "550")
         @PathVariable("id") Long id,
         
@@ -250,8 +243,11 @@ public class MovieController {
         @RequestParam(value = "size", defaultValue = "20") int size
     ) {
         log.info("GET /api/v1/movies/{}/recommendations - page={}", id, page);
-        PageResponse<MovieListDto> movies = movieService.getRecommendedMovies(id, page, size);
-        return ResponseEntity.ok(ApiResponse.success(movies, "Recommendations retrieved successfully", 200));
+        return ResponseEntity.ok(movieService.getRecommendedMovies(id, page, size));
+    }
+    
+    @ExceptionHandler(ResourceNotFoundException.class)
+    ProblemDetail handleNotFound(ResourceNotFoundException e) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, e.getMessage());
     }
 }
-

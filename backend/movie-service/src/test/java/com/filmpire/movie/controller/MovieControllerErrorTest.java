@@ -22,7 +22,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 @WebMvcTest(MovieController.class)
 @DisplayName("MovieController Error Handling Tests")
-@SuppressWarnings("null")
 class MovieControllerErrorTest {
 
     @Autowired

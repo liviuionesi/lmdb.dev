@@ -3,7 +3,6 @@ package com.filmpire.movie;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cache.annotation.EnableCaching;
-import org.springframework.cloud.openfeign.EnableFeignClients;
 
 /**
  * Movie Service Application.
@@ -23,7 +22,6 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
  * @version 1.0.0
  */
 @SpringBootApplication
-@EnableFeignClients
 @EnableCaching
 public class MovieServiceApplication {
 

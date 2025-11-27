@@ -33,7 +33,6 @@ import static org.mockito.Mockito.*;
  */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("MovieService Tests")
-@SuppressWarnings("null")
 class MovieServiceTest {
 
     @Mock
@@ -71,8 +70,8 @@ class MovieServiceTest {
 
         // Assert
         assertThat(result).isNotNull();
-        assertThat(result.getTmdbId()).isEqualTo(tmdbId);
-        assertThat(result.getTitle()).isEqualTo("Fight Club");
+        assertThat(result.tmdbId()).isEqualTo(tmdbId);
+        assertThat(result.title()).isEqualTo("Fight Club");
         verify(movieRepository).findByTmdbId(tmdbId);
         verify(movieMapper).toDto(movie);
         verifyNoInteractions(tmdbClient);
@@ -97,8 +96,8 @@ class MovieServiceTest {
 
         // Assert
         assertThat(result).isNotNull();
-        assertThat(result.getTmdbId()).isEqualTo(tmdbId);
-        verify(movieRepository).findByTmdbId(tmdbId);
+        assertThat(result.tmdbId()).isEqualTo(tmdbId);
+        verify(movieRepository, times(2)).findByTmdbId(tmdbId);
         verify(tmdbClient).getMovieDetails(tmdbId, tmdbApiKey);
         verify(movieRepository).save(any(Movie.class));
         verify(movieMapper).toDto(savedMovie);
@@ -221,9 +220,10 @@ class MovieServiceTest {
         List<VideoDto> result = movieService.getMovieVideos(movieId);
 
         // Assert
-        assertThat(result).isNotNull();
-        assertThat(result).hasSize(2);
-        assertThat(result.get(0).getType()).isEqualTo("Trailer");
+        assertThat(result)
+                .isNotNull()
+                .hasSize(2);
+        assertThat(result.get(0).type()).isEqualTo("Trailer");
         verify(tmdbClient).getMovieVideos(movieId, tmdbApiKey);
     }
 
@@ -240,10 +240,10 @@ class MovieServiceTest {
 
         // Assert
         assertThat(result).isNotNull();
-        assertThat(result.getMovieId()).isEqualTo(movieId);
-        assertThat(result.getCast()).hasSize(2);
-        assertThat(result.getCrew()).hasSize(1);
-        assertThat(result.getCast().get(0).getName()).isEqualTo("Brad Pitt");
+        assertThat(result.movieId()).isEqualTo(movieId);
+        assertThat(result.cast()).hasSize(2);
+        assertThat(result.crew()).hasSize(1);
+        assertThat(result.cast().get(0).name()).isEqualTo("Brad Pitt");
         verify(tmdbClient).getMovieCredits(movieId, tmdbApiKey);
     }
 
@@ -299,10 +299,11 @@ class MovieServiceTest {
         List<GenreDto> result = movieService.getAllGenres();
 
         // Assert
-        assertThat(result).isNotNull();
-        assertThat(result).hasSize(2);
-        assertThat(result.get(0).getName()).isEqualTo("Action");
-        assertThat(result.get(1).getName()).isEqualTo("Drama");
+        assertThat(result)
+                .isNotNull()
+                .hasSize(2);
+        assertThat(result.get(0).name()).isEqualTo("Action");
+        assertThat(result.get(1).name()).isEqualTo("Drama");
         verify(tmdbClient).getGenres(tmdbApiKey);
     }
 
@@ -346,123 +347,132 @@ class MovieServiceTest {
     }
 
     private TmdbMovieResponse createTestTmdbMovieResponse(Long tmdbId) {
-        TmdbMovieResponse response = new TmdbMovieResponse();
-        response.setId(tmdbId);
-        response.setTitle("Fight Club");
-        response.setOverview("An insomniac office worker...");
-        response.setPosterPath("/poster.jpg");
-        response.setBackdropPath("/backdrop.jpg");
-        response.setReleaseDate(LocalDate.of(1999, 10, 15));
-        response.setVoteAverage(8.4);
-        response.setVoteCount(25000);
-        response.setRuntime(139);
-        response.setStatus("Released");
-        response.setBudget(63000000L);
-        response.setRevenue(100853753L);
-        response.setPopularity(450.5);
-        response.setAdult(false);
-        response.setGenres(Arrays.asList(
+        return new TmdbMovieResponse(
+            tmdbId,
+            "Fight Club",
+            "An insomniac office worker...",
+            "/poster.jpg",
+            "/backdrop.jpg",
+            LocalDate.of(1999, 10, 15),
+            8.4,
+            25000,
+            Arrays.asList(
                 Genre.builder().id(18L).name("Drama").build(),
                 Genre.builder().id(53L).name("Thriller").build()
-        ));
-        return response;
+            ),
+            139,
+            "Released",
+            63000000L,
+            100853753L,
+            null,
+            null,
+            "en",
+            450.5,
+            false,
+            null,
+            null,
+            null
+        );
     }
 
     private TmdbMovieListResponse createTestTmdbMovieListResponse() {
-        TmdbMovieListResponse response = new TmdbMovieListResponse();
-        response.setPage(1);
-        response.setTotalResults(100);
-        response.setTotalPages(5);
+        TmdbMovieListResponse.TmdbMovieItem item1 = new TmdbMovieListResponse.TmdbMovieItem(
+            550L,
+            "Fight Club",
+            "An insomniac office worker...",
+            "/poster.jpg",
+            "/backdrop.jpg",
+            "1999-10-15",
+            8.4,
+            25000,
+            null,
+            450.5,
+            false,
+            "en"
+        );
 
-        TmdbMovieListResponse.TmdbMovieItem item1 = new TmdbMovieListResponse.TmdbMovieItem();
-        item1.setId(550L);
-        item1.setTitle("Fight Club");
-        item1.setOverview("An insomniac office worker...");
-        item1.setPosterPath("/poster.jpg");
-        item1.setReleaseDate("1999-10-15");
-        item1.setVoteAverage(8.4);
-        item1.setVoteCount(25000);
-        item1.setPopularity(450.5);
-        item1.setAdult(false);
+        TmdbMovieListResponse.TmdbMovieItem item2 = new TmdbMovieListResponse.TmdbMovieItem(
+            13L,
+            "Forrest Gump",
+            "A man with a low IQ...",
+            "/poster2.jpg",
+            null,
+            "1994-07-06",
+            8.8,
+            22000,
+            null,
+            320.3,
+            false,
+            "en"
+        );
 
-        TmdbMovieListResponse.TmdbMovieItem item2 = new TmdbMovieListResponse.TmdbMovieItem();
-        item2.setId(13L);
-        item2.setTitle("Forrest Gump");
-        item2.setOverview("A man with a low IQ...");
-        item2.setPosterPath("/poster2.jpg");
-        item2.setReleaseDate("1994-07-06");
-        item2.setVoteAverage(8.8);
-        item2.setVoteCount(22000);
-        item2.setPopularity(320.3);
-        item2.setAdult(false);
-
-        response.setResults(Arrays.asList(item1, item2));
-        return response;
+        return new TmdbMovieListResponse(1, 5, 100, Arrays.asList(item1, item2));
     }
 
     private TmdbVideosResponse createTestTmdbVideosResponse() {
-        TmdbVideosResponse response = new TmdbVideosResponse();
-        
-        TmdbVideosResponse.TmdbVideo video1 = new TmdbVideosResponse.TmdbVideo();
-        video1.setId("video123");
-        video1.setKey("dQw4w9WgXcQ");
-        video1.setName("Official Trailer");
-        video1.setSite("YouTube");
-        video1.setSize(1080);
-        video1.setType("Trailer");
-        video1.setOfficial(true);
-        video1.setPublishedAt("2020-01-01T00:00:00Z");
+        TmdbVideosResponse.TmdbVideo video1 = new TmdbVideosResponse.TmdbVideo(
+            "video123",
+            "dQw4w9WgXcQ",
+            "Official Trailer",
+            "YouTube",
+            1080,
+            "Trailer",
+            true,
+            "2020-01-01T00:00:00Z"
+        );
 
-        TmdbVideosResponse.TmdbVideo video2 = new TmdbVideosResponse.TmdbVideo();
-        video2.setId("video456");
-        video2.setKey("abc123xyz");
-        video2.setName("Behind the Scenes");
-        video2.setSite("YouTube");
-        video2.setSize(720);
-        video2.setType("Featurette");
-        video2.setOfficial(true);
-        video2.setPublishedAt("2020-02-01T00:00:00Z");
+        TmdbVideosResponse.TmdbVideo video2 = new TmdbVideosResponse.TmdbVideo(
+            "video456",
+            "abc123xyz",
+            "Behind the Scenes",
+            "YouTube",
+            720,
+            "Featurette",
+            true,
+            "2020-02-01T00:00:00Z"
+        );
 
-        response.setResults(Arrays.asList(video1, video2));
-        return response;
+        return new TmdbVideosResponse(550L, Arrays.asList(video1, video2));
     }
 
     private TmdbCreditsResponse createTestTmdbCreditsResponse() {
-        TmdbCreditsResponse response = new TmdbCreditsResponse();
+        TmdbCreditsResponse.TmdbCast cast1 = new TmdbCreditsResponse.TmdbCast(
+            287L,
+            "Brad Pitt",
+            "Tyler Durden",
+            "/brad.jpg",
+            0,
+            null
+        );
 
-        TmdbCreditsResponse.TmdbCast cast1 = new TmdbCreditsResponse.TmdbCast();
-        cast1.setId(287L);
-        cast1.setName("Brad Pitt");
-        cast1.setCharacter("Tyler Durden");
-        cast1.setProfilePath("/brad.jpg");
-        cast1.setOrder(0);
+        TmdbCreditsResponse.TmdbCast cast2 = new TmdbCreditsResponse.TmdbCast(
+            819L,
+            "Edward Norton",
+            "The Narrator",
+            "/norton.jpg",
+            1,
+            null
+        );
 
-        TmdbCreditsResponse.TmdbCast cast2 = new TmdbCreditsResponse.TmdbCast();
-        cast2.setId(819L);
-        cast2.setName("Edward Norton");
-        cast2.setCharacter("The Narrator");
-        cast2.setProfilePath("/norton.jpg");
-        cast2.setOrder(1);
+        TmdbCreditsResponse.TmdbCrew crew1 = new TmdbCreditsResponse.TmdbCrew(
+            7467L,
+            "David Fincher",
+            "Director",
+            "Directing",
+            "/fincher.jpg",
+            null
+        );
 
-        TmdbCreditsResponse.TmdbCrew crew1 = new TmdbCreditsResponse.TmdbCrew();
-        crew1.setId(7467L);
-        crew1.setName("David Fincher");
-        crew1.setJob("Director");
-        crew1.setDepartment("Directing");
-        crew1.setProfilePath("/fincher.jpg");
-
-        response.setCast(Arrays.asList(cast1, cast2));
-        response.setCrew(Arrays.asList(crew1));
-        return response;
+        return new TmdbCreditsResponse(550L, Arrays.asList(cast1, cast2), Arrays.asList(crew1));
     }
 
     private TmdbGenresResponse createTestTmdbGenresResponse() {
-        TmdbGenresResponse response = new TmdbGenresResponse();
-        response.setGenres(Arrays.asList(
+        return new TmdbGenresResponse(
+            Arrays.asList(
                 Genre.builder().id(28L).name("Action").build(),
                 Genre.builder().id(18L).name("Drama").build()
-        ));
-        return response;
+            )
+        );
     }
 }
 

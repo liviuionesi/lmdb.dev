@@ -6,12 +6,23 @@ Enterprise-grade microservices platform for movie discovery and management, demo
 
 This project implements a comprehensive microservices architecture with:
 
-- **8 Backend Microservices** (Spring Boot 3.5.8-SNAPSHOT, Java 25)
+- **8 Backend Microservices** (Spring Boot 3.5.8-SNAPSHOT, Java 25, Gradle Groovy DSL)
 - **2 Frontend Applications** (Next.js 16, React Native 0.76.3)
 - **Hybrid Database Strategy** (PostgreSQL + MongoDB)
 - **Spring Cloud Infrastructure** (Eureka, Config Server, API Gateway)
 - **Spring AI Integration** (Voice recognition, recommendations)
 - **Complete CI/CD Pipeline** (GitHub Actions)
+
+### Development Standards (Spring Boot 3.5.x + Java 25)
+
+**Core Principles:**
+- ✅ **Constructor Injection ONLY** - NO field injection
+- ✅ **Java Records for DTOs** - NO mutable classes
+- ✅ **RestClient or @HttpExchange** - NO RestTemplate
+- ✅ **JUnit 5 (Jupiter) exclusively** - JUnit 4 FORBIDDEN
+- ✅ **Testcontainers with @ServiceConnection** - NO H2
+- ✅ **ReentrantLock** - NO synchronized blocks (Virtual Threads)
+- ✅ **Version Management via gradle.properties** - Single source of truth
 
 ## 📋 Prerequisites
 
@@ -101,44 +112,65 @@ filmpire-microservices/
 
 ## 🛠️ Technology Stack
 
-### Backend
-- Java 25
-- Spring Boot 3.5.8-SNAPSHOT
-- Spring Cloud 2025.0.0
-- Spring AI 1.0.0-SNAPSHOT
-- PostgreSQL 17
-- MongoDB 8.0
-- Redis 7.4
+### Backend (Versions in gradle.properties)
+- **Java** 25 (via SDKMAN)
+- **Gradle** 9.2.0 (Groovy DSL via wrapper)
+- **Spring Boot** 3.5.8-SNAPSHOT
+- **Spring Cloud** 2025.0.0
+- **Spring AI** 1.0.0-SNAPSHOT
+- **PostgreSQL** 17-alpine
+- **MongoDB** 8.0
+- **Redis** 7.4-alpine
+
+### Testing Stack
+- **JUnit** 5.11.3 (Jupiter ONLY - JUnit 4 FORBIDDEN)
+- **Mockito** 5.19.0
+- **Testcontainers** 1.21.2 (with @ServiceConnection)
+- **AssertJ** (fluent assertions)
+- **JaCoCo** 0.8.14 (85% coverage minimum)
 
 ### Frontend
-- Next.js 16.0.0
-- React 19.0.2
-- Material UI 7.3.5
-- TypeScript 5.7.2
-- React Native 0.76.3
-- Expo SDK 52.0.0
+- **Next.js** 16.0.0
+- **React** 19.0.2
+- **Material UI** 7.3.5
+- **TypeScript** 5.7.2
+- **React Native** 0.76.3
+- **Expo SDK** 52.0.0
 
 ## 📚 Documentation
 
-- [Architecture Document](./ARCHITECTURE.md) - Complete system architecture
-- [Cursor Prompts](./CURSOR_PROMPTS.md) - Development prompts guide
+- [Architecture Document](./docs/architecture/ARCHITECTURE.md) - Complete system architecture
+- [Gradle Build Setup](./docs/architecture/GRADLE_BUILD_SETUP.md) - Build configuration & version management
+- [Spring Boot Development Rules](./.cursorrules/spring-boot-development.mdc) - Development standards
 - [API Documentation](./docs/api/) - OpenAPI specifications
-- [Setup Guide](./docs/guides/SETUP.md) - Detailed setup instructions
+- [Port Mapping](./docs/architecture/PORT_MAPPING.md) - Service ports reference
 
 ## 🧪 Testing
 
+**All tests run via Cursor IDE Test Runner (CodeLens "Run Test" buttons)**
+
 ```bash
-# Run all backend tests
+# Run all backend tests (via terminal - for CI/CD)
 ./gradlew test
 
 # Run specific service tests
 cd backend/movie-service
 ./gradlew test
 
+# Run with coverage report
+./gradlew test jacocoTestReport
+
 # Run frontend tests
 cd frontend/web-nextjs
 npm test
 ```
+
+**Testing Requirements:**
+- ✅ JUnit 5 (Jupiter) exclusively - NO JUnit 4
+- ✅ Minimum 85% code coverage
+- ✅ Testcontainers with `@ServiceConnection` for integration tests
+- ✅ NO H2 database - use real databases via Testcontainers
+- ✅ `testRuntimeOnly 'org.junit.platform:junit-platform-launcher'` in all services
 
 ## 🚢 Deployment
 

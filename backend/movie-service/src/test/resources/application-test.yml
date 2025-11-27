@@ -1,56 +1,31 @@
-# Test Configuration for Movie Service
-server:
-  port: 0  # Random port for tests
-
 spring:
-  application:
-    name: movie-service-test
-  
-  # MongoDB Test Configuration (overridden by Testcontainers)
-  data:
-    mongodb:
-      uri: mongodb://localhost:27017/test
-      database: test
-  
-  # Redis Test Configuration (disabled for most tests)
-  cache:
-    type: none
-  redis:
-    host: localhost
-    port: 6379
-  
-  # Disable Cloud Config in tests
   cloud:
+    discovery:
+      enabled: false
     config:
       enabled: false
+      discovery:
+        enabled: false
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+      - org.springframework.cloud.openfeign.FeignAutoConfiguration
+      - org.springframework.cloud.netflix.eureka.EurekaClientAutoConfiguration
+      - org.springframework.cloud.client.discovery.simple.SimpleDiscoveryClientAutoConfiguration
+  cache:
+    type: none
 
-# TMDB API Configuration
-tmdb:
-  api:
-    key: ${TMDB_API_KEY:ae8fa6e23866cb34a49337b233547834}
-    base-url: https://api.themoviedb.org/3
-
-# Disable Eureka in tests
 eureka:
   client:
     enabled: false
+    register-with-eureka: false
+    fetch-registry: false
 
-# Actuator Configuration
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info
-  endpoint:
-    health:
-      show-details: always
+server:
+  port: 0
 
-# Logging Configuration
 logging:
   level:
     root: INFO
     com.filmpire.movie: DEBUG
-    org.springframework.web: INFO
-    org.springframework.data.mongodb: DEBUG
-    org.testcontainers: INFO
-

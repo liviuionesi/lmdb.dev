@@ -2,11 +2,11 @@ package com.filmpire.movie.repository;
 
 import com.filmpire.movie.model.Genre;
 import com.filmpire.movie.model.Movie;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.data.mongo.DataMongoTest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -30,20 +30,29 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DataMongoTest
 @Testcontainers
 @DisplayName("MovieRepository Integration Tests")
-@SuppressWarnings({"resource", "try", "null"})
 class MovieRepositoryTest {
 
     @Container
-    static MongoDBContainer mongoDBContainer = new MongoDBContainer("mongo:7.0")
-            .withExposedPorts(27017);
+    static MongoDBContainer mongoDBContainer = new MongoDBContainer("mongo:8.0.0");
 
     @DynamicPropertySource
-    static void setProperties(DynamicPropertyRegistry registry) {
+    static void configureProperties(DynamicPropertyRegistry registry) {
         registry.add("spring.data.mongodb.uri", mongoDBContainer::getReplicaSetUrl);
     }
 
-    @Autowired
-    private MovieRepository movieRepository;
+    private final MovieRepository movieRepository;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    MovieRepositoryTest(MovieRepository movieRepository) {
+        this.movieRepository = movieRepository;
+    }
+
+    @AfterAll
+    static void cleanup() {
+        if (mongoDBContainer != null && mongoDBContainer.isRunning()) {
+            mongoDBContainer.stop();
+        }
+    }
 
     @BeforeEach
     void setUp() {

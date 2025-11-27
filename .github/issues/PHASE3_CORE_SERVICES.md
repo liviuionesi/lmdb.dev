@@ -25,9 +25,18 @@ Delivers core functionality for movie discovery, user management, and actor info
 - #15 - Implement Service Integration Tests
 
 **Technical Stack:**
-- Movie Service: Spring Boot + MongoDB + Redis + TMDB API
-- User Service: Spring Boot + PostgreSQL + JWT + Spring Security
-- Actor Service: Spring Boot + PostgreSQL + TMDB API
+- Movie Service: Spring Boot 3.5.8 + MongoDB 8.0 + Redis 7.4 + RestClient (TMDB API)
+- User Service: Spring Boot 3.5.8 + PostgreSQL 17 + JWT 0.13.0 + Spring Security
+- Actor Service: Spring Boot 3.5.8 + PostgreSQL 17 + RestClient (TMDB API)
+
+**Development Standards:**
+- ✅ Java 25 with records for all DTOs
+- ✅ Constructor injection ONLY (NO field injection)
+- ✅ RestClient or @HttpExchange (NO RestTemplate)
+- ✅ JUnit 5 Jupiter exclusively (NO JUnit 4)
+- ✅ Testcontainers with @ServiceConnection (NO H2)
+- ✅ Gradle Groovy DSL with gradle.properties version management
+- ✅ junit-platform-launcher for Cursor IDE Test Runner
 
 **Story Points:** 34  
 **Target Sprint:** Sprint 3-5  
@@ -45,19 +54,22 @@ Delivers core functionality for movie discovery, user management, and actor info
 Implement Movie Service with TMDB API integration, MongoDB storage, Redis caching, and comprehensive movie discovery endpoints.
 
 **Implementation Checklist:**
-- [ ] Create domain models (Movie, Genre, Certification, Video, Credits)
+- [ ] Create domain models (Movie, Genre, Certification, Video, Credits) with @Builder (NO @Data for entities)
+- [ ] Create immutable DTOs using Java records (NO mutable classes)
 - [ ] Implement MongoDB repositories with custom queries
-- [ ] Create DTOs and MapStruct mappers
-- [ ] Implement TMDB API client with Feign
+- [ ] Create MapStruct mappers
+- [ ] Implement TMDB API client with RestClient (NO RestTemplate/Feign)
+- [ ] Use constructor injection in all services (NO @Autowired on fields)
 - [ ] Implement hybrid caching strategy (MongoDB + Redis)
 - [ ] Create REST API endpoints (discover, search, details, trending, popular)
 - [ ] Implement pagination and filtering
-- [ ] Add rate limiting for TMDB API calls
+- [ ] Add rate limiting with ReentrantLock (NO synchronized blocks)
 - [ ] Configure Eureka client registration
 - [ ] Add actuator endpoints and health checks
 - [ ] Implement OpenAPI documentation
-- [ ] Write unit tests (85%+ coverage)
-- [ ] Write integration tests with TestContainers
+- [ ] Write unit tests with JUnit 5 Jupiter (85%+ coverage)
+- [ ] Write integration tests with Testcontainers + @ServiceConnection
+- [ ] Add testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 - [ ] Create Dockerfile
 
 **API Endpoints:**
@@ -75,11 +87,13 @@ GET  /api/v1/movies/{id}/recommendations  # Recommended movies
 GET  /api/v1/genres                 # Get all genres
 ```
 
-**Domain Model:**
+**Domain Model (Entity - use @Builder, NOT @Data):**
 ```java
 @Document(collection = "movies")
-@Data
 @Builder
+@Getter
+@NoArgsConstructor
+@AllArgsConstructor
 public class Movie {
     @Id
     private String id;
@@ -104,6 +118,31 @@ public class Movie {
 }
 ```
 
+**DTO (Immutable Java Record - Spring Boot 3.5.x Standard):**
+```java
+// ALL DTOs MUST be records - NO mutable classes
+public record MovieDto(
+    String id,
+    Long tmdbId,
+    String title,
+    String overview,
+    String posterPath,
+    String backdropPath,
+    LocalDate releaseDate,
+    Double voteAverage,
+    Integer voteCount,
+    List<GenreDto> genres,
+    Integer runtime
+) {
+    // Compact constructor for validation
+    public MovieDto {
+        if (title == null || title.isBlank()) {
+            throw new IllegalArgumentException("Title cannot be blank");
+        }
+    }
+}
+```
+
 **Caching Strategy:**
 ```
 1. Check Redis cache (5 min TTL)
@@ -113,7 +152,7 @@ public class Movie {
 5. Return to client
 ```
 
-**Dependencies:**
+**Dependencies (Gradle Groovy DSL - versions from gradle.properties):**
 ```groovy
 dependencies {
     implementation project(':backend:shared-library')
@@ -122,26 +161,80 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
     implementation 'org.springframework.boot:spring-boot-starter-cache'
     implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
-    implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    
+    // Use RestClient (Spring Boot 3.2+) - NO RestTemplate, NO Feign
+    // RestClient is part of spring-boot-starter-web
+    
     implementation "org.mapstruct:mapstruct:${mapstructVersion}"
     implementation "org.projectlombok:lombok:${lombokVersion}"
     implementation "org.springdoc:springdoc-openapi-starter-webmvc-ui:${springdocVersion}"
     
+    annotationProcessor "org.mapstruct:mapstruct-processor:${mapstructVersion}"
+    annotationProcessor "org.projectlombok:lombok:${lombokVersion}"
+    
+    // Testing - JUnit 5 Jupiter ONLY (NO JUnit 4)
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
-    testImplementation "org.testcontainers:mongodb:${testcontainersVersion}"
-    testImplementation "org.testcontainers:junit-jupiter:${testcontainersVersion}"
+    testImplementation 'org.testcontainers:mongodb'
+    testImplementation 'org.testcontainers:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'  // CRITICAL for Cursor IDE
+}
+
+tasks.named('test') {
+    useJUnitPlatform()  // Enable JUnit 5
+}
+```
+
+**TMDB Client (RestClient - NO RestTemplate):**
+```java
+@Configuration
+public class TmdbClientConfig {
+    
+    @Bean
+    public RestClient tmdbRestClient(
+            @Value("${tmdb.base-url}") String baseUrl,
+            @Value("${tmdb.api-key}") String apiKey) {
+        return RestClient.builder()
+                .baseUrl(baseUrl)
+                .defaultHeader("Authorization", "Bearer " + apiKey)
+                .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                .build();
+    }
+}
+
+@Service
+@Slf4j
+public class TmdbClient {
+    
+    private final RestClient restClient;
+    
+    // Constructor injection - NO @Autowired on fields
+    public TmdbClient(RestClient tmdbRestClient) {
+        this.restClient = tmdbRestClient;
+    }
+    
+    public TmdbMovieResponse getMovie(Long id) {
+        return restClient.get()
+                .uri("/movie/{id}", id)
+                .retrieve()
+                .body(TmdbMovieResponse.class);
+    }
 }
 ```
 
 **Acceptance Criteria:**
-- [ ] All TMDB endpoints implemented
+- [ ] All TMDB endpoints implemented with RestClient
+- [ ] Constructor injection used everywhere (NO field injection)
+- [ ] All DTOs are Java records (NO mutable classes)
 - [ ] Caching working (Redis + MongoDB)
 - [ ] Pagination and filtering functional
 - [ ] Error handling complete
 - [ ] Registered with Eureka
 - [ ] OpenAPI documentation complete
-- [ ] All tests passing (85%+ coverage)
+- [ ] JUnit 5 tests passing (85%+ coverage)
+- [ ] Testcontainers with @ServiceConnection working
+- [ ] junit-platform-launcher added for Cursor IDE
+- [ ] Tests run via Cursor IDE Test Runner
 - [ ] Performance: < 100ms response time (cached)
 - [ ] Performance: < 500ms response time (TMDB)
 
@@ -167,22 +260,25 @@ curl http://localhost:8081/swagger-ui.html
 Implement User Service with JWT authentication, Spring Security, user registration/login, profile management, and favorites/watchlist functionality.
 
 **Implementation Checklist:**
-- [ ] Create domain models (User, Role, Favorite, Watchlist)
+- [ ] Create domain models (User, Role, Favorite, Watchlist) with @Builder
+- [ ] Create immutable DTOs using Java records (NO mutable classes)
 - [ ] Implement PostgreSQL repositories
-- [ ] Create DTOs and MapStruct mappers
-- [ ] Implement JWT token generation and validation
-- [ ] Configure Spring Security with JWT
+- [ ] Create MapStruct mappers
+- [ ] Implement JWT token generation and validation (JJWT 0.13.0)
+- [ ] Configure Spring Security with JWT (NO session management)
+- [ ] Use constructor injection in all services (NO @Autowired on fields)
 - [ ] Implement authentication endpoints (register, login, refresh)
 - [ ] Implement user profile endpoints
 - [ ] Implement favorites and watchlist endpoints
-- [ ] Add password encryption (BCrypt)
+- [ ] Add password encryption (BCrypt strength 12)
 - [ ] Configure Flyway migrations
 - [ ] Add role-based access control (RBAC)
 - [ ] Register with Eureka
 - [ ] Add health checks
 - [ ] Implement OpenAPI documentation
-- [ ] Write unit tests (85%+ coverage)
-- [ ] Write integration tests with TestContainers
+- [ ] Write unit tests with JUnit 5 Jupiter (85%+ coverage)
+- [ ] Write integration tests with Testcontainers + @ServiceConnection
+- [ ] Add testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 - [ ] Create Dockerfile
 
 **API Endpoints:**
@@ -202,12 +298,14 @@ POST /api/v1/users/watchlist/{id}   # Add to watchlist
 DELETE /api/v1/users/watchlist/{id} # Remove from watchlist
 ```
 
-**Domain Model:**
+**Domain Model (Entity - use @Builder with @Getter, NOT @Data):**
 ```java
 @Entity
 @Table(name = "users")
-@Data
 @Builder
+@Getter
+@NoArgsConstructor
+@AllArgsConstructor
 public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -236,25 +334,103 @@ public class User {
 }
 ```
 
-**Security Configuration:**
+**DTOs (Immutable Java Records - Spring Boot 3.5.x Standard):**
+```java
+// Registration request DTO
+public record RegisterRequest(
+    String username,
+    String email,
+    String password
+) {
+    public RegisterRequest {
+        if (username == null || username.isBlank()) {
+            throw new IllegalArgumentException("Username cannot be blank");
+        }
+        if (email == null || !email.matches("^[A-Za-z0-9+_.-]+@(.+)$")) {
+            throw new IllegalArgumentException("Invalid email format");
+        }
+        if (password == null || password.length() < 8) {
+            throw new IllegalArgumentException("Password must be at least 8 characters");
+        }
+    }
+}
+
+// User profile DTO
+public record UserDto(
+    UUID id,
+    String username,
+    String email,
+    Role role,
+    boolean enabled,
+    LocalDateTime createdAt,
+    LocalDateTime lastLogin
+) {}
+
+// JWT response DTO
+public record JwtResponse(
+    String token,
+    String refreshToken,
+    UserDto user
+) {}
+```
+
+**Security Configuration (Spring Boot 3.5.x with Constructor Injection):**
 ```java
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+    
+    private final JwtAuthenticationFilter jwtAuthFilter;
+    
+    // Constructor injection - NO @Autowired on fields
+    public SecurityConfig(JwtAuthenticationFilter jwtAuthFilter) {
+        this.jwtAuthFilter = jwtAuthFilter;
+    }
+    
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) {
-        http
-            .csrf().disable()
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        return http
+            .csrf(csrf -> csrf.disable())
+            .sessionManagement(session -> 
+                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+            )
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/v1/auth/**").permitAll()
-                .requestMatchers("/actuator/**").permitAll()
+                .requestMatchers("/actuator/health", "/actuator/info").permitAll()
+                .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                 .anyRequest().authenticated()
             )
-            .sessionManagement()
-                .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-            .and()
-            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
-        return http.build();
+            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+            .build();
+    }
+    
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder(12);  // Strength 12
+    }
+}
+
+@Component
+@Slf4j
+public class JwtAuthenticationFilter extends OncePerRequestFilter {
+    
+    private final JwtTokenProvider tokenProvider;
+    private final UserDetailsService userDetailsService;
+    
+    // Constructor injection
+    public JwtAuthenticationFilter(
+            JwtTokenProvider tokenProvider,
+            UserDetailsService userDetailsService) {
+        this.tokenProvider = tokenProvider;
+        this.userDetailsService = userDetailsService;
+    }
+    
+    @Override
+    protected void doFilterInternal(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            FilterChain filterChain) throws ServletException, IOException {
+        // Implementation
     }
 }
 ```
@@ -295,15 +471,20 @@ CREATE TABLE watchlist (
 
 **Acceptance Criteria:**
 - [ ] User registration and login working
-- [ ] JWT tokens generated and validated
-- [ ] Password encryption with BCrypt
+- [ ] JWT tokens generated and validated (JJWT 0.13.0)
+- [ ] Password encryption with BCrypt (strength 12)
+- [ ] Constructor injection used everywhere (NO field injection)
+- [ ] All DTOs are Java records (NO mutable classes)
 - [ ] Profile management functional
 - [ ] Favorites and watchlist working
 - [ ] Role-based access control implemented
-- [ ] Database migrations successful
+- [ ] Database migrations successful (Flyway)
 - [ ] Registered with Eureka
 - [ ] OpenAPI documentation complete
-- [ ] All tests passing (85%+ coverage)
+- [ ] JUnit 5 tests passing (85%+ coverage)
+- [ ] Testcontainers with @ServiceConnection working
+- [ ] junit-platform-launcher added for Cursor IDE
+- [ ] Tests run via Cursor IDE Test Runner
 - [ ] Security tests passing
 
 **Testing Commands:**
@@ -327,18 +508,21 @@ curl http://localhost:8082/swagger-ui.html
 Implement Actor Service with TMDB API integration for cast and crew information, biographies, filmographies, and images.
 
 **Implementation Checklist:**
-- [ ] Create domain models (Actor, Credit, Biography)
+- [ ] Create domain models (Actor, Credit, Biography) with @Builder
+- [ ] Create immutable DTOs using Java records (NO mutable classes)
 - [ ] Implement PostgreSQL repositories
-- [ ] Create DTOs and MapStruct mappers
-- [ ] Implement TMDB API client for people endpoints
+- [ ] Create MapStruct mappers
+- [ ] Implement TMDB API client with RestClient (NO RestTemplate)
+- [ ] Use constructor injection in all services (NO @Autowired on fields)
 - [ ] Create REST API endpoints (details, credits, images)
-- [ ] Implement caching strategy
+- [ ] Implement caching strategy with Redis
 - [ ] Add pagination for filmography
 - [ ] Configure Eureka client
 - [ ] Add health checks
 - [ ] Implement OpenAPI documentation
-- [ ] Write unit tests (85%+ coverage)
-- [ ] Write integration tests with TestContainers
+- [ ] Write unit tests with JUnit 5 Jupiter (85%+ coverage)
+- [ ] Write integration tests with Testcontainers + @ServiceConnection
+- [ ] Add testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 - [ ] Create Dockerfile
 
 **API Endpoints:**
@@ -350,12 +534,14 @@ GET /api/v1/actors/popular           # Get popular actors
 GET /api/v1/actors/search            # Search actors
 ```
 
-**Domain Model:**
+**Domain Model (Entity - use @Builder with @Getter, NOT @Data):**
 ```java
 @Entity
 @Table(name = "actors")
-@Data
 @Builder
+@Getter
+@NoArgsConstructor
+@AllArgsConstructor
 public class Actor {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -384,15 +570,47 @@ public class Actor {
 }
 ```
 
+**DTOs (Immutable Java Records - Spring Boot 3.5.x Standard):**
+```java
+// Actor details DTO
+public record ActorDto(
+    Long id,
+    Long tmdbId,
+    String name,
+    String biography,
+    LocalDate birthday,
+    LocalDate deathday,
+    String birthplace,
+    String profilePath,
+    Double popularity,
+    String knownForDepartment
+) {}
+
+// Actor credit DTO
+public record ActorCreditDto(
+    Long movieId,
+    String movieTitle,
+    String character,
+    String posterPath,
+    LocalDate releaseDate,
+    Double voteAverage
+) {}
+```
+
 **Acceptance Criteria:**
-- [ ] All TMDB person endpoints implemented
+- [ ] All TMDB person endpoints implemented with RestClient
+- [ ] Constructor injection used everywhere (NO field injection)
+- [ ] All DTOs are Java records (NO mutable classes)
 - [ ] Actor details retrieval working
 - [ ] Filmography pagination functional
 - [ ] Images retrieval working
 - [ ] Caching implemented
 - [ ] Registered with Eureka
 - [ ] OpenAPI documentation complete
-- [ ] All tests passing (85%+ coverage)
+- [ ] JUnit 5 tests passing (85%+ coverage)
+- [ ] Testcontainers with @ServiceConnection working
+- [ ] junit-platform-launcher added for Cursor IDE
+- [ ] Tests run via Cursor IDE Test Runner
 - [ ] Performance: < 300ms response time
 
 **Testing Commands:**
@@ -416,15 +634,18 @@ curl http://localhost:8083/swagger-ui.html
 Implement comprehensive integration tests across all core services to ensure proper communication and data flow.
 
 **Implementation Checklist:**
-- [ ] Set up integration test framework
-- [ ] Create test data builders
+- [ ] Set up integration test framework with JUnit 5 Jupiter
+- [ ] Configure Testcontainers with @ServiceConnection for all services
+- [ ] Add junit-platform-launcher to all test configurations
+- [ ] Create test data builders (using Java records for immutable test data)
 - [ ] Write Movie-User integration tests (favorites)
 - [ ] Write Movie-Actor integration tests (cast)
 - [ ] Write Gateway routing tests
-- [ ] Test service discovery
+- [ ] Test service discovery (Eureka)
 - [ ] Test error propagation
 - [ ] Test circuit breaker scenarios
 - [ ] Test rate limiting
+- [ ] Verify all tests run in Cursor IDE Test Runner
 - [ ] Create test documentation
 
 **Test Scenarios:**
@@ -472,9 +693,12 @@ For all tasks in this phase:
 - Design patterns documented
 - SonarQube quality gate passed
 
-✅ **Testing**
+✅ **Testing (Spring Boot 3.5.x Standards)**
+- JUnit 5 (Jupiter) exclusively - **JUnit 4 FORBIDDEN**
 - Unit tests (85%+ coverage)
-- Integration tests with TestContainers
+- Integration tests with Testcontainers + @ServiceConnection
+- testRuntimeOnly 'org.junit.platform:junit-platform-launcher' in all services
+- Tests verified to run in Cursor IDE Test Runner
 - API contract tests
 - Performance tests
 - Security tests (for User Service)
@@ -497,11 +721,16 @@ For all tasks in this phase:
 
 - [ ] All core services running
 - [ ] Service-to-service communication working
-- [ ] TMDB API integration functional
-- [ ] Authentication and authorization working
+- [ ] TMDB API integration functional (using RestClient)
+- [ ] Authentication and authorization working (JWT + Spring Security)
+- [ ] Constructor injection used throughout (NO field injection)
+- [ ] All DTOs are Java records (NO mutable classes)
 - [ ] All CRUD operations functional
+- [ ] JUnit 5 tests passing in Cursor IDE Test Runner
+- [ ] Testcontainers with @ServiceConnection working
 - [ ] Performance benchmarks met
 - [ ] Zero critical bugs
+- [ ] All services use versions from gradle.properties
 
 ---
 

@@ -1,0 +1,166 @@
+---
+alwaysApply: false
+---
+# React Native & Expo Development Rules
+
+You are an expert Senior Mobile Architect specializing in **React Native 0.76**, **Expo Router 4**, and **Cross-Platform Mobile Development**.
+
+## 1. Project Configuration
+
+- **Framework**: React Native 0.76.3
+- **Expo**: ~52.0.0
+- **Expo Router**: ~4.0.0
+- **React**: 19.0.2
+- **TypeScript**: 5.7.2
+- **Node.js**: 24.11.1 (via NVM)
+
+## 2. Architecture & Patterns
+
+### A. Expo Router (File-Based Routing)
+- Use **Expo Router** for navigation (file-based routing)
+- Routes defined by file structure in `app/` directory
+- Use `(tabs)`, `(stack)`, `(group)` for route organization
+- Dynamic routes: `[id].tsx`, `[...slug].tsx`
+
+### B. File Structure
+```
+app/
+  ├── _layout.tsx         # Root layout
+  ├── (tabs)/
+  │   ├── _layout.tsx
+  │   ├── index.tsx       # Home tab
+  │   └── movies/
+  │       ├── index.tsx
+  │       └── [id].tsx
+  ├── (stack)/
+  │   └── movie-details/
+  │       └── [id].tsx
+components/
+  ├── ui/                 # Reusable UI components
+  └── features/           # Feature-specific components
+lib/
+  ├── api/                # API client functions
+  ├── utils/              # Utility functions
+  └── types/              # TypeScript types
+hooks/                     # Custom React hooks
+```
+
+### C. Navigation
+- Use `expo-router` hooks: `useRouter()`, `useLocalSearchParams()`, `useGlobalSearchParams()`
+- Use `Link` component for navigation
+- Use `Stack.Screen` options for headers, animations
+- Prefer declarative navigation over imperative
+
+### D. State Management
+- **Server State**: React Query (`@tanstack/react-query`)
+- **Client State**: Zustand for global state
+- **Form State**: React Hook Form with Zod validation
+- **Local State**: `useState`, `useReducer` for component-level state
+
+## 3. Coding Standards
+
+### A. TypeScript
+- **Strict mode**: Always enabled
+- **Types over Interfaces**: Prefer `type` for object shapes
+- **No `any`**: Use `unknown` and type guards
+- **Explicit return types**: For exported functions
+
+### B. React Native Patterns
+```typescript
+// Screen component
+import { useLocalSearchParams } from 'expo-router';
+import { View, Text } from 'react-native';
+
+export default function MovieDetailsScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  // ... component logic
+  return (
+    <View>
+      <Text>Movie {id}</Text>
+    </View>
+  );
+}
+```
+
+### C. Styling
+- **React Native Paper**: Primary UI library (`react-native-paper`)
+- **StyleSheet API**: For component styles
+- **Theme**: Use Paper's theme system
+- **Responsive**: Use `Dimensions` API or `react-native-responsive-screen` if needed
+
+### D. API Integration
+```typescript
+// lib/api/movies.ts
+import { useQuery } from '@tanstack/react-query';
+
+export function useMovie(id: string) {
+  return useQuery({
+    queryKey: ['movie', id],
+    queryFn: async () => {
+      const res = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/movies/${id}`);
+      if (!res.ok) throw new Error('Failed to fetch');
+      return res.json();
+    },
+  });
+}
+```
+
+### E. Platform-Specific Code
+```typescript
+import { Platform } from 'react-native';
+
+const styles = StyleSheet.create({
+  container: {
+    paddingTop: Platform.OS === 'ios' ? 20 : 0,
+  },
+});
+```
+
+## 4. Testing
+
+- **Framework**: Jest
+- **Test Location**: `__tests__/` or `*.test.tsx` files
+- **Component Testing**: Use React Native Testing Library
+- **Mocking**: Mock native modules and API calls
+
+## 5. Performance
+
+- **Lists**: Use `FlatList` or `SectionList` for long lists
+- **Images**: Use `expo-image` for optimized images
+- **Memoization**: Use `React.memo`, `useMemo`, `useCallback` appropriately
+- **Bundle Size**: Monitor with `expo bundle-size`
+
+## 6. Expo-Specific
+
+### A. Development
+- Use `expo start` for development server
+- Use `expo start --android` or `expo start --ios` for platform-specific
+- Use Expo Go app for quick testing
+
+### B. Building
+- Use EAS Build: `eas build --platform android|ios`
+- Configure `app.json` for app metadata
+- Use environment variables: `EXPO_PUBLIC_*` prefix
+
+### C. Native Modules
+- Prefer Expo modules over bare React Native when possible
+- Use `expo install` for Expo-compatible packages
+- Check compatibility with Expo SDK version
+
+## 7. Cursor/VS Code Specific
+
+- **Formatting**: Prettier
+- **Linting**: ESLint with React Native config
+- **Type Checking**: TypeScript compiler
+- **Test Runner**: Jest extension
+
+## 8. Antigravity Rules
+
+- **NO** `react-navigation` (use Expo Router)
+- **NO** bare React Native navigation setup (Expo Router handles it)
+- **NO** `StyleSheet.create` outside component or separate file
+- **NO** inline styles for complex styling
+- **NO** `useEffect` for data fetching (use React Query)
+- **NO** prop drilling (use Zustand or React Query)
+- **NO** `any` types
+- **NO** console.log in production code (use proper logging)

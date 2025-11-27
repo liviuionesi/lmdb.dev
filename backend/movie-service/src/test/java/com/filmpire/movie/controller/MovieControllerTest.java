@@ -26,14 +26,17 @@ import static org.hamcrest.Matchers.*;
  */
 @WebMvcTest(MovieController.class)
 @DisplayName("MovieController Tests")
-@SuppressWarnings("null")
 class MovieControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
+    private final MockMvc mockMvc;
 
     @MockitoBean
     private MovieService movieService;
+
+    @Autowired
+    MovieControllerTest(MockMvc mockMvc) {
+        this.mockMvc = mockMvc;
+    }
 
     @Test
     @DisplayName("GET /api/v1/movies/{id} - Should return movie details")
@@ -47,13 +50,11 @@ class MovieControllerTest {
         mockMvc.perform(get("/api/v1/movies/{id}", movieId)
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.message").value("Movie retrieved successfully"))
-                .andExpect(jsonPath("$.data.tmdbId").value(movieId))
-                .andExpect(jsonPath("$.data.title").value("Fight Club"))
-                .andExpect(jsonPath("$.data.voteAverage").value(8.4))
-                .andExpect(jsonPath("$.data.runtime").value(139))
-                .andExpect(jsonPath("$.data.genres", hasSize(2)));
+                .andExpect(jsonPath("$.tmdbId").value(movieId))
+                .andExpect(jsonPath("$.title").value("Fight Club"))
+                .andExpect(jsonPath("$.voteAverage").value(8.4))
+                .andExpect(jsonPath("$.runtime").value(139))
+                .andExpect(jsonPath("$.genres", hasSize(2)));
     }
 
     @Test
@@ -70,11 +71,10 @@ class MovieControllerTest {
                 .param("size", "20")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.content", hasSize(2)))
-                .andExpect(jsonPath("$.data.totalElements").value(100))
-                .andExpect(jsonPath("$.data.totalPages").value(5))
-                .andExpect(jsonPath("$.data.pageNumber").value(0));
+                .andExpect(jsonPath("$.content", hasSize(2)))
+                .andExpect(jsonPath("$.totalElements").value(100))
+                .andExpect(jsonPath("$.totalPages").value(5))
+                .andExpect(jsonPath("$.pageNumber").value(0));
     }
 
     @Test
@@ -93,8 +93,7 @@ class MovieControllerTest {
                 .param("genreId", genreId.toString())
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.content", hasSize(2)));
+                .andExpect(jsonPath("$.content", hasSize(2)));
     }
 
     @Test
@@ -114,8 +113,7 @@ class MovieControllerTest {
                 .param("year", year.toString())
                 .param("minRating", minRating.toString())
                 .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(status().isOk());
     }
 
     @Test
@@ -133,9 +131,7 @@ class MovieControllerTest {
                 .param("size", "20")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.message").value("Search completed successfully"))
-                .andExpect(jsonPath("$.data.content", hasSize(2)));
+                .andExpect(jsonPath("$.content", hasSize(2)));
     }
 
     @Test
@@ -151,9 +147,7 @@ class MovieControllerTest {
                 .param("page", "1")
                 .param("size", "20")
                 .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.message").value("Trending movies retrieved successfully"));
+                .andExpect(status().isOk());
     }
 
     @Test
@@ -166,8 +160,7 @@ class MovieControllerTest {
         // Act & Assert
         mockMvc.perform(get("/api/v1/movies/trending")
                 .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(status().isOk());
     }
 
     @Test
@@ -182,9 +175,7 @@ class MovieControllerTest {
                 .param("page", "1")
                 .param("size", "20")
                 .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.message").value("Popular movies retrieved successfully"));
+                .andExpect(status().isOk());
     }
 
     @Test
@@ -199,9 +190,7 @@ class MovieControllerTest {
                 .param("page", "1")
                 .param("size", "20")
                 .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.message").value("Top-rated movies retrieved successfully"));
+                .andExpect(status().isOk());
     }
 
     @Test
@@ -216,11 +205,9 @@ class MovieControllerTest {
         mockMvc.perform(get("/api/v1/movies/{id}/videos", movieId)
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.message").value("Videos retrieved successfully"))
-                .andExpect(jsonPath("$.data", hasSize(2)))
-                .andExpect(jsonPath("$.data[0].type").value("Trailer"))
-                .andExpect(jsonPath("$.data[0].site").value("YouTube"));
+                .andExpect(jsonPath("$", hasSize(2)))
+                .andExpect(jsonPath("$[0].type").value("Trailer"))
+                .andExpect(jsonPath("$[0].site").value("YouTube"));
     }
 
     @Test
@@ -235,12 +222,10 @@ class MovieControllerTest {
         mockMvc.perform(get("/api/v1/movies/{id}/credits", movieId)
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.message").value("Credits retrieved successfully"))
-                .andExpect(jsonPath("$.data.movieId").value(movieId))
-                .andExpect(jsonPath("$.data.cast", hasSize(2)))
-                .andExpect(jsonPath("$.data.crew", hasSize(1)))
-                .andExpect(jsonPath("$.data.cast[0].name").value("Brad Pitt"));
+                .andExpect(jsonPath("$.movieId").value(movieId))
+                .andExpect(jsonPath("$.cast", hasSize(2)))
+                .andExpect(jsonPath("$.crew", hasSize(1)))
+                .andExpect(jsonPath("$.cast[0].name").value("Brad Pitt"));
     }
 
     @Test
@@ -256,9 +241,7 @@ class MovieControllerTest {
                 .param("page", "1")
                 .param("size", "20")
                 .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.message").value("Similar movies retrieved successfully"));
+                .andExpect(status().isOk());
     }
 
     @Test
@@ -274,9 +257,7 @@ class MovieControllerTest {
                 .param("page", "1")
                 .param("size", "20")
                 .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.message").value("Recommendations retrieved successfully"));
+                .andExpect(status().isOk());
     }
 
     // Helper methods
@@ -399,4 +380,3 @@ class MovieControllerTest {
                 .build();
     }
 }
-

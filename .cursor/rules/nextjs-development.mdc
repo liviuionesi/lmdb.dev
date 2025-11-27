@@ -1,0 +1,140 @@
+---
+alwaysApply: false
+---
+# Next.js 16 & React 19 Development Rules
+
+You are an expert Senior Frontend Architect specializing in **Next.js 16**, **React 19**, **TypeScript**, and **Modern Web Development**.
+
+## 1. Project Configuration
+
+- **Framework**: Next.js 16.0.0
+- **React**: 19.0.2
+- **TypeScript**: 5.7.2
+- **Node.js**: 24.11.1 (via NVM)
+- **Package Manager**: npm 11.6.2
+
+## 2. Architecture & Patterns
+
+### A. Next.js App Router (Required)
+- Use **App Router** (`app/` directory), NOT Pages Router
+- Use **Server Components** by default, opt into Client Components only when needed
+- Use `async/await` for Server Components that fetch data
+- Use `'use client'` directive only when necessary (interactivity, hooks, browser APIs)
+
+### B. File Structure
+```
+app/
+  ├── layout.tsx          # Root layout (Server Component)
+  ├── page.tsx            # Home page
+  ├── (routes)/           # Route groups
+  │   ├── movies/
+  │   │   ├── page.tsx
+  │   │   └── [id]/
+  │   │       └── page.tsx
+  └── api/                # API routes (if needed)
+      └── route.ts
+components/
+  ├── ui/                 # Reusable UI components
+  └── features/           # Feature-specific components
+lib/
+  ├── api/                # API client functions
+  ├── utils/              # Utility functions
+  └── types/              # TypeScript types
+```
+
+### C. Data Fetching
+- **Server Components**: Fetch directly with `fetch()` (caching enabled by default)
+- **Client Components**: Use `@tanstack/react-query` for client-side data fetching
+- Use `revalidate` for ISR, `cache: 'no-store'` for dynamic data
+- Prefer Server Components for initial data, React Query for client-side updates
+
+### D. State Management
+- **Server State**: React Query (`@tanstack/react-query`)
+- **Client State**: Zustand for global client state
+- **Form State**: React Hook Form with Zod validation
+- **URL State**: Next.js `useSearchParams`, `useRouter`
+
+## 3. Coding Standards
+
+### A. TypeScript
+- **Strict mode**: Always enabled
+- **Types over Interfaces**: Prefer `type` for object shapes, `interface` only for extensibility
+- **No `any`**: Use `unknown` and type guards instead
+- **Explicit return types**: For exported functions
+
+### B. React Patterns
+```typescript
+// Server Component (default)
+export default async function MoviePage({ params }: { params: { id: string } }) {
+  const movie = await fetchMovie(params.id);
+  return <MovieDetails movie={movie} />;
+}
+
+// Client Component (when needed)
+'use client';
+
+import { useState } from 'react';
+
+export function MovieSearch() {
+  const [query, setQuery] = useState('');
+  // ... client-side logic
+}
+```
+
+### C. Styling
+- **Tailwind CSS**: Primary styling approach
+- **MUI (Material-UI)**: For complex components (use `@mui/material`)
+- **CSS Modules**: For component-scoped styles if needed
+- **Emotion**: Required for MUI (already in dependencies)
+
+### D. API Integration
+```typescript
+// lib/api/movies.ts
+export async function getMovie(id: string): Promise<Movie> {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/movies/${id}`, {
+    next: { revalidate: 3600 } // ISR: 1 hour
+  });
+  
+  if (!res.ok) {
+    throw new Error('Failed to fetch movie');
+  }
+  
+  return res.json();
+}
+```
+
+### E. Error Handling
+- Use Next.js `error.tsx` for error boundaries
+- Use `not-found.tsx` for 404 pages
+- Handle API errors gracefully with try/catch in Server Components
+- Use React Query error handling in Client Components
+
+## 4. Testing
+
+- **Framework**: Jest with React Testing Library
+- **Test Location**: `__tests__/` or `*.test.tsx` files
+- **Focus**: Component behavior, not implementation details
+- **Mocking**: Mock API calls, not React components
+
+## 5. Performance
+
+- **Images**: Always use `next/image` with proper `width`, `height`, `alt`
+- **Fonts**: Use `next/font` for custom fonts
+- **Code Splitting**: Automatic with App Router
+- **Bundle Analysis**: Use `@next/bundle-analyzer` when needed
+
+## 6. Cursor/VS Code Specific
+
+- **Formatting**: Prettier (configured via `.prettierrc`)
+- **Linting**: ESLint with `eslint-config-next`
+- **Type Checking**: TypeScript compiler in watch mode
+- **Test Runner**: Jest extension for IDE integration
+
+## 7. Antigravity Rules
+
+- **NO** `getServerSideProps` or `getStaticProps` (App Router only)
+- **NO** `pages/` directory (use `app/` only)
+- **NO** `_app.tsx` or `_document.tsx` (use `layout.tsx`)
+- **NO** Client Components for data fetching that can be done server-side
+- **NO** `useEffect` for data fetching (use Server Components or React Query)
+- **NO** prop drilling (use Zustand or React Query for shared state)

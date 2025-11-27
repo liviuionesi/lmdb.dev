@@ -25,7 +25,6 @@ import static org.mockito.Mockito.*;
  * Unit tests for GlobalRateLimitFilter.
  */
 @DisplayName("GlobalRateLimitFilter Tests")
-@SuppressWarnings("null")
 class GlobalRateLimitFilterTest {
 
     private GlobalRateLimitFilter globalRateLimitFilter;

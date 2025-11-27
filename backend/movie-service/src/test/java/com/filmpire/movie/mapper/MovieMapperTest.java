@@ -4,10 +4,6 @@ import com.filmpire.movie.dto.*;
 import com.filmpire.movie.model.*;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.ComponentScan;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -18,19 +14,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Tests for MovieMapper.
- * Tests MapStruct mappings between entities and DTOs.
+ * Tests MapStruct mappings between entities and DTOs using the generated implementation.
  */
-@SpringBootTest(classes = MovieMapperTest.TestConfig.class)
 @DisplayName("MovieMapper Tests")
 class MovieMapperTest {
 
-    @TestConfiguration
-    @ComponentScan(basePackages = "com.filmpire.movie.mapper")
-    static class TestConfig {
-    }
-
-    @Autowired
-    private MovieMapper mapper;
+    // Use MapStruct's factory to get the generated implementation directly
+    private final MovieMapper mapper = org.mapstruct.factory.Mappers.getMapper(MovieMapper.class);
 
     @Test
     @DisplayName("Should map Movie to MovieDto correctly")
@@ -71,27 +61,27 @@ class MovieMapperTest {
 
         // Assert
         assertThat(dto).isNotNull();
-        assertThat(dto.getId()).isEqualTo("mongo123");
-        assertThat(dto.getTmdbId()).isEqualTo(550L);
-        assertThat(dto.getTitle()).isEqualTo("Fight Club");
-        assertThat(dto.getOverview()).isEqualTo("An insomniac office worker...");
-        assertThat(dto.getPosterPath()).isEqualTo("/poster.jpg");
-        assertThat(dto.getBackdropPath()).isEqualTo("/backdrop.jpg");
-        assertThat(dto.getReleaseDate()).isEqualTo(LocalDate.of(1999, 10, 15));
-        assertThat(dto.getVoteAverage()).isEqualTo(8.4);
-        assertThat(dto.getVoteCount()).isEqualTo(25000);
-        assertThat(dto.getGenres()).hasSize(2);
-        assertThat(dto.getRuntime()).isEqualTo(139);
-        assertThat(dto.getStatus()).isEqualTo("Released");
-        assertThat(dto.getBudget()).isEqualTo(63000000L);
-        assertThat(dto.getRevenue()).isEqualTo(100853753L);
-        assertThat(dto.getSpokenLanguages()).containsExactly("English");
-        assertThat(dto.getOriginalLanguage()).isEqualTo("en");
-        assertThat(dto.getPopularity()).isEqualTo(450.5);
-        assertThat(dto.getAdult()).isFalse();
-        assertThat(dto.getImdbId()).isEqualTo("tt0137523");
-        assertThat(dto.getTagline()).isEqualTo("Mischief. Mayhem. Soap.");
-        assertThat(dto.getHomepage()).isEqualTo("http://www.foxmovies.com/movies/fight-club");
+        assertThat(dto.id()).isEqualTo("mongo123");
+        assertThat(dto.tmdbId()).isEqualTo(550L);
+        assertThat(dto.title()).isEqualTo("Fight Club");
+        assertThat(dto.overview()).isEqualTo("An insomniac office worker...");
+        assertThat(dto.posterPath()).isEqualTo("/poster.jpg");
+        assertThat(dto.backdropPath()).isEqualTo("/backdrop.jpg");
+        assertThat(dto.releaseDate()).isEqualTo(LocalDate.of(1999, 10, 15));
+        assertThat(dto.voteAverage()).isEqualTo(8.4);
+        assertThat(dto.voteCount()).isEqualTo(25000);
+        assertThat(dto.genres()).hasSize(2);
+        assertThat(dto.runtime()).isEqualTo(139);
+        assertThat(dto.status()).isEqualTo("Released");
+        assertThat(dto.budget()).isEqualTo(63000000L);
+        assertThat(dto.revenue()).isEqualTo(100853753L);
+        assertThat(dto.spokenLanguages()).containsExactly("English");
+        assertThat(dto.originalLanguage()).isEqualTo("en");
+        assertThat(dto.popularity()).isEqualTo(450.5);
+        assertThat(dto.adult()).isFalse();
+        assertThat(dto.imdbId()).isEqualTo("tt0137523");
+        assertThat(dto.tagline()).isEqualTo("Mischief. Mayhem. Soap.");
+        assertThat(dto.homepage()).isEqualTo("http://www.foxmovies.com/movies/fight-club");
     }
 
     @Test
@@ -117,16 +107,16 @@ class MovieMapperTest {
 
         // Assert
         assertThat(dto).isNotNull();
-        assertThat(dto.getTmdbId()).isEqualTo(550L);
-        assertThat(dto.getTitle()).isEqualTo("Fight Club");
-        assertThat(dto.getOverview()).isEqualTo("An insomniac office worker...");
-        assertThat(dto.getPosterPath()).isEqualTo("/poster.jpg");
-        assertThat(dto.getBackdropPath()).isEqualTo("/backdrop.jpg");
-        assertThat(dto.getReleaseDate()).isEqualTo(LocalDate.of(1999, 10, 15));
-        assertThat(dto.getVoteAverage()).isEqualTo(8.4);
-        assertThat(dto.getVoteCount()).isEqualTo(25000);
-        assertThat(dto.getPopularity()).isEqualTo(450.5);
-        assertThat(dto.getAdult()).isFalse();
+        assertThat(dto.tmdbId()).isEqualTo(550L);
+        assertThat(dto.title()).isEqualTo("Fight Club");
+        assertThat(dto.overview()).isEqualTo("An insomniac office worker...");
+        assertThat(dto.posterPath()).isEqualTo("/poster.jpg");
+        assertThat(dto.backdropPath()).isEqualTo("/backdrop.jpg");
+        assertThat(dto.releaseDate()).isEqualTo(LocalDate.of(1999, 10, 15));
+        assertThat(dto.voteAverage()).isEqualTo(8.4);
+        assertThat(dto.voteCount()).isEqualTo(25000);
+        assertThat(dto.popularity()).isEqualTo(450.5);
+        assertThat(dto.adult()).isFalse();
     }
 
     @Test
@@ -143,8 +133,8 @@ class MovieMapperTest {
 
         // Assert
         assertThat(dto).isNotNull();
-        assertThat(dto.getId()).isEqualTo(28L);
-        assertThat(dto.getName()).isEqualTo("Action");
+        assertThat(dto.id()).isEqualTo(28L);
+        assertThat(dto.name()).isEqualTo("Action");
     }
 
     @Test
@@ -162,12 +152,12 @@ class MovieMapperTest {
 
         // Assert
         assertThat(dtos).hasSize(3);
-        assertThat(dtos.get(0).getId()).isEqualTo(28L);
-        assertThat(dtos.get(0).getName()).isEqualTo("Action");
-        assertThat(dtos.get(1).getId()).isEqualTo(18L);
-        assertThat(dtos.get(1).getName()).isEqualTo("Drama");
-        assertThat(dtos.get(2).getId()).isEqualTo(53L);
-        assertThat(dtos.get(2).getName()).isEqualTo("Thriller");
+        assertThat(dtos.get(0).id()).isEqualTo(28L);
+        assertThat(dtos.get(0).name()).isEqualTo("Action");
+        assertThat(dtos.get(1).id()).isEqualTo(18L);
+        assertThat(dtos.get(1).name()).isEqualTo("Drama");
+        assertThat(dtos.get(2).id()).isEqualTo(53L);
+        assertThat(dtos.get(2).name()).isEqualTo("Thriller");
     }
 
     @Test
@@ -190,14 +180,14 @@ class MovieMapperTest {
 
         // Assert
         assertThat(dto).isNotNull();
-        assertThat(dto.getId()).isEqualTo("video123");
-        assertThat(dto.getKey()).isEqualTo("dQw4w9WgXcQ");
-        assertThat(dto.getName()).isEqualTo("Official Trailer");
-        assertThat(dto.getSite()).isEqualTo("YouTube");
-        assertThat(dto.getSize()).isEqualTo(1080);
-        assertThat(dto.getType()).isEqualTo("Trailer");
-        assertThat(dto.getOfficial()).isTrue();
-        assertThat(dto.getPublishedAt()).isEqualTo("2020-01-01T00:00:00Z");
+        assertThat(dto.id()).isEqualTo("video123");
+        assertThat(dto.key()).isEqualTo("dQw4w9WgXcQ");
+        assertThat(dto.name()).isEqualTo("Official Trailer");
+        assertThat(dto.site()).isEqualTo("YouTube");
+        assertThat(dto.size()).isEqualTo(1080);
+        assertThat(dto.type()).isEqualTo("Trailer");
+        assertThat(dto.official()).isTrue();
+        assertThat(dto.publishedAt()).isEqualTo("2020-01-01T00:00:00Z");
     }
 
     @Test
@@ -217,11 +207,11 @@ class MovieMapperTest {
 
         // Assert
         assertThat(dto).isNotNull();
-        assertThat(dto.getId()).isEqualTo(287L);
-        assertThat(dto.getName()).isEqualTo("Brad Pitt");
-        assertThat(dto.getCharacter()).isEqualTo("Tyler Durden");
-        assertThat(dto.getProfilePath()).isEqualTo("/brad.jpg");
-        assertThat(dto.getOrder()).isZero();
+        assertThat(dto.id()).isEqualTo(287L);
+        assertThat(dto.name()).isEqualTo("Brad Pitt");
+        assertThat(dto.character()).isEqualTo("Tyler Durden");
+        assertThat(dto.profilePath()).isEqualTo("/brad.jpg");
+        assertThat(dto.order()).isZero();
     }
 
     @Test
@@ -241,11 +231,11 @@ class MovieMapperTest {
 
         // Assert
         assertThat(dto).isNotNull();
-        assertThat(dto.getId()).isEqualTo(7467L);
-        assertThat(dto.getName()).isEqualTo("David Fincher");
-        assertThat(dto.getJob()).isEqualTo("Director");
-        assertThat(dto.getDepartment()).isEqualTo("Directing");
-        assertThat(dto.getProfilePath()).isEqualTo("/fincher.jpg");
+        assertThat(dto.id()).isEqualTo(7467L);
+        assertThat(dto.name()).isEqualTo("David Fincher");
+        assertThat(dto.job()).isEqualTo("Director");
+        assertThat(dto.department()).isEqualTo("Directing");
+        assertThat(dto.profilePath()).isEqualTo("/fincher.jpg");
     }
 
     @Test
@@ -262,11 +252,11 @@ class MovieMapperTest {
 
         // Assert
         assertThat(dto).isNotNull();
-        assertThat(dto.getTmdbId()).isEqualTo(550L);
-        assertThat(dto.getTitle()).isEqualTo("Fight Club");
-        assertThat(dto.getOverview()).isNull();
-        assertThat(dto.getPosterPath()).isNull();
-        assertThat(dto.getGenres()).isNull();
+        assertThat(dto.tmdbId()).isEqualTo(550L);
+        assertThat(dto.title()).isEqualTo("Fight Club");
+        assertThat(dto.overview()).isNull();
+        assertThat(dto.posterPath()).isNull();
+        assertThat(dto.genres()).isNull();
     }
 
     @Test
@@ -291,9 +281,9 @@ class MovieMapperTest {
 
         // Assert
         assertThat(dtos).hasSize(2);
-        assertThat(dtos.get(0).getTmdbId()).isEqualTo(550L);
-        assertThat(dtos.get(0).getTitle()).isEqualTo("Fight Club");
-        assertThat(dtos.get(1).getTmdbId()).isEqualTo(13L);
-        assertThat(dtos.get(1).getTitle()).isEqualTo("Forrest Gump");
+        assertThat(dtos.get(0).tmdbId()).isEqualTo(550L);
+        assertThat(dtos.get(0).title()).isEqualTo("Fight Club");
+        assertThat(dtos.get(1).tmdbId()).isEqualTo(13L);
+        assertThat(dtos.get(1).title()).isEqualTo("Forrest Gump");
     }
 }

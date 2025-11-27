@@ -3,18 +3,20 @@ package com.filmpire.movie.integration;
 import com.filmpire.movie.config.TmdbClientTestStubConfig;
 import com.filmpire.movie.model.Movie;
 import com.filmpire.movie.repository.MovieRepository;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
-import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+
 import org.testcontainers.containers.MongoDBContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.junit.jupiter.Container;
@@ -31,43 +33,39 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * End-to-end integration tests.
  * Tests complete workflows from HTTP request to database and back.
  */
-@SpringBootTest(
-    webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-    properties = {
-        "spring.autoconfigure.exclude=" +
-            "org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration," +
-            "org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration," +
-            "org.springframework.cloud.openfeign.FeignAutoConfiguration"
-    }
-)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
 @Import(TmdbClientTestStubConfig.class)
 @Testcontainers
+@ActiveProfiles("test")
 @DisplayName("End-to-End Integration Tests")
-@SuppressWarnings({"resource", "try", "null"})
+@SuppressWarnings("resource")
 class EndToEndIntegrationTest {
 
     @Container
     static MongoDBContainer mongoDBContainer = new MongoDBContainer("mongo:8.0.0")
-            .withExposedPorts(27017)
             .waitingFor(Wait.forListeningPort())
             .withStartupTimeout(Duration.ofSeconds(60));
+
+    @DynamicPropertySource
+    static void configureProperties(DynamicPropertyRegistry registry) {
+        registry.add("spring.data.mongodb.uri", mongoDBContainer::getReplicaSetUrl);
+    }
 
     private final MockMvc mockMvc;
     private final MovieRepository movieRepository;
 
-    @Autowired
+    @org.springframework.beans.factory.annotation.Autowired
     EndToEndIntegrationTest(MockMvc mockMvc, MovieRepository movieRepository) {
         this.mockMvc = mockMvc;
         this.movieRepository = movieRepository;
     }
 
-    @DynamicPropertySource
-    static void setProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.data.mongodb.uri", mongoDBContainer::getReplicaSetUrl);
-        registry.add("spring.cache.type", () -> "none");
-        registry.add("eureka.client.enabled", () -> "false");
-        registry.add("spring.cloud.config.enabled", () -> "false");
+    @AfterAll
+    static void cleanup() {
+        if (mongoDBContainer != null && mongoDBContainer.isRunning()) {
+            mongoDBContainer.stop();
+        }
     }
 
     @BeforeEach
@@ -87,28 +85,30 @@ class EndToEndIntegrationTest {
         // This test demonstrates a complete user workflow
         // Note: Requires valid TMDB API key for full functionality
 
-        // Step 1: Get genres
+        // Step 1: Get genres (returns List<GenreDto> directly)
         mockMvc.perform(get("/api/v1/genres")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data").exists());
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$[0].id").exists())
+                .andExpect(jsonPath("$[0].name").exists());
 
-        // Step 2: Discover popular movies
+        // Step 2: Discover popular movies (returns PageResponse<MovieListDto>)
         mockMvc.perform(get("/api/v1/movies/popular")
                 .param("page", "1")
                 .param("size", "10")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.content").exists());
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.totalElements").exists())
+                .andExpect(jsonPath("$.totalPages").exists());
 
-        // Step 3: Get trending movies
+        // Step 3: Get trending movies (returns PageResponse<MovieListDto>)
         mockMvc.perform(get("/api/v1/movies/trending")
                 .param("timeWindow", "week")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$.content").isArray());
     }
 
     @Test
@@ -116,21 +116,21 @@ class EndToEndIntegrationTest {
     void searchAndGetDetailsWorkflow() throws Exception {
         // This test demonstrates searching and getting detailed information
 
-        // Step 1: Search for movies
+        // Step 1: Search for movies (returns PageResponse<MovieListDto>)
         mockMvc.perform(get("/api/v1/movies/search")
                 .param("query", "Matrix")
                 .param("page", "1")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data").exists());
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.totalElements").exists());
 
         // Step 2: Get top-rated movies
         mockMvc.perform(get("/api/v1/movies/top-rated")
                 .param("page", "1")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$.content").isArray());
     }
 
     @Test
@@ -145,7 +145,7 @@ class EndToEndIntegrationTest {
                 .param("genreId", "28") // Action
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$.content").isArray());
 
         // Step 2: Discover by year and rating
         mockMvc.perform(get("/api/v1/movies/discover")
@@ -155,7 +155,7 @@ class EndToEndIntegrationTest {
                 .param("minRating", "8.0")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$.content").isArray());
 
         // Step 3: Discover with all filters
         mockMvc.perform(get("/api/v1/movies/discover")
@@ -166,7 +166,7 @@ class EndToEndIntegrationTest {
                 .param("minRating", "7.5")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$.content").isArray());
     }
 
     @Test
@@ -174,32 +174,32 @@ class EndToEndIntegrationTest {
     void apiResponseConsistency() throws Exception {
         // Verify all endpoints return consistent ApiResponse structure
 
-        // Popular movies
+        // Popular movies (returns PageResponse with standard structure)
         mockMvc.perform(get("/api/v1/movies/popular")
                 .param("page", "1")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").exists())
-                .andExpect(jsonPath("$.message").exists())
-                .andExpect(jsonPath("$.data").exists())
-                .andExpect(jsonPath("$.statusCode").exists());
+                .andExpect(jsonPath("$.content").exists())
+                .andExpect(jsonPath("$.pageNumber").exists())
+                .andExpect(jsonPath("$.totalElements").exists())
+                .andExpect(jsonPath("$.totalPages").exists());
 
-        // Top-rated movies
+        // Top-rated movies (returns PageResponse with standard structure)
         mockMvc.perform(get("/api/v1/movies/top-rated")
                 .param("page", "1")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").exists())
-                .andExpect(jsonPath("$.message").exists())
-                .andExpect(jsonPath("$.data").exists());
+                .andExpect(jsonPath("$.content").exists())
+                .andExpect(jsonPath("$.pageNumber").exists())
+                .andExpect(jsonPath("$.totalElements").exists());
 
-        // Genres
+        // Genres (returns List<GenreDto> directly - array format)
         mockMvc.perform(get("/api/v1/genres")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").exists())
-                .andExpect(jsonPath("$.message").exists())
-                .andExpect(jsonPath("$.data").exists());
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$[0].id").exists())
+                .andExpect(jsonPath("$[0].name").exists());
     }
 
     @Test
@@ -213,7 +213,7 @@ class EndToEndIntegrationTest {
                 .param("size", "5")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.pageNumber").value(0));
+                .andExpect(jsonPath("$.pageNumber").value(0));
 
         // Page 2
         mockMvc.perform(get("/api/v1/movies/popular")
@@ -221,7 +221,7 @@ class EndToEndIntegrationTest {
                 .param("size", "5")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.pageNumber").value(1));
+                .andExpect(jsonPath("$.pageNumber").value(1));
 
         // Page 3
         mockMvc.perform(get("/api/v1/movies/popular")
@@ -229,7 +229,7 @@ class EndToEndIntegrationTest {
                 .param("size", "5")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.pageNumber").value(2));
+                .andExpect(jsonPath("$.pageNumber").value(2));
     }
 
     @Test
@@ -259,13 +259,12 @@ class EndToEndIntegrationTest {
 
         movieRepository.save(movie);
 
-        // Request should return from MongoDB cache
+        // Request should return from MongoDB cache (returns MovieDto directly)
         mockMvc.perform(get("/api/v1/movies/{id}", 550L)
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.tmdbId").value(550))
-                .andExpect(jsonPath("$.data.title").value("Fight Club"));
+                .andExpect(jsonPath("$.tmdbId").value(550))
+                .andExpect(jsonPath("$.title").value("Fight Club"));
     }
 
     @Test
@@ -295,7 +294,7 @@ class EndToEndIntegrationTest {
                     .param("size", "20")
                     .contentType(MediaType.APPLICATION_JSON))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.success").value(true));
+                    .andExpect(jsonPath("$.content").isArray());
         }
     }
 

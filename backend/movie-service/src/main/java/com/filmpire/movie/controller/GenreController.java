@@ -2,7 +2,6 @@ package com.filmpire.movie.controller;
 
 import com.filmpire.movie.dto.GenreDto;
 import com.filmpire.movie.service.MovieService;
-import com.filmpire.shared.dto.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -33,10 +32,8 @@ public class GenreController {
      */
     @GetMapping
     @Operation(summary = "Get all genres", description = "Retrieve all available movie genres")
-    public ResponseEntity<ApiResponse<List<GenreDto>>> getAllGenres() {
+    public ResponseEntity<List<GenreDto>> getAllGenres() {
         log.info("GET /api/v1/genres - Fetching all genres");
-        List<GenreDto> genres = movieService.getAllGenres();
-        return ResponseEntity.ok(ApiResponse.success(genres, "Genres retrieved successfully", 200));
+        return ResponseEntity.ok(movieService.getAllGenres());
     }
 }
-

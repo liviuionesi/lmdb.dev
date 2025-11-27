@@ -1,0 +1,72 @@
+---
+alwaysApply: true
+---
+
+# Global Development Rules
+
+These rules apply across all projects and technologies in this workspace.
+
+## 1. Code Quality
+
+- **Immutability**: Prefer immutable data structures and patterns
+- **Type Safety**: Always use TypeScript/strong typing, avoid `any`
+- **Error Handling**: Explicit error handling, no silent failures
+- **Testing**: Write tests for critical paths, aim for high coverage
+- **Documentation**: Document complex logic, public APIs, and architectural decisions
+
+## 2. Git Workflow
+
+- **Commits**: Write clear, descriptive commit messages
+- **Branches**: Use feature branches, merge via PR
+- **Code Review**: All code should be reviewed before merging
+- **Clean History**: Rebase/squash commits for clean history
+
+## 3. Environment Management
+
+- **Java**: Managed via SDKMAN (Java 25)
+- **Node.js**: Managed via NVM (Node 24.11.1)
+- **Gradle**: Managed via SDKMAN (Gradle 9.2.0)
+- **Environment Variables**: Use `.env` files, never commit secrets
+
+## 4. IDE Configuration
+
+- **Cursor/VS Code**: Primary IDE
+- **Extensions**: Use recommended extensions from `.vscode/extensions.json`
+- **Formatting**: Auto-format on save enabled
+- **Linting**: Real-time linting enabled
+- **Spellcheck**: Code Spell Checker for English and German
+
+## 5. Communication
+
+- **Code Comments**: Write in English
+- **Documentation**: Write in English
+- **Commit Messages**: Write in English
+- **Variable Names**: Use English (camelCase/PascalCase)
+- **User-Facing Text**: Can be multilingual (English/German)
+
+## 6. Performance
+
+- **Optimize Early**: Profile before optimizing
+- **Lazy Loading**: Use lazy loading for routes, components, modules
+- **Caching**: Implement appropriate caching strategies
+- **Bundle Size**: Monitor and minimize bundle sizes
+
+## 7. Security
+
+- **Secrets**: Never commit secrets, use environment variables
+- **Dependencies**: Keep dependencies updated, scan for vulnerabilities
+- **Input Validation**: Always validate and sanitize user input
+- **Authentication**: Use secure authentication patterns
+
+## 8. Accessibility
+
+- **Semantic HTML**: Use semantic HTML elements
+- **ARIA Labels**: Add ARIA labels when needed
+- **Keyboard Navigation**: Ensure keyboard accessibility
+- **Screen Readers**: Test with screen readers
+
+## 9. Project-Specific Rules
+
+- **Spring Boot**: See `spring-boot-development.mdc`
+- **Next.js**: See `nextjs-development.mdc`
+- **React Native**: See `react-native-development.mdc`

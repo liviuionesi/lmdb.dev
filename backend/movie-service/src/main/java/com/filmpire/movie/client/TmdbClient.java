@@ -1,20 +1,16 @@
 package com.filmpire.movie.client;
 
 import com.filmpire.movie.client.dto.*;
-import org.springframework.cloud.openfeign.FeignClient;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.service.annotation.GetExchange;
+import org.springframework.web.service.annotation.HttpExchange;
 
 /**
- * Feign client for TMDB API.
+ * Http Client for TMDB API.
  * Base URL and API key are configured in application.yml.
  */
-@FeignClient(
-    name = "tmdb-client",
-    url = "${tmdb.api.base-url}",
-    configuration = TmdbClientConfig.class
-)
+@HttpExchange
 public interface TmdbClient {
 
     /**
@@ -24,7 +20,7 @@ public interface TmdbClient {
      * @param apiKey API key
      * @return Movie details
      */
-    @GetMapping("/movie/{movieId}")
+    @GetExchange("/movie/{movieId}")
     TmdbMovieResponse getMovieDetails(
         @PathVariable("movieId") Long movieId,
         @RequestParam("api_key") String apiKey
@@ -41,7 +37,7 @@ public interface TmdbClient {
      * @param minRating Minimum rating filter
      * @return List of movies
      */
-    @GetMapping("/discover/movie")
+    @GetExchange("/discover/movie")
     TmdbMovieListResponse discoverMovies(
         @RequestParam("api_key") String apiKey,
         @RequestParam(value = "page", defaultValue = "1") Integer page,
@@ -59,7 +55,7 @@ public interface TmdbClient {
      * @param page Page number
      * @return List of movies
      */
-    @GetMapping("/search/movie")
+    @GetExchange("/search/movie")
     TmdbMovieListResponse searchMovies(
         @RequestParam("api_key") String apiKey,
         @RequestParam("query") String query,
@@ -74,7 +70,7 @@ public interface TmdbClient {
      * @param page Page number
      * @return List of trending movies
      */
-    @GetMapping("/trending/movie/{timeWindow}")
+    @GetExchange("/trending/movie/{timeWindow}")
     TmdbMovieListResponse getTrendingMovies(
         @PathVariable("timeWindow") String timeWindow,
         @RequestParam("api_key") String apiKey,
@@ -88,7 +84,7 @@ public interface TmdbClient {
      * @param page Page number
      * @return List of popular movies
      */
-    @GetMapping("/movie/popular")
+    @GetExchange("/movie/popular")
     TmdbMovieListResponse getPopularMovies(
         @RequestParam("api_key") String apiKey,
         @RequestParam(value = "page", defaultValue = "1") Integer page
@@ -101,7 +97,7 @@ public interface TmdbClient {
      * @param page Page number
      * @return List of top-rated movies
      */
-    @GetMapping("/movie/top_rated")
+    @GetExchange("/movie/top_rated")
     TmdbMovieListResponse getTopRatedMovies(
         @RequestParam("api_key") String apiKey,
         @RequestParam(value = "page", defaultValue = "1") Integer page
@@ -114,7 +110,7 @@ public interface TmdbClient {
      * @param apiKey API key
      * @return List of videos
      */
-    @GetMapping("/movie/{movieId}/videos")
+    @GetExchange("/movie/{movieId}/videos")
     TmdbVideosResponse getMovieVideos(
         @PathVariable("movieId") Long movieId,
         @RequestParam("api_key") String apiKey
@@ -127,7 +123,7 @@ public interface TmdbClient {
      * @param apiKey API key
      * @return Credits
      */
-    @GetMapping("/movie/{movieId}/credits")
+    @GetExchange("/movie/{movieId}/credits")
     TmdbCreditsResponse getMovieCredits(
         @PathVariable("movieId") Long movieId,
         @RequestParam("api_key") String apiKey
@@ -141,7 +137,7 @@ public interface TmdbClient {
      * @param page Page number
      * @return List of similar movies
      */
-    @GetMapping("/movie/{movieId}/similar")
+    @GetExchange("/movie/{movieId}/similar")
     TmdbMovieListResponse getSimilarMovies(
         @PathVariable("movieId") Long movieId,
         @RequestParam("api_key") String apiKey,
@@ -156,7 +152,7 @@ public interface TmdbClient {
      * @param page Page number
      * @return List of recommended movies
      */
-    @GetMapping("/movie/{movieId}/recommendations")
+    @GetExchange("/movie/{movieId}/recommendations")
     TmdbMovieListResponse getRecommendedMovies(
         @PathVariable("movieId") Long movieId,
         @RequestParam("api_key") String apiKey,
@@ -169,9 +165,8 @@ public interface TmdbClient {
      * @param apiKey API key
      * @return List of genres
      */
-    @GetMapping("/genre/movie/list")
+    @GetExchange("/genre/movie/list")
     TmdbGenresResponse getGenres(
         @RequestParam("api_key") String apiKey
     );
 }
-

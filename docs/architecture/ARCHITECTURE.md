@@ -244,29 +244,32 @@ spring:
 - High read performance for movie catalogs
 - Easy to handle embedded documents
 
-**Domain Model:**
+**Domain Model (Java 25 Record):**
 ```java
 @Document(collection = "movies")
-public record Movie(
-    @Id String id,
-    String tmdbId,
-    String title,
-    String originalTitle,
-    String overview,
-    LocalDate releaseDate,
-    Integer runtime,
-    Double voteAverage,
-    Integer voteCount,
-    String posterPath,
-    String backdropPath,
-    List<Genre> genres,
-    List<CastMember> cast,
-    List<CrewMember> crew,
-    List<Video> videos,
-    List<ProductionCompany> productionCompanies,
-    List<String> spokenLanguages,
-    MovieStatus status
-) {}
+@Builder
+@Slf4j
+public class Movie {
+    @Id 
+    private String id;
+    private Long tmdbId;
+    private String title;
+    private String originalTitle;
+    private String overview;
+    private LocalDate releaseDate;
+    private Integer runtime;
+    private Double voteAverage;
+    private Integer voteCount;
+    private String posterPath;
+    private String backdropPath;
+    private List<Genre> genres;
+    private List<CastMember> cast;
+    private List<CrewMember> crew;
+    private List<Video> videos;
+    private List<ProductionCompany> productionCompanies;
+    private List<String> spokenLanguages;
+    private MovieStatus status;
+}
 ```
 
 **TMDB Endpoints Replicated:**
@@ -278,16 +281,25 @@ public record Movie(
 - `GET /api/v1/movies/discover?genre={id}` - Discover by genre
 - `GET /api/v1/genres` - Get all genres
 
-**Service Layer (TDD Example):**
+**Service Layer (Constructor Injection - NO Field Injection):**
 ```java
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class MovieService {
     
     private final MovieRepository movieRepository;
     private final TmdbClient tmdbClient;
     private final CacheManager cacheManager;
+    
+    // Constructor injection - Spring Boot 3.5.x best practice
+    public MovieService(
+            MovieRepository movieRepository, 
+            TmdbClient tmdbClient,
+            CacheManager cacheManager) {
+        this.movieRepository = movieRepository;
+        this.tmdbClient = tmdbClient;
+        this.cacheManager = cacheManager;
+    }
     
     /**
      * Retrieves movies by category with caching and fallback to TMDB.
@@ -332,9 +344,10 @@ public class MovieService {
 }
 ```
 
-**Test Example (TDD):**
+**Test Example (JUnit 5 Jupiter + Mockito):**
 ```java
 @ExtendWith(MockitoExtension.class)
+@DisplayName("MovieService Unit Tests")
 class MovieServiceTest {
     
     @Mock
@@ -348,6 +361,8 @@ class MovieServiceTest {
     
     @InjectMocks
     private MovieService movieService;
+    
+    // NOTE: Using JUnit 5 (Jupiter) exclusively - JUnit 4 is FORBIDDEN
     
     @Test
     @DisplayName("Should return cached movies when cache hit")
@@ -611,8 +626,9 @@ public class MovieCast {
 3. **Chat Assistant**
 4. **Semantic Search**
 
-**Domain Model:**
+**Domain Model (Immutable Java Records - Spring Boot 3.5.x):**
 ```java
+// All DTOs, Events, and domain objects use Java records for immutability
 @Document(collection = "conversations")
 public record Conversation(
     @Id String id,
@@ -622,7 +638,14 @@ public record Conversation(
     Map<String, Object> context,
     Instant createdAt,
     Instant updatedAt
-) {}
+) {
+    // Compact constructor for validation
+    public Conversation {
+        if (userId == null || userId.isBlank()) {
+            throw new IllegalArgumentException("userId cannot be blank");
+        }
+    }
+}
 
 public record Message(
     String role,  // user, assistant, system
@@ -672,14 +695,20 @@ message MovieRecommendation {
 }
 ```
 
-**Spring AI Integration:**
+**Spring AI Integration (Constructor Injection):**
 ```java
 @Service
-@RequiredArgsConstructor
+@Slf4j
 public class AIRecommendationService {
     
     private final ChatClient chatClient;
     private final EmbeddingClient embeddingClient;
+    
+    // Constructor injection - NO @Autowired on fields
+    public AIRecommendationService(ChatClient chatClient, EmbeddingClient embeddingClient) {
+        this.chatClient = chatClient;
+        this.embeddingClient = embeddingClient;
+    }
     
     /**
      * Generates personalized movie recommendations using AI.
@@ -741,8 +770,9 @@ public class AIRecommendationService {
 - Nested file information (thumbnails, sizes, formats)
 - Flexible schema for different media types
 
-**Domain Model:**
+**Domain Model (Immutable Records - Java 25):**
 ```java
+// Using Java records for all DTOs - NO mutable classes
 @Document(collection = "media")
 public record MediaFile(
     @Id String id,
@@ -757,7 +787,14 @@ public record MediaFile(
     MediaMetadata metadata,
     Instant uploadedAt,
     String uploadedBy
-) {}
+) {
+    // Validation in compact constructor
+    public MediaFile {
+        if (fileSize < 0) {
+            throw new IllegalArgumentException("File size cannot be negative");
+        }
+    }
+}
 
 public record MediaMetadata(
     Integer width,
@@ -790,48 +827,76 @@ public record MediaMetadata(
 
 ### 4.2 Data Migration Strategy
 
-**Initial TMDB Import:**
+**Initial TMDB Import (NO @RequiredArgsConstructor pattern):**
 ```java
 @Component
-@RequiredArgsConstructor
+@Slf4j
 public class TmdbDataImporter {
     
     private final TmdbClient tmdbClient;
     private final MovieRepository movieRepository;
     private final ActorRepository actorRepository;
+    private final ReentrantLock importLock = new ReentrantLock();  // NO synchronized blocks
+    
+    // Explicit constructor - clearer than Lombok for critical components
+    public TmdbDataImporter(
+            TmdbClient tmdbClient,
+            MovieRepository movieRepository,
+            ActorRepository actorRepository) {
+        this.tmdbClient = tmdbClient;
+        this.movieRepository = movieRepository;
+        this.actorRepository = actorRepository;
+    }
     
     @Scheduled(cron = "0 0 2 * * ?")  // Daily at 2 AM
     public void importPopularMovies() {
-        log.info("Starting TMDB import");
-        
-        int totalPages = 500;  // Import top 10,000 movies
-        
-        for (int page = 1; page <= totalPages; page++) {
-            try {
-                List<Movie> movies = tmdbClient.fetchPopularMovies(page);
-                movieRepository.saveAll(movies);
-                log.debug("Imported page {} of {}", page, totalPages);
-                Thread.sleep(250);  // Rate limiting
-            } catch (Exception e) {
-                log.error("Error importing page {}", page, e);
-            }
+        // Use ReentrantLock instead of synchronized to avoid pinning Virtual Threads
+        if (!importLock.tryLock()) {
+            log.warn("Import already in progress, skipping");
+            return;
         }
         
-        log.info("TMDB import completed");
+        try {
+            log.info("Starting TMDB import");
+            
+            int totalPages = 500;  // Import top 10,000 movies
+            
+            for (int page = 1; page <= totalPages; page++) {
+                try {
+                    List<Movie> movies = tmdbClient.fetchPopularMovies(page);
+                    movieRepository.saveAll(movies);
+                    log.debug("Imported page {} of {}", page, totalPages);
+                    Thread.sleep(250);  // Rate limiting
+                } catch (Exception e) {
+                    log.error("Error importing page {}", page, e);
+                }
+            }
+            
+            log.info("TMDB import completed");
+        } finally {
+            importLock.unlock();
+        }
     }
 }
 ```
 
 ### 4.3 Caching Strategy
 
-**Redis Cache Configuration:**
+**Redis Cache Configuration (Constructor Injection):**
 ```java
 @Configuration
 @EnableCaching
 public class CacheConfig {
     
+    private final RedisConnectionFactory factory;
+    
+    // Constructor injection - NO field injection
+    public CacheConfig(RedisConnectionFactory factory) {
+        this.factory = factory;
+    }
+    
     @Bean
-    public CacheManager cacheManager(RedisConnectionFactory factory) {
+    public CacheManager cacheManager() {
         RedisCacheConfiguration config = RedisCacheConfiguration
             .defaultCacheConfig()
             .entryTtl(Duration.ofHours(1))
@@ -1464,11 +1529,18 @@ Closes #123
 
 ### 10.2 Unit Testing (60% of tests)
 
-**Tools:** JUnit 5, Mockito, AssertJ
+**Tools:** JUnit 5 (Jupiter) ONLY, Mockito 5.19.0, AssertJ
+
+**Critical Requirements:**
+- ✅ JUnit 5 (Jupiter) exclusively - **JUnit 4 is FORBIDDEN**
+- ✅ `testRuntimeOnly 'org.junit.platform:junit-platform-launcher'` in build.gradle
+- ✅ Tests run via Cursor IDE Test Runner (CodeLens "Run Test" buttons)
+- ✅ NO `@MockBean` - use `@MockitoBean` (Spring Boot 3.4+) for Spring context tests
 
 **Example:**
 ```java
 @ExtendWith(MockitoExtension.class)
+@DisplayName("MovieService Unit Tests")
 class MovieServiceTest {
     
     @Mock
@@ -1528,28 +1600,29 @@ class MovieServiceTest {
 
 ### 10.3 Integration Testing (30% of tests)
 
-**Tools:** Spring Boot Test, TestContainers, RestAssured
+**Tools:** Spring Boot Test, TestContainers 1.21.2, RestAssured
 
-**Example:**
+**Critical Requirements:**
+- ✅ Testcontainers with `@ServiceConnection` (Spring Boot 3.1+)
+- ✅ NO H2 database - use Testcontainers with real databases
+- ✅ Tests run in Cursor IDE Test Runner
+
+**Example (Modern @ServiceConnection approach):**
 ```java
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
 @Testcontainers
 class MovieServiceIntegrationTest {
     
     @Container
-    static MongoDBContainer mongodb = new MongoDBContainer("mongo:8.0")
-        .withExposedPorts(27017);
+    @ServiceConnection  // Spring Boot 3.1+ automatic connection configuration
+    static MongoDBContainer mongodb = new MongoDBContainer("mongo:8.0");
     
     @Container
+    @ServiceConnection
     static GenericContainer<?> redis = new GenericContainer<>("redis:7.4-alpine")
         .withExposedPorts(6379);
     
-    @DynamicPropertySource
-    static void setProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.data.mongodb.uri", mongodb::getReplicaSetUrl);
-        registry.add("spring.data.redis.host", redis::getHost);
-        registry.add("spring.data.redis.port", redis::getFirstMappedPort);
-    }
+    // NO @DynamicPropertySource needed with @ServiceConnection!
     
     @Autowired
     private TestRestTemplate restTemplate;
@@ -2111,10 +2184,29 @@ filmpire-microservices/
 
 ---
 
-## Appendix B: Key Java 25 Features Showcased
+## Appendix B: Spring Boot 3.5.x + Java 25 Best Practices
 
-### Records (Immutable DTOs)
+### Critical "Antigravity" Rules (MUST FOLLOW)
+
+**❌ FORBIDDEN:**
+- `RestTemplate` - use `RestClient` or `@HttpExchange` interfaces
+- Field injection (`@Autowired` on fields) - use constructor injection
+- Mutable DTOs - use Java `record` for all DTOs, Events, Config Props
+- H2 for integration tests - use Testcontainers with `@ServiceConnection`
+- `synchronized` blocks - use `ReentrantLock` to avoid pinning Virtual Threads
+- `@MockBean` - use `@MockitoBean` (Spring Boot 3.4+)
+- JUnit 4 - use JUnit 5 (Jupiter) exclusively
+
+**✅ REQUIRED:**
+- Constructor injection (manual or via explicit constructor)
+- Java records for immutability
+- Testcontainers with `@ServiceConnection`
+- `testRuntimeOnly 'org.junit.platform:junit-platform-launcher'` in build.gradle
+- Tests run via Cursor IDE Test Runner
+
+### Records (Immutable DTOs - Java 25)
 ```java
+// All DTOs MUST be records - NO mutable classes
 public record MovieDTO(
     String id,
     String title,
@@ -2157,13 +2249,14 @@ public record ErrorResponse(String message, int code) implements ApiResponse {}
 public record EmptyResponse() implements ApiResponse {}
 ```
 
-### Virtual Threads (Project Loom)
+### Virtual Threads (Java 25 - Project Loom)
 ```java
 @Configuration
 public class AsyncConfig {
     
     @Bean
     public Executor taskExecutor() {
+        // Virtual threads - lightweight, scalable concurrency
         return Executors.newVirtualThreadPerTaskExecutor();
     }
 }
@@ -2171,12 +2264,64 @@ public class AsyncConfig {
 @Service
 public class MovieService {
     
+    private final MovieRepository movieRepository;
+    private final ReentrantLock cacheLock = new ReentrantLock();
+    
+    public MovieService(MovieRepository movieRepository) {
+        this.movieRepository = movieRepository;
+    }
+    
     @Async
     public CompletableFuture<List<Movie>> fetchMoviesAsync() {
         // Runs on virtual thread - extremely lightweight
+        // NEVER use synchronized blocks with virtual threads
         return CompletableFuture.completedFuture(
             movieRepository.findAll()
         );
+    }
+    
+    public void updateCache() {
+        // Use ReentrantLock instead of synchronized for virtual threads
+        cacheLock.lock();
+        try {
+            // Cache update logic
+        } finally {
+            cacheLock.unlock();
+        }
+    }
+}
+
+### RestClient (NO RestTemplate)
+```java
+@Configuration
+public class RestClientConfig {
+    
+    @Bean
+    public RestClient tmdbRestClient(@Value("${tmdb.base-url}") String baseUrl) {
+        // Use RestClient instead of deprecated RestTemplate
+        return RestClient.builder()
+                .baseUrl(baseUrl)
+                .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                .build();
+    }
+}
+
+@Service
+public class TmdbClient {
+    
+    private final RestClient restClient;
+    private final String apiKey;
+    
+    public TmdbClient(RestClient restClient, @Value("${tmdb.api-key}") String apiKey) {
+        this.restClient = restClient;
+        this.apiKey = apiKey;
+    }
+    
+    public TmdbMovieResponse getMovie(Long id) {
+        return restClient.get()
+                .uri("/movie/{id}?api_key={key}", id, apiKey)
+                .retrieve()
+                .body(TmdbMovieResponse.class);
     }
 }
 ```

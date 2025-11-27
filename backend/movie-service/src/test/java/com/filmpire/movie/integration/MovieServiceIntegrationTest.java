@@ -4,22 +4,22 @@ import com.filmpire.movie.config.TmdbClientTestStubConfig;
 import com.filmpire.movie.dto.GenreDto;
 import com.filmpire.movie.dto.MovieListDto;
 import com.filmpire.movie.repository.MovieRepository;
-import com.filmpire.shared.dto.ApiResponse;
 import com.filmpire.shared.dto.PageResponse;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
-import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MvcResult;
 import org.testcontainers.containers.MongoDBContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
@@ -42,44 +42,41 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * If not set, tests will use mock/stubbed responses.
  */
 @SpringBootTest(
-    webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-    properties = {
-        "spring.autoconfigure.exclude=" +
-            "org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration," +
-            "org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration," +
-            "org.springframework.cloud.openfeign.FeignAutoConfiguration"
-    }
+    webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT
 )
 @AutoConfigureMockMvc
 @Import(TmdbClientTestStubConfig.class)
 @Testcontainers
+@ActiveProfiles("test")
 @DisplayName("Movie Service Integration Tests")
-@SuppressWarnings({"resource", "try", "null"})
 class MovieServiceIntegrationTest {
 
     @Container
     static MongoDBContainer mongoDBContainer = new MongoDBContainer("mongo:8.0.0")
-            .withExposedPorts(27017)
             .waitingFor(Wait.forListeningPort())
             .withStartupTimeout(Duration.ofSeconds(60));
+
+    @DynamicPropertySource
+    static void configureProperties(DynamicPropertyRegistry registry) {
+        registry.add("spring.data.mongodb.uri", mongoDBContainer::getReplicaSetUrl);
+    }
 
     private final MockMvc mockMvc;
     private final ObjectMapper objectMapper;
     private final MovieRepository movieRepository;
 
-    @Autowired
+    @org.springframework.beans.factory.annotation.Autowired
     MovieServiceIntegrationTest(MockMvc mockMvc, ObjectMapper objectMapper, MovieRepository movieRepository) {
         this.mockMvc = mockMvc;
         this.objectMapper = objectMapper;
         this.movieRepository = movieRepository;
     }
 
-    @DynamicPropertySource
-    static void setProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.data.mongodb.uri", mongoDBContainer::getReplicaSetUrl);
-        registry.add("spring.cache.type", () -> "none"); // Disable cache for integration tests
-        registry.add("eureka.client.enabled", () -> "false"); // Disable Eureka
-        registry.add("spring.cloud.config.enabled", () -> "false"); // Disable config server
+    @AfterAll
+    static void cleanup() {
+        if (mongoDBContainer != null && mongoDBContainer.isRunning()) {
+            mongoDBContainer.stop();
+        }
     }
 
     @BeforeEach
@@ -101,17 +98,17 @@ class MovieServiceIntegrationTest {
         MvcResult result = mockMvc.perform(get("/api/v1/genres")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$[0].id").exists())
                 .andReturn();
 
         String content = result.getResponse().getContentAsString();
-        ApiResponse<List<GenreDto>> response = objectMapper.readValue(
+        List<GenreDto> genres = objectMapper.readValue(
                 content,
-                new TypeReference<ApiResponse<List<GenreDto>>>() {}
+                new TypeReference<List<GenreDto>>() {}
         );
 
-        assertThat(response.isSuccess()).isTrue();
-        assertThat(response.getData()).isNotNull();
+        assertThat(genres).isNotNull().isNotEmpty();
     }
 
     @Test
@@ -127,8 +124,8 @@ class MovieServiceIntegrationTest {
                 .param("size", "20")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data").exists());
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.content").exists());
 
         // Step 2: Get popular movies
         mockMvc.perform(get("/api/v1/movies/popular")
@@ -136,7 +133,7 @@ class MovieServiceIntegrationTest {
                 .param("size", "20")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$.content").isArray());
 
         // Step 3: Get trending movies
         mockMvc.perform(get("/api/v1/movies/trending")
@@ -144,7 +141,7 @@ class MovieServiceIntegrationTest {
                 .param("page", "1")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$.content").isArray());
     }
 
     @Test
@@ -158,8 +155,8 @@ class MovieServiceIntegrationTest {
                 .param("minRating", "7.0")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data").exists());
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.content").exists());
     }
 
     @Test
@@ -174,14 +171,14 @@ class MovieServiceIntegrationTest {
                 .andReturn();
 
         String content1 = result1.getResponse().getContentAsString();
-        ApiResponse<PageResponse<MovieListDto>> response1 = objectMapper.readValue(
+        PageResponse<MovieListDto> response1 = objectMapper.readValue(
                 content1,
-                new TypeReference<ApiResponse<PageResponse<MovieListDto>>>() {}
+                new TypeReference<PageResponse<MovieListDto>>() {}
         );
 
-        assertThat(response1.isSuccess()).isTrue();
-        assertThat(response1.getData()).isNotNull();
-        assertThat(response1.getData().getPageNumber()).isZero(); // 0-indexed
+        assertThat(response1).isNotNull();
+        assertThat(response1.getContent()).isNotNull();
+        assertThat(response1.getPageNumber()).isZero(); // 0-indexed
 
         // Test page 2
         MvcResult result2 = mockMvc.perform(get("/api/v1/movies/discover")
@@ -192,14 +189,14 @@ class MovieServiceIntegrationTest {
                 .andReturn();
 
         String content2 = result2.getResponse().getContentAsString();
-        ApiResponse<PageResponse<MovieListDto>> response2 = objectMapper.readValue(
+        PageResponse<MovieListDto> response2 = objectMapper.readValue(
                 content2,
-                new TypeReference<ApiResponse<PageResponse<MovieListDto>>>() {}
+                new TypeReference<PageResponse<MovieListDto>>() {}
         );
 
-        assertThat(response2.isSuccess()).isTrue();
-        assertThat(response2.getData()).isNotNull();
-        assertThat(response2.getData().getPageNumber()).isEqualTo(1); // 0-indexed
+        assertThat(response2).isNotNull();
+        assertThat(response2.getContent()).isNotNull();
+        assertThat(response2.getPageNumber()).isEqualTo(1); // 0-indexed
     }
 
     @Test
@@ -211,7 +208,7 @@ class MovieServiceIntegrationTest {
                     .param("page", "1")
                     .contentType(MediaType.APPLICATION_JSON))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.success").value(true));
+                    .andExpect(jsonPath("$.content").isArray());
         }
     }
 
@@ -224,23 +221,22 @@ class MovieServiceIntegrationTest {
                 .param("size", "20")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").exists())
-                .andExpect(jsonPath("$.message").exists())
-                .andExpect(jsonPath("$.data").exists())
-                .andExpect(jsonPath("$.statusCode").exists())
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.totalElements").exists())
+                .andExpect(jsonPath("$.pageNumber").exists())
                 .andReturn();
 
         String content = result.getResponse().getContentAsString();
-        ApiResponse<PageResponse<MovieListDto>> response = objectMapper.readValue(
+        PageResponse<MovieListDto> response = objectMapper.readValue(
                 content,
-                new TypeReference<ApiResponse<PageResponse<MovieListDto>>>() {}
+                new TypeReference<PageResponse<MovieListDto>>() {}
         );
 
         // Verify PageResponse structure
-        assertThat(response.getData().getContent()).isNotNull();
-        assertThat(response.getData().getPageNumber()).isNotNegative();
-        assertThat(response.getData().getPageSize()).isPositive();
-        assertThat(response.getData().getTotalElements()).isNotNegative();
-        assertThat(response.getData().getTotalPages()).isNotNegative();
+        assertThat(response.getContent()).isNotNull();
+        assertThat(response.getPageNumber()).isNotNegative();
+        assertThat(response.getPageSize()).isPositive();
+        assertThat(response.getTotalElements()).isNotNegative();
+        assertThat(response.getTotalPages()).isNotNegative();
     }
 }

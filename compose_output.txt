@@ -1,4 +1,0 @@
-CONTAINER ID  IMAGE                                 COMMAND               CREATED         STATUS                   PORTS                     NAMES
-85dfec29ea8f  docker.io/library/mongo:8.0           mongod                2 days ago      Up 52 seconds (healthy)  0.0.0.0:27017->27017/tcp  filmpire-mongo
-bc9968ff4c3f  docker.io/library/redis:7.4-alpine    redis-server --re...  2 days ago      Up 52 seconds (healthy)  0.0.0.0:6379->6379/tcp    filmpire-redis
-ff3a8032c893  docker.io/library/postgres:17-alpine  postgres              52 seconds ago  Up 52 seconds (healthy)  0.0.0.0:5432->5432/tcp    filmpire-postgres

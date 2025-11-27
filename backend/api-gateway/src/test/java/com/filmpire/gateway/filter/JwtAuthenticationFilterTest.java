@@ -78,7 +78,6 @@ class JwtAuthenticationFilterTest {
             "/actuator/health"
     })
     @DisplayName("Should allow public paths without authentication")
-    @SuppressWarnings("null")
     void filter_shouldAllowPublicPaths(String path) {
         // Given
         MockServerHttpRequest request = Objects.requireNonNull(
@@ -125,7 +124,6 @@ class JwtAuthenticationFilterTest {
 
     @Test
     @DisplayName("Should process valid JWT token")
-    @SuppressWarnings("null")
     void filter_shouldProcessValidToken() {
         // Given
         String validToken = "valid.jwt.token";
