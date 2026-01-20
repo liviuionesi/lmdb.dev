@@ -1,10 +1,13 @@
 # Multi-stage Dockerfile for API Gateway
 # Stage 1: Build
-FROM gradle:8.12.0-jdk25 AS build
+# Stage 1: Build
+FROM eclipse-temurin:25-jdk-alpine AS build
 
 WORKDIR /app
 
-# Copy Gradle configuration files
+# Copy Gradle wrapper and build files
+COPY gradlew .
+COPY gradle gradle
 COPY settings.gradle .
 COPY gradle.properties .
 COPY build.gradle .
@@ -16,8 +19,11 @@ COPY backend/shared-library ./backend/shared-library
 COPY backend/api-gateway/build.gradle ./backend/api-gateway/
 COPY backend/api-gateway/src ./backend/api-gateway/src
 
+# Make wrapper executable
+RUN chmod +x gradlew
+
 # Build the application
-RUN gradle :backend:api-gateway:bootJar --no-daemon
+RUN ./gradlew :backend:api-gateway:bootJar --no-daemon
 
 # Stage 2: Runtime
 FROM eclipse-temurin:25-jre-alpine

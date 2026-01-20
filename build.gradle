@@ -90,3 +90,9 @@ subprojects {
     }
 }
 
+task startInfrastructure(type: Exec) {
+    group = 'execution'
+    description = 'Starts the Movie Service infrastructure (Discovery, Config, Gateway, Movie Service)'
+    commandLine './start-all-services.sh'
+}
+
