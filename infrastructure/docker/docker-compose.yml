@@ -172,7 +172,7 @@ services:
     environment:
       SPRING_APPLICATION_NAME: config-service
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
-      SPRING_CLOUD_CONFIG_SERVER_NATIVE_SEARCHLOCATIONS: file:/app/config
+      SPRING_CLOUD_CONFIG_SERVER_NATIVE_SEARCHLOCATIONS: classpath:/config
     depends_on:
       discovery-service:
         condition: service_healthy
@@ -228,6 +228,8 @@ services:
       SPRING_APPLICATION_NAME: movie-service
       SPRING_PROFILES_ACTIVE: prod
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
+      EUREKA_SERVER_URL: http://discovery-service:8761/eureka/
+      SPRING_CONFIG_IMPORT: optional:configserver:http://config-service:8888
       MONGODB_URI: mongodb://${MONGO_ROOT_USER:-admin}:${MONGO_ROOT_PASSWORD:-admin123}@mongodb:27017/filmpire?authSource=admin
       REDIS_HOST: redis
       REDIS_PORT: 6379
@@ -235,6 +237,8 @@ services:
       TMDB_API_KEY: ${TMDB_API_KEY}
     depends_on:
       discovery-service:
+        condition: service_healthy
+      config-service:
         condition: service_healthy
       mongodb:
         condition: service_healthy

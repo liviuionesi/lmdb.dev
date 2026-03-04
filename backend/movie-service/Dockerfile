@@ -1,23 +1,26 @@
 # Multi-stage Dockerfile for Movie Service
 # Stage 1: Build
-FROM docker.io/library/gradle:8.11-jdk21 AS build
+FROM docker.io/library/eclipse-temurin:25-jdk-alpine AS build
 
 WORKDIR /app
 
+# Copy Gradle wrapper
+COPY gradlew .
+COPY gradle gradle
+
+# Download Gradle distribution to cache it as a distinct Docker layer
+RUN chmod +x gradlew && ./gradlew --version --no-daemon
+
 # Copy Gradle configuration files
+COPY build.gradle .
 COPY settings.gradle .
 COPY gradle.properties .
-COPY build.gradle .
 
-# Copy shared library first (dependency)
-COPY backend/shared-library ./backend/shared-library
-
-# Copy movie-service source
-COPY backend/movie-service/build.gradle ./backend/movie-service/
-COPY backend/movie-service/src ./backend/movie-service/src
+# Copy all backend modules (needed for multi-module Gradle build)
+COPY backend backend
 
 # Build the application
-RUN gradle :backend:movie-service:bootJar --no-daemon
+RUN ./gradlew :backend:movie-service:bootJar --no-daemon -x test
 
 # Stage 2: Runtime
 FROM docker.io/library/eclipse-temurin:25-jre-alpine

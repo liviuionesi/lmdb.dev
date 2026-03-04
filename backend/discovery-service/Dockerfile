@@ -2,18 +2,22 @@
 FROM docker.io/library/eclipse-temurin:25-jdk-alpine AS build
 WORKDIR /workspace/app
 
-# Copy Gradle wrapper and build files
+# Copy Gradle wrapper
 COPY gradlew .
 COPY gradle gradle
+
+# Download Gradle distribution to cache it as a distinct Docker layer
+RUN chmod +x gradlew && ./gradlew --version --no-daemon
+
+# Copy Gradle configuration files
 COPY build.gradle .
 COPY settings.gradle .
 COPY gradle.properties .
 
-# Copy backend modules (all services needed for Gradle multi-project build)
+# Copy all backend modules (needed for multi-module Gradle build)
 COPY backend backend
 
 # Build the application
-RUN chmod +x gradlew
 RUN ./gradlew :backend:discovery-service:bootJar --no-daemon -x test
 
 # Production stage
