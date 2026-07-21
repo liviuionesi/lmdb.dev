@@ -19,7 +19,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.hamcrest.Matchers.*;
 
 /**
- * Unit tests for GenreController.
+ * Web-layer tests for {@link GenreController} ({@code @WebMvcTest}: only the
+ * MVC slice loads, the service is a {@code @MockitoBean}).
+ *
+ * <p>These verify the HTTP contract of the genres endpoint — routing, status,
+ * and the JSON shape/order the React app's sidebar consumes — independent of
+ * how the service produces genres.</p>
  */
 @WebMvcTest(GenreController.class)
 @DisplayName("GenreController Tests")
@@ -31,6 +36,12 @@ class GenreControllerTest {
     @MockitoBean
     private MovieService movieService;
 
+    /**
+     * The endpoint must serialize the genre list to JSON in order (id + name
+     * per element), since the sidebar renders genres exactly as returned.
+     *
+     * @throws Exception if the mock request fails
+     */
     @Test
     @DisplayName("GET /api/v1/genres - Should return all genres")
     void getAllGenres_ShouldReturnAllGenres() throws Exception {
@@ -51,6 +62,13 @@ class GenreControllerTest {
                 .andExpect(jsonPath("$[2].name").value("Animation"));
     }
 
+    /**
+     * With no genres the endpoint must return 200 and an empty JSON array (not
+     * 404 or null), so the client can render an empty sidebar without special
+     * error handling.
+     *
+     * @throws Exception if the mock request fails
+     */
     @Test
     @DisplayName("GET /api/v1/genres - Should return empty list when no genres")
     void getAllGenres_WhenNoGenres_ShouldReturnEmptyList() throws Exception {
@@ -64,6 +82,11 @@ class GenreControllerTest {
                 .andExpect(jsonPath("$", hasSize(0)));
     }
 
+    /**
+     * Builds a five-genre list the service mock returns.
+     *
+     * @return test genres
+     */
     private List<GenreDto> createTestGenres() {
         return Arrays.asList(
                 GenreDto.builder().id(28L).name("Action").build(),
