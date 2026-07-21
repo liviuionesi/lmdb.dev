@@ -1,15 +1,31 @@
 # Filmpire Microservices - Enterprise Software Architecture Document
 
-**Version:** 1.1.0  
-**Date:** July 21, 2026 (deployment & observability architecture added)  
-**Author:** Software Architecture Team  
-**Purpose:** Portfolio project demonstrating enterprise-grade full-stack development
+**Version:** 1.2.0  
+**Date:** July 21, 2026 (TMDB v3 facade as primary API; existing Filmpire React app is the sole frontend — Next.js/mobile descoped; deployment & observability architecture)  
+**Author:** Liviu Ionesi  
+**Purpose:** Portfolio project demonstrating enterprise-grade full-stack development for a movie platform
 
 ---
 
 ## Executive Summary
 
-This document outlines the complete architecture for Filmpire, a production-ready microservices-based movie platform. The system replicates TMDB API functionality with a hybrid caching strategy, demonstrates modern Java 25 and Spring Boot 3.5 capabilities, and includes Next.js 16 web application and React Native 0.82 mobile apps. The project emphasizes enterprise best practices, comprehensive testing (TDD), and deployment readiness.
+This document outlines the complete architecture for Filmpire, a production-ready microservices-based movie platform.
+
+**Core product goal:** clone the TMDB v3 API in Spring so that the existing
+**Filmpire React application** (`~/Desktop/filmpire`, CRA + Redux Toolkit
+Query + MUI + Alan AI) can consume this backend as a **drop-in replacement**
+for `https://api.themoviedb.org/3` — the React app changes only its base URL.
+Requests are served read-through: **Redis cache → MongoDB → real TMDB API
+(fallback)**; anything fetched from the real TMDB is saved to MongoDB and
+returned to the app, so the local database grows organically with use. TMDB's
+account/authentication endpoints are proxied straight through to the real
+TMDB (login and favorites keep using the user's real TMDB account).
+
+The system demonstrates modern Java 25 and Spring Boot 3.5 capabilities and
+emphasizes enterprise best practices, comprehensive testing (TDD), IaC-based
+free-tier cloud deployment, and full observability. A dedicated Next.js web
+app and React Native mobile apps were considered and **descoped** (v1.2.0) —
+the existing Filmpire React app is the only frontend.
 
 ---
 
@@ -56,34 +72,27 @@ This document outlines the complete architecture for Filmpire, a production-read
 | Springdoc OpenAPI | 2.8.14 | Gradle | API documentation |
 | JaCoCo | 0.8.14 | Gradle | Code coverage |
 
-### 1.2 Frontend Web (Exact Versions)
+### 1.2 Frontend — Existing Filmpire React App (consumer, not built here)
 
-| Technology | Version | Installation Method | Purpose |
-|------------|---------|---------------------|---------|
-| Node.js | 24.11.1 LTS | NVM | Runtime |
-| npm | 11.6.2 | NVM | Package manager |
-| Next.js | 16.0.0 | npm | React framework |
-| React | 19.0.2 | npm | UI library |
-| TypeScript | 5.7.x | npm | Type safety |
-| Tailwind CSS | 3.4.x | npm | Styling |
-| Material UI (MUI) | 7.3.5 | npm | UI components |
-| MUI Icons | 7.3.5 | npm | Icon library |
-| TanStack Query | 5.0.8 | npm | Data fetching |
-| Zustand | 5.0.8 | npm | State management |
-| Zod | 3.24.x | npm | Validation |
-| React Hook Form | 7.51.0 | npm | Form handling |
+The frontend is the pre-existing Filmpire application at `~/Desktop/filmpire`
+(separate project, not part of this repo). This backend must serve it without
+frontend changes beyond configuration:
 
-### 1.3 Mobile (Exact Versions)
+| Technology | Version | Notes |
+|------------|---------|-------|
+| React (CRA) | 17.x | `react-scripts` 5 |
+| Redux Toolkit Query | 1.6.x | All TMDB calls in `src/services/TMDB.js` |
+| axios | 1.6.x | Auth calls in `src/utils/index.js` |
+| Material UI | 5.x | |
+| Alan AI SDK | 1.8.x | Voice control (calls TMDB via the same services) |
+| TMDB API contract | v3 | Base URL `https://api.themoviedb.org/3` → becomes this backend's gateway |
 
-| Technology | Version | Installation Method | Purpose |
-|------------|---------|---------------------|---------|
-| React Native | 0.76.3 | npm | Mobile framework |
-| Expo SDK | 52.0.0 | npm | Development platform |
-| TypeScript | 5.7.x | npm | Type safety |
-| React Navigation | 7.x | npm | Navigation |
-| Expo Router | 4.x | npm | File-based routing |
+> A dedicated Next.js web app and React Native mobile apps were part of
+> earlier drafts and are **descoped** as of v1.2.0. The empty
+> `frontend/web-nextjs` and `frontend/mobile-react-native` directories are
+> legacy placeholders, out of scope.
 
-### 1.4 DevOps & Infrastructure
+### 1.3 DevOps & Infrastructure
 
 | Technology | Version | Purpose |
 |------------|---------|---------|
@@ -103,21 +112,19 @@ This document outlines the complete architecture for Filmpire, a production-read
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                     Client Applications                     │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐       │
-│  │  Next.js 16  │  │   iOS App    │  │  Android App │       │
-│  │  (React 19)  │  │   (Expo)     │  │    (Expo)    │       │
-│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘       │
-└─────────┼──────────────────┼──────────────────┼─────────────┘
-          │                  │                  │
-          └──────────────────┴──────────────────┘
-                             │
-                             ▼
+│              Filmpire React App (existing, CRA)             │
+│     RTK Query + axios, TMDB v3 contract, Alan AI voice      │
+│     baseURL: http://localhost:8080  (was api.themoviedb.org)│
+└──────────────────────────────┬──────────────────────────────┘
+                               │  TMDB v3-shaped requests
+                               ▼
           ┌──────────────────────────────────┐
           │   API Gateway (Spring Cloud)     │
           │         Port: 8080               │
-          │  - Rate Limiting                 │
-          │  - Authentication                │
+          │  - TMDB v3 facade routing        │
+          │  - /authentication/*, /account/* │
+          │    → proxied to real TMDB        │
+          │  - Rate Limiting, CORS           │
           │  - Load Balancing                │
           └─────────────┬────────────────────┘
                         │
@@ -928,20 +935,62 @@ public class CacheConfig {
 
 ## 5. API Specifications
 
-### 5.1 TMDB Endpoints Mapping
+### 5.1 Primary API: TMDB v3-Compatible Facade
 
-| TMDB Endpoint | Filmpire Endpoint | Service | Method |
-|---------------|-------------------|---------|--------|
-| `/genre/movie/list` | `/api/v1/genres` | Movie | GET |
-| `/search/movie` | `/api/v1/movies/search` | Movie | GET |
-| `/movie/{category}` | `/api/v1/movies/{category}` | Movie | GET |
-| `/discover/movie?with_genres={id}` | `/api/v1/movies/discover` | Movie | GET |
-| `/movie/{id}` | `/api/v1/movies/{id}` | Movie | GET |
-| `/movie/{id}/recommendations` | `/api/v1/movies/{id}/recommendations` | AI | GET |
-| `/account/{id}/favorite` | `/api/v1/users/favorites` | User | GET |
-| `/account/{id}/watchlist` | `/api/v1/users/watchlist` | User | GET |
-| `/person/{id}` | `/api/v1/actors/{id}` | Actor | GET |
-| `/discover/movie?with_cast={id}` | `/api/v1/actors/{id}/movies` | Actor | GET |
+**This is the product.** The gateway exposes the exact TMDB v3 API surface —
+same paths, same query parameters, same JSON response shapes — so the
+Filmpire React app works by changing only its base URL. Response bodies must
+be byte-for-byte shape-compatible with TMDB (`{page, results, total_pages,
+total_results}` for lists, TMDB's exact field names everywhere). The
+`api_key` query parameter sent by the app is accepted and ignored; the real
+TMDB key lives server-side only.
+
+**Endpoints required by the React app (`src/services/TMDB.js`,
+`src/utils/index.js`) — the facade MUST implement all of these:**
+
+| # | TMDB v3 Endpoint | Used by (React app) | Backing service | Strategy |
+|---|------------------|---------------------|-----------------|----------|
+| 1 | `GET /genre/movie/list` | Sidebar genres | Movie | read-through |
+| 2 | `GET /movie/{category}?page=` (popular, top_rated, upcoming) | Category browsing | Movie | read-through |
+| 3 | `GET /discover/movie?with_genres={id}&page=` | Genre browsing | Movie | read-through |
+| 4 | `GET /search/movie?query=&page=` | Search | Movie | read-through |
+| 5 | `GET /movie/{id}?append_to_response=videos,credits` | Movie details page | Movie | read-through |
+| 6 | `GET /movie/{id}/recommendations` | Details page | Movie | read-through |
+| 7 | `GET /movie/{id}/similar` | Details page | Movie | read-through |
+| 8 | `GET /person/{id}` | Actor page | Actor | read-through |
+| 9 | `GET /discover/movie?with_cast={id}&page=` | Actor filmography | Actor | read-through |
+| 10 | `GET /authentication/token/new` | Login | Gateway | **proxy to real TMDB** |
+| 11 | `POST /authentication/session/new` | Login | Gateway | **proxy to real TMDB** |
+| 12 | `GET /account` | Profile | Gateway | **proxy to real TMDB** |
+| 13 | `GET /account/{id}/{listName}?session_id=&page=` (favorite/movies, watchlist/movies) | Profile lists | Gateway | **proxy to real TMDB** |
+| 14 | `POST /account/{id}/favorite`, `POST /account/{id}/watchlist` | Toggle buttons | Gateway | **proxy to real TMDB** |
+
+**Read-through / save-through flow (endpoints 1–9):**
+```
+Request → Redis (TTL cache)
+            └─ miss → MongoDB
+                        └─ miss → real TMDB API (rate-limited, Bucket4j)
+                                    └─ save TMDB response → MongoDB
+                                       populate Redis → return to app
+```
+- The stored document IS the TMDB response shape (no lossy remapping), so
+  serving from MongoDB is always shape-identical to serving from TMDB.
+- Search results and paginated lists cache per (endpoint, params, page) key
+  with shorter TTLs; movie/person details cache long.
+- Images: the app builds `image.tmdb.org` URLs from `poster_path` fields —
+  images stay on TMDB's CDN (no proxying; media-service may cache them later).
+
+**Auth/account proxy (endpoints 10–14):** transparent pass-through to
+`api.themoviedb.org/3` with the server-side API key injected; the
+`themoviedb.org` approval redirect flow keeps working with the user's real
+TMDB account. No account data is stored locally (user-service local accounts
+are a separate, later feature).
+
+### 5.1b Secondary API: Native `/api/v1`
+
+The already-implemented native API (`/api/v1/movies/...`, ApiResponse
+wrappers) remains for direct/Swagger consumption and future clients, but the
+TMDB facade is the contract that matters for the React app.
 
 ### 5.2 OpenAPI Documentation
 
@@ -1095,15 +1144,11 @@ cd movie-service
 ./gradlew test
 ./gradlew bootRun
 
-# Frontend setup
-cd ../../frontend/web-nextjs
+# Frontend (existing Filmpire React app — separate project)
+cd ~/Desktop/filmpire
+echo "REACT_APP_API_URL=http://localhost:8080" >> .env.local  # point at gateway
 npm install
-npm run dev
-
-# Mobile setup
-cd ../mobile-react-native
-npm install
-npx expo start
+npm start
 ```
 
 ### 7.3 Docker Compose for Local Development
@@ -1395,13 +1440,12 @@ jacocoVersion=0.8.14
 | 0 | 1 week | Project setup | Repo, CI/CD, docs templates |
 | 1-2 | 2 weeks | Infrastructure | Eureka, Config, Gateway, DB |
 | 3-5 | 3 weeks | Core services | Movie, User, Actor services |
-| 6-7 | 2 weeks | Advanced | AI Service, Media Service |
-| 8-9 | 2 weeks | Web | Next.js 16 application |
-| 10-11 | 2 weeks | Mobile | React Native apps |
-| 12 | 1 week | Testing | E2E, performance, security |
-| 13 | 1 week | Deployment | Production deploy, docs |
+| 6-7 | 2 weeks | TMDB Facade | TMDB v3 facade + React app integration |
+| 8-9 | 2 weeks | Advanced | AI Service, Media Service |
+| 10 | 1 week | Testing | E2E (React app), performance, security |
+| 11-12 | 2 weeks | Observability & Deploy | Prometheus/ELK, Terraform, K8s cloud |
 
-**Total Timeline:** 13 weeks (3.25 months)
+**Total Timeline:** 12 weeks (~3 months)
 
 ### 9.2 Definition of Done (DoD)
 
@@ -1680,7 +1724,8 @@ class MovieServiceIntegrationTest {
 
 ### 10.4 End-to-End Testing (10% of tests)
 
-**Tools:** Playwright (web), Detox (mobile)
+**Tools:** Playwright, run against the existing Filmpire React app pointed at
+the local backend stack (the true acceptance test for the TMDB facade)
 
 **Example (Playwright):**
 ```typescript
@@ -2098,7 +2143,9 @@ templates → Kibana dashboards) is fully demonstrable without cloud cost.
 - [ ] Sub-200ms average API response time
 - [ ] Zero critical security vulnerabilities (Snyk/OWASP)
 - [ ] SonarQube quality gate: A rating
-- [ ] Mobile apps published to TestFlight and Google Play Internal Testing
+- [ ] **Filmpire React app runs fully against this backend with only a
+      base-URL change** (browse, search, details, actor pages, login,
+      favorites via TMDB proxy)
 - [ ] Complete API documentation (OpenAPI/Swagger)
 - [ ] CI/CD pipeline with <10 minute build time
 - [ ] 99% uptime over 30 days
@@ -2122,9 +2169,9 @@ templates → Kibana dashboards) is fully demonstrable without cloud cost.
 - REST + gRPC APIs
 - PostgreSQL + MongoDB hybrid strategy
 - Spring AI integration
-- Next.js 16 + React 19
-- React Native 0.82 mobile development
+- API-compatible facade design (drop-in TMDB v3 clone)
 - Docker + Kubernetes orchestration
+- Terraform IaC on AWS & Azure free tiers
 - TDD with 85%+ coverage
 - CI/CD automation
 - Clean Code + SOLID principles
