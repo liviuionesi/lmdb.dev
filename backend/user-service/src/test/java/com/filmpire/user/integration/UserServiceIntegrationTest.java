@@ -56,6 +56,11 @@ class UserServiceIntegrationTest {
     private static String accessToken;
     private static String refreshToken;
 
+    /**
+     * Journey step 1: a real INSERT through the Flyway-migrated schema. The
+     * captured access/refresh tokens seed every later step, so this also
+     * proves signup returns both tokens without a follow-up login call.
+     */
     @Test
     @Order(1)
     @DisplayName("Register: creates the account and returns a token bundle")
@@ -76,6 +81,11 @@ class UserServiceIntegrationTest {
         refreshToken = data.get("refreshToken").asText();
     }
 
+    /**
+     * Re-registering the username from step 1 (different email) must map to a
+     * clean 400 envelope — proof the guard fires in the service layer rather
+     * than leaking PostgreSQL's unique-constraint violation as a 500.
+     */
     @Test
     @Order(2)
     @DisplayName("Register: duplicate username is rejected with 400")
@@ -88,6 +98,11 @@ class UserServiceIntegrationTest {
             .andExpect(jsonPath("$.success").value(false));
     }
 
+    /**
+     * Exercises the real security chain, not a mocked one: the anonymous
+     * request must die in the JWT filter, and the step-1 token must resolve
+     * to the same account that registered — identity, not just validity.
+     */
     @Test
     @Order(3)
     @DisplayName("Profile requires a token: 401 without, 200 with")
@@ -103,6 +118,11 @@ class UserServiceIntegrationTest {
             .andExpect(jsonPath("$.data.email").value("liviu@example.com"));
     }
 
+    /**
+     * Idempotency here rests on a real (user, movie) unique constraint, so it
+     * only proves out against actual PostgreSQL: the double add must collapse
+     * to one row, and ordering/deletion must hold across real queries.
+     */
     @Test
     @Order(4)
     @DisplayName("Favorites: add is idempotent, list is newest-first, delete removes")
@@ -134,6 +154,11 @@ class UserServiceIntegrationTest {
             .andExpect(jsonPath("$.data.length()").value(1));
     }
 
+    /**
+     * Favorites and watchlist share the same (user, movie) shape, so a
+     * mis-joined or shared table is a plausible bug: with step 4's favorite
+     * still present, a count of exactly 1 proves the lists never bleed.
+     */
     @Test
     @Order(5)
     @DisplayName("Watchlist: independent of favorites")
@@ -149,6 +174,11 @@ class UserServiceIntegrationTest {
             .andExpect(jsonPath("$.data[0].movieId").value(603));
     }
 
+    /**
+     * Rotation is the replay defense: every refresh must mint a NEW refresh
+     * token and kill the presented one, so a stolen token becomes worthless
+     * the moment its legitimate owner refreshes first.
+     */
     @Test
     @Order(6)
     @DisplayName("Refresh rotates: new tokens issued, old refresh token dies")
@@ -175,10 +205,16 @@ class UserServiceIntegrationTest {
             .andExpect(status().isUnauthorized());
     }
 
+    /**
+     * The change must take effect within the request that reported OK: the
+     * old hash has to be unusable and the new one live immediately, with no
+     * window where both (or neither) credential authenticates.
+     */
     @Test
     @Order(7)
     @DisplayName("Password change: old password stops working, new one logs in")
     void passwordChange() throws Exception {
+        // 1. Authenticated change swaps the stored hash.
         mockMvc.perform(put("/api/v1/users/password")
                 .header("Authorization", "Bearer " + accessToken)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -197,6 +233,13 @@ class UserServiceIntegrationTest {
             .andExpect(status().isOk());
     }
 
+    /**
+     * Logout must sever the renewable half of the session: the refresh token
+     * dies immediately, but the already-issued access token stays valid until
+     * its short natural expiry. This asserts that accepted stateless-JWT
+     * trade-off explicitly, so a future "revoke access tokens on logout"
+     * change is a conscious decision rather than a silent regression.
+     */
     @Test
     @Order(8)
     @DisplayName("Logout revokes the refresh token; access token expires naturally")
@@ -218,6 +261,12 @@ class UserServiceIntegrationTest {
             .andExpect(status().isOk());
     }
 
+    /**
+     * Bean-validation failures (short username, malformed email, short
+     * password all at once) must surface as a 400 with a populated message,
+     * not a stack trace or 500 — proof the GlobalExceptionHandler translates
+     * MethodArgumentNotValidException into the shared error envelope.
+     */
     @Test
     @Order(9)
     @DisplayName("Validation: malformed registration is rejected with field details")

@@ -55,6 +55,11 @@ class PersonFacadeServiceTest {
         ReflectionTestUtils.setField(service, "detailRefresh", Duration.ofHours(720));
     }
 
+    /**
+     * A document inside its freshness window must be served straight from
+     * PostgreSQL — the read-through's whole point is that warm data costs zero
+     * TMDB calls, which is what protects the shared 40-req/10s rate budget.
+     */
     @Test
     @DisplayName("Fresh PostgreSQL copy is served without calling TMDB")
     void freshCopyServedLocally() {
@@ -66,6 +71,12 @@ class PersonFacadeServiceTest {
         verify(rawClient, never()).fetch(anyString(), any());
     }
 
+    /**
+     * A copy older than the freshness window must be refreshed from TMDB and
+     * written back under the same key (save-through overwrite), so the cache
+     * self-heals toward current data instead of serving indefinitely-stale
+     * documents.
+     */
     @Test
     @DisplayName("Stale copy triggers refetch and save-through overwrite")
     void staleCopyRefetched() {
@@ -78,6 +89,11 @@ class PersonFacadeServiceTest {
         verify(repository).save(any(TmdbPersonDocument.class));
     }
 
+    /**
+     * When TMDB is unreachable but a (stale) copy exists, serving the stale
+     * data beats returning an error: for a read-only catalog an outdated
+     * actor page is far more useful to the user than a 5xx.
+     */
     @Test
     @DisplayName("TMDB unreachable: stale copy is served as fallback")
     void staleFallbackOnNetworkFailure() {
@@ -90,6 +106,11 @@ class PersonFacadeServiceTest {
         assertThat(service.getRaw(PATH, none)).isEqualTo(STORED_JSON);
     }
 
+    /**
+     * With neither a live TMDB nor a cached copy there is nothing truthful to
+     * return, so the network failure must propagate (to become a 502 at the
+     * controller) rather than be masked as an empty or fabricated success.
+     */
     @Test
     @DisplayName("TMDB unreachable with no copy: failure propagates")
     void failurePropagatesWithoutCopy() {
@@ -101,6 +122,12 @@ class PersonFacadeServiceTest {
             .isInstanceOf(ResourceAccessException.class);
     }
 
+    /**
+     * The key must sort query params by name so that logically-identical
+     * requests with different param order collapse to one cache entry. Keeping
+     * the algorithm byte-identical to movie-service's keeps cache keys
+     * predictable platform-wide (and reviewable in one place).
+     */
     @Test
     @DisplayName("Canonical key sorts params — identical to movie-service's algorithm")
     void canonicalKeyMatchesPlatformConvention() {

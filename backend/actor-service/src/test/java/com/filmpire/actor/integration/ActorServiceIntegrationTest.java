@@ -85,6 +85,12 @@ class ActorServiceIntegrationTest {
         resetAllRequests();
     }
 
+    /**
+     * The facade's core promise: the body returned must equal TMDB's bytes
+     * exactly, and the client-supplied api_key must be discarded in favor of
+     * the server key. Asserting the WireMock request carried the server key
+     * (and never the client one) proves the credential swap happens.
+     */
     @Test
     @DisplayName("Facade /person/{id}: byte-identical body, client api_key stripped")
     void personFacadeByteFidelity() throws Exception {
@@ -103,6 +109,12 @@ class ActorServiceIntegrationTest {
             .withQueryParam("api_key", equalTo("react-app-key")));
     }
 
+    /**
+     * Save-through must persist the first response and serve the second from
+     * PostgreSQL. The exactly-one WireMock hit is the load-bearing assertion —
+     * it proves the DB read path is actually taken, which is what keeps TMDB
+     * traffic (and rate-limit pressure) bounded under repeated requests.
+     */
     @Test
     @DisplayName("Facade save-through: second request served from PostgreSQL, zero TMDB calls")
     void personServedFromPostgresOnRepeat() throws Exception {
@@ -121,6 +133,12 @@ class ActorServiceIntegrationTest {
         verify(1, getRequestedFor(urlPathEqualTo("/person/819")));
     }
 
+    /**
+     * Two error paths that must stay distinct: a real TMDB 404 is replayed
+     * byte-for-byte (the app sees TMDB's own error shape), while a
+     * structurally-invalid id (non-numeric) is rejected locally and must never
+     * reach TMDB — checked by asserting zero upstream requests for it.
+     */
     @Test
     @DisplayName("Facade: TMDB 404 passes through verbatim; non-numeric id is a local 404")
     void personErrorHandling() throws Exception {
@@ -144,6 +162,12 @@ class ActorServiceIntegrationTest {
         verify(0, getRequestedFor(urlPathEqualTo("/person/not-a-person")));
     }
 
+    /**
+     * The native API parses the same raw document the facade stores and
+     * projects the fields the app needs (id, name, birthplace, birthdate). The
+     * follow-up repository check proves the upsert side effect fires, giving
+     * the service a locally-queryable actors table that grows with use.
+     */
     @Test
     @DisplayName("Native /api/v1/actors/{id}: typed profile parsed and upserted")
     void nativeActorEndpointParsesAndPersists() throws Exception {
@@ -165,6 +189,12 @@ class ActorServiceIntegrationTest {
             .satisfies(actor -> assertThat(actor.getName()).isEqualTo("Edward Norton"));
     }
 
+    /**
+     * Filmography is derived from TMDB's movie_credits cast and must be sorted
+     * newest-release-first (the order the UI expects). The fixture deliberately
+     * lists Fight Club (1999) before 25th Hour (2002) so a green result proves
+     * the service re-sorts rather than passing TMDB's order through.
+     */
     @Test
     @DisplayName("Native filmography: parsed from movie_credits, newest first")
     void nativeFilmographySortedNewestFirst() throws Exception {
@@ -180,6 +210,12 @@ class ActorServiceIntegrationTest {
             .andExpect(jsonPath("$.data[1].movieId").value(550));
     }
 
+    /**
+     * Regression guard ported from movie-service: an accented query ("léa
+     * seydoux") must reach TMDB decoded, not double-encoded. WireMock matches
+     * on the decoded value, so a match confirms the raw client's explicit
+     * percent-encoding forwards non-ASCII search terms correctly.
+     */
     @Test
     @DisplayName("Native search: UTF-8 query survives forwarding (encoding regression guard)")
     void nativeSearchWithUtf8Query() throws Exception {
@@ -199,6 +235,12 @@ class ActorServiceIntegrationTest {
             .andExpect(jsonPath("$.data.results[0].name").value("Léa Seydoux"));
     }
 
+    /**
+     * The same upstream 404 that the facade replays raw must, on the native
+     * path, be translated into the shared ApiResponse envelope (success:false)
+     * — proving the package-scoped error advice keeps native errors
+     * ApiResponse-shaped while leaving the facade's raw TMDB errors untouched.
+     */
     @Test
     @DisplayName("Native endpoint maps upstream 404 to the ApiResponse envelope")
     void nativeEndpointWrapsUpstreamError() throws Exception {

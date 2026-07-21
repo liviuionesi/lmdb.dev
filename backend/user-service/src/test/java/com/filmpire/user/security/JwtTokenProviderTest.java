@@ -44,6 +44,11 @@ class JwtTokenProviderTest {
             .build();
     }
 
+    /**
+     * The gateway parses tokens with its own JwtUtil and never calls back into
+     * this service, so sub/userId/roles must be present and correctly typed at
+     * issuance — a missing claim here surfaces as a 401 in a different service.
+     */
     @Test
     @DisplayName("Issued token carries the gateway claim contract: sub, userId, roles")
     void tokenCarriesGatewayClaims() {
@@ -60,6 +65,11 @@ class JwtTokenProviderTest {
         assertThat(claims.get().get("roles")).isEqualTo(List.of("USER"));
     }
 
+    /**
+     * A payload whose signature no longer matches must yield Optional.empty()
+     * rather than throw: callers treat "invalid" and "absent" identically, and
+     * an exception would leak JJWT internals into the security filter chain.
+     */
     @Test
     @DisplayName("Tampered token is rejected (empty), not thrown")
     void tamperedTokenRejected() {
@@ -70,6 +80,11 @@ class JwtTokenProviderTest {
         assertThat(provider.parse(tampered)).isEmpty();
     }
 
+    /**
+     * A structurally valid token minted under a different key must fail
+     * verification — otherwise anyone who knows the claim layout could forge
+     * credentials this service would accept.
+     */
     @Test
     @DisplayName("Token signed with a different secret is rejected")
     void wrongSecretRejected() {
@@ -80,6 +95,11 @@ class JwtTokenProviderTest {
         assertThat(provider.parse(token)).isEmpty();
     }
 
+    /**
+     * Expiry must be enforced inside parse() itself, not left to callers: a
+     * provider that still returns claims for an expired token would silently
+     * extend every session past its configured lifetime.
+     */
     @Test
     @DisplayName("Expired token is rejected")
     void expiredTokenRejected() {

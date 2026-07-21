@@ -50,6 +50,13 @@ this file, but should still respect the conventions below.
   unusual, non-obvious, or proceeds in distinct steps — number the steps
   (e.g. `// 1. Check Redis cache`). Do NOT comment the self-evident.
 - Comments explain WHY and the contract, not restate the code.
+- TESTS ARE NOT EXEMPT: every test class gets a Javadoc (what's under test,
+  which tools — WireMock, Testcontainers, mocks), every @Test method gets a
+  Javadoc describing the scenario and why the asserted behavior is the
+  correct one (complementing @DisplayName, never restating it), and test
+  bodies use Given/When/Then or numbered-step comments when they have more
+  than one logical step. Helper/setup methods too. The shared-library test
+  suite is the reference style.
 
 ## Commit conventions
 

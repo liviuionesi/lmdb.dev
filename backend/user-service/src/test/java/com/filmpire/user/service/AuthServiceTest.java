@@ -66,6 +66,11 @@ class AuthServiceTest {
         ReflectionTestUtils.setField(authService, "refreshExpirationMs", 604_800_000L);
     }
 
+    /**
+     * Happy-path signup must persist a BCrypt hash (never the raw password),
+     * store a refresh-token row, and hand back a bundle the client can use
+     * immediately — no separate login round trip after registering.
+     */
     @Test
     @DisplayName("Registration hashes the password and returns a full token bundle")
     void registerHashesPasswordAndIssuesTokens() {
@@ -91,6 +96,11 @@ class AuthServiceTest {
         verify(refreshTokenRepository).save(any(RefreshToken.class));
     }
 
+    /**
+     * The uniqueness guard must fire before any save is attempted: reaching
+     * the database constraint instead would surface as a 500 rather than a
+     * clean ValidationException naming the offending field.
+     */
     @Test
     @DisplayName("Registration rejects a taken username")
     void registerRejectsDuplicateUsername() {
@@ -102,6 +112,11 @@ class AuthServiceTest {
             .hasMessageContaining("Username");
     }
 
+    /**
+     * Runs against the real BCrypt encoder, so a green result proves the raw
+     * password actually verifies against the stored hash. The lastLogin touch
+     * matters because downstream audit/inactivity logic depends on it.
+     */
     @Test
     @DisplayName("Login succeeds with correct credentials and updates lastLogin")
     void loginSucceeds() {
@@ -114,6 +129,11 @@ class AuthServiceTest {
         assertThat(user.getLastLogin()).isNotNull();
     }
 
+    /**
+     * A wrong password and an unknown username must produce the identical
+     * exception AND message; any observable difference turns the login
+     * endpoint into a username-enumeration oracle for attackers.
+     */
     @Test
     @DisplayName("Login fails identically for wrong password and unknown user")
     void loginFailsUniformly() {
@@ -131,6 +151,11 @@ class AuthServiceTest {
             .hasMessage("Invalid username or password");
     }
 
+    /**
+     * A disabled account presenting the CORRECT password must still be
+     * refused — the enabled flag is the administrative kill switch, and
+     * password validity must never override it.
+     */
     @Test
     @DisplayName("Login rejects disabled accounts")
     void loginRejectsDisabledAccount() {
@@ -142,6 +167,11 @@ class AuthServiceTest {
             .isInstanceOf(UnauthorizedException.class);
     }
 
+    /**
+     * A refresh token with no matching hash in the store must be refused:
+     * accepting it would let any well-formed string mint fresh access tokens
+     * without the caller ever having authenticated.
+     */
     @Test
     @DisplayName("Refresh rejects an unknown token")
     void refreshRejectsUnknownToken() {
@@ -151,6 +181,11 @@ class AuthServiceTest {
             .isInstanceOf(UnauthorizedException.class);
     }
 
+    /**
+     * An expired refresh token must be rejected AND deleted in the same call:
+     * leaving the dead row behind would allow endless retries against it and
+     * bloat the token table with entries that can never succeed again.
+     */
     @Test
     @DisplayName("Refresh rejects and purges an expired token")
     void refreshRejectsExpiredToken() {
@@ -170,6 +205,11 @@ class AuthServiceTest {
         verify(refreshTokenRepository).delete(expired);
     }
 
+    /**
+     * Logout must revoke every refresh token the user holds, not only the one
+     * presented — otherwise a token stolen from another device would survive
+     * an explicit "log me out" request.
+     */
     @Test
     @DisplayName("Logout revokes all of the user's refresh tokens")
     void logoutRevokesAllTokens() {
