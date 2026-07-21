@@ -25,7 +25,7 @@ dependencies {
     implementation "org.springdoc:springdoc-openapi-starter-webmvc-ui:${springdocVersion}"
     implementation "org.mapstruct:mapstruct:${mapstructVersion}"
     
-    implementation "com.giffing.bucket4j.spring.boot.starter:bucket4j-spring-boot-starter:${bucket4jVersion}"
+    implementation "com.bucket4j:bucket4j-core:${bucket4jVersion}"
     
     // Lombok
     compileOnly "org.projectlombok:lombok:${lombokVersion}"
