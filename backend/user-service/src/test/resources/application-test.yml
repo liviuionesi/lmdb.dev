@@ -1,0 +1,17 @@
+# Test profile: Eureka off (no discovery infra in tests); the datasource is
+# provided by Testcontainers via @ServiceConnection, so no URL is set here.
+spring:
+  cloud:
+    discovery:
+      enabled: false
+
+eureka:
+  client:
+    enabled: false
+    register-with-eureka: false
+    fetch-registry: false
+
+jwt:
+  secret: test-secret-key-for-user-service-tests-256bit
+  expiration: 3600000
+  refresh-expiration: 604800000

@@ -5,17 +5,17 @@ spring:
   application:
     name: user-service
   datasource:
-    url: jdbc:postgresql://localhost:5432/filmpire
-    username: admin
-    password: admin123
+    url: ${POSTGRES_URL:jdbc:postgresql://localhost:5432/filmpire}
+    username: ${POSTGRES_USERNAME:admin}
+    password: ${POSTGRES_PASSWORD:admin123}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
+      # Flyway owns the schema; Hibernate only checks the mapping against it.
       ddl-auto: validate
     show-sql: false
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
   flyway:
     enabled: true
@@ -24,11 +24,17 @@ spring:
 eureka:
   client:
     service-url:
-      defaultZone: http://localhost:8761/eureka/
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka/}
 
+# JWT configuration.
+# CONTRACT: jwt.secret MUST match the API gateway's jwt.secret — the gateway
+# validates the access tokens this service issues (HS256, shared secret).
+# The default below matches the gateway's default for local development;
+# production MUST override via JWT_SECRET.
 jwt:
-  secret: your-secret-key-change-in-production-min-512-bits
-  expiration: 3600000
+  secret: ${JWT_SECRET:filmpire-secret-key-change-in-production}
+  expiration: ${JWT_EXPIRATION:3600000}          # access token: 1 hour
+  refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000}  # refresh: 7 days
 
 management:
   endpoints:
@@ -41,4 +47,3 @@ springdoc:
     path: /v3/api-docs
   swagger-ui:
     path: /swagger-ui.html
-
