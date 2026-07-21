@@ -1,0 +1,102 @@
+# Test profile for GatewayIntegrationTest (#19).
+#
+# Boots the REAL gateway but replaces the production `lb://service` routes
+# (which resolve via Eureka) with static routes pointing at a single WireMock
+# server on port 9971 that stands in for every downstream service. Eureka and
+# the discovery route locator are disabled; Redis host/port come from a
+# Testcontainers container via @DynamicPropertySource.
+#
+# The route list here REPLACES the base application.yml routes (Spring Boot does
+# not merge list properties across profile documents). More specific test-only
+# paths (cbtest, rltest) are listed first so they win over the general
+# movie-service route.
+
+spring:
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: false          # no Eureka-derived routes in tests
+      # Drop the production default-filters: the Retry filter retries GET on
+      # 503, which would multiply requests and corrupt circuit-breaker and
+      # request-count assertions.
+      default-filters: []
+      routes:
+        # --- Circuit-breaker test route (statusCodes makes 500 a CB failure) ---
+        - id: cb-test
+          uri: http://localhost:9971
+          predicates:
+            - Path=/api/v1/movies/cbtest/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: cbTestCircuitBreaker
+                fallbackUri: forward:/fallback/movies
+                statusCodes:
+                  - "500"
+
+        # --- Rate-limit test route (tiny burst so it trips fast) ---
+        - id: rl-test
+          uri: http://localhost:9971
+          predicates:
+            - Path=/api/v1/movies/rltest/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                key-resolver: "#{@ipKeyResolver}"
+                redis-rate-limiter.replenishRate: 1
+                redis-rate-limiter.burstCapacity: 3
+                redis-rate-limiter.requestedTokens: 1
+
+        # --- Movie service (public GET; also serves /api/v1/genres) ---
+        - id: movie-service
+          uri: http://localhost:9971
+          predicates:
+            - Path=/api/v1/movies/**,/api/v1/genres/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: movieServiceCircuitBreaker
+                fallbackUri: forward:/fallback/movies
+
+        # --- User service (protected by Spring Security) ---
+        - id: user-service
+          uri: http://localhost:9971
+          predicates:
+            - Path=/api/v1/users/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: userServiceCircuitBreaker
+                fallbackUri: forward:/fallback/users
+
+        # --- Actor service (public GET) ---
+        - id: actor-service
+          uri: http://localhost:9971
+          predicates:
+            - Path=/api/v1/actors/**
+
+  data:
+    redis:
+      # host/port injected by @DynamicPropertySource; the test Redis has no auth
+      password:
+
+# No Eureka in integration tests
+eureka:
+  client:
+    enabled: false
+    register-with-eureka: false
+    fetch-registry: false
+
+# Tune the circuit breaker used by the cb-test route so it opens after only a
+# few failing calls (production defaults would need far more traffic).
+resilience4j:
+  circuitbreaker:
+    instances:
+      cbTestCircuitBreaker:
+        base-config: default
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 4
+        minimum-number-of-calls: 4
+        wait-duration-in-open-state: 2s
+        permitted-number-of-calls-in-half-open-state: 1

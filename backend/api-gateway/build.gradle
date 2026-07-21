@@ -36,6 +36,8 @@ dependencies {
     testImplementation 'io.projectreactor:reactor-test'
     testImplementation "org.testcontainers:testcontainers:${testcontainersVersion}"
     testImplementation "org.testcontainers:junit-jupiter:${testcontainersVersion}"
+    // Gateway integration tests: WireMock stands in for downstream services
+    testImplementation "org.wiremock:wiremock-standalone:${wiremockVersion}"
 }
 
 dependencyManagement {
