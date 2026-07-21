@@ -13,8 +13,15 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Tests for MovieMapper.
- * Tests MapStruct mappings between entities and DTOs using the generated implementation.
+ * Tests for {@link MovieMapper}, the MapStruct mapper between persistence
+ * entities and native {@code /api/v1} DTOs.
+ *
+ * <p>MapStruct generates the implementation at compile time by matching field
+ * names, so a renamed field or type change silently drops from the mapping with
+ * no compile error. These tests exercise the generated implementation directly
+ * (via the Mappers factory) and assert every field survives each conversion —
+ * that field-by-field coverage is the only thing that catches a silently
+ * unmapped property.</p>
  */
 @DisplayName("MovieMapper Tests")
 class MovieMapperTest {
@@ -22,6 +29,11 @@ class MovieMapperTest {
     // Use MapStruct's factory to get the generated implementation directly
     private final MovieMapper mapper = org.mapstruct.factory.Mappers.getMapper(MovieMapper.class);
 
+    /**
+     * The full entity→DTO mapping must carry ALL fields, including nested
+     * genres and language lists — this is the detail-endpoint conversion, so a
+     * dropped field means missing data on the movie details page.
+     */
     @Test
     @DisplayName("Should map Movie to MovieDto correctly")
     void movieToDto_ShouldMapCorrectly() {
@@ -84,6 +96,11 @@ class MovieMapperTest {
         assertThat(dto.homepage()).isEqualTo("http://www.foxmovies.com/movies/fight-club");
     }
 
+    /**
+     * The lighter list DTO (used in grid/search results) must map its subset of
+     * fields correctly — a separate mapping from the full DTO, so it needs its
+     * own coverage to catch a list-specific omission.
+     */
     @Test
     @DisplayName("Should map Movie to MovieListDto correctly")
     void movieToListDto_ShouldMapCorrectly() {
@@ -119,6 +136,10 @@ class MovieMapperTest {
         assertThat(dto.adult()).isFalse();
     }
 
+    /**
+     * The Genre→GenreDto mapping (id + name) must be exact — it's reused inside
+     * the movie mapping, so a bug here would corrupt genres everywhere.
+     */
     @Test
     @DisplayName("Should map Genre to GenreDto correctly")
     void genreToDto_ShouldMapCorrectly() {
@@ -137,6 +158,10 @@ class MovieMapperTest {
         assertThat(dto.name()).isEqualTo("Action");
     }
 
+    /**
+     * The list-mapping variant must preserve both element content AND order,
+     * since genres are displayed in the order TMDB returns them.
+     */
     @Test
     @DisplayName("Should map list of Genres to list of GenreDtos")
     void genresListToDto_ShouldMapCorrectly() {
@@ -160,6 +185,11 @@ class MovieMapperTest {
         assertThat(dtos.get(2).name()).isEqualTo("Thriller");
     }
 
+    /**
+     * Video mapping must carry the fields the UI needs to embed a trailer
+     * (site + key build the YouTube URL; official/type drive selection), so all
+     * of them are asserted.
+     */
     @Test
     @DisplayName("Should map Video to VideoDto correctly")
     void videoToDto_ShouldMapCorrectly() {
@@ -190,6 +220,11 @@ class MovieMapperTest {
         assertThat(dto.publishedAt()).isEqualTo("2020-01-01T00:00:00Z");
     }
 
+    /**
+     * Cast mapping must preserve the billing {@code order} field (0 = top
+     * billing) alongside character/profile, because the UI sorts and displays
+     * cast by that order.
+     */
     @Test
     @DisplayName("Should map Cast to CastDto correctly")
     void castToDto_ShouldMapCorrectly() {
@@ -214,6 +249,10 @@ class MovieMapperTest {
         assertThat(dto.order()).isZero();
     }
 
+    /**
+     * Crew mapping must carry job + department (used to surface the director
+     * and group crew), a distinct shape from cast that needs its own check.
+     */
     @Test
     @DisplayName("Should map Crew to CrewDto correctly")
     void crewToDto_ShouldMapCorrectly() {
@@ -238,6 +277,11 @@ class MovieMapperTest {
         assertThat(dto.profilePath()).isEqualTo("/fincher.jpg");
     }
 
+    /**
+     * Mapping a sparse entity must yield a DTO with nulls preserved (not an NPE
+     * and not defaulted values) — MapStruct must pass TMDB's omitted fields
+     * through faithfully.
+     */
     @Test
     @DisplayName("Should handle null values gracefully")
     void mapping_WithNullValues_ShouldHandleGracefully() {
@@ -259,6 +303,11 @@ class MovieMapperTest {
         assertThat(dto.genres()).isNull();
     }
 
+    /**
+     * The bulk movies→list-DTO mapping must preserve element content and order,
+     * since this is the conversion applied to every paged catalog/search
+     * response.
+     */
     @Test
     @DisplayName("Should map list of Movies to list of MovieListDtos")
     void moviesListToDto_ShouldMapCorrectly() {

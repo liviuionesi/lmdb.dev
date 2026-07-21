@@ -11,12 +11,23 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Unit tests for MovieDto.
- * Tests DTO serialization, deserialization, and data integrity.
+ * Unit tests for the {@link MovieDto} record — the immutable response type of
+ * the native {@code /api/v1} movie API.
+ *
+ * <p>As a record, DTO gets value equality, a builder (Lombok), and accessors
+ * for free; these tests pin the behaviors clients depend on: construction,
+ * value equality/hashCode (safe caching and comparison), Java serialization
+ * round-trip (the DTO is cached), null-tolerance for sparse TMDB data, and a
+ * useful toString for logs.</p>
  */
 @DisplayName("MovieDto Tests")
 class MovieDtoTest {
 
+    /**
+     * The builder must populate every accessor — the DTO is assembled field by
+     * field from the entity/mapper, so a dropped field would silently vanish
+     * from API responses.
+     */
     @Test
     @DisplayName("Should create DTO with builder")
     void builder_ShouldCreateDto() {
@@ -50,6 +61,14 @@ class MovieDtoTest {
         assertThat(dto.voteAverage()).isEqualTo(8.4);
     }
 
+    /**
+     * The DTO must survive a Java-serialization round trip unchanged, because
+     * it is stored in the (Redis) cache; a non-serializable field or broken
+     * serialVersionUID would surface as cache write/read failures at runtime.
+     *
+     * @throws IOException            if the stream operations fail
+     * @throws ClassNotFoundException if deserialization can't resolve the type
+     */
     @Test
     @DisplayName("Should be serializable")
     void dto_ShouldBeSerializable() throws IOException, ClassNotFoundException {
@@ -82,6 +101,11 @@ class MovieDtoTest {
         assertThat(deserialized.voteAverage()).isEqualTo(original.voteAverage());
     }
 
+    /**
+     * Record value-equality must hold field-by-field (equal for same content,
+     * unequal otherwise, consistent hashCode) — relied on by cache dedup and by
+     * any comparison of API results.
+     */
     @Test
     @DisplayName("Should handle equals and hashCode correctly")
     void equalsAndHashCode_ShouldWork() {
@@ -110,6 +134,11 @@ class MovieDtoTest {
         assertThat(dto1.hashCode()).isEqualTo(dto2.hashCode());
     }
 
+    /**
+     * The nested {@link GenreDto} list must be carried through and remain
+     * order-addressable, since the API exposes genres exactly as stored and the
+     * UI renders them in that order.
+     */
     @Test
     @DisplayName("Should handle genres correctly")
     void dto_WithGenres_ShouldWork() {
@@ -132,6 +161,11 @@ class MovieDtoTest {
         assertThat(dto.genres().get(0).name()).isEqualTo("Action");
     }
 
+    /**
+     * A DTO built from partial data must leave unset fields null rather than
+     * failing — TMDB omits fields, and the DTO has to represent that faithfully
+     * instead of substituting defaults that would misinform clients.
+     */
     @Test
     @DisplayName("Should handle null values gracefully")
     void dto_WithNullValues_ShouldWork() {
@@ -149,6 +183,11 @@ class MovieDtoTest {
         assertThat(dto.posterPath()).isNull();
     }
 
+    /**
+     * The record's toString must include the key identifying fields (id, title,
+     * rating) so log lines and debugging output are actually useful rather than
+     * an opaque object reference.
+     */
     @Test
     @DisplayName("Should handle toString correctly")
     void toString_ShouldWork() {
