@@ -27,7 +27,15 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Performance tests for MovieRepository using Testcontainers.
+ * Coarse performance/smoke tests for {@link MovieRepository} against real
+ * MongoDB (Testcontainers, {@code @DataMongoTest}).
+ *
+ * <p>These are NOT precise benchmarks — the wall-clock thresholds are
+ * deliberately generous ceilings (seconds/hundreds of ms) that seed hundreds
+ * to a thousand documents and assert the operation completes within a sane
+ * bound. Their real value is catching accidental O(n) blowups or a query that
+ * stops using its index (e.g. a full-collection scan) at moderate data volume,
+ * not measuring exact latency.</p>
  */
 @DataMongoTest
 @Testcontainers
@@ -37,6 +45,11 @@ class MovieRepositoryPerformanceTest {
     @Container
     static MongoDBContainer mongoDBContainer = new MongoDBContainer("mongo:7.0");
 
+    /**
+     * Points Spring Data at the container's Mongo.
+     *
+     * @param registry Spring test property registry
+     */
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry) {
         registry.add("spring.data.mongodb.uri", mongoDBContainer::getReplicaSetUrl);
@@ -44,11 +57,17 @@ class MovieRepositoryPerformanceTest {
 
     private final MovieRepository movieRepository;
 
+    /**
+     * Constructor injection of the repository under test.
+     *
+     * @param movieRepository the repository
+     */
     @org.springframework.beans.factory.annotation.Autowired
     MovieRepositoryPerformanceTest(MovieRepository movieRepository) {
         this.movieRepository = movieRepository;
     }
 
+    /** Stops the container after the class. */
     @AfterAll
     static void cleanup() {
         if (mongoDBContainer != null && mongoDBContainer.isRunning()) {
@@ -56,16 +75,22 @@ class MovieRepositoryPerformanceTest {
         }
     }
 
+    /** Empties the collection before each test for a known starting size. */
     @BeforeEach
     void setUp() {
         movieRepository.deleteAll();
     }
 
+    /** Empties the collection after each test to isolate data volumes. */
     @AfterEach
     void tearDown() {
         movieRepository.deleteAll();
     }
 
+    /**
+     * Bulk-inserting 100 movies via saveAll must finish well within 5s — guards
+     * against a regression where saveAll degrades to per-document round trips.
+     */
     @Test
     @DisplayName("Should handle bulk insert efficiently")
     void bulkInsert_ShouldBeEfficient() {
@@ -86,6 +111,12 @@ class MovieRepositoryPerformanceTest {
         assertThat(endTime - startTime).isLessThan(5000); // Should complete within 5 seconds
     }
 
+    /**
+     * A findByTmdbId lookup among 1000 documents must return in &lt;100ms —
+     * effectively asserting the query uses the tmdbId index rather than
+     * scanning the collection (the difference a missing index would make is
+     * far larger than this ceiling).
+     */
     @Test
     @DisplayName("Should perform indexed queries efficiently")
     void indexedQuery_ShouldBeEfficient() {
@@ -107,6 +138,11 @@ class MovieRepositoryPerformanceTest {
         assertThat(endTime - startTime).isLessThan(100); // Should be very fast (< 100ms)
     }
 
+    /**
+     * Fetching a first and a deep (6th) page from 500 sorted documents must
+     * finish within 1s and report the correct total — confirms deep pagination
+     * doesn't degrade badly and that totalElements is accurate for the pager.
+     */
     @Test
     @DisplayName("Should handle pagination efficiently with large datasets")
     void pagination_WithLargeDataset_ShouldBeEfficient() {
@@ -136,6 +172,11 @@ class MovieRepositoryPerformanceTest {
         assertThat(endTime - startTime).isLessThan(1000); // Should complete within 1 second
     }
 
+    /**
+     * Querying an embedded-array field (genre id) across 200 mixed-genre movies
+     * must finish within 500ms and return matches — the array-membership query
+     * is the most likely to scan, so this bounds it at moderate volume.
+     */
     @Test
     @DisplayName("Should handle complex genre queries efficiently")
     void genreQuery_WithComplexData_ShouldBeEfficient() {
@@ -172,6 +213,11 @@ class MovieRepositoryPerformanceTest {
         assertThat(endTime - startTime).isLessThan(500); // Should complete within 500ms
     }
 
+    /**
+     * A date-range query over a full year of documents must finish within
+     * 500ms and return the in-range subset — bounds the range scan used by
+     * year-based browsing.
+     */
     @Test
     @DisplayName("Should handle date range queries efficiently")
     void dateRangeQuery_ShouldBeEfficient() {
@@ -197,6 +243,12 @@ class MovieRepositoryPerformanceTest {
         assertThat(endTime - startTime).isLessThan(500); // Should complete within 500ms
     }
 
+    /**
+     * Case-insensitive title search across 100 documents (with two "Dark
+     * Knight" titles among noise) must return exactly the two matches within
+     * 500ms — bounds the substring/regex title query and confirms it stays
+     * selective amid noise.
+     */
     @Test
     @DisplayName("Should handle text search efficiently")
     void textSearch_ShouldBeEfficient() {
@@ -225,6 +277,11 @@ class MovieRepositoryPerformanceTest {
         assertThat(endTime - startTime).isLessThan(500); // Should complete within 500ms
     }
 
+    /**
+     * Three existence checks against 1000 documents must together finish in
+     * &lt;100ms — the existsByTmdbId probe is on the hot read-through path, so
+     * it must be index-backed and cheap even at volume.
+     */
     @Test
     @DisplayName("Should handle existence checks efficiently")
     void existenceCheck_ShouldBeEfficient() {
@@ -251,6 +308,16 @@ class MovieRepositoryPerformanceTest {
 
     // Helper method
 
+    /**
+     * Builds a persistable movie with the given identifying fields; popularity
+     * is derived from the id so seeded datasets have a stable sort order.
+     *
+     * @param tmdbId      TMDB id
+     * @param title       movie title
+     * @param voteAverage rating
+     * @param releaseDate release date
+     * @return a test movie ready to save
+     */
     private Movie createTestMovie(Long tmdbId, String title, Double voteAverage, LocalDate releaseDate) {
         return Movie.builder()
                 .tmdbId(tmdbId)

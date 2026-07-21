@@ -25,7 +25,15 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Integration tests for MovieRepository using Testcontainers.
+ * Integration tests for {@link MovieRepository} against real MongoDB
+ * (Testcontainers, {@code @DataMongoTest} slice — only the data layer loads).
+ *
+ * <p>Spring Data derives these finder queries from method names at runtime, so
+ * a mistyped property or wrong keyword produces a WRONG query, not a compile
+ * error. Running them against a real Mongo is the only way to prove each
+ * derived query (by-title-ignore-case, by-embedded-genre-id, date range,
+ * min-rating, and the three sort orders) actually returns what its name
+ * promises.</p>
  */
 @DataMongoTest
 @Testcontainers
@@ -35,6 +43,12 @@ class MovieRepositoryTest {
     @Container
     static MongoDBContainer mongoDBContainer = new MongoDBContainer("mongo:8.0.0");
 
+    /**
+     * Points Spring Data at the container's Mongo (replica-set URL for
+     * transaction support).
+     *
+     * @param registry Spring test property registry
+     */
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry) {
         registry.add("spring.data.mongodb.uri", mongoDBContainer::getReplicaSetUrl);
@@ -42,11 +56,18 @@ class MovieRepositoryTest {
 
     private final MovieRepository movieRepository;
 
+    /**
+     * Constructor injection of the repository under test.
+     *
+     * @param movieRepository the repository
+     */
     @org.springframework.beans.factory.annotation.Autowired
     MovieRepositoryTest(MovieRepository movieRepository) {
         this.movieRepository = movieRepository;
     }
 
+    /** Stops the shared container after the class (belt-and-braces with the
+     *  Testcontainers lifecycle). */
     @AfterAll
     static void cleanup() {
         if (mongoDBContainer != null && mongoDBContainer.isRunning()) {
@@ -54,16 +75,22 @@ class MovieRepositoryTest {
         }
     }
 
+    /** Empties the collection before each test so seeded data is deterministic. */
     @BeforeEach
     void setUp() {
         movieRepository.deleteAll();
     }
 
+    /** Empties the collection after each test to avoid cross-test leakage. */
     @AfterEach
     void tearDown() {
         movieRepository.deleteAll();
     }
 
+    /**
+     * Baseline persistence: a saved movie gets an id and is retrievable by its
+     * TMDB id — the core lookup the read-through cache depends on.
+     */
     @Test
     @DisplayName("Should save and find movie by TMDB ID")
     void saveAndFindByTmdbId_ShouldWork() {
@@ -82,6 +109,11 @@ class MovieRepositoryTest {
         assertThat(found.get().getTitle()).isEqualTo("Fight Club");
     }
 
+    /**
+     * Title search must be substring AND case-insensitive: querying "fight"
+     * must match "Fight Club" and exclude the others — the behavior a search
+     * box needs, and easy to get wrong in a derived query.
+     */
     @Test
     @DisplayName("Should find movies by title containing ignore case")
     void findByTitleContainingIgnoreCase_ShouldReturnMatches() {
@@ -100,6 +132,12 @@ class MovieRepositoryTest {
         assertThat(result.getContent().get(0).getTitle()).isEqualTo("Fight Club");
     }
 
+    /**
+     * Genre filtering queries INTO an embedded array: a movie matches if the
+     * genre id appears in its nested genres list. The fixture (one action-only,
+     * one drama-only, one both) proves the query matches on membership, not on
+     * a scalar field.
+     */
     @Test
     @DisplayName("Should find movies by genre ID")
     void findByGenreId_ShouldReturnMoviesWithGenre() {
@@ -129,6 +167,11 @@ class MovieRepositoryTest {
                 .containsExactlyInAnyOrder("The Dark Knight", "Mad Max");
     }
 
+    /**
+     * The date-range query must be inclusive-between: only Fight Club (1999)
+     * falls in 1995–2000, excluding the 1994 and 2008 films — pins the boundary
+     * semantics that "year filter" browsing relies on.
+     */
     @Test
     @DisplayName("Should find movies by release date between")
     void findByReleaseDateBetween_ShouldReturnMoviesInRange() {
@@ -149,6 +192,11 @@ class MovieRepositoryTest {
         assertThat(result.getContent().get(0).getTitle()).isEqualTo("Fight Club");
     }
 
+    /**
+     * The min-rating query must be greater-than-OR-EQUAL: with threshold 8.5,
+     * the 8.8 and 9.0 films match and the 8.4 and 6.5 films don't — confirms the
+     * inclusive boundary of the "minimum rating" filter.
+     */
     @Test
     @DisplayName("Should find movies by minimum vote average")
     void findByVoteAverageGreaterThanEqual_ShouldReturnHighRatedMovies() {
@@ -169,6 +217,11 @@ class MovieRepositoryTest {
                 .containsExactlyInAnyOrder("Forrest Gump", "The Dark Knight");
     }
 
+    /**
+     * Popularity sort must be DESC: the fixture's popularities (450/320/890)
+     * must come back Dark Knight → Fight Club → Forrest Gump. The distinct
+     * values make a wrong sort direction obvious.
+     */
     @Test
     @DisplayName("Should find all movies ordered by popularity desc")
     void findAllByOrderByPopularityDesc_ShouldReturnOrderedMovies() {
@@ -196,6 +249,11 @@ class MovieRepositoryTest {
         assertThat(result.getContent().get(2).getTitle()).isEqualTo("Forrest Gump");
     }
 
+    /**
+     * Vote-average sort must be DESC (9.0 → 8.8 → 8.4) — the "top rated" feed's
+     * ordering, verified independently of the popularity sort since they key on
+     * different fields.
+     */
     @Test
     @DisplayName("Should find all movies ordered by vote average desc")
     void findAllByOrderByVoteAverageDesc_ShouldReturnOrderedMovies() {
@@ -216,6 +274,10 @@ class MovieRepositoryTest {
         assertThat(result.getContent().get(2).getTitle()).isEqualTo("Fight Club");
     }
 
+    /**
+     * Release-date sort must be DESC (2008 → 1999 → 1994) — the "newest first"
+     * ordering, the date-typed counterpart to the numeric sorts above.
+     */
     @Test
     @DisplayName("Should find all movies ordered by release date desc")
     void findAllByOrderByReleaseDateDesc_ShouldReturnOrderedMovies() {
@@ -236,6 +298,11 @@ class MovieRepositoryTest {
         assertThat(result.getContent().get(2).getTitle()).isEqualTo("Forrest Gump");
     }
 
+    /**
+     * The existence check must return true for a stored id and false otherwise
+     * — the cheap "is this already cached?" probe the service uses to decide
+     * whether to call TMDB, so both branches are asserted.
+     */
     @Test
     @DisplayName("Should check if movie exists by TMDB ID")
     void existsByTmdbId_ShouldReturnCorrectValue() {
@@ -251,6 +318,11 @@ class MovieRepositoryTest {
         assertThat(notExists).isFalse();
     }
 
+    /**
+     * A lookup for an unknown id must return an empty Optional (not null),
+     * which is exactly the "miss" signal the read-through relies on to fall
+     * through to TMDB.
+     */
     @Test
     @DisplayName("Should handle empty results for non-existent TMDB ID")
     void findByTmdbId_WhenNotExists_ShouldReturnEmpty() {
@@ -263,6 +335,16 @@ class MovieRepositoryTest {
 
     // Helper method
 
+    /**
+     * Builds a persistable movie with the given identifying fields and sensible
+     * defaults for the rest.
+     *
+     * @param tmdbId      TMDB id
+     * @param title       movie title
+     * @param voteAverage rating
+     * @param releaseDate release date
+     * @return a test movie ready to save
+     */
     private Movie createTestMovie(Long tmdbId, String title, Double voteAverage, LocalDate releaseDate) {
         return Movie.builder()
                 .tmdbId(tmdbId)
