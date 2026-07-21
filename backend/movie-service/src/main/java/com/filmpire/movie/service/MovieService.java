@@ -34,13 +34,9 @@ public class MovieService {
     private String tmdbApiKey;
 
     /**
-     * Get movie by ID with hybrid caching.
-     * 1. Check Redis cache (via @Cacheable)
-     * 2. Check MongoDB
-     * 3. Fetch from TMDB API and store in MongoDB + Redis
-     *
-     * @param tmdbId TMDB movie ID
-     * @return Movie DTO
+     * Guards the fetch-from-TMDB path so concurrent misses for the same movie
+     * don't trigger duplicate TMDB calls and duplicate MongoDB inserts.
+     * ReentrantLock (not synchronized) to avoid pinning virtual threads.
      */
     private final java.util.concurrent.locks.ReentrantLock lock = new java.util.concurrent.locks.ReentrantLock();
 

@@ -9,24 +9,57 @@ import org.springframework.web.client.support.RestClientAdapter;
 import org.springframework.web.service.invoker.HttpServiceProxyFactory;
 
 /**
- * Configuration for TMDB Http Client.
+ * HTTP client configuration for the TMDB API.
+ *
+ * <p>Defines one shared, rate-limited {@link RestClient} and builds two
+ * consumers on top of it:</p>
+ * <ul>
+ *   <li>{@link TmdbClient} — typed HTTP interface used by the native
+ *       {@code /api/v1} API (deserializes into DTOs), and</li>
+ *   <li>{@code TmdbRawClient} (facade package) — raw passthrough used by the
+ *       TMDB v3 facade (returns unparsed JSON).</li>
+ * </ul>
+ *
+ * <p>Sharing the single {@code RestClient} matters: the
+ * {@link TmdbRateLimitInterceptor} it carries holds the token bucket, so all
+ * outbound TMDB traffic from this service instance is throttled by ONE
+ * bucket regardless of which consumer sends it.</p>
  */
 @Configuration
 public class TmdbClientConfig {
 
+    /** TMDB API base URL (e.g. {@code https://api.themoviedb.org/3}). */
     @Value("${tmdb.api.base-url}")
     private String baseUrl;
 
+    /**
+     * The single shared HTTP client for all TMDB traffic: base URL, JSON
+     * headers, and the rate-limit interceptor.
+     *
+     * @param builder              Spring-provided builder
+     * @param rateLimitInterceptor bucket-based throttle (40 req / 10 s)
+     * @return shared TMDB RestClient
+     */
     @Bean
-    public TmdbClient tmdbClient(RestClient.Builder builder, @NonNull TmdbRateLimitInterceptor rateLimitInterceptor) {
-        RestClient restClient = builder
+    public RestClient tmdbRestClient(RestClient.Builder builder,
+                                     @NonNull TmdbRateLimitInterceptor rateLimitInterceptor) {
+        return builder
             .baseUrl(baseUrl)
             .defaultHeader("Accept", "application/json")
             .defaultHeader("Content-Type", "application/json")
             .requestInterceptor(rateLimitInterceptor)
             .build();
+    }
 
-        RestClientAdapter adapter = RestClientAdapter.create(restClient);
+    /**
+     * Typed TMDB HTTP interface backed by the shared RestClient.
+     *
+     * @param tmdbRestClient the shared client bean defined above
+     * @return proxy implementing {@link TmdbClient}
+     */
+    @Bean
+    public TmdbClient tmdbClient(RestClient tmdbRestClient) {
+        RestClientAdapter adapter = RestClientAdapter.create(tmdbRestClient);
         HttpServiceProxyFactory factory = HttpServiceProxyFactory.builderFor(adapter).build();
 
         return factory.createClient(TmdbClient.class);
