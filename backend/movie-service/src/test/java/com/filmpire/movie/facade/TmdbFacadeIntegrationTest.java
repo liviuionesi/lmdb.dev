@@ -201,6 +201,39 @@ class TmdbFacadeIntegrationTest {
     }
 
     @Test
+    @DisplayName("Search queries with spaces and non-ASCII characters reach TMDB intact")
+    void searchQueryEncodingSurvivesForwarding() throws Exception {
+        String emptyList = "{\"page\":1,\"results\":[],\"total_pages\":0,\"total_results\":0}";
+
+        // WireMock matches on the DECODED query value — if double-encoding
+        // occurred, TMDB would receive "fight%20club"/"am%C3%A9lie" as
+        // literals and these stubs would not match.
+        stubFor(WireMock.get(urlPathEqualTo("/search/movie"))
+            .withQueryParam("query", equalTo("fight club"))
+            .willReturn(okJson(emptyList)));
+        stubFor(WireMock.get(urlPathEqualTo("/search/movie"))
+            .withQueryParam("query", equalTo("amélie"))
+            .willReturn(okJson(emptyList)));
+
+        // Space in the query (the common search case).
+        mockMvc.perform(get("/search/movie")
+                .queryParam("query", "fight club").queryParam("page", "1"))
+            .andExpect(status().isOk())
+            .andExpect(content().json(emptyList, true));
+
+        // Non-ASCII (accented) characters.
+        mockMvc.perform(get("/search/movie")
+                .queryParam("query", "amélie").queryParam("page", "1"))
+            .andExpect(status().isOk())
+            .andExpect(content().json(emptyList, true));
+
+        verify(1, getRequestedFor(urlPathEqualTo("/search/movie"))
+            .withQueryParam("query", equalTo("fight club")));
+        verify(1, getRequestedFor(urlPathEqualTo("/search/movie"))
+            .withQueryParam("query", equalTo("amélie")));
+    }
+
+    @Test
     @DisplayName("Genre list is served and persisted")
     void genreListWorks() throws Exception {
         String genres = "{\"genres\":[{\"id\":28,\"name\":\"Action\"},{\"id\":18,\"name\":\"Drama\"}]}";
