@@ -30,8 +30,16 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /**
- * End-to-end integration tests.
- * Tests complete workflows from HTTP request to database and back.
+ * End-to-end tests driving whole user workflows over the full stack (real
+ * controller → service → MongoDB via Testcontainers, TMDB client stubbed by
+ * {@link TmdbClientTestStubConfig}).
+ *
+ * <p>Where MovieServiceIntegrationTest checks endpoints individually, these
+ * chain several requests into realistic journeys (browse → search → filter →
+ * paginate) and verify the platform behaves consistently across them: uniform
+ * response envelopes, correct pagination indexing, MongoDB-backed serving, and
+ * fail-fast error handling. Assertions are structural because the stubbed TMDB
+ * client makes the data deterministic but arbitrary.</p>
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
@@ -47,6 +55,11 @@ class EndToEndIntegrationTest {
             .waitingFor(Wait.forListeningPort())
             .withStartupTimeout(Duration.ofSeconds(60));
 
+    /**
+     * Points Spring Data at the container's Mongo.
+     *
+     * @param registry Spring test property registry
+     */
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry) {
         registry.add("spring.data.mongodb.uri", mongoDBContainer::getReplicaSetUrl);
@@ -55,12 +68,19 @@ class EndToEndIntegrationTest {
     private final MockMvc mockMvc;
     private final MovieRepository movieRepository;
 
+    /**
+     * Constructor injection of the web client and repository.
+     *
+     * @param mockMvc         MVC test client
+     * @param movieRepository repository, used to seed/reset state
+     */
     @org.springframework.beans.factory.annotation.Autowired
     EndToEndIntegrationTest(MockMvc mockMvc, MovieRepository movieRepository) {
         this.mockMvc = mockMvc;
         this.movieRepository = movieRepository;
     }
 
+    /** Stops the container after the class. */
     @AfterAll
     static void cleanup() {
         if (mongoDBContainer != null && mongoDBContainer.isRunning()) {
@@ -68,17 +88,26 @@ class EndToEndIntegrationTest {
         }
     }
 
+    /** Empties the collection before each test for deterministic state. */
     @BeforeEach
     void setUp() {
         movieRepository.deleteAll();
     }
 
+    /** Empties the collection after each test. */
     @AfterEach
     void tearDown() {
         movieRepository.deleteAll();
     }
 
 
+    /**
+     * The core browse journey — genres, then popular, then trending — must all
+     * succeed in sequence with their expected shapes, proving the primary
+     * home-screen data paths work together over the full stack.
+     *
+     * @throws Exception if any request fails
+     */
     @Test
     @DisplayName("E2E: Complete movie discovery workflow")
     void completeMovieDiscoveryWorkflow() throws Exception {
@@ -111,6 +140,13 @@ class EndToEndIntegrationTest {
                 .andExpect(jsonPath("$.content").isArray());
     }
 
+    /**
+     * The search-oriented journey (search then top-rated) must return paged
+     * content over the full stack — covers the discovery path a user takes when
+     * looking for a specific title.
+     *
+     * @throws Exception if any request fails
+     */
     @Test
     @DisplayName("E2E: Search and get movie details workflow")
     void searchAndGetDetailsWorkflow() throws Exception {
@@ -133,6 +169,13 @@ class EndToEndIntegrationTest {
                 .andExpect(jsonPath("$.content").isArray());
     }
 
+    /**
+     * The filtering journey exercises discover with progressively more filters
+     * (genre only, year+rating, then all three) so combined filter binding is
+     * proven across the real stack, not just a single-filter case.
+     *
+     * @throws Exception if any request fails
+     */
     @Test
     @DisplayName("E2E: Filter and discover movies workflow")
     void filterAndDiscoverWorkflow() throws Exception {
@@ -169,6 +212,14 @@ class EndToEndIntegrationTest {
                 .andExpect(jsonPath("$.content").isArray());
     }
 
+    /**
+     * Cross-endpoint contract check: the list endpoints (popular, top-rated)
+     * must all expose the same PageResponse envelope, while genres uses the bare
+     * array form — pins the two response shapes clients must handle so neither
+     * drifts.
+     *
+     * @throws Exception if any request fails
+     */
     @Test
     @DisplayName("E2E: Test API response consistency across endpoints")
     void apiResponseConsistency() throws Exception {
@@ -202,6 +253,13 @@ class EndToEndIntegrationTest {
                 .andExpect(jsonPath("$[0].name").exists());
     }
 
+    /**
+     * Walking pages 1→2→3 must yield response pageNumbers 0→1→2, proving the
+     * 1-based request / 0-based response mapping holds consistently across
+     * successive pages over the full stack.
+     *
+     * @throws Exception if any request fails
+     */
     @Test
     @DisplayName("E2E: Test pagination across multiple pages")
     void paginationWorkflow() throws Exception {
@@ -232,6 +290,14 @@ class EndToEndIntegrationTest {
                 .andExpect(jsonPath("$.pageNumber").value(2));
     }
 
+    /**
+     * The read-through hit proven at the HTTP layer: a movie pre-saved directly
+     * into MongoDB must be returned by {@code GET /movies/{id}} with the stored
+     * fields — confirms the endpoint serves from the database (not only from
+     * the stubbed TMDB client), the whole point of the caching layer.
+     *
+     * @throws Exception if the request fails
+     */
     @Test
     @DisplayName("E2E: Test caching behavior with MongoDB")
     void cachingBehaviorWithMongoDB() throws Exception {
@@ -267,6 +333,14 @@ class EndToEndIntegrationTest {
                 .andExpect(jsonPath("$.title").value("Fight Club"));
     }
 
+    /**
+     * Bad requests must fail fast at the HTTP boundary: a search without the
+     * required query and a non-numeric id both return 400 over the full stack —
+     * confirms validation/type-conversion rejects malformed input before it
+     * reaches the service.
+     *
+     * @throws Exception if a request fails unexpectedly
+     */
     @Test
     @DisplayName("E2E: Test error handling workflow")
     void errorHandlingWorkflow() throws Exception {
@@ -284,6 +358,14 @@ class EndToEndIntegrationTest {
                 .andExpect(status().isBadRequest());
     }
 
+    /**
+     * Ten successive requests to the same endpoint must all return 200 with the
+     * expected shape — a stability smoke test that the full stack handles
+     * repeated load without connection/state errors. (Sequential, not truly
+     * parallel.)
+     *
+     * @throws Exception if any request fails
+     */
     @Test
     @DisplayName("E2E: Test concurrent requests handling")
     void concurrentRequestsHandling() throws Exception {
@@ -298,6 +380,13 @@ class EndToEndIntegrationTest {
         }
     }
 
+    /**
+     * A breadth check that EVERY movie-list endpoint (popular, top-rated,
+     * trending day/week, discover, search) is wired and returns 200 over the
+     * full stack — catches a route that compiles but fails to serve.
+     *
+     * @throws Exception if any request fails
+     */
     @Test
     @DisplayName("E2E: Test all movie list endpoints")
     void allMovieListEndpoints() throws Exception {

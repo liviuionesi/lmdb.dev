@@ -240,6 +240,15 @@ class TmdbFacadeIntegrationTest {
             .withQueryParam("with_cast", equalTo("819")));
     }
 
+    /**
+     * The regression guard for the query-encoding bug: a query with a space
+     * ("fight club") and one with a non-ASCII character ("amélie") must reach
+     * TMDB DECODED, not double-encoded. WireMock matches on the decoded value,
+     * so a match proves the raw client percent-encodes forwarded params exactly
+     * once — the fix this test was written to lock in.
+     *
+     * @throws Exception if a request fails
+     */
     @Test
     @DisplayName("Search queries with spaces and non-ASCII characters reach TMDB intact")
     void searchQueryEncodingSurvivesForwarding() throws Exception {

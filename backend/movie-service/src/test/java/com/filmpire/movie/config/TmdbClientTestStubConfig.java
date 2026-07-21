@@ -16,14 +16,29 @@ import java.util.List;
  * with an in-memory stub. This prevents integration tests from
  * calling the real TMDB API while still exercising the full
  * controller -> service -> caching -> MongoDB stack.
+ * <p>
+ * Every stub answer is deterministic and derived from the input arguments (movie id, page), so
+ * integration tests can predict exact field values without network access or WireMock. Import
+ * it into a test with {@code @Import(TmdbClientTestStubConfig.class)}; {@code @Primary} makes
+ * it win over the auto-configured HTTP-interface proxy.
  */
 @TestConfiguration
 public class TmdbClientTestStubConfig {
 
+    /**
+     * Supplies the stubbed {@link TmdbClient} as the primary bean so it transparently replaces
+     * the real declarative HTTP client everywhere it is injected. Implemented as an anonymous
+     * class rather than Mockito so all methods have real, consistent behavior by default.
+     */
     @Bean
     @Primary
     public TmdbClient tmdbClientStub() {
         return new TmdbClient() {
+            /**
+             * Returns a fully populated details record whose title, paths, imdb id and homepage
+             * embed the requested movie id, letting callers assert that the id they asked for
+             * is the one that flowed through the service and persistence layers.
+             */
             @Override
             public TmdbMovieResponse getMovieDetails(Long movieId, String apiKey) {
                 return new TmdbMovieResponse(
@@ -56,32 +71,44 @@ public class TmdbClientTestStubConfig {
                 );
             }
 
+            /**
+             * Ignores every filter (sort, genre, year, rating) and returns the shared
+             * page-derived list; filter correctness is not this stub's concern.
+             */
             @Override
             public TmdbMovieListResponse discoverMovies(String apiKey, Integer page, String sortBy,
                                                          Long genreId, Integer year, Double minRating) {
                 return buildStubMovieList(page);
             }
 
+            /** Ignores the query text; any search yields the shared page-derived list. */
             @Override
             public TmdbMovieListResponse searchMovies(String apiKey, String query, Integer page) {
                 return buildStubMovieList(page);
             }
 
+            /** Ignores the time window ("day"/"week"); trending is the shared list. */
             @Override
             public TmdbMovieListResponse getTrendingMovies(String timeWindow, String apiKey, Integer page) {
                 return buildStubMovieList(page);
             }
 
+            /** Popular movies are the shared page-derived list. */
             @Override
             public TmdbMovieListResponse getPopularMovies(String apiKey, Integer page) {
                 return buildStubMovieList(page);
             }
 
+            /** Top-rated movies are the shared page-derived list. */
             @Override
             public TmdbMovieListResponse getTopRatedMovies(String apiKey, Integer page) {
                 return buildStubMovieList(page);
             }
 
+            /**
+             * Returns a single official YouTube trailer whose id and key embed the movie id,
+             * so video lookups can be traced back to the requested movie in assertions.
+             */
             @Override
             public TmdbVideosResponse getMovieVideos(Long movieId, String apiKey) {
                 TmdbVideosResponse.TmdbVideo video = new TmdbVideosResponse.TmdbVideo(
@@ -97,6 +124,10 @@ public class TmdbClientTestStubConfig {
                 return new TmdbVideosResponse(movieId, List.of(video));
             }
 
+            /**
+             * Returns one cast member and one crew member (a director), the minimum shape
+             * needed to verify that both credit collections survive the mapping pipeline.
+             */
             @Override
             public TmdbCreditsResponse getMovieCredits(Long movieId, String apiKey) {
                 TmdbCreditsResponse.TmdbCast cast = new TmdbCreditsResponse.TmdbCast(
