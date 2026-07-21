@@ -28,8 +28,18 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 /**
- * Unit tests for MovieService.
- * Tests business logic with mocked dependencies.
+ * Unit tests for {@link MovieService}.
+ * <p>
+ * Exercises the service's business logic in isolation with Mockito: {@code MovieRepository}
+ * (MongoDB access), {@code TmdbClient} (TMDB HTTP client) and {@code MovieMapper} are all mocked,
+ * so no Spring context, database or network is involved. The TMDB API key normally bound via
+ * {@code @Value} is injected reflectively in {@link #setUp()}.
+ * <p>
+ * The central contract under test is the read-through pattern: MongoDB is consulted first and
+ * TMDB is only called on a cache miss, after which the result is persisted. Interaction-count
+ * details of that pattern are covered separately in {@code MovieServiceCacheTest}.
+ *
+ * @see MovieService
  */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("MovieService Tests")
@@ -49,11 +59,17 @@ class MovieServiceTest {
 
     private final String tmdbApiKey = "test-api-key";
 
+    /** Injects the @Value-bound TMDB key (no Spring context in a unit test). */
     @BeforeEach
     void setUp() {
         ReflectionTestUtils.setField(movieService, "tmdbApiKey", tmdbApiKey);
     }
 
+    /**
+     * The read-through hit path: an existing movie must be returned from
+     * MongoDB and mapped, with TMDB never consulted — the money-saving case
+     * that keeps the service under TMDB's rate limit.
+     */
     @Test
     @DisplayName("getMovieById - Should return from MongoDB when exists")
     void getMovieById_WhenExistsInMongoDB_ShouldReturnFromDB() {
@@ -77,6 +93,11 @@ class MovieServiceTest {
         verifyNoInteractions(tmdbClient);
     }
 
+    /**
+     * The read-through miss path: an absent movie must be fetched from TMDB and
+     * persisted, so the next read is local. The two findByTmdbId invocations are
+     * the double-check around the single-flight lock.
+     */
     @Test
     @DisplayName("getMovieById - Should fetch from TMDB API when not in MongoDB")
     void getMovieById_WhenNotInMongoDB_ShouldFetchFromTMDB() {
@@ -103,6 +124,11 @@ class MovieServiceTest {
         verify(movieMapper).toDto(savedMovie);
     }
 
+    /**
+     * Discover must translate TMDB's list response into a PageResponse whose
+     * totals (100 elements / 5 pages) come straight from TMDB — the pagination
+     * metadata the UI relies on to render page controls.
+     */
     @Test
     @DisplayName("discoverMovies - Should return paginated movies")
     void discoverMovies_ShouldReturnPaginatedMovies() {
@@ -122,6 +148,11 @@ class MovieServiceTest {
         verify(tmdbClient).discoverMovies(tmdbApiKey, 1, "popularity.desc", null, null, null);
     }
 
+    /**
+     * Discover filters (genre, year, min rating) must be passed through to the
+     * TMDB client unchanged — verified by matching the exact client arguments,
+     * since a dropped filter would silently widen the user's results.
+     */
     @Test
     @DisplayName("discoverMovies - Should apply filters correctly")
     void discoverMovies_WithFilters_ShouldApplyFilters() {
@@ -142,6 +173,10 @@ class MovieServiceTest {
         verify(tmdbClient).discoverMovies(tmdbApiKey, 1, "popularity.desc", genreId, year, minRating);
     }
 
+    /**
+     * Search must forward the query to TMDB and return the mapped page — the
+     * core search delegation that backs the app's search bar.
+     */
     @Test
     @DisplayName("searchMovies - Should return search results")
     void searchMovies_ShouldReturnSearchResults() {
@@ -159,6 +194,10 @@ class MovieServiceTest {
         verify(tmdbClient).searchMovies(tmdbApiKey, query, 1);
     }
 
+    /**
+     * Trending must forward the time-window ("week"/"day") to TMDB — verified
+     * on the client argument so the wrong window can't be silently substituted.
+     */
     @Test
     @DisplayName("getTrendingMovies - Should return trending movies")
     void getTrendingMovies_ShouldReturnTrendingMovies() {
@@ -176,6 +215,10 @@ class MovieServiceTest {
         verify(tmdbClient).getTrendingMovies(timeWindow, tmdbApiKey, 1);
     }
 
+    /**
+     * Popular must delegate to the corresponding TMDB endpoint and return the
+     * mapped page — one of the default home-screen category feeds.
+     */
     @Test
     @DisplayName("getPopularMovies - Should return popular movies")
     void getPopularMovies_ShouldReturnPopularMovies() {
@@ -192,6 +235,10 @@ class MovieServiceTest {
         verify(tmdbClient).getPopularMovies(tmdbApiKey, 1);
     }
 
+    /**
+     * Top-rated must delegate to its own TMDB endpoint — a distinct category
+     * from popular, so it gets its own delegation check.
+     */
     @Test
     @DisplayName("getTopRatedMovies - Should return top-rated movies")
     void getTopRatedMovies_ShouldReturnTopRatedMovies() {
@@ -208,6 +255,11 @@ class MovieServiceTest {
         verify(tmdbClient).getTopRatedMovies(tmdbApiKey, 1);
     }
 
+    /**
+     * Videos must be fetched and converted to VideoDtos, with the trailer's
+     * type preserved — the details page keys off {@code type == "Trailer"} to
+     * pick which video to embed.
+     */
     @Test
     @DisplayName("getMovieVideos - Should return movie videos")
     void getMovieVideos_ShouldReturnMovieVideos() {
@@ -227,6 +279,11 @@ class MovieServiceTest {
         verify(tmdbClient).getMovieVideos(movieId, tmdbApiKey);
     }
 
+    /**
+     * Credits must split TMDB's response into cast and crew and preserve
+     * top-billed order (Brad Pitt first) — the details page renders the cast
+     * list in exactly this order.
+     */
     @Test
     @DisplayName("getMovieCredits - Should return movie credits")
     void getMovieCredits_ShouldReturnMovieCredits() {
@@ -247,6 +304,10 @@ class MovieServiceTest {
         verify(tmdbClient).getMovieCredits(movieId, tmdbApiKey);
     }
 
+    /**
+     * Similar must delegate per-movie to TMDB and return the mapped page — a
+     * details-page rail, verified on the client call with the movie id.
+     */
     @Test
     @DisplayName("getSimilarMovies - Should return similar movies")
     void getSimilarMovies_ShouldReturnSimilarMovies() {
@@ -264,6 +325,10 @@ class MovieServiceTest {
         verify(tmdbClient).getSimilarMovies(movieId, tmdbApiKey, 1);
     }
 
+    /**
+     * Recommendations must delegate per-movie to TMDB — the sibling of similar
+     * movies (different TMDB endpoint), so it needs its own delegation check.
+     */
     @Test
     @DisplayName("getRecommendedMovies - Should return recommended movies")
     void getRecommendedMovies_ShouldReturnRecommendedMovies() {
@@ -281,6 +346,11 @@ class MovieServiceTest {
         verify(tmdbClient).getRecommendedMovies(movieId, tmdbApiKey, 1);
     }
 
+    /**
+     * The genre list must be fetched and each Genre mapped to a GenreDto in
+     * order — this feeds the app's genre sidebar, so both content and ordering
+     * matter.
+     */
     @Test
     @DisplayName("getAllGenres - Should return all genres")
     void getAllGenres_ShouldReturnAllGenres() {
@@ -309,6 +379,12 @@ class MovieServiceTest {
 
     // Helper methods
 
+    /**
+     * Builds a fully-populated Movie entity (MongoDB-hit stubbing).
+     *
+     * @param tmdbId TMDB id to embed
+     * @return a test movie
+     */
     private Movie createTestMovie(Long tmdbId) {
         return Movie.builder()
                 .id("mongo123")
@@ -335,6 +411,12 @@ class MovieServiceTest {
                 .build();
     }
 
+    /**
+     * Builds the DTO the mapper is stubbed to return.
+     *
+     * @param tmdbId TMDB id to embed
+     * @return a test DTO
+     */
     private MovieDto createTestMovieDto(Long tmdbId) {
         return MovieDto.builder()
                 .id("mongo123")
@@ -346,6 +428,12 @@ class MovieServiceTest {
                 .build();
     }
 
+    /**
+     * Builds the raw TMDB detail response returned on a cache miss.
+     *
+     * @param tmdbId TMDB id to embed
+     * @return a test TMDB movie response
+     */
     private TmdbMovieResponse createTestTmdbMovieResponse(Long tmdbId) {
         return new TmdbMovieResponse(
             tmdbId,
@@ -375,6 +463,12 @@ class MovieServiceTest {
         );
     }
 
+    /**
+     * Builds a two-item TMDB list response with totals (page 1 of 5, 100
+     * results) used by all the list-endpoint tests.
+     *
+     * @return a test TMDB list response
+     */
     private TmdbMovieListResponse createTestTmdbMovieListResponse() {
         TmdbMovieListResponse.TmdbMovieItem item1 = new TmdbMovieListResponse.TmdbMovieItem(
             550L,
@@ -409,6 +503,12 @@ class MovieServiceTest {
         return new TmdbMovieListResponse(1, 5, 100, Arrays.asList(item1, item2));
     }
 
+    /**
+     * Builds a videos response with a Trailer and a Featurette (order matters:
+     * the trailer is first, which the videos test asserts).
+     *
+     * @return a test TMDB videos response
+     */
     private TmdbVideosResponse createTestTmdbVideosResponse() {
         TmdbVideosResponse.TmdbVideo video1 = new TmdbVideosResponse.TmdbVideo(
             "video123",
@@ -435,6 +535,12 @@ class MovieServiceTest {
         return new TmdbVideosResponse(550L, Arrays.asList(video1, video2));
     }
 
+    /**
+     * Builds a credits response with two cast (billing order 0, 1) and one
+     * crew member (director), matching the credits test's expectations.
+     *
+     * @return a test TMDB credits response
+     */
     private TmdbCreditsResponse createTestTmdbCreditsResponse() {
         TmdbCreditsResponse.TmdbCast cast1 = new TmdbCreditsResponse.TmdbCast(
             287L,
@@ -466,6 +572,11 @@ class MovieServiceTest {
         return new TmdbCreditsResponse(550L, Arrays.asList(cast1, cast2), Arrays.asList(crew1));
     }
 
+    /**
+     * Builds a two-genre TMDB response (Action, Drama) for the genres test.
+     *
+     * @return a test TMDB genres response
+     */
     private TmdbGenresResponse createTestTmdbGenresResponse() {
         return new TmdbGenresResponse(
             Arrays.asList(
