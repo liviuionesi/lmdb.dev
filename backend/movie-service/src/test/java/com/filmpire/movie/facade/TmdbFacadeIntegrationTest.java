@@ -84,12 +84,23 @@ class TmdbFacadeIntegrationTest {
      * Starts every test from a clean slate: no stored raw documents and no
      * recorded WireMock requests (stubs are re-declared per test).
      */
+    /**
+     * Resets to a clean slate before each test: no stored raw documents and no
+     * recorded WireMock requests, so cache-hit vs cache-miss assertions and
+     * request counts start from zero.
+     */
     @BeforeEach
     void cleanSlate() {
         repository.deleteAll();
         resetAllRequests();
     }
 
+    /**
+     * The two load-bearing promises of the facade in one test: the returned
+     * body equals TMDB's bytes exactly, and the client's own api_key is
+     * discarded in favor of the server key (asserted by checking WireMock saw
+     * only the server key, never the client's).
+     */
     @Test
     @DisplayName("Facade returns TMDB's body byte-for-byte and strips the client api_key")
     void popularListIsByteIdenticalAndKeyIsSwapped() throws Exception {
@@ -113,6 +124,12 @@ class TmdbFacadeIntegrationTest {
             .withQueryParam("api_key", equalTo("react-app-client-key")));
     }
 
+    /**
+     * Proves save-through end to end: after one request populates MongoDB, a
+     * second identical request returns the same body while WireMock records
+     * exactly one upstream hit. The single-call assertion is what guarantees
+     * repeated browsing doesn't multiply TMDB traffic.
+     */
     @Test
     @DisplayName("Second identical request is served from MongoDB — zero TMDB calls")
     void secondRequestServedFromMongo() throws Exception {
@@ -131,6 +148,12 @@ class TmdbFacadeIntegrationTest {
         verify(1, getRequestedFor(urlPathEqualTo("/movie/popular")));
     }
 
+    /**
+     * The React app requests details as {@code /movie/{id}?append_to_response=
+     * videos,credits}; the facade must forward that param unchanged so TMDB
+     * returns the embedded videos/credits the details page needs, and the body
+     * must come back byte-identical.
+     */
     @Test
     @DisplayName("Movie details forward append_to_response and return the exact body")
     void movieDetailsWithAppendToResponse() throws Exception {
@@ -148,6 +171,11 @@ class TmdbFacadeIntegrationTest {
             .withQueryParam("append_to_response", equalTo("videos,credits")));
     }
 
+    /**
+     * A real TMDB 404 must be replayed with both its status and its exact error
+     * body, so the React app sees TMDB's own error shape (status_code 34) rather
+     * than a Filmpire-flavored error it wouldn't recognize.
+     */
     @Test
     @DisplayName("TMDB 404 error body passes through verbatim")
     void tmdbNotFoundPassesThrough() throws Exception {
@@ -164,6 +192,12 @@ class TmdbFacadeIntegrationTest {
             .andExpect(content().json(tmdbError, true));
     }
 
+    /**
+     * A {@code /movie/{x}} where x is neither a known category nor a numeric id
+     * is malformed, so the facade must answer a TMDB-shaped 404 LOCALLY and
+     * never call TMDB (asserted by zero upstream requests) — spending a
+     * rate-limit token on a request that can't succeed would be wasteful.
+     */
     @Test
     @DisplayName("Unknown movie category yields TMDB-shaped 404 without calling TMDB")
     void unknownCategoryIsLocal404() throws Exception {
@@ -176,6 +210,12 @@ class TmdbFacadeIntegrationTest {
         verify(0, anyRequestedFor(anyUrl()));
     }
 
+    /**
+     * The single {@code /discover/movie} endpoint backs two distinct app
+     * features — genre browsing ({@code with_genres}) and actor filmography
+     * ({@code with_cast}) — so both filter params must be forwarded unchanged.
+     * Verified by asserting each reached TMDB with its exact value.
+     */
     @Test
     @DisplayName("Discover by genre and by cast are both forwarded verbatim")
     void discoverForwardsFilters() throws Exception {
@@ -233,6 +273,11 @@ class TmdbFacadeIntegrationTest {
             .withQueryParam("query", equalTo("amélie")));
     }
 
+    /**
+     * The genre list (React app sidebar) must be served byte-identical AND
+     * persisted under its canonical key, confirming even this parameterless
+     * detail endpoint goes through the same save-through path as everything else.
+     */
     @Test
     @DisplayName("Genre list is served and persisted")
     void genreListWorks() throws Exception {

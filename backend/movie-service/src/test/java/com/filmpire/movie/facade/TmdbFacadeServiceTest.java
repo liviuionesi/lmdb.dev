@@ -63,6 +63,11 @@ class TmdbFacadeServiceTest {
         params.add("page", "1");
     }
 
+    /**
+     * A document inside its freshness window must be served from MongoDB with
+     * no TMDB call — the whole point of the read-through is that warm data
+     * costs nothing against the shared 40-req/10s TMDB budget.
+     */
     @Test
     @DisplayName("Fresh MongoDB copy is served without calling TMDB")
     void freshCopyServedWithoutTmdbCall() {
@@ -79,6 +84,11 @@ class TmdbFacadeServiceTest {
         verify(rawClient, never()).fetch(anyString(), any());
     }
 
+    /**
+     * A copy older than the list freshness window must be refreshed from TMDB
+     * and written back under the same key, so cached lists self-heal toward
+     * current data instead of serving stale rankings forever.
+     */
     @Test
     @DisplayName("Stale copy triggers refetch and save-through overwrite")
     void staleCopyRefetchedAndSaved() {
@@ -96,6 +106,11 @@ class TmdbFacadeServiceTest {
         verify(repository).save(any(TmdbDocument.class));
     }
 
+    /**
+     * On a total miss the service must fetch from TMDB and persist the result
+     * (save-through) so the very next request is served locally — this is how
+     * the database organically fills with the movies users actually browse.
+     */
     @Test
     @DisplayName("Cache miss fetches from TMDB and saves through")
     void missFetchesAndSaves() {
@@ -108,6 +123,11 @@ class TmdbFacadeServiceTest {
         verify(repository).save(any(TmdbDocument.class));
     }
 
+    /**
+     * When TMDB is unreachable but a stale copy exists, serving the stale data
+     * beats an error — for a read-only catalog an outdated popular list is far
+     * more useful to the user than a 5xx page.
+     */
     @Test
     @DisplayName("TMDB unreachable: stale copy is served as fallback")
     void staleFallbackWhenTmdbUnreachable() {
@@ -122,6 +142,11 @@ class TmdbFacadeServiceTest {
         assertThat(service.getList(PATH, params)).isEqualTo(FRESH_JSON);
     }
 
+    /**
+     * With neither TMDB nor a cached copy there is nothing truthful to return,
+     * so the failure must propagate (surfacing as a 502) rather than be masked
+     * as an empty success the client would misread as "no results".
+     */
     @Test
     @DisplayName("TMDB unreachable with no local copy: failure propagates")
     void failurePropagatesWithoutLocalCopy() {
@@ -133,6 +158,12 @@ class TmdbFacadeServiceTest {
             .isInstanceOf(ResourceAccessException.class);
     }
 
+    /**
+     * A TMDB error (e.g. 404) is a deliberate upstream answer, NOT a network
+     * failure, so it must pass through verbatim and must NOT be hidden behind a
+     * stale cached copy — the two failure modes are handled differently on
+     * purpose, and this pins that distinction.
+     */
     @Test
     @DisplayName("Upstream TMDB errors pass through without stale fallback")
     void upstreamErrorPassesThrough() {
@@ -146,6 +177,11 @@ class TmdbFacadeServiceTest {
             .isInstanceOf(TmdbUpstreamException.class);
     }
 
+    /**
+     * The cache key must sort params by name so that {@code ?a=1&b=2} and
+     * {@code ?b=2&a=1} collapse to one entry — otherwise logically-identical
+     * requests would each miss the cache and hammer TMDB needlessly.
+     */
     @Test
     @DisplayName("Canonical key is independent of query parameter order")
     void canonicalKeyIsOrderIndependent() {
@@ -162,6 +198,10 @@ class TmdbFacadeServiceTest {
             .isEqualTo("movie/popular?language=en&page=2");
     }
 
+    /**
+     * With no query params the key must be exactly the path (no trailing "?"),
+     * so parameterless endpoints like the genre list get a clean, stable key.
+     */
     @Test
     @DisplayName("Canonical key without params is just the path")
     void canonicalKeyWithoutParams() {

@@ -11,12 +11,23 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Unit tests for Movie entity.
- * Tests entity behavior, builders, and data integrity.
+ * Unit tests for the {@link Movie} MongoDB entity — its Lombok-generated
+ * builder, accessors, and equals/hashCode.
+ *
+ * <p>These are cheap structural guards on the persistence model that the
+ * native {@code /api/v1} path relies on: the builder is the only way movies
+ * are constructed from TMDB data, and equals/hashCode back deduplication, so a
+ * Lombok annotation accidentally dropped would silently break both. Nested
+ * collections (genres, production companies, spoken languages) and numeric edge
+ * cases are exercised because TMDB payloads routinely include all of them.</p>
  */
 @DisplayName("Movie Entity Tests")
 class MovieTest {
 
+    /**
+     * The builder must set every field it's given — the primary construction
+     * path for a movie, so a broken builder would corrupt everything persisted.
+     */
     @Test
     @DisplayName("Should create movie with builder")
     void builder_ShouldCreateMovie() {
@@ -53,6 +64,11 @@ class MovieTest {
         assertThat(movie.getAdult()).isFalse();
     }
 
+    /**
+     * A partially-populated movie must leave the unset fields null rather than
+     * throwing or defaulting — TMDB frequently omits fields (runtime, genres),
+     * so the entity has to tolerate sparse data.
+     */
     @Test
     @DisplayName("Should handle null values")
     void movie_WithNullValues_ShouldWork() {
@@ -70,6 +86,11 @@ class MovieTest {
         assertThat(movie.getRuntime()).isNull();
     }
 
+    /**
+     * The no-arg constructor + setters path (used by Spring Data when
+     * materializing from Mongo) must round-trip every property, complementing
+     * the builder test to cover both construction routes.
+     */
     @Test
     @DisplayName("Should set and get all properties correctly")
     void settersAndGetters_ShouldWork() {
@@ -112,6 +133,11 @@ class MovieTest {
         assertThat(movie.getCreatedAt()).isEqualTo(now);
     }
 
+    /**
+     * Value equality must hold for movies with identical fields and fail for
+     * differing ones, with hashCode consistent — required for correct behavior
+     * in sets/maps and for any dedup logic that compares movies.
+     */
     @Test
     @DisplayName("Should handle equals and hashCode correctly")
     void equalsAndHashCode_ShouldWork() {
@@ -140,6 +166,11 @@ class MovieTest {
         assertThat(movie1.hashCode()).isEqualTo(movie2.hashCode());
     }
 
+    /**
+     * Genres are an embedded nested list on the movie document; this confirms
+     * the list is stored and its elements remain addressable in order, since
+     * the UI renders genre chips from exactly this structure.
+     */
     @Test
     @DisplayName("Should create movie with genres")
     void movie_WithGenres_ShouldWork() {
@@ -163,6 +194,11 @@ class MovieTest {
         assertThat(movie.getGenres().get(0).getName()).isEqualTo("Action");
     }
 
+    /**
+     * Production companies are a second embedded object list; verified
+     * independently of genres because they use a different nested type and a
+     * mapping bug could affect one but not the other.
+     */
     @Test
     @DisplayName("Should create movie with production companies")
     void movie_WithProductionCompanies_ShouldWork() {
@@ -188,6 +224,11 @@ class MovieTest {
         assertThat(movie.getProductionCompanies().get(0).getName()).isEqualTo("20th Century Fox");
     }
 
+    /**
+     * Spoken languages are a plain String list (not objects), and
+     * originalLanguage is a separate scalar; both must persist so the two
+     * language concepts don't get conflated.
+     */
     @Test
     @DisplayName("Should handle spoken languages")
     void movie_WithSpokenLanguages_ShouldWork() {
@@ -208,6 +249,11 @@ class MovieTest {
         assertThat(movie.getOriginalLanguage()).isEqualTo("en");
     }
 
+    /**
+     * The audit timestamps and tmdbSyncVersion must persist — they drive the
+     * facade/cache staleness and re-sync logic, so losing them would break
+     * freshness decisions.
+     */
     @Test
     @DisplayName("Should handle timestamps correctly")
     void movie_WithTimestamps_ShouldWork() {
@@ -229,6 +275,11 @@ class MovieTest {
         assertThat(movie.getTmdbSyncVersion()).isEqualTo(1);
     }
 
+    /**
+     * Budget/revenue reach into the billions and popularity/voteCount can hit
+     * type maxima, so the fields must use wide enough types (long/double) —
+     * this guards against a narrowing that would overflow on blockbuster data.
+     */
     @Test
     @DisplayName("Should handle large numeric values")
     void movie_WithLargeValues_ShouldWork() {
@@ -249,6 +300,10 @@ class MovieTest {
         assertThat(movie.getPopularity()).isEqualTo(Double.MAX_VALUE);
     }
 
+    /**
+     * The rating boundaries 0.0 and 10.0 must be stored exactly (not clamped or
+     * treated as "unset"), since they are valid TMDB scores at the extremes.
+     */
     @Test
     @DisplayName("Should handle edge case ratings")
     void movie_WithEdgeCaseRatings_ShouldWork() {
