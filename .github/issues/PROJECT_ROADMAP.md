@@ -94,4 +94,10 @@ The board is the single source of truth for remaining work.
 | §10 Testing strategy | #19, #38, per-service test criteria |
 | §11 Deployment (Terraform/K8s/$0 free tier) | #22, #25, #26, #27, #28 |
 | §12 Observability (Prometheus/Grafana/ELK) | #23, #24 |
+| §12.3 Distributed tracing (ADR-007) | #42 |
+| §12.4 SLOs / §10.5 performance testing | #45 |
+| §2.2 Kafka event bus (ADR-006) | #39, #40, #41 |
+| §10.6 Contract testing (ADR-008) | #43 |
+| §2.4 Failure-mode matrix / facade hardening | #44 |
+| §2.3 ADRs 001–008 | docs/architecture/adr/ (committed) |
 | §13 Success criteria | epic acceptance criteria (#22, #30) |

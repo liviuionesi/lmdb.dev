@@ -1,7 +1,7 @@
 # Filmpire Microservices - Enterprise Software Architecture Document
 
-**Version:** 1.2.0  
-**Date:** July 21, 2026 (TMDB v3 facade as primary API; existing Filmpire React app is the sole frontend — Next.js/mobile descoped; deployment & observability architecture)  
+**Version:** 1.3.0  
+**Date:** July 21, 2026 (architecture review: ADRs 001–008 recorded; Kafka event bus, distributed tracing, contract testing adopted; failure-mode matrix and SLOs added)  
 **Author:** Liviu Ionesi  
 **Purpose:** Portfolio project demonstrating enterprise-grade full-stack development for a movie platform
 
@@ -154,8 +154,44 @@ frontend changes beyond configuration:
 
 - **Synchronous**: REST APIs (JSON) between clients and services
 - **Asynchronous**: gRPC for AI Service internal communication
-- **Event-Driven**: Future consideration for Kafka/RabbitMQ
+- **Event-Driven**: Kafka (ADR-006, local profiles only) — the TMDB facade
+  publishes a `tmdb.document.saved` event (key: canonical request key;
+  payload: endpoint type, path, timestamp) on every save-through; an
+  analytics consumer maintains a most-requested-movies view served at
+  `/api/v1/analytics/most-requested`. Publishing is fire-and-forget: an
+  unavailable broker must never fail the request path.
 - **Caching**: Redis for frequently accessed data
+
+### 2.3 Architecture Decision Records
+
+Significant decisions are recorded in [`adr/`](adr/):
+
+| ADR | Decision |
+|-----|----------|
+| [001](adr/001-microservices-architecture.md) | Microservices over monolith (conscious over-decomposition for the learning goal) |
+| [002](adr/002-database-per-service.md) | Per-service database choices |
+| [003](adr/003-tmdb-raw-passthrough-facade.md) | TMDB facade serves raw stored JSON, not re-mapped DTOs |
+| [004](adr/004-zero-budget-cloud-strategy.md) | $0 cloud budget: local-first, ephemeral free-tier clusters |
+| [005](adr/005-eureka-config-vs-kubernetes-native.md) | Eureka/Config Server in compose profile; K8s-native mechanisms in overlays |
+| [006](adr/006-kafka-event-bus.md) | Kafka event bus for save-through events & analytics |
+| [007](adr/007-distributed-tracing-zipkin.md) | Distributed tracing now (Micrometer Tracing + Zipkin) |
+| [008](adr/008-contract-testing.md) | Contract testing with Spring Cloud Contract |
+
+### 2.4 Failure-Mode Matrix
+
+Behavior when a dependency fails (the resilience contract; each row is
+enforced by code and, where marked ✓, by an automated test):
+
+| Failure | Behavior | Status |
+|---------|----------|--------|
+| Redis down | Cache layer skipped; requests fall through to MongoDB/TMDB (slower, correct) | built-in |
+| MongoDB down | Facade read-through fails → 502 TMDB-shaped error; native API 5xx | acceptable (single-node dev DB) |
+| TMDB unreachable | Facade serves stale MongoDB copy if present ✓; else 502 TMDB-shaped error ✓ | implemented (#31) |
+| TMDB 4xx/5xx | Error status + body replayed to client verbatim ✓ | implemented (#31) |
+| TMDB rate limit | Bucket4j blocks the calling thread until a token frees (40 req/10 s, single shared bucket) ✓ | implemented (#16) |
+| Downstream service down (gateway view) | Resilience4j circuit breaker → fallback response | implemented (#13) |
+| Kafka down | Event publish fails silently (logged); request path unaffected | planned (ADR-006) |
+| Eureka down | Existing clients use cached registry; K8s profile unaffected (DNS) | built-in / ADR-005 |
 
 ---
 
@@ -1822,7 +1858,16 @@ class MovieServiceSimulation extends Simulation {
 }
 ```
 
-### 10.6 Test Coverage Requirements
+### 10.6 Contract Testing (ADR-008)
+
+- **Spring Cloud Contract** protects internal service boundaries: producer
+  contracts live in movie-service (and later actor-service) for the facade
+  endpoints; the build publishes stub jars; api-gateway tests consume them
+  via StubRunner instead of hand-written mocks.
+- The TMDB-side contract stays fixture-based (recorded real responses) — we
+  cannot impose contracts on a third party; that split is deliberate.
+
+### 10.7 Test Coverage Requirements
 
 **Minimum Coverage:**
 - Overall: 85%
@@ -2119,12 +2164,29 @@ The compose file `infrastructure/docker/docker-compose.elk.yml` runs the full
 stack locally so the pipeline (JSON logs → Logstash grok/filters → index
 templates → Kibana dashboards) is fully demonstrable without cloud cost.
 
-### 12.3 Tracing (existing plan, unchanged)
+### 12.3 Distributed Tracing (in scope — ADR-007)
 
-- Micrometer Tracing + Zipkin (already compatible with Spring Boot 3.5
-  actuator setup); deferred until after metrics + logging land.
+- **Micrometer Tracing (Brave) + Zipkin** across gateway and all services.
+- W3C trace-context propagation; trace/span IDs injected into the JSON logs
+  so ELK entries correlate with Zipkin traces.
+- Zipkin runs as a container in the local profiles; sampling 100% locally,
+  configurable (`management.tracing.sampling.probability`) for cloud.
+- Demo artifact: one trace showing the same facade request as a cache hit
+  (~ms, no TMDB span) vs a cold miss (TMDB client span visible).
 
-### 12.4 Rollout Order
+### 12.4 Service-Level Objectives
+
+Alerts in §12.1 derive from these SLOs (measured at the gateway, 30-day
+window):
+
+| SLO | Target | Error budget consequence |
+|-----|--------|--------------------------|
+| Availability (non-5xx) | 99.0% | budget burn >2×: freeze feature work, fix reliability |
+| Latency, cache-served reads | P95 < 200 ms | sustained breach: investigate Redis/Mongo before adding features |
+| Latency, TMDB-fallback reads | P95 < 800 ms | breach without TMDB degradation: profile the read-through chain |
+| Facade shape fidelity | 100% (byte-identical) | any regression is a release blocker, caught by fixture tests |
+
+### 12.5 Rollout Order
 
 1. Instrument all services (actuator + Prometheus registry + JSON logging) —
    no infra needed, verifiable with curl.
