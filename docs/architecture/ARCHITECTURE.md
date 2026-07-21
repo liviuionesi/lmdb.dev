@@ -1,7 +1,7 @@
 # Filmpire Microservices - Enterprise Software Architecture Document
 
-**Version:** 1.0.0  
-**Date:** November 14, 2025  
+**Version:** 1.1.0  
+**Date:** July 21, 2026 (deployment & observability architecture added)  
 **Author:** Software Architecture Team  
 **Purpose:** Portfolio project demonstrating enterprise-grade full-stack development
 
@@ -25,8 +25,9 @@ This document outlines the complete architecture for Filmpire, a production-read
 8. [Version Management](#version-management)
 9. [Enterprise Development Process](#enterprise-development-process)
 10. [Testing Strategy](#testing-strategy)
-11. [Deployment Architecture](#deployment-architecture)
-12. [Monitoring & Observability](#monitoring--observability)
+11. [Deployment Architecture](#11-deployment-architecture) — Terraform, Kubernetes, AWS & Azure free tier
+12. [Monitoring & Observability](#12-monitoring--observability) — Prometheus/Grafana, ELK stack
+13. [Success Criteria](#13-success-criteria)
 
 ---
 
@@ -1823,211 +1824,246 @@ tasks.jacocoTestCoverageVerification {
 
 ## 11. Deployment Architecture
 
-### 11.1 Deployment Options
+### 11.1 Deployment Strategy Overview
 
-**Option 1: Render (Recommended for Portfolio)**
-- Free tier: 750 hours/month
-- Automatic deployments from GitHub
-- Managed PostgreSQL (free tier)
-- Easy setup, good for demos
+All cloud infrastructure is provisioned with **Terraform** (Infrastructure as
+Code) and all services run on **Kubernetes**. Two cloud targets are supported,
+both constrained to their **free tiers**:
 
-**Option 2: Railway**
-- $5 free credit/month
-- Simple UI
-- Good for microservices
-- Auto-scaling
+| Target | Kubernetes Flavor | Free-Tier Basis | Notes |
+|--------|-------------------|-----------------|-------|
+| **Azure** (primary) | AKS (managed) | AKS control plane is free; 750 h/month B1s/B2ats VM (12 months); $200 credit (30 days) | Preferred: managed control plane at $0 |
+| **AWS** (secondary) | k3s (self-managed on EC2) | 750 h/month t2.micro/t3.micro (12 months); 30 GB EBS | EKS control plane is NOT free (~$73/month) — use single-node k3s instead |
+| Local | minikube / k3d | n/a | Mirrors cloud manifests exactly |
 
-**Option 3: Fly.io**
-- Free tier with limitations
-- Global deployment
-- Good performance
+**Free-tier reality check (drives all sizing decisions):**
+- Free-tier nodes have 1 vCPU / 1–2 GB RAM. A full 8-service Spring Boot
+  deployment does not fit. The cloud profile deploys the **core slice** only:
+  discovery, config, gateway, movie-service + MongoDB + Redis, with JVM flags
+  `-XX:MaxRAMPercentage=60 -Xss256k` and single replicas.
+- Everything else (user/actor/ai/media services, full ELK) runs in the
+  **local** profile; the manifests are identical, only Kustomize overlays and
+  replica counts differ.
+- Free-tier expiry: both providers bill after 12 months — infrastructure MUST
+  be destroyable with a single `terraform destroy` and rebuildable with a
+  single `terraform apply` (no manual console changes, ever).
 
-### 11.2 Deployment Strategy
+### 11.2 Terraform Layout
 
-**Backend Services (Render):**
-```yaml
-# render.yaml
-services:
-  - type: web
-    name: filmpire-api-gateway
-    env: docker
-    dockerfilePath: ./backend/api-gateway/Dockerfile
-    envVars:
-      - key: SPRING_PROFILES_ACTIVE
-        value: prod
-      - key: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
-        value: https://filmpire-eureka.onrender.com/eureka/
-    healthCheckPath: /actuator/health
-    
-  - type: web
-    name: filmpire-movie-service
-    env: docker
-    dockerfilePath: ./backend/movie-service/Dockerfile
-    envVars:
-      - key: SPRING_DATA_MONGODB_URI
-        fromDatabase:
-          name: filmpire-mongodb
-          property: connectionString
+```
+infrastructure/terraform/
+├── modules/
+│   ├── network/          # VPC/VNet, subnets, security groups/NSGs
+│   ├── cluster-aks/      # AKS cluster (free control plane, 1 node pool)
+│   ├── cluster-k3s/      # EC2 t3.micro + k3s bootstrap (user_data)
+│   └── registry/         # ACR Basic / ECR (container images)
+├── azure/
+│   ├── main.tf           # composes network + cluster-aks + registry
+│   ├── variables.tf
+│   ├── outputs.tf        # kubeconfig, registry URL
+│   └── backend.tf        # remote state: Azure Storage account
+├── aws/
+│   ├── main.tf           # composes network + cluster-k3s + registry
+│   ├── variables.tf
+│   ├── outputs.tf
+│   └── backend.tf        # remote state: S3 + DynamoDB lock
+└── README.md             # bootstrap: state backend creation, credentials
 ```
 
-**Frontend (Vercel):**
-```json
-// vercel.json
-{
-  "buildCommand": "npm run build",
-  "outputDirectory": ".next",
-  "framework": "nextjs",
-  "env": {
-    "NEXT_PUBLIC_API_URL": "https://filmpire-gateway.onrender.com"
+**Terraform rules:**
+- Remote state per cloud (S3+DynamoDB on AWS, Storage account on Azure);
+  never commit state files.
+- All resources tagged/labeled `project=filmpire`, `managed-by=terraform`.
+- Credentials come from environment (`ARM_*`, `AWS_*`) or OIDC in CI —
+  never from `.tf` files or committed `tfvars`.
+- `terraform plan` runs in CI on every PR touching `infrastructure/terraform/`;
+  `terraform apply` is manual (workflow_dispatch) only.
+
+**Example — AKS free-tier cluster (modules/cluster-aks):**
+```hcl
+resource "azurerm_kubernetes_cluster" "filmpire" {
+  name                = "filmpire-aks"
+  location            = var.location
+  resource_group_name = var.resource_group_name
+  dns_prefix          = "filmpire"
+  sku_tier            = "Free"          # free control plane
+
+  default_node_pool {
+    name       = "default"
+    node_count = 1
+    vm_size    = "Standard_B2ats_v2"    # free-tier eligible burstable
   }
+
+  identity { type = "SystemAssigned" }
 }
 ```
 
-**Mobile (Expo EAS):**
-```json
-// eas.json
-{
-  "build": {
-    "production": {
-      "android": {
-        "buildType": "apk"
-      },
-      "ios": {
-        "simulator": false
-      }
-    }
-  },
-  "submit": {
-    "production": {
-      "android": {
-        "serviceAccountKeyPath": "./google-play-key.json",
-        "track": "internal"
-      },
-      "ios": {
-        "appleId": "your@email.com",
-        "ascAppId": "1234567890",
-        "appleTeamId": "ABCD123456"
-      }
-    }
-  }
+**Example — AWS k3s node (modules/cluster-k3s):**
+```hcl
+resource "aws_instance" "k3s_server" {
+  ami           = data.aws_ami.al2023.id
+  instance_type = "t3.micro"            # free tier: 750 h/month
+  user_data     = <<-EOF
+    #!/bin/bash
+    curl -sfL https://get.k3s.io | sh -s - \
+      --disable traefik --write-kubeconfig-mode 644
+  EOF
+  root_block_device { volume_size = 20 }  # within 30 GB free EBS
+  tags = { Name = "filmpire-k3s", project = "filmpire" }
 }
 ```
 
-### 11.3 CI/CD Pipeline
+### 11.3 Kubernetes Layout
 
-**GitHub Actions Workflow:**
+Kustomize base + overlays (no Helm for own services; Helm only for
+third-party charts):
 
-```yaml
-# .github/workflows/backend-ci-cd.yml
-name: Backend CI/CD
-
-on:
-  push:
-    branches: [main, develop]
-    paths:
-      - 'backend/**'
-  pull_request:
-    branches: [main, develop]
-
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        service: [movie-service, user-service, actor-service, ai-service]
-    
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Setup Java 25
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '25'
-          cache: 'gradle'
-      
-      - name: Run Tests
-        working-directory: backend/${{ matrix.service }}
-        run: |
-          ./gradlew clean test
-          ./gradlew jacocoTestReport
-      
-      - name: SonarQube Scan
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        working-directory: backend/${{ matrix.service }}
-        run: ./gradlew sonar
-      
-      - name: Upload Coverage
-        uses: codecov/codecov-action@v4
-        with:
-          files: backend/${{ matrix.service }}/build/reports/jacoco/test/jacocoTestReport.xml
-  
-  build:
-    needs: test
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Build Docker Images
-        run: |
-          docker build -t filmpire/movie-service:latest backend/movie-service
-          docker build -t filmpire/user-service:latest backend/user-service
-      
-      - name: Push to Docker Hub
-        env:
-          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
-        run: |
-          echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
-          docker push filmpire/movie-service:latest
-  
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    
-    steps:
-      - name: Deploy to Render
-        env:
-          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
-        run: |
-          curl -X POST \
-            https://api.render.com/deploy/srv-xxx \
-            -H "Authorization: Bearer $RENDER_API_KEY"
+```
+infrastructure/kubernetes/
+├── base/                      # cloud-agnostic manifests
+│   ├── discovery-service/     # Deployment, Service, probes
+│   ├── config-service/
+│   ├── api-gateway/           # + Ingress
+│   ├── movie-service/
+│   ├── user-service/
+│   ├── actor-service/
+│   ├── mongodb/               # StatefulSet + PVC
+│   ├── redis/
+│   └── kustomization.yaml
+├── overlays/
+│   ├── local/                 # all services, generous resources
+│   ├── azure/                 # core slice, B-series sizing, ACR images
+│   └── aws/                   # core slice, t3.micro sizing, ECR images
+├── monitoring/                # see section 12
+└── logging/                   # see section 12
 ```
 
-### 11.4 Monitoring & Observability
+**Deployment conventions:**
+- Every service: readiness probe on `/actuator/health/readiness`, liveness on
+  `/actuator/health/liveness`, resource requests/limits mandatory.
+- Config via ConfigMaps generated from the config-service's native config
+  files; secrets via Kubernetes Secrets (SOPS-encrypted in git, or created
+  out-of-band by Terraform — never plaintext in the repo).
+- Images built by CI, tagged with the git SHA, pushed to ACR/ECR.
 
-**Spring Boot Actuator Endpoints:**
+### 11.4 CI/CD Pipeline (GitHub Actions)
+
+```
+push to main
+  └─► backend-ci.yml        build + test (existing)
+        └─► docker-publish.yml   build images, tag ${GIT_SHA}, push registry
+              └─► deploy.yml (workflow_dispatch / on-tag)
+                    ├─ terraform plan/apply (manual gate)
+                    └─ kubectl apply -k overlays/<cloud>
+```
+
+- `terraform plan` posted on PRs that touch `infrastructure/terraform/`.
+- Deploys are explicit (`workflow_dispatch` with cloud choice) — never
+  automatic on merge, to protect the free-tier hour budget.
+- Rollback = `kubectl rollout undo` (images are SHA-tagged and kept in the
+  registry).
+
+---
+
+## 12. Monitoring & Observability
+
+### 12.1 Metrics — Prometheus + Grafana
+
+**Stack:** kube-prometheus-stack Helm chart (Prometheus, Grafana,
+Alertmanager, node-exporter, kube-state-metrics).
+
+**Service instrumentation (every Spring Boot service):**
+```groovy
+implementation 'org.springframework.boot:spring-boot-starter-actuator'
+implementation 'io.micrometer:micrometer-registry-prometheus'
+```
 ```yaml
 management:
   endpoints:
     web:
       exposure:
         include: health,info,metrics,prometheus
-  endpoint:
-    health:
-      show-details: always
   metrics:
-    export:
-      prometheus:
-        enabled: true
+    tags:
+      application: ${spring.application.name}
 ```
 
-**Monitoring Stack:**
-- **Metrics**: Micrometer + Prometheus
-- **Logging**: Logback + ELK Stack (Elasticsearch, Logstash, Kibana)
-- **Tracing**: Zipkin or Jaeger
-- **Alerting**: Prometheus Alertmanager
+Prometheus discovers services via a `ServiceMonitor` per service (label
+selector `monitoring: enabled` on the Kubernetes Service).
+
+**Dashboards (provisioned as ConfigMaps, versioned in git):**
+1. JVM per service (heap, GC, threads — critical on 1 GB nodes)
+2. HTTP server metrics (rate, errors, duration per endpoint)
+3. Gateway dashboard (route latency, rate-limit rejections, circuit-breaker state)
+4. Infrastructure (node CPU/memory, pod restarts)
+
+**Alerting rules (Alertmanager):**
+- Service down > 2 min (`up == 0`)
+- P95 latency > 500 ms for 5 min
+- JVM heap > 85% for 5 min
+- Pod restart loop (> 3 restarts / 10 min)
+
+**Free-tier sizing:** Prometheus 15-day retention, 10s scrape interval
+relaxed to 30s in cloud overlays; Grafana single replica, no persistence in
+cloud (dashboards are provisioned from git anyway).
+
+### 12.2 Logging — ELK Stack
+
+**Stack:** Elasticsearch + Logstash + Kibana, with Filebeat as the
+per-node log shipper.
+
+```
+pods stdout (JSON) ─► Filebeat (DaemonSet) ─► Logstash ─► Elasticsearch ─► Kibana
+```
+
+**Service log format** — all services log JSON to stdout via
+logstash-logback-encoder:
+```groovy
+implementation 'net.logstash.logback:logstash-logback-encoder:8.0'
+```
+```xml
+<!-- logback-spring.xml -->
+<appender name="JSON" class="ch.qos.logback.core.ConsoleAppender">
+  <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+    <customFields>{"application":"${APP_NAME}"}</customFields>
+  </encoder>
+</appender>
+```
+
+**Index strategy:** `filmpire-logs-%{+yyyy.MM.dd}`, ILM policy: delete after
+7 days (local) / 3 days (cloud) to bound disk usage.
+
+**Free-tier reality:** Elasticsearch needs ≥1 GB heap — it does NOT fit on a
+free-tier node alongside the services. Deployment profiles:
+
+| Profile | Logging deployment |
+|---------|--------------------|
+| Local (minikube/k3d, docker-compose) | Full ELK + Filebeat, single-node ES |
+| Cloud free tier | Filebeat only, shipping to a **local** or external ES endpoint; alternatively `kubectl logs` + Kibana omitted |
+| Cloud (paid, future) | ECK operator, 3-node ES |
+
+The compose file `infrastructure/docker/docker-compose.elk.yml` runs the full
+stack locally so the pipeline (JSON logs → Logstash grok/filters → index
+templates → Kibana dashboards) is fully demonstrable without cloud cost.
+
+### 12.3 Tracing (existing plan, unchanged)
+
+- Micrometer Tracing + Zipkin (already compatible with Spring Boot 3.5
+  actuator setup); deferred until after metrics + logging land.
+
+### 12.4 Rollout Order
+
+1. Instrument all services (actuator + Prometheus registry + JSON logging) —
+   no infra needed, verifiable with curl.
+2. Local: docker-compose.elk.yml + kube-prometheus-stack on minikube.
+3. Terraform: Azure AKS first (free control plane), then AWS k3s.
+4. Cloud deploy of core slice + monitoring; ELK stays local.
 
 ---
 
-## 12. Success Criteria
+## 13. Success Criteria
 
-### 12.1 Technical Metrics
+### 13.1 Technical Metrics
 
 - [ ] All TMDB endpoints replicated and functional
 - [ ] 85%+ test coverage across all services
@@ -2039,7 +2075,7 @@ management:
 - [ ] CI/CD pipeline with <10 minute build time
 - [ ] 99% uptime over 30 days
 
-### 12.2 Documentation Completeness
+### 13.2 Documentation Completeness
 
 - [ ] Architecture decision records (ADRs) for major decisions
 - [ ] README per service with setup instructions
@@ -2049,7 +2085,7 @@ management:
 - [ ] Deployment guide
 - [ ] Troubleshooting guide
 
-### 12.3 Portfolio Presentation
+### 13.3 Portfolio Presentation
 
 **Demonstrated Skills:**
 - Enterprise microservices architecture
