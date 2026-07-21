@@ -21,7 +21,17 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
- * Unit tests for GlobalErrorWebExceptionHandler.
+ * Unit tests for {@link GlobalErrorWebExceptionHandler}, the gateway's
+ * catch-all reactive error boundary.
+ *
+ * <p>Because the gateway sits in front of every service, an unhandled error
+ * here would leak a raw stack trace or an inconsistent body to clients. These
+ * tests drive representative exception types through the handler and assert two
+ * things per case: the mapped HTTP status is correct, and the response is
+ * always {@code application/json}. A real {@link ObjectMapper} is used so the
+ * body is genuinely serialized; the final test swaps in a deliberately-broken
+ * mapper to prove the handler degrades gracefully even when serialization
+ * itself fails.</p>
  */
 @DisplayName("GlobalErrorWebExceptionHandler Tests")
 class GlobalErrorWebExceptionHandlerTest {
@@ -29,12 +39,18 @@ class GlobalErrorWebExceptionHandlerTest {
     private GlobalErrorWebExceptionHandler errorHandler;
     private ObjectMapper objectMapper;
 
+    /** Fresh handler backed by a real, working ObjectMapper. */
     @BeforeEach
     void setUp() {
         objectMapper = new ObjectMapper();
         errorHandler = new GlobalErrorWebExceptionHandler(objectMapper);
     }
 
+    /**
+     * A ResponseStatusException must surface its own status (404 here) rather
+     * than being flattened to 500 — this is how downstream/intentional status
+     * codes propagate to the client through the gateway.
+     */
     @Test
     @DisplayName("Should handle ResponseStatusException")
     void handle_shouldHandleResponseStatusException() {
@@ -58,6 +74,11 @@ class GlobalErrorWebExceptionHandlerTest {
                 .isEqualTo(MediaType.APPLICATION_JSON);
     }
 
+    /**
+     * Any JWT failure (here an expired token) must map to 401, not 500 — a
+     * bad/expired token is an authentication problem, and returning 500 would
+     * both mislead clients and hide the real cause.
+     */
     @Test
     @DisplayName("Should handle JWT exceptions")
     void handle_shouldHandleJwtException() {
@@ -81,6 +102,11 @@ class GlobalErrorWebExceptionHandlerTest {
                 .isEqualTo(MediaType.APPLICATION_JSON);
     }
 
+    /**
+     * IllegalArgumentException signifies bad client input, so it must map to
+     * 400 — attributing a caller mistake to a server fault (500) would skew
+     * error budgets and mislead debugging.
+     */
     @Test
     @DisplayName("Should handle IllegalArgumentException")
     void handle_shouldHandleIllegalArgumentException() {
@@ -103,6 +129,11 @@ class GlobalErrorWebExceptionHandlerTest {
                 .isEqualTo(MediaType.APPLICATION_JSON);
     }
 
+    /**
+     * The catch-all: an unrecognized RuntimeException must become a 500 with a
+     * JSON body, so unexpected failures still return a well-formed, non-leaky
+     * response instead of a raw error.
+     */
     @Test
     @DisplayName("Should handle generic exceptions")
     void handle_shouldHandleGenericException() {
@@ -126,6 +157,11 @@ class GlobalErrorWebExceptionHandlerTest {
                 .isEqualTo(MediaType.APPLICATION_JSON);
     }
 
+    /**
+     * Content-type discipline: regardless of the error, the response must be
+     * application/json so clients can parse errors uniformly instead of
+     * special-casing HTML or plain-text gateway errors.
+     */
     @Test
     @DisplayName("Should return JSON error response")
     void handle_shouldReturnJsonErrorResponse() {
@@ -149,6 +185,12 @@ class GlobalErrorWebExceptionHandlerTest {
                 .isEqualTo(MediaType.APPLICATION_JSON);
     }
 
+    /**
+     * The error body should carry the request path so clients and logs can
+     * correlate a failure to the endpoint that produced it; the request here
+     * uses a distinct path and the handler must still resolve to a well-formed
+     * 500.
+     */
     @Test
     @DisplayName("Should include path in error response")
     void handle_shouldIncludePathInErrorResponse() {
@@ -171,6 +213,12 @@ class GlobalErrorWebExceptionHandlerTest {
                 .isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
+    /**
+     * Defense-in-depth: if the ObjectMapper itself throws while serializing the
+     * error body, the handler must still complete the exchange rather than
+     * throwing a second exception out of the error path (which would leave the
+     * client with a dropped connection). Uses a mock mapper rigged to fail.
+     */
     @Test
     @DisplayName("Should handle JsonProcessingException gracefully")
     void handle_shouldHandleJsonProcessingException() {

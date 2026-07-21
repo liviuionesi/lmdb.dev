@@ -29,30 +29,59 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.when;
 
 /**
- * Helper methods for null-safe test utilities
+ * Static null-safety helpers shared by the filter tests.
+ *
+ * <p>Spring's reactive mock builders are declared {@code @Nullable}, which
+ * trips the project's null-checking; these wrappers assert non-null once so
+ * the test bodies stay free of repeated Objects.requireNonNull noise.</p>
  */
 final class TestNullSafety {
+    /**
+     * Wraps a mock request in a web exchange, asserting the result is non-null.
+     *
+     * @param request the mock request
+     * @return a non-null exchange
+     */
     @NonNull
     static ServerWebExchange createExchange(@NonNull MockServerHttpRequest request) {
         return Objects.requireNonNull(
                 MockServerWebExchange.from(request),
                 "MockServerWebExchange must not be null");
     }
-    
+
+    /**
+     * Null-asserts an exchange for passing into non-null parameters.
+     *
+     * @param exchange the exchange
+     * @return the same exchange, guaranteed non-null
+     */
     @NonNull
     static ServerWebExchange requireNonNull(ServerWebExchange exchange) {
         return Objects.requireNonNull(exchange, "Exchange must not be null");
     }
-    
+
+    /**
+     * Null-asserts a filter chain for passing the mock into non-null parameters.
+     *
+     * @param chain the filter chain
+     * @return the same chain, guaranteed non-null
+     */
     @NonNull
     static WebFilterChain requireNonNull(WebFilterChain chain) {
         return Objects.requireNonNull(chain, "Filter chain must not be null");
     }
-    
+
 }
 
 /**
- * Unit tests for JwtAuthenticationFilter.
+ * Unit tests for {@link JwtAuthenticationFilter}, the gateway's reactive
+ * authentication gate.
+ *
+ * <p>{@link JwtUtil} and the downstream {@link WebFilterChain} are mocked, so
+ * these tests isolate the filter's own decisions: which paths bypass auth, and
+ * how valid vs invalid tokens are handled. Reactive flows are asserted with
+ * {@link StepVerifier}; the 401 case is checked on the mutated response status
+ * because the filter short-circuits the chain rather than throwing.</p>
  */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("JwtAuthenticationFilter Tests")
@@ -66,11 +95,18 @@ class JwtAuthenticationFilterTest {
 
     private JwtAuthenticationFilter jwtAuthenticationFilter;
 
+    /** Builds the filter under test around the mocked JwtUtil. */
     @BeforeEach
     void setUp() {
         jwtAuthenticationFilter = new JwtAuthenticationFilter(jwtUtil);
     }
 
+    /**
+     * Public paths (login, catalog reads, health) must pass through with no
+     * token — the gateway cannot demand auth on the endpoints used to obtain a
+     * token, nor on anonymous browsing. Parameterized over representative
+     * public prefixes.
+     */
     @ParameterizedTest
     @ValueSource(strings = {
             "/api/v1/auth/login",
@@ -95,6 +131,12 @@ class JwtAuthenticationFilterTest {
                 .verifyComplete();
     }
 
+    /**
+     * A protected path presenting a token that fails validation must be
+     * refused with 401 — not passed through — so unverified callers never
+     * reach downstream services. The status is asserted on the response the
+     * filter mutated before completing.
+     */
     @Test
     @DisplayName("Should reject invalid JWT token")
     void filter_shouldRejectInvalidToken() {
@@ -122,6 +164,12 @@ class JwtAuthenticationFilterTest {
         assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 
+    /**
+     * A valid token on a protected path must let the request continue down the
+     * chain. The stubbed claim extractions (username/userId/roles) represent
+     * the identity the filter forwards downstream; completing the chain proves
+     * the request was admitted rather than short-circuited.
+     */
     @Test
     @DisplayName("Should process valid JWT token")
     void filter_shouldProcessValidToken() {

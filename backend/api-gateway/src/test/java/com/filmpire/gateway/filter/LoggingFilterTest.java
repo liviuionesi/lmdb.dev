@@ -17,7 +17,13 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
- * Unit tests for LoggingFilter.
+ * Unit tests for {@link LoggingFilter}, the gateway's request-timing/logging
+ * filter.
+ *
+ * <p>The chain is mocked to complete empty. Since logging itself has no
+ * asserted output, the observable contract is: the filter always continues the
+ * chain, and it stamps a {@code startTime} exchange attribute that the
+ * post-filter uses to compute request latency.</p>
  */
 @DisplayName("LoggingFilter Tests")
 class LoggingFilterTest {
@@ -25,6 +31,7 @@ class LoggingFilterTest {
     private LoggingFilter loggingFilter;
     private GatewayFilterChain filterChain;
 
+    /** Fresh filter plus a pass-through chain mock. */
     @BeforeEach
     void setUp() {
         loggingFilter = new LoggingFilter();
@@ -32,6 +39,11 @@ class LoggingFilterTest {
         when(filterChain.filter(any())).thenReturn(Mono.empty());
     }
 
+    /**
+     * The filter must never swallow a request: it completes the chain AND
+     * leaves a startTime attribute behind, which is the hook latency logging
+     * depends on.
+     */
     @Test
     @DisplayName("Should continue filter chain and log request")
     void filter_shouldContinueFilterChain() {
@@ -53,6 +65,12 @@ class LoggingFilterTest {
         assertThat(startTime).isNotNull();
     }
 
+    /**
+     * The recorded startTime must be an actual wall-clock reading taken during
+     * filtering, so it is bounded by the timestamps captured just before and
+     * after the call — a hard-coded or zero value would make every latency
+     * measurement meaningless.
+     */
     @Test
     @DisplayName("Should record request start time")
     void filter_shouldRecordStartTime() {
@@ -77,6 +95,11 @@ class LoggingFilterTest {
                 .isLessThanOrEqualTo(System.currentTimeMillis());
     }
 
+    /**
+     * Timing/logging must be method-agnostic: GET, POST, PUT and DELETE all
+     * get the startTime stamp, so latency metrics cover every verb rather than
+     * silently skipping writes.
+     */
     @Test
     @DisplayName("Should handle different HTTP methods")
     void filter_shouldHandleDifferentHttpMethods() {
@@ -102,6 +125,12 @@ class LoggingFilterTest {
         }
     }
 
+    /**
+     * The filter must run at (almost) highest precedence so it brackets the
+     * whole chain — start time has to be captured before any other filter runs
+     * for the measured latency to include their cost. Pinning the exact order
+     * guards against a reorder that would silently under-report latency.
+     */
     @Test
     @DisplayName("Should have correct filter order")
     void getOrder_shouldReturnCorrectOrder() {

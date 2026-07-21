@@ -16,7 +16,13 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
- * Unit tests for IpFilterGlobalFilter.
+ * Unit tests for {@link IpFilterGlobalFilter}, the gateway's IP allow/deny
+ * filter.
+ *
+ * <p>The downstream {@link GatewayFilterChain} is mocked to complete empty, so
+ * a completed chain means "request admitted" and a mutated 403 response means
+ * "request blocked". Covers both the request-filtering decisions and the
+ * blacklist/whitelist management API that drives them.</p>
  */
 @DisplayName("IpFilterGlobalFilter Tests")
 class IpFilterGlobalFilterTest {
@@ -24,6 +30,7 @@ class IpFilterGlobalFilterTest {
     private IpFilterGlobalFilter ipFilterGlobalFilter;
     private GatewayFilterChain filterChain;
 
+    /** Fresh filter with an empty blacklist/whitelist and a pass-through chain. */
     @BeforeEach
     void setUp() {
         ipFilterGlobalFilter = new IpFilterGlobalFilter();
@@ -31,6 +38,10 @@ class IpFilterGlobalFilterTest {
         when(filterChain.filter(any())).thenReturn(Mono.empty());
     }
 
+    /**
+     * The default-open case: an IP that is on no blacklist must be admitted,
+     * so ordinary traffic flows unless explicitly denied.
+     */
     @Test
     @DisplayName("Should allow non-blacklisted IP")
     void filter_shouldAllowNonBlacklistedIp() {
@@ -49,6 +60,11 @@ class IpFilterGlobalFilterTest {
                 .verifyComplete();
     }
 
+    /**
+     * A request from a blacklisted IP must be stopped with 403 before reaching
+     * any service — the core deny-listing behavior. Asserted on the mutated
+     * response status because the filter short-circuits rather than throwing.
+     */
     @Test
     @DisplayName("Should block blacklisted IP")
     void filter_shouldBlockBlacklistedIp() {
@@ -72,6 +88,11 @@ class IpFilterGlobalFilterTest {
         assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
+    /**
+     * The blacklist must behave as a set that supports add and remove, since
+     * operators toggle entries at runtime; a broken remove would strand an IP
+     * as permanently blocked.
+     */
     @Test
     @DisplayName("Should manage blacklist correctly")
     void blacklist_shouldAddAndRemoveIps() {
@@ -89,6 +110,11 @@ class IpFilterGlobalFilterTest {
         assertThat(ipFilterGlobalFilter.getBlacklist()).containsExactly("10.0.0.2");
     }
 
+    /**
+     * The whitelist mirrors the blacklist's add/remove semantics — verified
+     * independently because the two lists are separate state and a copy-paste
+     * bug could wire one to the other.
+     */
     @Test
     @DisplayName("Should manage whitelist correctly")
     void whitelist_shouldAddAndRemoveIps() {
@@ -106,6 +132,12 @@ class IpFilterGlobalFilterTest {
         assertThat(ipFilterGlobalFilter.getWhitelist()).containsExactly("192.168.1.2");
     }
 
+    /**
+     * Whitelist mode must default OFF (fail-open to blacklisting) and toggle
+     * cleanly, because flipping it ON changes the filter from deny-list to
+     * allow-list semantics — a security-significant switch that must be
+     * deliberate, never stuck.
+     */
     @Test
     @DisplayName("Should enable and disable whitelist mode")
     void whitelistMode_shouldToggle() {
@@ -121,6 +153,13 @@ class IpFilterGlobalFilterTest {
         assertThat(ipFilterGlobalFilter.isWhitelistModeEnabled()).isFalse();
     }
 
+    /**
+     * Actuator endpoints must bypass IP filtering even for a blacklisted IP,
+     * so health/readiness probes (which may originate from an
+     * infrastructure address that happens to be blocked) never get cut off and
+     * take the platform down. A null status confirms the filter didn't touch
+     * the response.
+     */
     @Test
     @DisplayName("Should allow actuator endpoints without filtering")
     void filter_shouldSkipActuatorEndpoints() {

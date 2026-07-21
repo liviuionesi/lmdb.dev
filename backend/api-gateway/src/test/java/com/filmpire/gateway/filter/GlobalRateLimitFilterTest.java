@@ -22,7 +22,16 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 /**
- * Unit tests for GlobalRateLimitFilter.
+ * Unit tests for {@link GlobalRateLimitFilter}, the gateway's Redis-backed
+ * per-IP rate limiter.
+ *
+ * <p>Redis is mocked via {@link ReactiveRedisTemplate}/{@link
+ * ReactiveValueOperations}, so a test controls the observed request count by
+ * stubbing {@code increment()}. Reflection flips the private {@code enabled}
+ * flag because the filter defaults off; each test that needs limiting turns it
+ * on explicitly. Key behaviors covered: the enabled/disabled and actuator
+ * bypasses, the under-limit vs over-limit decision and its response headers,
+ * fail-open on Redis errors, and client-IP resolution from X-Forwarded-For.</p>
  */
 @DisplayName("GlobalRateLimitFilter Tests")
 class GlobalRateLimitFilterTest {
@@ -32,6 +41,12 @@ class GlobalRateLimitFilterTest {
     private ReactiveValueOperations<String, String> valueOperations;
     private GatewayFilterChain filterChain;
 
+    /**
+     * Wires mocked Redis + chain into a fresh filter and forces {@code enabled}
+     * to false as the default, so tests opt into rate limiting deliberately.
+     *
+     * @throws Exception if the reflective field access fails
+     */
     @BeforeEach
     @SuppressWarnings("unchecked")
     void setUp() throws Exception {
@@ -50,6 +65,12 @@ class GlobalRateLimitFilterTest {
         enabledField.setBoolean(globalRateLimitFilter, false);
     }
 
+    /**
+     * When the feature flag is off, the filter must not even touch Redis —
+     * verified by asserting opsForValue() is never called. This keeps the
+     * gateway fully functional (and Redis-independent) when limiting is
+     * turned off.
+     */
     @Test
     @DisplayName("Should skip rate limiting when disabled")
     void filter_shouldSkipWhenDisabled() {
@@ -69,6 +90,13 @@ class GlobalRateLimitFilterTest {
         verify(redisTemplate, never()).opsForValue();
     }
 
+    /**
+     * Even with limiting ON, actuator endpoints must be exempt so health
+     * probes are never throttled into failure. Asserted via Redis being
+     * untouched for an actuator path.
+     *
+     * @throws Exception if the reflective enable fails
+     */
     @Test
     @DisplayName("Should skip rate limiting for actuator endpoints")
     void filter_shouldSkipActuatorEndpoints() throws Exception {
@@ -94,6 +122,13 @@ class GlobalRateLimitFilterTest {
         verify(redisTemplate, never()).opsForValue();
     }
 
+    /**
+     * A count under the limit (stubbed 50 of 100) must pass AND advertise the
+     * budget via X-RateLimit-Limit/Remaining headers, so well-behaved clients
+     * can self-throttle. A null status confirms the request was not rejected.
+     *
+     * @throws Exception if the reflective enable fails
+     */
     @Test
     @DisplayName("Should allow request when under rate limit")
     void filter_shouldAllowRequestUnderLimit() throws Exception {
@@ -128,6 +163,14 @@ class GlobalRateLimitFilterTest {
         assertThat(exchange.getResponse().getStatusCode()).isNull();
     }
 
+    /**
+     * A count over the limit (stubbed 101) must yield 429, emit
+     * Remaining:0 / Reset headers, and — critically — NOT forward the request
+     * (verify the chain is never called), so an abusive client can't reach
+     * downstream services.
+     *
+     * @throws Exception if the reflective enable fails
+     */
     @Test
     @DisplayName("Should reject request when rate limit exceeded")
     void filter_shouldRejectWhenLimitExceeded() throws Exception {
@@ -168,6 +211,15 @@ class GlobalRateLimitFilterTest {
         verify(filterChain, never()).filter(any());
     }
 
+    /**
+     * FAIL-OPEN policy: if Redis errors, the filter must let the request
+     * through (chain called) rather than block legitimate traffic on an
+     * infrastructure hiccup. A rate limiter that fails closed would turn a
+     * Redis blip into a full outage — a worse failure than briefly unmetered
+     * traffic.
+     *
+     * @throws Exception if the reflective enable fails
+     */
     @Test
     @DisplayName("Should handle Redis errors gracefully")
     void filter_shouldHandleRedisErrors() throws Exception {
@@ -196,6 +248,14 @@ class GlobalRateLimitFilterTest {
         verify(filterChain).filter(any());
     }
 
+    /**
+     * Behind a proxy the socket address is the proxy, so the limiter must key
+     * on the FIRST hop in X-Forwarded-For (the real client) — asserted by the
+     * exact Redis key "global-rate-limit:10.0.0.1". Keying on the proxy IP
+     * instead would lump all users into one shared bucket.
+     *
+     * @throws Exception if the reflective enable fails
+     */
     @Test
     @DisplayName("Should extract client IP from X-Forwarded-For header")
     void filter_shouldExtractIpFromForwardedFor() throws Exception {
@@ -224,6 +284,12 @@ class GlobalRateLimitFilterTest {
         verify(valueOperations).increment("global-rate-limit:10.0.0.1");
     }
 
+    /**
+     * Rate limiting must sit just after logging in the chain (HIGHEST+2) so
+     * rejected requests are still logged but are dropped before the more
+     * expensive auth/routing filters run. Pinning the order guards that
+     * placement against accidental reordering.
+     */
     @Test
     @DisplayName("Should have correct filter order")
     void getOrder_shouldReturnCorrectOrder() {
