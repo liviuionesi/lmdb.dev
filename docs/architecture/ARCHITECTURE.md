@@ -1836,7 +1836,35 @@ both constrained to their **free tiers**:
 | **AWS** (secondary) | k3s (self-managed on EC2) | 750 h/month t2.micro/t3.micro (12 months); 30 GB EBS | EKS control plane is NOT free (~$73/month) — use single-node k3s instead |
 | Local | minikube / k3d | n/a | Mirrors cloud manifests exactly |
 
-**Free-tier reality check (drives all sizing decisions):**
+**HARD CONSTRAINT: the budget is $0.** Every decision below follows from
+that. Verification is layered, not assumed:
+
+1. **Local-first.** The primary build/test/demo environment is the developer
+   laptop (Fedora, Podman-based Kubernetes via `minikube --driver=podman`).
+   The ENTIRE system — all services, Prometheus/Grafana, full ELK — runs and
+   is verified locally at $0. Cloud is a demo target only, never the dev
+   environment.
+2. **Non-billable account types only.** Sign up for the account plans that
+   cannot generate an invoice: Azure free account with the default spending
+   limit ON (subscription deactivates when the credit is exhausted — it does
+   not start billing), and the AWS free-account plan (post-July-2025
+   credits-based model, which expires instead of converting to charges).
+   Never upgrade either account to pay-as-you-go. Confirm these terms on the
+   official free-tier pages at signup time — they change.
+3. **Ephemeral clusters.** Cloud environments are created for a demo and
+   destroyed after (`terraform apply` ≈ 15 min, demo, `terraform destroy`).
+   Nothing runs unattended in the cloud, so nothing accumulates cost and the
+   free hours/credits stretch across many months of demos.
+4. **Zero-spend tripwires.** The FIRST resources in each Terraform
+   composition are a zero-spend budget + email alert (AWS Budgets / Azure
+   Cost Management). Any nonzero forecast triggers a same-day email.
+5. **No paid managed extras.** Container images live on **ghcr.io (GitHub
+   Container Registry — free for public repos)**, NOT ACR (Basic tier is
+   ~$5/month) or ECR private. Avoid cloud load balancers where they bill
+   hourly (expose via NodePort/hostPort on the node's public IP for demos);
+   avoid NAT gateways entirely.
+
+**Free-tier sizing reality (drives all sizing decisions):**
 - Free-tier nodes have 1 vCPU / 1–2 GB RAM. A full 8-service Spring Boot
   deployment does not fit. The cloud profile deploys the **core slice** only:
   discovery, config, gateway, movie-service + MongoDB + Redis, with JVM flags
@@ -1844,9 +1872,9 @@ both constrained to their **free tiers**:
 - Everything else (user/actor/ai/media services, full ELK) runs in the
   **local** profile; the manifests are identical, only Kustomize overlays and
   replica counts differ.
-- Free-tier expiry: both providers bill after 12 months — infrastructure MUST
-  be destroyable with a single `terraform destroy` and rebuildable with a
-  single `terraform apply` (no manual console changes, ever).
+- Infrastructure MUST be destroyable with a single `terraform destroy` and
+  rebuildable with a single `terraform apply` (no manual console changes,
+  ever) — this is what makes the ephemeral-cluster model workable.
 
 ### 11.2 Terraform Layout
 
@@ -1856,14 +1884,14 @@ infrastructure/terraform/
 │   ├── network/          # VPC/VNet, subnets, security groups/NSGs
 │   ├── cluster-aks/      # AKS cluster (free control plane, 1 node pool)
 │   ├── cluster-k3s/      # EC2 t3.micro + k3s bootstrap (user_data)
-│   └── registry/         # ACR Basic / ECR (container images)
+│   └── budget-guard/     # zero-spend budget + alert (FIRST resource applied)
 ├── azure/
-│   ├── main.tf           # composes network + cluster-aks + registry
+│   ├── main.tf           # composes budget-guard + network + cluster-aks
 │   ├── variables.tf
-│   ├── outputs.tf        # kubeconfig, registry URL
+│   ├── outputs.tf        # kubeconfig
 │   └── backend.tf        # remote state: Azure Storage account
 ├── aws/
-│   ├── main.tf           # composes network + cluster-k3s + registry
+│   ├── main.tf           # composes budget-guard + network + cluster-k3s
 │   ├── variables.tf
 │   ├── outputs.tf
 │   └── backend.tf        # remote state: S3 + DynamoDB lock
@@ -1932,8 +1960,8 @@ infrastructure/kubernetes/
 │   └── kustomization.yaml
 ├── overlays/
 │   ├── local/                 # all services, generous resources
-│   ├── azure/                 # core slice, B-series sizing, ACR images
-│   └── aws/                   # core slice, t3.micro sizing, ECR images
+│   ├── azure/                 # core slice, B-series sizing, ghcr.io images
+│   └── aws/                   # core slice, t3.micro sizing, ghcr.io images
 ├── monitoring/                # see section 12
 └── logging/                   # see section 12
 ```
@@ -1944,7 +1972,7 @@ infrastructure/kubernetes/
 - Config via ConfigMaps generated from the config-service's native config
   files; secrets via Kubernetes Secrets (SOPS-encrypted in git, or created
   out-of-band by Terraform — never plaintext in the repo).
-- Images built by CI, tagged with the git SHA, pushed to ACR/ECR.
+- Images built by CI, tagged with the git SHA, pushed to ghcr.io (free for public repos).
 
 ### 11.4 CI/CD Pipeline (GitHub Actions)
 
