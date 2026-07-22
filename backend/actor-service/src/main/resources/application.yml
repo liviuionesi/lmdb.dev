@@ -1,11 +1,16 @@
 server:
   port: 8083
+  # Honor X-Forwarded-* from the gateway so HATEOAS _links reflect the public
+  # gateway host (localhost:8080) rather than the internal service host.
+  forward-headers-strategy: framework
 
 spring:
   application:
     name: actor-service
   datasource:
-    url: ${POSTGRES_URL:jdbc:postgresql://localhost:5432/filmpire}
+    # Database-per-service (ADR-002): actor-service owns its own database so its
+    # Flyway history never collides with user-service's in the shared instance.
+    url: ${POSTGRES_URL:jdbc:postgresql://localhost:5432/filmpire_actor}
     username: ${POSTGRES_USERNAME:admin}
     password: ${POSTGRES_PASSWORD:admin123}
     driver-class-name: org.postgresql.Driver

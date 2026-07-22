@@ -8,6 +8,7 @@ import com.filmpire.shared.dto.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.hateoas.EntityModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,6 +18,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
 /**
  * Native typed actor endpoints (issue #18): profile, filmography, search.
@@ -40,8 +44,13 @@ public class ActorController {
      */
     @GetMapping("/{id}")
     @Operation(summary = "Get actor details by TMDB person id")
-    public ResponseEntity<ApiResponse<ActorDto>> getActor(@PathVariable Long id) {
-        return ok(actorService.getActor(id), "Actor retrieved");
+    public ResponseEntity<ApiResponse<EntityModel<ActorDto>>> getActor(@PathVariable Long id) {
+        // HATEOAS: the profile advertises links to itself and its filmography
+        // sub-resource, so a client discovers navigation instead of building URLs.
+        EntityModel<ActorDto> model = EntityModel.of(actorService.getActor(id),
+            linkTo(methodOn(ActorController.class).getActor(id)).withSelfRel(),
+            linkTo(methodOn(ActorController.class).getFilmography(id)).withRel("movies"));
+        return ok(model, "Actor retrieved");
     }
 
     /**

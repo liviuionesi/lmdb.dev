@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.hateoas.EntityModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
@@ -16,9 +17,20 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
+
 /**
  * REST controller for movie operations.
  * All endpoints are prefixed with /api/v1/movies.
+ *
+ * <p>The movie <em>detail</em> resource is HATEOAS-enriched (HAL {@code _links}):
+ * it advertises links to itself and its sub-resources (videos, credits, similar,
+ * recommendations) so a client navigates the API by following links rather than
+ * hard-coding URLs. List endpoints keep the compact {@link PageResponse}
+ * pagination envelope, and the raw TMDB facade
+ * ({@link com.filmpire.movie.facade.TmdbFacadeController}) stays byte-for-byte
+ * per ADR-003 and is intentionally not decorated.</p>
  */
 @RestController
 @RequestMapping("/api/v1/movies")
@@ -33,16 +45,25 @@ public class MovieController {
      * Get movie details by TMDB ID.
      *
      * @param id TMDB movie ID
-     * @return Movie details
+     * @return Movie details as a HATEOAS resource (self + sub-resource links)
      */
     @GetMapping("/{id}")
     @Operation(summary = "Get movie by ID", description = "Retrieve detailed movie information by TMDB ID")
-    public ResponseEntity<MovieDto> getMovieById(
+    public ResponseEntity<EntityModel<MovieDto>> getMovieById(
         @Parameter(description = "TMDB movie ID", example = "550")
         @PathVariable("id") Long id
     ) {
         log.info("GET /api/v1/movies/{} - Fetching movie details", id);
-        return ResponseEntity.ok(movieService.getMovieById(id));
+        MovieDto movie = movieService.getMovieById(id);
+        // A movie detail advertises how to reach its own sub-resources, so a
+        // client never has to construct these URLs itself.
+        EntityModel<MovieDto> model = EntityModel.of(movie,
+            linkTo(methodOn(MovieController.class).getMovieById(id)).withSelfRel(),
+            linkTo(methodOn(MovieController.class).getMovieVideos(id)).withRel("videos"),
+            linkTo(methodOn(MovieController.class).getMovieCredits(id)).withRel("credits"),
+            linkTo(methodOn(MovieController.class).getSimilarMovies(id, 1, 20)).withRel("similar"),
+            linkTo(methodOn(MovieController.class).getRecommendedMovies(id, 1, 20)).withRel("recommendations"));
+        return ResponseEntity.ok(model);
     }
 
     /**
@@ -60,20 +81,20 @@ public class MovieController {
     public ResponseEntity<PageResponse<MovieListDto>> discoverMovies(
         @Parameter(description = "Page number", example = "1")
         @RequestParam(value = "page", defaultValue = "1") int page,
-        
+
         @Parameter(description = "Page size", example = "20")
         @RequestParam(value = "size", defaultValue = "20") int size,
-        
+
         @Parameter(description = "Genre ID filter", example = "28")
         @RequestParam(value = "genreId", required = false) Long genreId,
-        
+
         @Parameter(description = "Release year filter", example = "2024")
         @RequestParam(value = "year", required = false) Integer year,
-        
+
         @Parameter(description = "Minimum rating filter", example = "7.0")
         @RequestParam(value = "minRating", required = false) Double minRating
     ) {
-        log.info("GET /api/v1/movies/discover - page={}, size={}, genre={}, year={}, minRating={}", 
+        log.info("GET /api/v1/movies/discover - page={}, size={}, genre={}, year={}, minRating={}",
                  page, size, genreId, year, minRating);
         return ResponseEntity.ok(movieService.discoverMovies(page, size, genreId, year, minRating));
     }
@@ -91,10 +112,10 @@ public class MovieController {
     public ResponseEntity<PageResponse<MovieListDto>> searchMovies(
         @Parameter(description = "Search query", example = "Inception", required = true)
         @RequestParam(value = "query") String query,
-        
+
         @Parameter(description = "Page number", example = "1")
         @RequestParam(value = "page", defaultValue = "1") int page,
-        
+
         @Parameter(description = "Page size", example = "20")
         @RequestParam(value = "size", defaultValue = "20") int size
     ) {
@@ -115,10 +136,10 @@ public class MovieController {
     public ResponseEntity<PageResponse<MovieListDto>> getTrendingMovies(
         @Parameter(description = "Time window (day or week)", example = "week")
         @RequestParam(value = "timeWindow", defaultValue = "week") String timeWindow,
-        
+
         @Parameter(description = "Page number", example = "1")
         @RequestParam(value = "page", defaultValue = "1") int page,
-        
+
         @Parameter(description = "Page size", example = "20")
         @RequestParam(value = "size", defaultValue = "20") int size
     ) {
@@ -138,7 +159,7 @@ public class MovieController {
     public ResponseEntity<PageResponse<MovieListDto>> getPopularMovies(
         @Parameter(description = "Page number", example = "1")
         @RequestParam(value = "page", defaultValue = "1") int page,
-        
+
         @Parameter(description = "Page size", example = "20")
         @RequestParam(value = "size", defaultValue = "20") int size
     ) {
@@ -158,7 +179,7 @@ public class MovieController {
     public ResponseEntity<PageResponse<MovieListDto>> getTopRatedMovies(
         @Parameter(description = "Page number", example = "1")
         @RequestParam(value = "page", defaultValue = "1") int page,
-        
+
         @Parameter(description = "Page size", example = "20")
         @RequestParam(value = "size", defaultValue = "20") int size
     ) {
@@ -211,10 +232,10 @@ public class MovieController {
     public ResponseEntity<PageResponse<MovieListDto>> getSimilarMovies(
         @Parameter(description = "TMDB movie ID", example = "550")
         @PathVariable("id") Long id,
-        
+
         @Parameter(description = "Page number", example = "1")
         @RequestParam(value = "page", defaultValue = "1") int page,
-        
+
         @Parameter(description = "Page size", example = "20")
         @RequestParam(value = "size", defaultValue = "20") int size
     ) {
@@ -235,17 +256,17 @@ public class MovieController {
     public ResponseEntity<PageResponse<MovieListDto>> getRecommendedMovies(
         @Parameter(description = "TMDB movie ID", example = "550")
         @PathVariable("id") Long id,
-        
+
         @Parameter(description = "Page number", example = "1")
         @RequestParam(value = "page", defaultValue = "1") int page,
-        
+
         @Parameter(description = "Page size", example = "20")
         @RequestParam(value = "size", defaultValue = "20") int size
     ) {
         log.info("GET /api/v1/movies/{}/recommendations - page={}", id, page);
         return ResponseEntity.ok(movieService.getRecommendedMovies(id, page, size));
     }
-    
+
     @ExceptionHandler(ResourceNotFoundException.class)
     ProblemDetail handleNotFound(ResourceNotFoundException e) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, e.getMessage());

@@ -1,5 +1,8 @@
 server:
   port: 8081
+  # Honor X-Forwarded-* from the gateway so HATEOAS _links reflect the public
+  # gateway host (localhost:8080) rather than the internal service host.
+  forward-headers-strategy: framework
 
 spring:
   application:

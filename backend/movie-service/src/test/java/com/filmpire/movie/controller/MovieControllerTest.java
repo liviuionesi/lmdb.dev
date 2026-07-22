@@ -74,7 +74,14 @@ class MovieControllerTest {
                 .andExpect(jsonPath("$.title").value("Fight Club"))
                 .andExpect(jsonPath("$.voteAverage").value(8.4))
                 .andExpect(jsonPath("$.runtime").value(139))
-                .andExpect(jsonPath("$.genres", hasSize(2)));
+                .andExpect(jsonPath("$.genres", hasSize(2)))
+                // HATEOAS: the detail resource advertises self + sub-resource links
+                // so clients navigate by following them, not by building URLs.
+                .andExpect(jsonPath("$._links.self.href", containsString("/api/v1/movies/550")))
+                .andExpect(jsonPath("$._links.videos.href", containsString("/api/v1/movies/550/videos")))
+                .andExpect(jsonPath("$._links.credits.href", containsString("/api/v1/movies/550/credits")))
+                .andExpect(jsonPath("$._links.similar.href", containsString("/api/v1/movies/550/similar")))
+                .andExpect(jsonPath("$._links.recommendations.href", containsString("/api/v1/movies/550/recommendations")));
     }
 
     /**
