@@ -41,5 +41,6 @@
     "**/.settings": true,
     "**/.factorypath": true,
     "**/.gradle": true
-  }
+  },
+  "java.autobuild.enabled": true
 }

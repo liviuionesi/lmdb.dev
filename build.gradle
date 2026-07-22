@@ -116,3 +116,13 @@ task startInfrastructure(type: Exec) {
     commandLine './start-all-services.sh'
 }
 
+// Automatically clear the STS workspace cache on clean builds to avoid stale IDE warnings
+task cleanStsCache(type: Delete) {
+    group = 'build setup'
+    description = 'Deletes the STS Language Server cache directory'
+    delete "${System.getProperty('user.home')}/.sts4"
+}
+
+tasks.named('clean') {
+    dependsOn cleanStsCache
+}
