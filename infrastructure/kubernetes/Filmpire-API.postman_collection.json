@@ -1,0 +1,1386 @@
+{
+    "info": {
+        "_postman_id": "filmpire-api-001",
+        "name": "Filmpire API",
+        "description": "Complete API collection for testing all Filmpire microservices through the API Gateway, with request tracing.\n\nInfrastructure Flow:\n1. Request \u2192 API Gateway (localhost:8080)\n2. Gateway \u2192 Eureka Service Discovery (localhost:8761)\n3. Eureka \u2192 target service (movie-service:8081, user-service:8082, actor-service:8083)\n4. Service \u2192 TMDB API (external) / PostgreSQL / MongoDB / Redis as needed\n5. Response with caching where applicable\n\nHATEOAS: single-resource GET endpoints (movie/actor details, user profile) advertise navigation via `_links`. Movie details return the HATEOAS resource bare (top-level `_links`); actor details and the user profile stay inside the shared ApiResponse envelope, so their links live under `data._links` instead.\n\nAuth: run '8. User Service - Auth \u2192 Register' first (or 'Login' if you already have an account) to populate the access_token/refresh_token collection variables used by every '9. User Service - Profile & Lists' request.",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "1. Health & Discovery",
+            "item": [
+                {
+                    "name": "Gateway Health",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{gateway_url}}/actuator/health",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "actuator",
+                                "health"
+                            ]
+                        },
+                        "description": "Check API Gateway health status"
+                    }
+                },
+                {
+                    "name": "Movie Service Health (Direct)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{movie_service_url}}/actuator/health",
+                            "host": [
+                                "{{movie_service_url}}"
+                            ],
+                            "path": [
+                                "actuator",
+                                "health"
+                            ]
+                        },
+                        "description": "Check Movie Service health directly (bypassing gateway)"
+                    }
+                },
+                {
+                    "name": "Actor Service Health (Direct)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{actor_service_url}}/actuator/health",
+                            "host": [
+                                "{{actor_service_url}}"
+                            ],
+                            "path": [
+                                "actuator",
+                                "health"
+                            ]
+                        },
+                        "description": "Check Actor Service health directly (bypassing gateway)"
+                    }
+                },
+                {
+                    "name": "User Service Health (Direct)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{user_service_url}}/actuator/health",
+                            "host": [
+                                "{{user_service_url}}"
+                            ],
+                            "path": [
+                                "actuator",
+                                "health"
+                            ]
+                        },
+                        "description": "Check User Service health directly (bypassing gateway)"
+                    }
+                },
+                {
+                    "name": "Eureka Dashboard",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{eureka_url}}/",
+                            "host": [
+                                "{{eureka_url}}"
+                            ],
+                            "path": [
+                                ""
+                            ]
+                        },
+                        "description": "View Eureka dashboard to see registered services"
+                    }
+                }
+            ],
+            "description": "Health checks and service discovery endpoints"
+        },
+        {
+            "name": "2. Movie Service - Discovery",
+            "item": [
+                {
+                    "name": "Discover Movies (via Gateway)",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "X-Request-ID",
+                                "value": "{{$randomUUID}}",
+                                "description": "Trace ID for request tracking"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{gateway_url}}/api/v1/movies/discover?page=1&size=20",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "movies",
+                                "discover"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                },
+                                {
+                                    "key": "size",
+                                    "value": "20"
+                                }
+                            ]
+                        },
+                        "description": "Discover movies with pagination through API Gateway"
+                    }
+                },
+                {
+                    "name": "Discover by Genre (Action)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{gateway_url}}/api/v1/movies/discover?genreId=28&page=1",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "movies",
+                                "discover"
+                            ],
+                            "query": [
+                                {
+                                    "key": "genreId",
+                                    "value": "28",
+                                    "description": "28 = Action"
+                                },
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                }
+                            ]
+                        },
+                        "description": "Discover action movies (genreId=28)"
+                    }
+                },
+                {
+                    "name": "Discover by Year",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{gateway_url}}/api/v1/movies/discover?year=2024&page=1",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "movies",
+                                "discover"
+                            ],
+                            "query": [
+                                {
+                                    "key": "year",
+                                    "value": "2024"
+                                },
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                }
+                            ]
+                        },
+                        "description": "Discover movies from 2024"
+                    }
+                },
+                {
+                    "name": "Discover by Minimum Rating",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{gateway_url}}/api/v1/movies/discover?minRating=7.5&page=1",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "movies",
+                                "discover"
+                            ],
+                            "query": [
+                                {
+                                    "key": "minRating",
+                                    "value": "7.5"
+                                },
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                }
+                            ]
+                        },
+                        "description": "Discover movies with rating >= 7.5"
+                    }
+                }
+            ],
+            "description": "Movie discovery with various filters"
+        },
+        {
+            "name": "3. Movie Service - Search & Details",
+            "item": [
+                {
+                    "name": "Search Movies",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{gateway_url}}/api/v1/movies/search?query=Inception&page=1",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "movies",
+                                "search"
+                            ],
+                            "query": [
+                                {
+                                    "key": "query",
+                                    "value": "Inception"
+                                },
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                }
+                            ]
+                        },
+                        "description": "Search movies by title/keywords"
+                    }
+                },
+                {
+                    "name": "Get Movie Details (Fight Club)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{gateway_url}}/api/v1/movies/550",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "movies",
+                                "550"
+                            ]
+                        },
+                        "description": "Get detailed info for Fight Club (ID: 550). The detail resource is a bare HATEOAS payload (no ApiResponse envelope): self + videos/credits/similar/recommendations links."
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "pm.test(\"Has HATEOAS links\", function () {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.expect(jsonData._links).to.exist;",
+                                    "    pm.expect(jsonData._links.self).to.exist;",
+                                    "    pm.expect(jsonData._links.videos).to.exist;",
+                                    "    pm.expect(jsonData._links.credits).to.exist;",
+                                    "    pm.expect(jsonData._links.similar).to.exist;",
+                                    "    pm.expect(jsonData._links.recommendations).to.exist;",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Get Movie Details (Inception)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{gateway_url}}/api/v1/movies/27205",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "movies",
+                                "27205"
+                            ]
+                        },
+                        "description": "Get detailed info for Inception (ID: 27205)"
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "pm.test(\"Has HATEOAS links\", function () {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.expect(jsonData._links).to.exist;",
+                                    "    pm.expect(jsonData._links.self).to.exist;",
+                                    "    pm.expect(jsonData._links.videos).to.exist;",
+                                    "    pm.expect(jsonData._links.credits).to.exist;",
+                                    "    pm.expect(jsonData._links.similar).to.exist;",
+                                    "    pm.expect(jsonData._links.recommendations).to.exist;",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ]
+                }
+            ],
+            "description": "Search and get movie details"
+        },
+        {
+            "name": "4. Movie Service - Lists",
+            "item": [
+                {
+                    "name": "Popular Movies",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{gateway_url}}/api/v1/movies/popular?page=1",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "movies",
+                                "popular"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                }
+                            ]
+                        },
+                        "description": "Get currently popular movies"
+                    }
+                },
+                {
+                    "name": "Top Rated Movies",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{gateway_url}}/api/v1/movies/top-rated?page=1",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "movies",
+                                "top-rated"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                }
+                            ]
+                        },
+                        "description": "Get highest-rated movies"
+                    }
+                },
+                {
+                    "name": "Trending Movies (Week)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{gateway_url}}/api/v1/movies/trending?timeWindow=week&page=1",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "movies",
+                                "trending"
+                            ],
+                            "query": [
+                                {
+                                    "key": "timeWindow",
+                                    "value": "week"
+                                },
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                }
+                            ]
+                        },
+                        "description": "Get trending movies for the week"
+                    }
+                },
+                {
+                    "name": "Trending Movies (Day)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{gateway_url}}/api/v1/movies/trending?timeWindow=day&page=1",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "movies",
+                                "trending"
+                            ],
+                            "query": [
+                                {
+                                    "key": "timeWindow",
+                                    "value": "day"
+                                },
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                }
+                            ]
+                        },
+                        "description": "Get trending movies for the day"
+                    }
+                }
+            ],
+            "description": "Predefined movie lists (popular, top-rated, trending)"
+        },
+        {
+            "name": "5. Movie Service - Extras",
+            "item": [
+                {
+                    "name": "Get Movie Videos (Trailers)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{gateway_url}}/api/v1/movies/550/videos",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "movies",
+                                "550",
+                                "videos"
+                            ]
+                        },
+                        "description": "Get trailers and clips for Fight Club"
+                    }
+                },
+                {
+                    "name": "Get Movie Credits (Cast & Crew)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{gateway_url}}/api/v1/movies/550/credits",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "movies",
+                                "550",
+                                "credits"
+                            ]
+                        },
+                        "description": "Get cast and crew for Fight Club"
+                    }
+                },
+                {
+                    "name": "Get Similar Movies",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{gateway_url}}/api/v1/movies/550/similar?page=1",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "movies",
+                                "550",
+                                "similar"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                }
+                            ]
+                        },
+                        "description": "Get movies similar to Fight Club"
+                    }
+                },
+                {
+                    "name": "Get Recommendations",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{gateway_url}}/api/v1/movies/550/recommendations?page=1",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "movies",
+                                "550",
+                                "recommendations"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                }
+                            ]
+                        },
+                        "description": "Get recommended movies based on Fight Club"
+                    }
+                }
+            ],
+            "description": "Movie videos, credits, similar, and recommendations"
+        },
+        {
+            "name": "6. Genres",
+            "item": [
+                {
+                    "name": "Get All Genres",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{gateway_url}}/api/v1/genres",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "genres"
+                            ]
+                        },
+                        "description": "Get all available movie genres"
+                    }
+                }
+            ],
+            "description": "Genre endpoints"
+        },
+        {
+            "name": "7. Actor Service",
+            "item": [
+                {
+                    "name": "Get Actor Details (Edward Norton)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{gateway_url}}/api/v1/actors/819",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "actors",
+                                "819"
+                            ]
+                        },
+                        "description": "Get detailed actor profile for Edward Norton (TMDB person ID: 819). Wrapped in the shared ApiResponse envelope; the detail resource under 'data' carries self + filmography (movies) HATEOAS links."
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "pm.test(\"Has HATEOAS links\", function () {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.expect(jsonData.data._links).to.exist;",
+                                    "    pm.expect(jsonData.data._links.self).to.exist;",
+                                    "    pm.expect(jsonData.data._links.movies).to.exist;",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Get Actor Filmography",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{gateway_url}}/api/v1/actors/819/movies",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "actors",
+                                "819",
+                                "movies"
+                            ]
+                        },
+                        "description": "Get Edward Norton's filmography, newest release first"
+                    }
+                },
+                {
+                    "name": "Search Actors",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{gateway_url}}/api/v1/actors/search?query=Edward Norton&page=1",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "actors",
+                                "search"
+                            ],
+                            "query": [
+                                {
+                                    "key": "query",
+                                    "value": "Edward Norton"
+                                },
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                }
+                            ]
+                        },
+                        "description": "Search actors by name"
+                    }
+                }
+            ],
+            "description": "Actor profiles, filmography and search (native typed API, issue #18)"
+        },
+        {
+            "name": "8. User Service - Auth",
+            "item": [
+                {
+                    "name": "Register",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{gateway_url}}/api/v1/auth/register",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "auth",
+                                "register"
+                            ]
+                        },
+                        "description": "Create an account. Generates a random username/email via a pre-request script so this can be re-run without colliding with a previous run, then captures access_token/refresh_token for the rest of the collection.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"username\": \"{{test_username}}\",\n    \"email\": \"{{test_email}}\",\n    \"password\": \"{{test_password}}\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "event": [
+                        {
+                            "listen": "prerequest",
+                            "script": {
+                                "exec": [
+                                    "// Generate a fresh, collision-free username/email each run so Register",
+                                    "// can be replayed without a manual 409/400 cleanup step.",
+                                    "const suffix = Date.now();",
+                                    "pm.collectionVariables.set('test_username', 'filmpire_' + suffix);",
+                                    "pm.collectionVariables.set('test_email', 'filmpire_' + suffix + '@example.com');"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        },
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status code is 201', function () { pm.response.to.have.status(201); });",
+                                    "const jsonData = pm.response.json();",
+                                    "pm.test('Returns a token bundle', function () {",
+                                    "    pm.expect(jsonData.data.accessToken).to.exist;",
+                                    "    pm.expect(jsonData.data.refreshToken).to.exist;",
+                                    "});",
+                                    "pm.collectionVariables.set('access_token', jsonData.data.accessToken);",
+                                    "pm.collectionVariables.set('refresh_token', jsonData.data.refreshToken);"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Login",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{gateway_url}}/api/v1/auth/login",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "auth",
+                                "login"
+                            ]
+                        },
+                        "description": "Log in with the credentials created by Register (test_username/test_password collection variables). Run Register at least once first.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"username\": \"{{test_username}}\",\n    \"password\": \"{{test_password}}\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "const jsonData = pm.response.json();",
+                                    "pm.test('Returns a token bundle', function () {",
+                                    "    pm.expect(jsonData.data.accessToken).to.exist;",
+                                    "    pm.expect(jsonData.data.refreshToken).to.exist;",
+                                    "});",
+                                    "pm.collectionVariables.set('access_token', jsonData.data.accessToken);",
+                                    "pm.collectionVariables.set('refresh_token', jsonData.data.refreshToken);"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Refresh Token",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{gateway_url}}/api/v1/auth/refresh",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "auth",
+                                "refresh"
+                            ]
+                        },
+                        "description": "Rotate the refresh token: mints a new access/refresh pair and invalidates the presented one.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"refreshToken\": \"{{refresh_token}}\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "const jsonData = pm.response.json();",
+                                    "pm.test('Returns a token bundle', function () {",
+                                    "    pm.expect(jsonData.data.accessToken).to.exist;",
+                                    "    pm.expect(jsonData.data.refreshToken).to.exist;",
+                                    "});",
+                                    "pm.collectionVariables.set('access_token', jsonData.data.accessToken);",
+                                    "pm.collectionVariables.set('refresh_token', jsonData.data.refreshToken);"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Logout",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{gateway_url}}/api/v1/auth/logout",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "auth",
+                                "logout"
+                            ]
+                        },
+                        "description": "Revoke the current refresh token. The access token stays valid until its natural expiry."
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ]
+                }
+            ],
+            "description": "Registration, login, token refresh and logout (issue #17)"
+        },
+        {
+            "name": "9. User Service - Profile & Lists",
+            "item": [
+                {
+                    "name": "Get Profile",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{gateway_url}}/api/v1/users/profile",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "users",
+                                "profile"
+                            ]
+                        },
+                        "description": "Get the caller's profile. The resource under 'data' carries self + favorites/watchlist HATEOAS links."
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "pm.test(\"Has HATEOAS links\", function () {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.expect(jsonData.data._links).to.exist;",
+                                    "    pm.expect(jsonData.data._links.self).to.exist;",
+                                    "    pm.expect(jsonData.data._links.favorites).to.exist;",
+                                    "    pm.expect(jsonData.data._links.watchlist).to.exist;",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Update Profile",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{gateway_url}}/api/v1/users/profile",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "users",
+                                "profile"
+                            ]
+                        },
+                        "description": "Update the caller's email (the only mutable profile field; username is the JWT subject).",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"email\": \"{{test_email}}\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Change Password",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{gateway_url}}/api/v1/users/password",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "users",
+                                "password"
+                            ]
+                        },
+                        "description": "Change the caller's password.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"currentPassword\": \"{{test_password}}\",\n    \"newPassword\": \"{{test_password}}\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Get Favorites",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{gateway_url}}/api/v1/users/favorites",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "users",
+                                "favorites"
+                            ]
+                        },
+                        "description": "List the caller's favorite movies, newest first."
+                    }
+                },
+                {
+                    "name": "Add Favorite (Fight Club)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{gateway_url}}/api/v1/users/favorites/550",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "users",
+                                "favorites",
+                                "550"
+                            ]
+                        },
+                        "description": "Add Fight Club to favorites (idempotent)."
+                    }
+                },
+                {
+                    "name": "Remove Favorite (Fight Club)",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{gateway_url}}/api/v1/users/favorites/550",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "users",
+                                "favorites",
+                                "550"
+                            ]
+                        },
+                        "description": "Remove Fight Club from favorites (idempotent)."
+                    }
+                },
+                {
+                    "name": "Get Watchlist",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{gateway_url}}/api/v1/users/watchlist",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "users",
+                                "watchlist"
+                            ]
+                        },
+                        "description": "List the caller's watchlist, newest first."
+                    }
+                },
+                {
+                    "name": "Add to Watchlist (Inception)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{gateway_url}}/api/v1/users/watchlist/27205",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "users",
+                                "watchlist",
+                                "27205"
+                            ]
+                        },
+                        "description": "Add Inception to the watchlist (idempotent)."
+                    }
+                },
+                {
+                    "name": "Remove from Watchlist (Inception)",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{gateway_url}}/api/v1/users/watchlist/27205",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "users",
+                                "watchlist",
+                                "27205"
+                            ]
+                        },
+                        "description": "Remove Inception from the watchlist (idempotent)."
+                    }
+                }
+            ],
+            "description": "Profile, favorites and watchlist for the authenticated user (issue #17)"
+        },
+        {
+            "name": "10. Testing Rate Limiting",
+            "item": [
+                {
+                    "name": "Test Rate Limit (Rapid Requests)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{gateway_url}}/api/v1/movies/popular",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "movies",
+                                "popular"
+                            ]
+                        },
+                        "description": "Send this request 25+ times rapidly to test rate limiting (10 req/sec, burst 20)"
+                    }
+                }
+            ],
+            "description": "Test rate limiting and circuit breaker"
+        },
+        {
+            "name": "11. OpenAPI Documentation",
+            "item": [
+                {
+                    "name": "Movie Service - Swagger UI",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{movie_service_url}}/swagger-ui.html",
+                            "host": [
+                                "{{movie_service_url}}"
+                            ],
+                            "path": [
+                                "swagger-ui.html"
+                            ]
+                        },
+                        "description": "Open Swagger UI for interactive Movie Service API documentation"
+                    }
+                },
+                {
+                    "name": "Movie Service - OpenAPI JSON",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{movie_service_url}}/v3/api-docs",
+                            "host": [
+                                "{{movie_service_url}}"
+                            ],
+                            "path": [
+                                "v3",
+                                "api-docs"
+                            ]
+                        },
+                        "description": "Get Movie Service OpenAPI specification as JSON"
+                    }
+                },
+                {
+                    "name": "Actor Service - Swagger UI",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{actor_service_url}}/swagger-ui.html",
+                            "host": [
+                                "{{actor_service_url}}"
+                            ],
+                            "path": [
+                                "swagger-ui.html"
+                            ]
+                        },
+                        "description": "Open Swagger UI for interactive Actor Service API documentation"
+                    }
+                },
+                {
+                    "name": "Actor Service - OpenAPI JSON",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{actor_service_url}}/v3/api-docs",
+                            "host": [
+                                "{{actor_service_url}}"
+                            ],
+                            "path": [
+                                "v3",
+                                "api-docs"
+                            ]
+                        },
+                        "description": "Get Actor Service OpenAPI specification as JSON"
+                    }
+                },
+                {
+                    "name": "User Service - Swagger UI",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{user_service_url}}/swagger-ui.html",
+                            "host": [
+                                "{{user_service_url}}"
+                            ],
+                            "path": [
+                                "swagger-ui.html"
+                            ]
+                        },
+                        "description": "Open Swagger UI for interactive User Service API documentation"
+                    }
+                },
+                {
+                    "name": "User Service - OpenAPI JSON",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{user_service_url}}/v3/api-docs",
+                            "host": [
+                                "{{user_service_url}}"
+                            ],
+                            "path": [
+                                "v3",
+                                "api-docs"
+                            ]
+                        },
+                        "description": "Get User Service OpenAPI specification as JSON"
+                    }
+                }
+            ],
+            "description": "API documentation endpoints"
+        }
+    ],
+    "variable": [
+        {
+            "key": "gateway_url",
+            "value": "http://localhost:8080",
+            "type": "string"
+        },
+        {
+            "key": "movie_service_url",
+            "value": "http://localhost:8081",
+            "type": "string"
+        },
+        {
+            "key": "user_service_url",
+            "value": "http://localhost:8082",
+            "type": "string"
+        },
+        {
+            "key": "actor_service_url",
+            "value": "http://localhost:8083",
+            "type": "string"
+        },
+        {
+            "key": "eureka_url",
+            "value": "http://localhost:8761",
+            "type": "string"
+        },
+        {
+            "key": "test_username",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "test_email",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "test_password",
+            "value": "TestPass123!",
+            "type": "string"
+        },
+        {
+            "key": "access_token",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "refresh_token",
+            "value": "",
+            "type": "string"
+        }
+    ]
+}
