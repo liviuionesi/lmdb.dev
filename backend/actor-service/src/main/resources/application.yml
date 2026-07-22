@@ -38,9 +38,6 @@ tmdb:
   api:
     key: ${TMDB_API_KEY:}
     base-url: https://api.themoviedb.org/3
-  # Person documents are near-immutable: one long freshness window.
-  facade:
-    detail-refresh: 720h
 
 eureka:
   client:

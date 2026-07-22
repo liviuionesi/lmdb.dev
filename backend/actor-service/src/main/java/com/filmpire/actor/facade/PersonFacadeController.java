@@ -1,113 +1,148 @@
 package com.filmpire.actor.facade;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.filmpire.actor.client.dto.TmdbPersonMovieCreditsResponse;
+import com.filmpire.actor.client.dto.TmdbPersonResponse;
+import com.filmpire.actor.model.Actor;
+import com.filmpire.actor.service.ActorService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.ResourceAccessException;
+import org.springframework.web.client.RestClientResponseException;
 
 /**
  * TMDB v3-compatible person facade — actor-service's slice of the primary
  * API (ARCHITECTURE.md §5.1 row 8, issues #18/#32).
  *
- * <p>The Filmpire React app calls {@code GET /person/{id}} for actor pages;
- * this controller serves it byte-identical to TMDB via
- * {@link PersonFacadeService}. Discover-by-cast
- * ({@code /discover/movie?with_cast=}) is intentionally NOT here — it is a
- * movie-list endpoint and lives in movie-service's facade (#31).</p>
+ * <p>The Filmpire React app calls {@code GET /person/{id}} for actor pages.
+ * As of ADR-010 (supersedes ADR-003), this serves TMDB's exact field
+ * names/shape but the data behind it is {@link ActorService}'s persisted,
+ * mapped {@link Actor} catalog — not a raw cached copy of TMDB's bytes.
+ * Discover-by-cast ({@code /discover/movie?with_cast=}) is intentionally
+ * NOT here — it is a movie-list endpoint and lives in movie-service's
+ * facade (#31).</p>
  */
 @RestController
 @Slf4j
 @RequiredArgsConstructor
 public class PersonFacadeController {
 
-    /** TMDB's canonical not-found body (status_code 34), replayed locally. */
-    private static final String TMDB_NOT_FOUND_BODY =
-        "{\"success\":false,\"status_code\":34,"
-        + "\"status_message\":\"The resource you requested could not be found.\"}";
-
-    private final PersonFacadeService facadeService;
+    private final ActorService actorService;
 
     /**
-     * {@code GET /person/{id}} — person details in exact TMDB shape.
+     * {@code GET /person/{id}} — person details in TMDB's exact shape,
+     * read-through/save-through against the persisted {@link Actor} catalog.
      *
-     * @param id     numeric TMDB person id (non-numeric → local TMDB-shaped 404)
-     * @param params forwarded query params (language, append_to_response, …)
-     * @return raw TMDB person JSON
+     * @param id numeric TMDB person id (non-numeric → local TMDB-shaped 404)
+     * @return TMDB-shaped person JSON
      */
     @GetMapping(value = "/person/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<String> personDetails(
-            @PathVariable String id,
-            @RequestParam MultiValueMap<String, String> params) {
-
-        // Guard: person ids are numeric; anything else never reaches TMDB.
+    public ResponseEntity<Object> personDetails(@PathVariable String id) {
         if (!id.chars().allMatch(Character::isDigit)) {
             log.debug("Person facade: rejecting non-numeric id '{}'", id);
-            return ResponseEntity.status(404)
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(TMDB_NOT_FOUND_BODY);
+            return notFound();
         }
 
-        return ok(facadeService.getRaw("person/" + id, strip(params)));
+        Actor actor = actorService.getOrFetchActorEntity(Long.parseLong(id));
+        return ResponseEntity.ok(toTmdbPersonResponse(actor));
     }
 
     /**
-     * Replays TMDB error responses byte-for-byte (status + body), per the
-     * facade contract.
+     * {@code GET /person/{id}/movie_credits} — the actor's filmography in
+     * TMDB's exact shape. Always live: the referenced movies belong to
+     * movie-service's own database (ADR-002).
      *
-     * @param e upstream error captured by {@link TmdbRawClient}
+     * @param id numeric TMDB person id
+     * @return TMDB-shaped movie-credits JSON
+     */
+    @GetMapping(value = "/person/{id}/movie_credits", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Object> movieCredits(@PathVariable String id) {
+        if (!id.chars().allMatch(Character::isDigit)) {
+            log.debug("Person facade: rejecting non-numeric id '{}'", id);
+            return notFound();
+        }
+
+        TmdbPersonMovieCreditsResponse credits = actorService.getFilmographyRaw(Long.parseLong(id));
+        return ResponseEntity.ok(credits);
+    }
+
+    /**
+     * Replays a real TMDB error response byte-for-byte: {@link com.filmpire.actor.client.TmdbPersonClient}
+     * calls go through Spring's RestClient, which captures the upstream body
+     * on a non-2xx response — reusing it preserves TMDB's exact error shape.
+     *
+     * @param e the captured upstream HTTP error
      * @return response mirroring TMDB's error exactly
      */
-    @ExceptionHandler(TmdbUpstreamException.class)
-    public ResponseEntity<String> upstreamError(TmdbUpstreamException e) {
+    @ExceptionHandler(RestClientResponseException.class)
+    public ResponseEntity<String> upstreamError(RestClientResponseException e) {
         return ResponseEntity.status(e.getStatusCode())
             .contentType(MediaType.APPLICATION_JSON)
-            .body(e.getBody());
+            .body(e.getResponseBodyAsString());
     }
 
     /**
-     * Maps "TMDB unreachable, no stored copy" to a TMDB-shaped 502.
+     * Maps "TMDB unreachable" to 502 Bad Gateway with a TMDB-shaped error
+     * body.
      *
-     * @param e network failure from {@link TmdbRawClient}
+     * @param e network failure reaching TMDB
      * @return 502 response with TMDB-style error JSON
      */
     @ExceptionHandler(ResourceAccessException.class)
-    public ResponseEntity<String> tmdbUnreachable(ResourceAccessException e) {
-        log.error("TMDB unreachable and no local copy available: {}", e.getMessage());
+    public ResponseEntity<TmdbErrorResponse> tmdbUnreachable(ResourceAccessException e) {
+        log.error("TMDB unreachable: {}", e.getMessage());
         return ResponseEntity.status(502)
-            .contentType(MediaType.APPLICATION_JSON)
-            .body("{\"success\":false,\"status_code\":502,"
-                + "\"status_message\":\"Upstream TMDB API is unreachable.\"}");
+            .body(new TmdbErrorResponse(false, 502, "Upstream TMDB API is unreachable."));
     }
 
     /**
-     * Removes parameters that must never reach TMDB (client {@code api_key},
-     * {@code session_id}).
+     * Builds TMDB's exact person-detail shape from our persisted entity.
      *
-     * @param params raw client query params
-     * @return a copy safe to forward and build cache keys from
+     * @param actor the persisted actor
+     * @return TMDB-shaped person response
      */
-    private static MultiValueMap<String, String> strip(MultiValueMap<String, String> params) {
-        MultiValueMap<String, String> clean = new LinkedMultiValueMap<>(params);
-        clean.remove("api_key");
-        clean.remove("session_id");
-        return clean;
+    private static TmdbPersonResponse toTmdbPersonResponse(Actor actor) {
+        return new TmdbPersonResponse(
+            actor.getTmdbId(),
+            actor.getName(),
+            actor.getBiography(),
+            actor.getBirthDate(),
+            actor.getBirthPlace(),
+            actor.getProfilePath(),
+            actor.getPopularity(),
+            actor.getAlsoKnownAs(),
+            actor.getKnownForDepartment(),
+            actor.getGender(),
+            actor.getImdbId(),
+            actor.getHomepage(),
+            actor.getAdult()
+        );
+    }
+
+    private static ResponseEntity<Object> notFound() {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+            .body(new TmdbErrorResponse(false, 34, "The resource you requested could not be found."));
     }
 
     /**
-     * Wraps a raw JSON body in a 200 response with the JSON content type.
+     * TMDB's own error envelope shape, replayed for locally-detected error
+     * cases that don't have a captured upstream body to forward verbatim.
      *
-     * @param body raw TMDB-shaped JSON
-     * @return 200 OK response
+     * @param success       always false
+     * @param statusCode    TMDB's numeric status code (not the HTTP status)
+     * @param statusMessage human-readable message
      */
-    private static ResponseEntity<String> ok(String body) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(body);
+    private record TmdbErrorResponse(
+        boolean success,
+        @JsonProperty("status_code") int statusCode,
+        @JsonProperty("status_message") String statusMessage
+    ) {
     }
 }

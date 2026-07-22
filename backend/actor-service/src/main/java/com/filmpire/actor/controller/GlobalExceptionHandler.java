@@ -1,6 +1,5 @@
 package com.filmpire.actor.controller;
 
-import com.filmpire.actor.facade.TmdbUpstreamException;
 import com.filmpire.shared.dto.ApiResponse;
 import com.filmpire.shared.exception.ResourceNotFoundException;
 import com.filmpire.shared.exception.ServiceUnavailableException;
@@ -11,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.client.ResourceAccessException;
+import org.springframework.web.client.RestClientResponseException;
 
 /**
  * Maps exceptions on the NATIVE {@code /api/v1} endpoints to the shared
@@ -29,15 +29,13 @@ public class GlobalExceptionHandler {
      * TMDB rejected the underlying fetch (e.g. unknown person id) → mirror
      * the upstream status with a native-shaped body.
      *
-     * @param e upstream error
+     * @param e upstream error captured by Spring's RestClient
      * @return error envelope with TMDB's status code
      */
-    @ExceptionHandler(TmdbUpstreamException.class)
-    public ResponseEntity<ApiResponse<Void>> handleUpstream(TmdbUpstreamException e) {
-        HttpStatus status = HttpStatus.resolve(e.getStatusCode()) != null
-            ? HttpStatus.valueOf(e.getStatusCode())
-            : HttpStatus.BAD_GATEWAY;
-        return error(status, "TMDB rejected the request (HTTP " + e.getStatusCode() + ")");
+    @ExceptionHandler(RestClientResponseException.class)
+    public ResponseEntity<ApiResponse<Void>> handleUpstream(RestClientResponseException e) {
+        return error(HttpStatus.valueOf(e.getStatusCode().value()),
+            "TMDB rejected the request (HTTP " + e.getStatusCode().value() + ")");
     }
 
     /**

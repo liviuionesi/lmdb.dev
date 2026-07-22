@@ -16,13 +16,19 @@ public final class ActorDtos {
     /**
      * Full actor profile.
      *
-     * @param tmdbId      TMDB person id
-     * @param name        actor's name
-     * @param biography   biography text (may be empty)
-     * @param birthDate   birth date, may be null
-     * @param birthPlace  birthplace, may be null
-     * @param profilePath TMDB profile image path, may be null
-     * @param popularity  TMDB popularity score
+     * @param tmdbId             TMDB person id
+     * @param name               actor's name
+     * @param biography          biography text (may be empty)
+     * @param birthDate          birth date, may be null
+     * @param birthPlace         birthplace, may be null
+     * @param profilePath        TMDB profile image path, may be null
+     * @param popularity         TMDB popularity score
+     * @param alsoKnownAs        alternate names/aliases, may be empty
+     * @param knownForDepartment TMDB's primary department (e.g. "Acting"), may be null
+     * @param gender             TMDB gender code (0=unspecified, 1=female, 2=male, 3=non-binary)
+     * @param imdbId             IMDB id, may be null
+     * @param homepage           personal/official homepage, may be null
+     * @param adult              adult-content flag as TMDB reports it
      */
     public record ActorDto(
         Long tmdbId,
@@ -31,7 +37,13 @@ public final class ActorDtos {
         LocalDate birthDate,
         String birthPlace,
         String profilePath,
-        Double popularity
+        Double popularity,
+        List<String> alsoKnownAs,
+        String knownForDepartment,
+        Integer gender,
+        String imdbId,
+        String homepage,
+        Boolean adult
     ) {
     }
 

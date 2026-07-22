@@ -5,14 +5,17 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.support.RestClientAdapter;
+import org.springframework.web.service.invoker.HttpServiceProxyFactory;
 
 /**
  * HTTP client configuration for the TMDB API.
  *
- * <p>Actor-service only needs the raw passthrough client (person data is
- * served byte-identical per ADR-003), so unlike movie-service there is no
- * typed HTTP interface here — just the single rate-limited
- * {@link RestClient} the facade's {@code TmdbRawClient} builds on.</p>
+ * <p>Defines one shared, rate-limited {@link RestClient} and builds
+ * {@link TmdbPersonClient} on top of it — the single typed HTTP interface
+ * used by both the native {@code /api/v1/actors} API and the TMDB v3 facade
+ * ({@code com.filmpire.actor.facade}) as of ADR-010, mirroring
+ * movie-service's client config.</p>
  */
 @Configuration
 public class TmdbClientConfig {
@@ -38,5 +41,19 @@ public class TmdbClientConfig {
             .defaultHeader("Content-Type", "application/json")
             .requestInterceptor(rateLimitInterceptor)
             .build();
+    }
+
+    /**
+     * Typed TMDB person HTTP interface backed by the shared RestClient.
+     *
+     * @param tmdbRestClient the shared client bean defined above
+     * @return proxy implementing {@link TmdbPersonClient}
+     */
+    @Bean
+    public TmdbPersonClient tmdbPersonClient(RestClient tmdbRestClient) {
+        RestClientAdapter adapter = RestClientAdapter.create(tmdbRestClient);
+        HttpServiceProxyFactory factory = HttpServiceProxyFactory.builderFor(adapter).build();
+
+        return factory.createClient(TmdbPersonClient.class);
     }
 }
