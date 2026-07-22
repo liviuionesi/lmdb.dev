@@ -3,10 +3,9 @@
 spring:
   application:
     name: media-service
-  data:
-    mongodb:
-      uri: ${MONGODB_URI:mongodb://localhost:27017/filmpire}
-      database: ${MONGODB_DATABASE:filmpire}
+  mongodb:
+    database: ${MONGODB_DATABASE:filmpire}
+    uri: ${MONGODB_URI:mongodb://localhost:27017/filmpire}
 
 # MinIO configuration
 minio:

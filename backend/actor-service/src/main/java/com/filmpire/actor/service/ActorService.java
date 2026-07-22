@@ -1,7 +1,7 @@
 package com.filmpire.actor.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import com.filmpire.actor.dto.ActorDtos.ActorDto;
 import com.filmpire.actor.dto.ActorDtos.ActorSearchResponse;
 import com.filmpire.actor.dto.ActorDtos.ActorSummaryDto;
@@ -59,11 +59,11 @@ public class ActorService {
         // 2. Upsert the typed projection (queryable local dataset).
         Actor actor = Actor.builder()
             .tmdbId(tmdbId)
-            .name(person.path("name").asText())
-            .biography(person.path("biography").asText(""))
-            .birthDate(parseDate(person.path("birthday").asText(null)))
-            .birthPlace(person.path("place_of_birth").asText(null))
-            .profilePath(person.path("profile_path").asText(null))
+            .name(person.path("name").asString())
+            .biography(person.path("biography").asString(""))
+            .birthDate(parseDate(person.path("birthday").asString(null)))
+            .birthPlace(person.path("place_of_birth").asString(null))
+            .profilePath(person.path("profile_path").asString(null))
             .popularity(person.path("popularity").asDouble())
             .syncedAt(LocalDateTime.now())
             .build();
@@ -98,10 +98,10 @@ public class ActorService {
         List<FilmographyEntryDto> entries = new ArrayList<>();
         credits.path("cast").forEach(entry -> entries.add(new FilmographyEntryDto(
             entry.path("id").asLong(),
-            entry.path("title").asText(),
-            entry.path("character").asText(null),
-            entry.path("release_date").asText(""),
-            entry.path("poster_path").asText(null),
+            entry.path("title").asString(),
+            entry.path("character").asString(null),
+            entry.path("release_date").asString(""),
+            entry.path("poster_path").asString(null),
             entry.path("vote_average").asDouble()
         )));
 
@@ -128,8 +128,8 @@ public class ActorService {
         List<ActorSummaryDto> actors = new ArrayList<>();
         result.path("results").forEach(person -> actors.add(new ActorSummaryDto(
             person.path("id").asLong(),
-            person.path("name").asText(),
-            person.path("profile_path").asText(null),
+            person.path("name").asString(),
+            person.path("profile_path").asString(null),
             person.path("popularity").asDouble()
         )));
 

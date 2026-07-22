@@ -1,6 +1,7 @@
 package com.filmpire.gateway.exception;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import io.jsonwebtoken.JwtException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -12,6 +13,7 @@ import org.springframework.mock.web.server.MockServerWebExchange;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
+import tools.jackson.core.JacksonException;
 
 import java.util.Objects;
 
@@ -42,7 +44,7 @@ class GlobalErrorWebExceptionHandlerTest {
     /** Fresh handler backed by a real, working ObjectMapper. */
     @BeforeEach
     void setUp() {
-        objectMapper = new ObjectMapper();
+        objectMapper = new JsonMapper();
         errorHandler = new GlobalErrorWebExceptionHandler(objectMapper);
     }
 
@@ -226,8 +228,8 @@ class GlobalErrorWebExceptionHandlerTest {
         ObjectMapper brokenMapper = mock(ObjectMapper.class);
         try {
             when(brokenMapper.writeValueAsString(any())).thenThrow(
-                    new com.fasterxml.jackson.core.JsonProcessingException("JSON error") {});
-        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+                    new JacksonException("JSON error") {});
+        } catch (JacksonException e) {
             // This won't happen in the test
         }
         

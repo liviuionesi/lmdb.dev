@@ -1,21 +1,20 @@
 package com.filmpire.user.integration;
-
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import org.testcontainers.postgresql.PostgreSQLContainer;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
-import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
@@ -44,7 +43,7 @@ class UserServiceIntegrationTest {
     /** Real PostgreSQL 17; @ServiceConnection wires the datasource. */
     @Container
     @ServiceConnection
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:17-alpine");
+    static PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:17-alpine");
 
     @Autowired
     private MockMvc mockMvc;
@@ -77,8 +76,8 @@ class UserServiceIntegrationTest {
             .andReturn();
 
         JsonNode data = objectMapper.readTree(result.getResponse().getContentAsString()).get("data");
-        accessToken = data.get("accessToken").asText();
-        refreshToken = data.get("refreshToken").asText();
+        accessToken = data.get("accessToken").asString();
+        refreshToken = data.get("refreshToken").asString();
     }
 
     /**
@@ -192,8 +191,8 @@ class UserServiceIntegrationTest {
 
         String oldRefreshToken = refreshToken;
         JsonNode data = objectMapper.readTree(result.getResponse().getContentAsString()).get("data");
-        accessToken = data.get("accessToken").asText();
-        refreshToken = data.get("refreshToken").asText();
+        accessToken = data.get("accessToken").asString();
+        refreshToken = data.get("refreshToken").asString();
 
         // Rotation issued a DIFFERENT refresh token…
         assertThat(refreshToken).isNotEqualTo(oldRefreshToken);

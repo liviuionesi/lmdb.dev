@@ -14,101 +14,103 @@
 spring:
   cloud:
     gateway:
-      discovery:
-        locator:
-          enabled: false          # no Eureka-derived routes in tests
-      # Drop the production default-filters: the Retry filter retries GET on
-      # 503, which would multiply requests and corrupt circuit-breaker and
-      # request-count assertions.
-      default-filters: []
-      routes:
-        # --- Circuit-breaker test route (statusCodes makes 500 a CB failure) ---
-        - id: cb-test
-          uri: http://localhost:9971
-          predicates:
-            - Path=/api/v1/movies/cbtest/**
-          filters:
-            - name: CircuitBreaker
-              args:
-                name: cbTestCircuitBreaker
-                fallbackUri: forward:/fallback/movies
-                statusCodes:
-                  - "500"
+      server:
+        webflux:
+          discovery:
+            locator:
+              enabled: false          # no Eureka-derived routes in tests
+          # Drop the production default-filters: the Retry filter retries GET on
+          # 503, which would multiply requests and corrupt circuit-breaker and
+          # request-count assertions.
+          default-filters: []
+          routes:
+            # --- Circuit-breaker test route (statusCodes makes 500 a CB failure) ---
+            - id: cb-test
+              uri: http://localhost:9971
+              predicates:
+                - Path=/api/v1/movies/cbtest/**
+              filters:
+                - name: CircuitBreaker
+                  args:
+                    name: cbTestCircuitBreaker
+                    fallbackUri: forward:/fallback/movies
+                    statusCodes:
+                      - "500"
 
-        # --- Rate-limit test route (tiny burst so it trips fast) ---
-        - id: rl-test
-          uri: http://localhost:9971
-          predicates:
-            - Path=/api/v1/movies/rltest/**
-          filters:
-            - name: RequestRateLimiter
-              args:
-                key-resolver: "#{@ipKeyResolver}"
-                redis-rate-limiter.replenishRate: 1
-                redis-rate-limiter.burstCapacity: 3
-                redis-rate-limiter.requestedTokens: 1
+            # --- Rate-limit test route (tiny burst so it trips fast) ---
+            - id: rl-test
+              uri: http://localhost:9971
+              predicates:
+                - Path=/api/v1/movies/rltest/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    key-resolver: "#{@ipKeyResolver}"
+                    redis-rate-limiter.replenishRate: 1
+                    redis-rate-limiter.burstCapacity: 3
+                    redis-rate-limiter.requestedTokens: 1
 
-        # --- Movie service (public GET; also serves /api/v1/genres) ---
-        - id: movie-service
-          uri: http://localhost:9971
-          predicates:
-            - Path=/api/v1/movies/**,/api/v1/genres/**
-          filters:
-            - name: CircuitBreaker
-              args:
-                name: movieServiceCircuitBreaker
-                fallbackUri: forward:/fallback/movies
+            # --- Movie service (public GET; also serves /api/v1/genres) ---
+            - id: movie-service
+              uri: http://localhost:9971
+              predicates:
+                - Path=/api/v1/movies/**,/api/v1/genres/**
+              filters:
+                - name: CircuitBreaker
+                  args:
+                    name: movieServiceCircuitBreaker
+                    fallbackUri: forward:/fallback/movies
 
-        # --- User service (protected by Spring Security) ---
-        - id: user-service
-          uri: http://localhost:9971
-          predicates:
-            - Path=/api/v1/users/**
-          filters:
-            - name: CircuitBreaker
-              args:
-                name: userServiceCircuitBreaker
-                fallbackUri: forward:/fallback/users
+            # --- User service (protected by Spring Security) ---
+            - id: user-service
+              uri: http://localhost:9971
+              predicates:
+                - Path=/api/v1/users/**
+              filters:
+                - name: CircuitBreaker
+                  args:
+                    name: userServiceCircuitBreaker
+                    fallbackUri: forward:/fallback/users
 
-        # --- Actor service (public GET) ---
-        - id: actor-service
-          uri: http://localhost:9971
-          predicates:
-            - Path=/api/v1/actors/**
+            # --- Actor service (public GET) ---
+            - id: actor-service
+              uri: http://localhost:9971
+              predicates:
+                - Path=/api/v1/actors/**
 
-        # --- TMDB v3 facade routes (#33) → WireMock stand-in downstreams ---
-        - id: tmdb-movie-facade
-          uri: http://localhost:9971
-          predicates:
-            - Path=/movie/**,/genre/**,/discover/**,/search/**
-          filters:
-            - RemoveRequestParameter=api_key
-        - id: tmdb-person-facade
-          uri: http://localhost:9971
-          predicates:
-            - Path=/person/**
-          filters:
-            - RemoveRequestParameter=api_key
+            # --- TMDB v3 facade routes (#33) → WireMock stand-in downstreams ---
+            - id: tmdb-movie-facade
+              uri: http://localhost:9971
+              predicates:
+                - Path=/movie/**,/genre/**,/discover/**,/search/**
+              filters:
+                - RemoveRequestParameter=api_key
+            - id: tmdb-person-facade
+              uri: http://localhost:9971
+              predicates:
+                - Path=/person/**
+              filters:
+                - RemoveRequestParameter=api_key
 
-        # --- TMDB auth/account proxy (#33) → WireMock stands in for real TMDB.
-        # PrefixPath=/3 mirrors production; the client api_key is removed and the
-        # server-side key injected. ---
-        - id: tmdb-authentication-proxy
-          uri: http://localhost:9971
-          predicates:
-            - Path=/authentication/**
-          filters:
-            - PrefixPath=/3
-            - RemoveRequestParameter=api_key
-            - AddRequestParameter=api_key,${tmdb.api.key}
-        - id: tmdb-account-proxy
-          uri: http://localhost:9971
-          predicates:
-            - Path=/account/**
-          filters:
-            - PrefixPath=/3
-            - RemoveRequestParameter=api_key
-            - AddRequestParameter=api_key,${tmdb.api.key}
+            # --- TMDB auth/account proxy (#33) → WireMock stands in for real TMDB.
+            # PrefixPath=/3 mirrors production; the client api_key is removed and the
+            # server-side key injected. ---
+            - id: tmdb-authentication-proxy
+              uri: http://localhost:9971
+              predicates:
+                - Path=/authentication/**
+              filters:
+                - PrefixPath=/3
+                - RemoveRequestParameter=api_key
+                - AddRequestParameter=api_key,${tmdb.api.key}
+            - id: tmdb-account-proxy
+              uri: http://localhost:9971
+              predicates:
+                - Path=/account/**
+              filters:
+                - PrefixPath=/3
+                - RemoveRequestParameter=api_key
+                - AddRequestParameter=api_key,${tmdb.api.key}
 
   data:
     redis:

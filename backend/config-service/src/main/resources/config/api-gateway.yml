@@ -5,37 +5,39 @@ spring:
     name: api-gateway
   cloud:
     gateway:
-      routes:
-        - id: movie-service
-          uri: lb://MOVIE-SERVICE
-          predicates:
-            - Path=/api/v1/movies/**
-          filters:
-            - RewritePath=/api/v1/movies/(?<segment>.*), /${segment}
-        - id: user-service
-          uri: lb://USER-SERVICE
-          predicates:
-            - Path=/api/v1/users/**, /api/v1/auth/**
-          filters:
-            - RewritePath=/api/v1/(?<segment>.*), /${segment}
-        - id: actor-service
-          uri: lb://ACTOR-SERVICE
-          predicates:
-            - Path=/api/v1/actors/**
-          filters:
-            - RewritePath=/api/v1/actors/(?<segment>.*), /${segment}
-        - id: ai-service
-          uri: lb://AI-SERVICE
-          predicates:
-            - Path=/api/v1/ai/**, /api/v1/recommendations/**
-        - id: media-service
-          uri: lb://MEDIA-SERVICE
-          predicates:
-            - Path=/api/v1/media/**
-      discovery:
-        locator:
-          enabled: true
-          lower-case-service-id: true
+      server:
+        webflux:
+          routes:
+            - id: movie-service
+              uri: lb://MOVIE-SERVICE
+              predicates:
+                - Path=/api/v1/movies/**
+              filters:
+                - RewritePath=/api/v1/movies/(?<segment>.*), /${segment}
+            - id: user-service
+              uri: lb://USER-SERVICE
+              predicates:
+                - Path=/api/v1/users/**, /api/v1/auth/**
+              filters:
+                - RewritePath=/api/v1/(?<segment>.*), /${segment}
+            - id: actor-service
+              uri: lb://ACTOR-SERVICE
+              predicates:
+                - Path=/api/v1/actors/**
+              filters:
+                - RewritePath=/api/v1/actors/(?<segment>.*), /${segment}
+            - id: ai-service
+              uri: lb://AI-SERVICE
+              predicates:
+                - Path=/api/v1/ai/**, /api/v1/recommendations/**
+            - id: media-service
+              uri: lb://MEDIA-SERVICE
+              predicates:
+                - Path=/api/v1/media/**
+          discovery:
+            locator:
+              enabled: true
+              lower-case-service-id: true
   data:
     redis:
       host: ${REDIS_HOST:localhost}

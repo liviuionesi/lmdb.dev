@@ -4,10 +4,9 @@ server:
 spring:
   application:
     name: media-service
-  data:
-    mongodb:
-      uri: mongodb://admin:admin123@localhost:27017/filmpire?authSource=admin
-      database: filmpire
+  mongodb:
+    database: filmpire
+    uri: mongodb://admin:admin123@localhost:27017/filmpire?authSource=admin
 
 minio:
   endpoint: http://localhost:9000

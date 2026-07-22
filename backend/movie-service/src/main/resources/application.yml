@@ -4,12 +4,13 @@ server:
 spring:
   application:
     name: movie-service
-  
+
   # MongoDB Configuration
+  mongodb:
+    database: filmpire
+    uri: ${MONGODB_URI:mongodb://admin:admin123@localhost:27017/filmpire?authSource=admin}
+
   data:
-    mongodb:
-      uri: ${MONGODB_URI:mongodb://admin:admin123@localhost:27017/filmpire?authSource=admin}
-      database: filmpire
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
@@ -64,9 +65,9 @@ management:
     health:
       show-details: always
   health:
-    mongo:
-      enabled: true
     redis:
+      enabled: true
+    mongodb:
       enabled: true
   metrics:
     tags:

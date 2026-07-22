@@ -2,11 +2,31 @@ plugins {
     id 'java'
     id 'org.springframework.boot' apply false
     id 'io.spring.dependency-management' apply false
+    // OpenRewrite drives automated framework migrations (e.g. Spring Boot
+    // version upgrades) as reviewable, idempotent source transformations.
+    // Run `./gradlew rewriteDryRun` to preview, `./gradlew rewriteRun` to apply.
+    id 'org.openrewrite.rewrite' version "${openRewriteVersion}"
 }
 
 allprojects {
     group = 'com.filmpire'
     version = projectVersion
+}
+
+// OpenRewrite recipe wiring. Recipe artifacts resolve from the settings-level
+// repositories (settings.gradle enforces FAIL_ON_PROJECT_REPOS, so no
+// project-scoped repositories block is used here). The rewrite-recipe-bom pins
+// a mutually-compatible set of recipe module versions.
+dependencies {
+    rewrite platform("org.openrewrite.recipe:rewrite-recipe-bom:${rewriteRecipeBomVersion}")
+    rewrite 'org.openrewrite.recipe:rewrite-spring'
+}
+
+rewrite {
+    // Full Spring Boot 3.5 -> 4.0 migration: bumps Boot/Cloud/Framework/Security,
+    // renames deprecated starters, and rewrites deprecated/renamed APIs and
+    // configuration properties. See ADR-009.
+    activeRecipe('org.openrewrite.java.spring.boot4.UpgradeSpringBoot_4_0')
 }
 
 subprojects {

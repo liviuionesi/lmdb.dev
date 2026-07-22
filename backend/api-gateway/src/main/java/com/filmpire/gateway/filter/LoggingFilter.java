@@ -70,10 +70,10 @@ public class LoggingFilter implements GlobalFilter, Ordered {
         }
         
         // Log important headers (avoid logging sensitive information)
-        if (headers.containsKey("User-Agent")) {
+        if (headers.containsHeader("User-Agent")) {
             log.debug("User-Agent: {}", headers.getFirst("User-Agent"));
         }
-        if (headers.containsKey("X-Forwarded-For")) {
+        if (headers.containsHeader("X-Forwarded-For")) {
             log.debug("X-Forwarded-For: {}", headers.getFirst("X-Forwarded-For"));
         }
     }

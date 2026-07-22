@@ -8,7 +8,7 @@ dependencies {
     implementation project(':backend:shared-library')
     
     // Spring Cloud Gateway
-    implementation 'org.springframework.cloud:spring-cloud-starter-gateway'
+    implementation 'org.springframework.cloud:spring-cloud-starter-gateway-server-webflux'
     implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
     
     // Circuit Breaker with Resilience4j
@@ -25,17 +25,19 @@ dependencies {
     
     // Actuator for health checks
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
-    
+
     // Lombok for cleaner code
     compileOnly "org.projectlombok:lombok:${lombokVersion}"
     annotationProcessor "org.projectlombok:lombok:${lombokVersion}"
-    
+
     // Testing
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
-    testImplementation 'org.springframework.security:spring-security-test'
+    testImplementation 'org.springframework.boot:spring-boot-starter-security-test'
+    // Boot 4 modularized WebTestClient auto-configuration into its own module.
+    testImplementation 'org.springframework.boot:spring-boot-webtestclient'
     testImplementation 'io.projectreactor:reactor-test'
-    testImplementation "org.testcontainers:testcontainers:${testcontainersVersion}"
-    testImplementation "org.testcontainers:junit-jupiter:${testcontainersVersion}"
+    testImplementation 'org.testcontainers:testcontainers'
+    testImplementation 'org.testcontainers:testcontainers-junit-jupiter'
     // Gateway integration tests: WireMock stands in for downstream services
     testImplementation "org.wiremock:wiremock-standalone:${wiremockVersion}"
 }

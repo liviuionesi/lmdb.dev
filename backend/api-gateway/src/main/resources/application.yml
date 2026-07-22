@@ -17,205 +17,207 @@ spring:
   
   cloud:
     gateway:
-      # HTTP client configuration for connection limits and timeouts
-      httpclient:
-        pool:
-          max-connections: 1000  # Global max connections to prevent exhaustion
-          max-idle-time: 30s     # Close idle connections after 30 seconds
-          max-life-time: 60s     # Close connections after 60 seconds
-        connect-timeout: 5000    # 5 second connection timeout
-        response-timeout: 10s    # 10 second response timeout
-      # Global CORS configuration
-      globalcors:
-        cors-configurations:
-          '[/**]':
-            allowed-origins:
-              - "http://localhost:3000"
-              - "http://localhost:3001"
-              - "http://localhost:5173"
-            allowed-methods:
-              - GET
-              - POST
-              - PUT
-              - DELETE
-              - PATCH
-              - OPTIONS
-            allowed-headers:
-              - "*"
-            allow-credentials: true
-            max-age: 3600
+      server:
+        webflux:
+          # HTTP client configuration for connection limits and timeouts
+          httpclient:
+            pool:
+              max-connections: 1000  # Global max connections to prevent exhaustion
+              max-idle-time: 30s     # Close idle connections after 30 seconds
+              max-life-time: 60s     # Close connections after 60 seconds
+            connect-timeout: 5000    # 5 second connection timeout
+            response-timeout: 10s    # 10 second response timeout
+          # Global CORS configuration
+          globalcors:
+            cors-configurations:
+              '[/**]':
+                allowed-origins:
+                  - "http://localhost:3000"
+                  - "http://localhost:3001"
+                  - "http://localhost:5173"
+                allowed-methods:
+                  - GET
+                  - POST
+                  - PUT
+                  - DELETE
+                  - PATCH
+                  - OPTIONS
+                allowed-headers:
+                  - "*"
+                allow-credentials: true
+                max-age: 3600
       
-      # Default filters for all routes
-      default-filters:
-        - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_UNIQUE
-        - name: Retry
-          args:
-            retries: 3
-            statuses: BAD_GATEWAY,SERVICE_UNAVAILABLE
-            methods: GET
-            backoff:
-              firstBackoff: 50ms
-              maxBackoff: 500ms
-              factor: 2
-              basedOnPreviousValue: false
+          # Default filters for all routes
+          default-filters:
+            - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_UNIQUE
+            - name: Retry
+              args:
+                retries: 3
+                statuses: BAD_GATEWAY,SERVICE_UNAVAILABLE
+                methods: GET
+                backoff:
+                  firstBackoff: 50ms
+                  maxBackoff: 500ms
+                  factor: 2
+                  basedOnPreviousValue: false
       
-      # Route definitions
-      routes:
-        # Movie Service Routes
-        - id: movie-service
-          uri: lb://movie-service
-          predicates:
-            - Path=/api/v1/movies/**,/api/v1/genres/**
-          filters:
-            - name: CircuitBreaker
-              args:
-                name: movieServiceCircuitBreaker
-                fallbackUri: forward:/fallback/movies
-            - name: RequestRateLimiter
-              args:
-                key-resolver: "#{@ipKeyResolver}"
-                redis-rate-limiter.replenishRate: 10
-                redis-rate-limiter.burstCapacity: 20
-                redis-rate-limiter.requestedTokens: 1
+          # Route definitions
+          routes:
+            # Movie Service Routes
+            - id: movie-service
+              uri: lb://movie-service
+              predicates:
+                - Path=/api/v1/movies/**,/api/v1/genres/**
+              filters:
+                - name: CircuitBreaker
+                  args:
+                    name: movieServiceCircuitBreaker
+                    fallbackUri: forward:/fallback/movies
+                - name: RequestRateLimiter
+                  args:
+                    key-resolver: "#{@ipKeyResolver}"
+                    redis-rate-limiter.replenishRate: 10
+                    redis-rate-limiter.burstCapacity: 20
+                    redis-rate-limiter.requestedTokens: 1
         
-        # User Service Routes
-        - id: user-service
-          uri: lb://user-service
-          predicates:
-            - Path=/api/v1/users/**
-          filters:
-            - name: CircuitBreaker
-              args:
-                name: userServiceCircuitBreaker
-                fallbackUri: forward:/fallback/users
-            - name: RequestRateLimiter
-              args:
-                key-resolver: "#{@ipKeyResolver}"
-                redis-rate-limiter.replenishRate: 10
-                redis-rate-limiter.burstCapacity: 20
+            # User Service Routes
+            - id: user-service
+              uri: lb://user-service
+              predicates:
+                - Path=/api/v1/users/**
+              filters:
+                - name: CircuitBreaker
+                  args:
+                    name: userServiceCircuitBreaker
+                    fallbackUri: forward:/fallback/users
+                - name: RequestRateLimiter
+                  args:
+                    key-resolver: "#{@ipKeyResolver}"
+                    redis-rate-limiter.replenishRate: 10
+                    redis-rate-limiter.burstCapacity: 20
         
-        # Authentication Routes (strict rate limiting to prevent brute force)
-        - id: auth-service
-          uri: lb://user-service
-          predicates:
-            - Path=/api/v1/auth/**
-          filters:
-            - name: CircuitBreaker
-              args:
-                name: authServiceCircuitBreaker
-                fallbackUri: forward:/fallback/auth
-            - name: RequestRateLimiter
-              args:
-                key-resolver: "#{@ipKeyResolver}"
-                redis-rate-limiter.replenishRate: 5
-                redis-rate-limiter.burstCapacity: 10
+            # Authentication Routes (strict rate limiting to prevent brute force)
+            - id: auth-service
+              uri: lb://user-service
+              predicates:
+                - Path=/api/v1/auth/**
+              filters:
+                - name: CircuitBreaker
+                  args:
+                    name: authServiceCircuitBreaker
+                    fallbackUri: forward:/fallback/auth
+                - name: RequestRateLimiter
+                  args:
+                    key-resolver: "#{@ipKeyResolver}"
+                    redis-rate-limiter.replenishRate: 5
+                    redis-rate-limiter.burstCapacity: 10
         
-        # Actor Service Routes
-        - id: actor-service
-          uri: lb://actor-service
-          predicates:
-            - Path=/api/v1/actors/**
-          filters:
-            - name: CircuitBreaker
-              args:
-                name: actorServiceCircuitBreaker
-                fallbackUri: forward:/fallback/actors
-            - name: RequestRateLimiter
-              args:
-                key-resolver: "#{@ipKeyResolver}"
-                redis-rate-limiter.replenishRate: 10
-                redis-rate-limiter.burstCapacity: 20
+            # Actor Service Routes
+            - id: actor-service
+              uri: lb://actor-service
+              predicates:
+                - Path=/api/v1/actors/**
+              filters:
+                - name: CircuitBreaker
+                  args:
+                    name: actorServiceCircuitBreaker
+                    fallbackUri: forward:/fallback/actors
+                - name: RequestRateLimiter
+                  args:
+                    key-resolver: "#{@ipKeyResolver}"
+                    redis-rate-limiter.replenishRate: 10
+                    redis-rate-limiter.burstCapacity: 20
         
-        # AI Service Routes
-        - id: ai-service
-          uri: lb://ai-service
-          predicates:
-            - Path=/api/v1/ai/**, /api/v1/recommendations/**
-          filters:
-            - name: CircuitBreaker
-              args:
-                name: aiServiceCircuitBreaker
-                fallbackUri: forward:/fallback/ai
-            - name: RequestRateLimiter
-              args:
-                key-resolver: "#{@ipKeyResolver}"
-                redis-rate-limiter.replenishRate: 5
-                redis-rate-limiter.burstCapacity: 10
+            # AI Service Routes
+            - id: ai-service
+              uri: lb://ai-service
+              predicates:
+                - Path=/api/v1/ai/**, /api/v1/recommendations/**
+              filters:
+                - name: CircuitBreaker
+                  args:
+                    name: aiServiceCircuitBreaker
+                    fallbackUri: forward:/fallback/ai
+                - name: RequestRateLimiter
+                  args:
+                    key-resolver: "#{@ipKeyResolver}"
+                    redis-rate-limiter.replenishRate: 5
+                    redis-rate-limiter.burstCapacity: 10
         
-        # Media Service Routes
-        - id: media-service
-          uri: lb://media-service
-          predicates:
-            - Path=/api/v1/media/**
-          filters:
-            - name: CircuitBreaker
-              args:
-                name: mediaServiceCircuitBreaker
-                fallbackUri: forward:/fallback/media
-            - name: RequestRateLimiter
-              args:
-                key-resolver: "#{@ipKeyResolver}"
-                redis-rate-limiter.replenishRate: 20
-                redis-rate-limiter.burstCapacity: 40
+            # Media Service Routes
+            - id: media-service
+              uri: lb://media-service
+              predicates:
+                - Path=/api/v1/media/**
+              filters:
+                - name: CircuitBreaker
+                  args:
+                    name: mediaServiceCircuitBreaker
+                    fallbackUri: forward:/fallback/media
+                - name: RequestRateLimiter
+                  args:
+                    key-resolver: "#{@ipKeyResolver}"
+                    redis-rate-limiter.replenishRate: 20
+                    redis-rate-limiter.burstCapacity: 40
 
-        # ---------------------------------------------------------------
-        # TMDB v3 FACADE routes (#33) — bare TMDB paths the Filmpire React
-        # app calls. Served by the movie/actor facade controllers, which
-        # inject the server-side TMDB key themselves; the gateway strips any
-        # client-sent api_key so it never reaches a downstream.
-        # ---------------------------------------------------------------
-        - id: tmdb-movie-facade
-          uri: lb://movie-service
-          predicates:
-            - Path=/movie/**,/genre/**,/discover/**,/search/**
-          filters:
-            - RemoveRequestParameter=api_key
-            - name: CircuitBreaker
-              args:
-                name: movieServiceCircuitBreaker
-                fallbackUri: forward:/fallback/movies
+            # ---------------------------------------------------------------
+            # TMDB v3 FACADE routes (#33) — bare TMDB paths the Filmpire React
+            # app calls. Served by the movie/actor facade controllers, which
+            # inject the server-side TMDB key themselves; the gateway strips any
+            # client-sent api_key so it never reaches a downstream.
+            # ---------------------------------------------------------------
+            - id: tmdb-movie-facade
+              uri: lb://movie-service
+              predicates:
+                - Path=/movie/**,/genre/**,/discover/**,/search/**
+              filters:
+                - RemoveRequestParameter=api_key
+                - name: CircuitBreaker
+                  args:
+                    name: movieServiceCircuitBreaker
+                    fallbackUri: forward:/fallback/movies
 
-        - id: tmdb-person-facade
-          uri: lb://actor-service
-          predicates:
-            - Path=/person/**
-          filters:
-            - RemoveRequestParameter=api_key
-            - name: CircuitBreaker
-              args:
-                name: actorServiceCircuitBreaker
-                fallbackUri: forward:/fallback/actors
+            - id: tmdb-person-facade
+              uri: lb://actor-service
+              predicates:
+                - Path=/person/**
+              filters:
+                - RemoveRequestParameter=api_key
+                - name: CircuitBreaker
+                  args:
+                    name: actorServiceCircuitBreaker
+                    fallbackUri: forward:/fallback/actors
 
-        # ---------------------------------------------------------------
-        # TMDB auth/account PROXY routes (#33) — passed straight through to
-        # the real TMDB so the React app's login + favorites/watchlist keep
-        # using the user's real TMDB account. The gateway removes the
-        # client's api_key and injects the server-side key; session_id is
-        # forwarded untouched. PrefixPath=/3 restores the TMDB v3 base path.
-        # ---------------------------------------------------------------
-        - id: tmdb-authentication-proxy
-          uri: https://api.themoviedb.org
-          predicates:
-            - Path=/authentication/**
-          filters:
-            - PrefixPath=/3
-            - RemoveRequestParameter=api_key
-            - AddRequestParameter=api_key,${tmdb.api.key}
+            # ---------------------------------------------------------------
+            # TMDB auth/account PROXY routes (#33) — passed straight through to
+            # the real TMDB so the React app's login + favorites/watchlist keep
+            # using the user's real TMDB account. The gateway removes the
+            # client's api_key and injects the server-side key; session_id is
+            # forwarded untouched. PrefixPath=/3 restores the TMDB v3 base path.
+            # ---------------------------------------------------------------
+            - id: tmdb-authentication-proxy
+              uri: https://api.themoviedb.org
+              predicates:
+                - Path=/authentication/**
+              filters:
+                - PrefixPath=/3
+                - RemoveRequestParameter=api_key
+                - AddRequestParameter=api_key,${tmdb.api.key}
 
-        - id: tmdb-account-proxy
-          uri: https://api.themoviedb.org
-          predicates:
-            - Path=/account/**
-          filters:
-            - PrefixPath=/3
-            - RemoveRequestParameter=api_key
-            - AddRequestParameter=api_key,${tmdb.api.key}
+            - id: tmdb-account-proxy
+              uri: https://api.themoviedb.org
+              predicates:
+                - Path=/account/**
+              filters:
+                - PrefixPath=/3
+                - RemoveRequestParameter=api_key
+                - AddRequestParameter=api_key,${tmdb.api.key}
 
-      # Service discovery
-      discovery:
-        locator:
-          enabled: true
-          lower-case-service-id: true
+          # Service discovery
+          discovery:
+            locator:
+              enabled: true
+              lower-case-service-id: true
   
   # Redis configuration for rate limiting
   data:

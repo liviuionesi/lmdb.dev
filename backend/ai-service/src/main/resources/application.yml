@@ -4,10 +4,6 @@ server:
 spring:
   application:
     name: ai-service
-  data:
-    mongodb:
-      uri: mongodb://admin:admin123@localhost:27017/filmpire?authSource=admin
-      database: filmpire
   ai:
     openai:
       api-key: ${OPENAI_API_KEY:your-api-key-here}
@@ -15,6 +11,9 @@ spring:
         options:
           model: gpt-4
           temperature: 0.7
+  mongodb:
+    database: filmpire
+    uri: mongodb://admin:admin123@localhost:27017/filmpire?authSource=admin
 
 eureka:
   client:

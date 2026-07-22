@@ -176,6 +176,7 @@ Significant decisions are recorded in [`adr/`](adr/):
 | [006](adr/006-kafka-event-bus.md) | Kafka event bus for save-through events & analytics |
 | [007](adr/007-distributed-tracing-zipkin.md) | Distributed tracing now (Micrometer Tracing + Zipkin) |
 | [008](adr/008-contract-testing.md) | Contract testing with Spring Cloud Contract |
+| [009](adr/009-openrewrite-spring-boot-4-migration.md) | OpenRewrite-driven Spring Boot 3.5 → 4.0 migration (Framework 7, Jackson 3, Cloud 2025.1) |
 
 ### 2.4 Failure-Mode Matrix
 

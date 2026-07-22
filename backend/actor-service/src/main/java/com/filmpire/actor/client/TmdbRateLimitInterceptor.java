@@ -3,11 +3,11 @@ package com.filmpire.actor.client;
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.NonNull;
 import org.springframework.http.HttpRequest;
 import org.springframework.http.client.ClientHttpRequestExecution;
 import org.springframework.http.client.ClientHttpRequestInterceptor;
 import org.springframework.http.client.ClientHttpResponse;
-import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -54,7 +54,7 @@ public class TmdbRateLimitInterceptor implements ClientHttpRequestInterceptor {
     @Override
     @NonNull
     public ClientHttpResponse intercept(@NonNull HttpRequest request,
-                                        @NonNull byte[] body,
+            byte @NonNull[] body,
                                         @NonNull ClientHttpRequestExecution execution) throws IOException {
         try {
             // Block the calling thread until a token frees — better a slow

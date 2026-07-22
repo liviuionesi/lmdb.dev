@@ -3,6 +3,7 @@ package com.filmpire.movie.client;
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.NonNull;
 import org.springframework.http.HttpRequest;
 import org.springframework.http.client.ClientHttpRequestExecution;
 import org.springframework.http.client.ClientHttpRequestInterceptor;
@@ -11,7 +12,6 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.time.Duration;
-import org.springframework.lang.NonNull;
 
 /**
  * Intercepts outbound Http requests to the TMDB API to enforce rate limits.
@@ -36,7 +36,7 @@ public class TmdbRateLimitInterceptor implements ClientHttpRequestInterceptor {
 
     @Override
     @NonNull
-    public ClientHttpResponse intercept(@NonNull HttpRequest request, @NonNull byte[] body, @NonNull ClientHttpRequestExecution execution) throws IOException {
+    public ClientHttpResponse intercept(@NonNull HttpRequest request, byte @NonNull[] body, @NonNull ClientHttpRequestExecution execution) throws IOException {
         try {
             // Block thread until a token is available to avoid 429 Too Many Requests
             log.debug("Awaiting TMDB rate limit token for: {}", request.getURI());

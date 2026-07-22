@@ -13,14 +13,16 @@ spring:
   
   cloud:
     gateway:
-      routes:
-        - id: test-route
-          uri: http://localhost:8080
-          predicates:
-            - Path=/test/**
-      discovery:
-        locator:
-          enabled: false  # Disable for unit tests
+      server:
+        webflux:
+          routes:
+            - id: test-route
+              uri: http://localhost:8080
+              predicates:
+                - Path=/test/**
+          discovery:
+            locator:
+              enabled: false  # Disable for unit tests
 
 eureka:
   client:

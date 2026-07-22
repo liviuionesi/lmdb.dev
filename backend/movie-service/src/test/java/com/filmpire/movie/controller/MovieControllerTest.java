@@ -6,7 +6,9 @@ import com.filmpire.shared.dto.PageResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
+import com.filmpire.movie.support.TestCacheConfig;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
@@ -30,6 +32,7 @@ import static org.hamcrest.Matchers.*;
  * shape" from the service's business logic (covered in MovieServiceTest).</p>
  */
 @WebMvcTest(MovieController.class)
+@Import(TestCacheConfig.class)
 @DisplayName("MovieController Tests")
 class MovieControllerTest {
 
