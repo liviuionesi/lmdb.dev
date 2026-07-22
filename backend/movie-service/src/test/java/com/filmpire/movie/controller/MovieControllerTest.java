@@ -1,6 +1,7 @@
 package com.filmpire.movie.controller;
 
 import com.filmpire.movie.dto.*;
+import com.filmpire.movie.model.SpokenLanguage;
 import com.filmpire.movie.service.MovieService;
 import com.filmpire.shared.dto.PageResponse;
 import org.junit.jupiter.api.DisplayName;
@@ -388,7 +389,7 @@ class MovieControllerTest {
                 .status("Released")
                 .budget(63000000L)
                 .revenue(100853753L)
-                .spokenLanguages(Arrays.asList("English"))
+                .spokenLanguages(List.of(SpokenLanguage.builder().iso6391("en").name("English").build()))
                 .originalLanguage("en")
                 .popularity(450.5)
                 .adult(false)

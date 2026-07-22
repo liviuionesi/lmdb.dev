@@ -7,18 +7,14 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * Production company entity.
+ * A language spoken in a movie, as TMDB reports it (ISO 639-1 code + name).
  */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ProductionCompany {
-    private Long id;
+public class SpokenLanguage {
+    @JsonProperty("iso_639_1")
+    private String iso6391;
     private String name;
-    @JsonProperty("logo_path")
-    private String logoPath;
-    @JsonProperty("origin_country")
-    private String originCountry;
 }
-

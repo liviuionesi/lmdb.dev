@@ -1,5 +1,9 @@
 package com.filmpire.movie.dto;
 
+import com.filmpire.movie.model.MovieCollection;
+import com.filmpire.movie.model.ProductionCompany;
+import com.filmpire.movie.model.ProductionCountry;
+import com.filmpire.movie.model.SpokenLanguage;
 import java.io.Serializable;
 import java.time.LocalDate;
 import java.util.List;
@@ -13,6 +17,7 @@ public record MovieDto(
     String id,
     Long tmdbId,
     String title,
+    String originalTitle,
     String overview,
     String posterPath,
     String backdropPath,
@@ -24,7 +29,11 @@ public record MovieDto(
     String status,
     Long budget,
     Long revenue,
-    List<String> spokenLanguages,
+    List<SpokenLanguage> spokenLanguages,
+    List<ProductionCompany> productionCompanies,
+    List<ProductionCountry> productionCountries,
+    MovieCollection belongsToCollection,
+    Boolean video,
     String originalLanguage,
     Double popularity,
     Boolean adult,

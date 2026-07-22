@@ -238,6 +238,7 @@ class MovieServiceCacheTest {
         return new TmdbMovieResponse(
             tmdbId,
             "Fight Club",
+            "Fight Club",
             "An insomniac office worker...",
             "/poster.jpg",
             null,
@@ -251,9 +252,14 @@ class MovieServiceCacheTest {
             100853753L,
             null,
             null,
+            null,
+            null,
+            false,
             "en",
             450.5,
             false,
+            null,
+            null,
             null,
             null,
             null

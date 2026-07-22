@@ -4,8 +4,12 @@ import com.filmpire.movie.client.TmdbClient;
 import com.filmpire.movie.client.dto.*;
 import com.filmpire.movie.dto.*;
 import com.filmpire.movie.mapper.MovieMapper;
+import com.filmpire.movie.model.Cast;
+import com.filmpire.movie.model.Credits;
+import com.filmpire.movie.model.Crew;
 import com.filmpire.movie.model.Genre;
 import com.filmpire.movie.model.Movie;
+import com.filmpire.movie.model.Video;
 import com.filmpire.movie.repository.MovieRepository;
 import com.filmpire.shared.dto.PageResponse;
 import org.junit.jupiter.api.BeforeEach;
@@ -133,7 +137,7 @@ class MovieServiceTest {
     void discoverMovies_ShouldReturnPaginatedMovies() {
         // Arrange
         TmdbMovieListResponse tmdbResponse = createTestTmdbMovieListResponse();
-        when(tmdbClient.discoverMovies(tmdbApiKey, 1, "popularity.desc", null, null, null))
+        when(tmdbClient.discoverMovies(tmdbApiKey, 1, "popularity.desc", null, null, null, null))
                 .thenReturn(tmdbResponse);
 
         // Act
@@ -144,7 +148,7 @@ class MovieServiceTest {
         assertThat(result.getContent()).hasSize(2);
         assertThat(result.getTotalElements()).isEqualTo(100);
         assertThat(result.getTotalPages()).isEqualTo(5);
-        verify(tmdbClient).discoverMovies(tmdbApiKey, 1, "popularity.desc", null, null, null);
+        verify(tmdbClient).discoverMovies(tmdbApiKey, 1, "popularity.desc", null, null, null, null);
     }
 
     /**
@@ -161,7 +165,7 @@ class MovieServiceTest {
         Double minRating = 7.5;
         TmdbMovieListResponse tmdbResponse = createTestTmdbMovieListResponse();
         
-        when(tmdbClient.discoverMovies(tmdbApiKey, 1, "popularity.desc", genreId, year, minRating))
+        when(tmdbClient.discoverMovies(tmdbApiKey, 1, "popularity.desc", genreId, year, minRating, null))
                 .thenReturn(tmdbResponse);
 
         // Act
@@ -169,7 +173,7 @@ class MovieServiceTest {
 
         // Assert
         assertThat(result).isNotNull();
-        verify(tmdbClient).discoverMovies(tmdbApiKey, 1, "popularity.desc", genreId, year, minRating);
+        verify(tmdbClient).discoverMovies(tmdbApiKey, 1, "popularity.desc", genreId, year, minRating, null);
     }
 
     /**
@@ -266,6 +270,13 @@ class MovieServiceTest {
         Long movieId = 550L;
         TmdbVideosResponse tmdbResponse = createTestTmdbVideosResponse();
         when(tmdbClient.getMovieVideos(movieId, tmdbApiKey)).thenReturn(tmdbResponse);
+        when(movieMapper.toDto(any(Video.class))).thenAnswer(inv -> {
+            Video v = inv.getArgument(0);
+            return VideoDto.builder()
+                    .id(v.getId()).key(v.getKey()).name(v.getName()).site(v.getSite())
+                    .size(v.getSize()).type(v.getType()).official(v.getOfficial())
+                    .publishedAt(v.getPublishedAt()).build();
+        });
 
         // Act
         List<VideoDto> result = movieService.getMovieVideos(movieId);
@@ -290,6 +301,22 @@ class MovieServiceTest {
         Long movieId = 550L;
         TmdbCreditsResponse tmdbResponse = createTestTmdbCreditsResponse();
         when(tmdbClient.getMovieCredits(movieId, tmdbApiKey)).thenReturn(tmdbResponse);
+        when(movieMapper.toDto(any(Credits.class))).thenAnswer(inv -> {
+            Credits c = inv.getArgument(0);
+            return CreditsDto.builder()
+                    .movieId(c.getMovieId())
+                    .cast(c.getCast().stream()
+                            .map(cast -> CastDto.builder()
+                                    .id(cast.getId()).name(cast.getName()).character(cast.getCharacter())
+                                    .profilePath(cast.getProfilePath()).order(cast.getOrder()).build())
+                            .toList())
+                    .crew(c.getCrew().stream()
+                            .map(crew -> CrewDto.builder()
+                                    .id(crew.getId()).name(crew.getName()).job(crew.getJob())
+                                    .department(crew.getDepartment()).profilePath(crew.getProfilePath()).build())
+                            .toList())
+                    .build();
+        });
 
         // Act
         CreditsDto result = movieService.getMovieCredits(movieId);
@@ -437,6 +464,7 @@ class MovieServiceTest {
         return new TmdbMovieResponse(
             tmdbId,
             "Fight Club",
+            "Fight Club",
             "An insomniac office worker...",
             "/poster.jpg",
             "/backdrop.jpg",
@@ -453,9 +481,14 @@ class MovieServiceTest {
             100853753L,
             null,
             null,
+            null,
+            null,
+            false,
             "en",
             450.5,
             false,
+            null,
+            null,
             null,
             null,
             null

@@ -35,6 +35,7 @@ public interface TmdbClient {
      * @param genreId Genre ID filter
      * @param year Release year filter
      * @param minRating Minimum rating filter
+     * @param castId Cast member TMDB person ID filter (TMDB's {@code with_cast})
      * @return List of movies
      */
     @GetExchange("/discover/movie")
@@ -44,7 +45,8 @@ public interface TmdbClient {
         @RequestParam(value = "sort_by", defaultValue = "popularity.desc") String sortBy,
         @RequestParam(value = "with_genres", required = false) Long genreId,
         @RequestParam(value = "year", required = false) Integer year,
-        @RequestParam(value = "vote_average.gte", required = false) Double minRating
+        @RequestParam(value = "vote_average.gte", required = false) Double minRating,
+        @RequestParam(value = "with_cast", required = false) Long castId
     );
 
     /**
@@ -99,6 +101,32 @@ public interface TmdbClient {
      */
     @GetExchange("/movie/top_rated")
     TmdbMovieListResponse getTopRatedMovies(
+        @RequestParam("api_key") String apiKey,
+        @RequestParam(value = "page", defaultValue = "1") Integer page
+    );
+
+    /**
+     * Get upcoming movie releases.
+     *
+     * @param apiKey API key
+     * @param page Page number
+     * @return List of upcoming movies
+     */
+    @GetExchange("/movie/upcoming")
+    TmdbMovieListResponse getUpcomingMovies(
+        @RequestParam("api_key") String apiKey,
+        @RequestParam(value = "page", defaultValue = "1") Integer page
+    );
+
+    /**
+     * Get movies currently in theaters.
+     *
+     * @param apiKey API key
+     * @param page Page number
+     * @return List of now-playing movies
+     */
+    @GetExchange("/movie/now_playing")
+    TmdbMovieListResponse getNowPlayingMovies(
         @RequestParam("api_key") String apiKey,
         @RequestParam(value = "page", defaultValue = "1") Integer page
     );

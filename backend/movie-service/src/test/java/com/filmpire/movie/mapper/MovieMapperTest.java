@@ -56,7 +56,7 @@ class MovieMapperTest {
                 .status("Released")
                 .budget(63000000L)
                 .revenue(100853753L)
-                .spokenLanguages(Arrays.asList("English"))
+                .spokenLanguages(List.of(SpokenLanguage.builder().iso6391("en").name("English").build()))
                 .originalLanguage("en")
                 .popularity(450.5)
                 .adult(false)
@@ -87,7 +87,9 @@ class MovieMapperTest {
         assertThat(dto.status()).isEqualTo("Released");
         assertThat(dto.budget()).isEqualTo(63000000L);
         assertThat(dto.revenue()).isEqualTo(100853753L);
-        assertThat(dto.spokenLanguages()).containsExactly("English");
+        assertThat(dto.spokenLanguages())
+            .extracting(SpokenLanguage::getName)
+            .containsExactly("English");
         assertThat(dto.originalLanguage()).isEqualTo("en");
         assertThat(dto.popularity()).isEqualTo(450.5);
         assertThat(dto.adult()).isFalse();

@@ -808,7 +808,14 @@ public class AIRecommendationService {
 
 **Port:** 8085  
 **Database:** MongoDB  
-**Storage:** MinIO (S3-compatible) or local filesystem
+**Storage:** MinIO (S3-compatible) or local filesystem — for future
+user-uploaded content only. TMDB-sourced media (posters, backdrops,
+trailers) is NEVER downloaded or stored as a file: this service persists
+only the TMDB CDN reference (`poster_path`/`backdrop_path`/a YouTube video
+key) plus metadata, and the client resolves those into `image.tmdb.org` /
+YouTube URLs itself, exactly as the native TMDB API does. Deliberate
+constraint: the dev machine has limited local disk, and re-hosting TMDB's
+media would add no value a CDN doesn't already provide.
 
 **Why MongoDB?**
 - Document-oriented metadata storage
@@ -974,60 +981,85 @@ public class CacheConfig {
 
 ### 5.1 Primary API: TMDB v3-Compatible Facade
 
-**This is the product.** The gateway exposes the exact TMDB v3 API surface —
-same paths, same query parameters, same JSON response shapes — so the
-Filmpire React app works by changing only its base URL. Response bodies must
-be byte-for-byte shape-compatible with TMDB (`{page, results, total_pages,
-total_results}` for lists, TMDB's exact field names everywhere). The
-`api_key` query parameter sent by the app is accepted and ignored; the real
-TMDB key lives server-side only.
+**This is the product — but as of ADR-010, it is not a proxy.** The gateway
+exposes the exact TMDB v3 API surface — same paths, same query parameters,
+same JSON response shapes (`{page, results, total_pages, total_results}` for
+lists, TMDB's exact field names everywhere) — so the Filmpire React app
+works by changing only its base URL and its auth flow (see endpoints 10–14
+below). What sits behind that surface is Filmpire's own persisted, typed,
+queryable catalog (`Movie`, `Actor`, …), fetched from TMDB once per resource
+and mapped/save-through rather than cached as opaque bytes (ADR-010,
+superseding ADR-003). The `api_key` query parameter sent by the app is
+accepted and ignored; the real TMDB key lives server-side only, used to
+populate that catalog.
 
 **Endpoints required by the React app (`src/services/TMDB.js`,
 `src/utils/index.js`) — the facade MUST implement all of these:**
 
 | # | TMDB v3 Endpoint | Used by (React app) | Backing service | Strategy |
 |---|------------------|---------------------|-----------------|----------|
-| 1 | `GET /genre/movie/list` | Sidebar genres | Movie | read-through |
-| 2 | `GET /movie/{category}?page=` (popular, top_rated, upcoming) | Category browsing | Movie | read-through |
-| 3 | `GET /discover/movie?with_genres={id}&page=` | Genre browsing | Movie | read-through |
-| 4 | `GET /search/movie?query=&page=` | Search | Movie | read-through |
-| 5 | `GET /movie/{id}?append_to_response=videos,credits` | Movie details page | Movie | read-through |
-| 6 | `GET /movie/{id}/recommendations` | Details page | Movie | read-through |
-| 7 | `GET /movie/{id}/similar` | Details page | Movie | read-through |
-| 8 | `GET /person/{id}` | Actor page | Actor | read-through |
-| 9 | `GET /discover/movie?with_cast={id}&page=` | Actor filmography | Actor | read-through |
-| 10 | `GET /authentication/token/new` | Login | Gateway | **proxy to real TMDB** |
-| 11 | `POST /authentication/session/new` | Login | Gateway | **proxy to real TMDB** |
-| 12 | `GET /account` | Profile | Gateway | **proxy to real TMDB** |
-| 13 | `GET /account/{id}/{listName}?session_id=&page=` (favorite/movies, watchlist/movies) | Profile lists | Gateway | **proxy to real TMDB** |
-| 14 | `POST /account/{id}/favorite`, `POST /account/{id}/watchlist` | Toggle buttons | Gateway | **proxy to real TMDB** |
+| 1 | `GET /genre/movie/list` | Sidebar genres | Movie | live (small, static taxonomy) + Redis cache |
+| 2 | `GET /movie/{category}?page=` (popular, top_rated, upcoming, now_playing) | Category browsing | Movie | live ranking, results upserted |
+| 3 | `GET /discover/movie?with_genres={id}&page=` | Genre browsing | Movie | live ranking, results upserted |
+| 4 | `GET /search/movie?query=&page=` | Search | Movie | live ranking, results upserted |
+| 5 | `GET /movie/{id}?append_to_response=videos,credits` | Movie details page | Movie | read-through/save-through (MongoDB) |
+| 6 | `GET /movie/{id}/recommendations` | Details page | Movie | live ranking, results upserted |
+| 7 | `GET /movie/{id}/similar` | Details page | Movie | live ranking, results upserted |
+| 8 | `GET /person/{id}` | Actor page | Actor | read-through/save-through (PostgreSQL) |
+| 9 | `GET /discover/movie?with_cast={id}&page=` | Actor filmography | Actor (via Movie) | live ranking, results upserted |
+| 10 | Login | Gateway → user-service | **planned: Filmpire JWT, not TMDB session proxy — see below** |
+| 11 | Register | Gateway → user-service | **planned: Filmpire JWT, not TMDB session proxy — see below** |
+| 12 | Profile | Gateway → user-service | **planned: Filmpire JWT, not TMDB session proxy — see below** |
+| 13 | Favorites / watchlist lists | Gateway → user-service | **planned: Filmpire JWT, not TMDB session proxy — see below** |
+| 14 | Favorites / watchlist toggle | Gateway → user-service | **planned: Filmpire JWT, not TMDB session proxy — see below** |
 
-**Read-through / save-through flow (endpoints 1–9):**
+**Read-through / save-through flow (endpoints 5, 8 — near-immutable detail
+resources):**
 ```
-Request → Redis (TTL cache)
-            └─ miss → MongoDB
-                        └─ miss → real TMDB API (rate-limited, Bucket4j)
-                                    └─ save TMDB response → MongoDB
-                                       populate Redis → return to app
+Request → MongoDB/PostgreSQL (by TMDB id)
+            └─ miss → real TMDB API (rate-limited, Bucket4j)
+                        └─ map into the typed entity → save → return
 ```
-- The stored document IS the TMDB response shape (no lossy remapping), so
-  serving from MongoDB is always shape-identical to serving from TMDB.
-- Search results and paginated lists cache per (endpoint, params, page) key
-  with shorter TTLs; movie/person details cache long.
+Once a detail record exists it is served locally indefinitely — budget,
+runtime, cast, etc. for a released movie don't change. `append_to_response`
+sub-resources (videos, credits) are fetched and persisted the same way, the
+first time they're requested, then embedded on subsequent responses without
+another TMDB round trip.
+
+**Live-ranking flow (endpoints 1–4, 6, 7, 9 — lists/search/discovery):**
+```
+Request → real TMDB API (rate-limited, Bucket4j) → Redis-cached response
+            └─ every movie in the results is upserted into MongoDB
+```
+TMDB's search/ranking/recommendation algorithms are not reimplemented — these
+calls stay live — but every movie any endpoint has ever returned accumulates
+in Filmpire's own MongoDB catalog, growing a real, queryable dataset from
+traffic (ADR-010). A movie only ever seen via a list carries the list-item
+fields until its own detail endpoint is hit at least once, which fills in
+the rest (progressive enrichment).
+
 - Images: the app builds `image.tmdb.org` URLs from `poster_path` fields —
-  images stay on TMDB's CDN (no proxying; media-service may cache them later).
+  images stay on TMDB's CDN (no proxying; media-service stores/serves only
+  those URLs, never the binaries — see §3.8).
 
-**Auth/account proxy (endpoints 10–14):** transparent pass-through to
-`api.themoviedb.org/3` with the server-side API key injected; the
-`themoviedb.org` approval redirect flow keeps working with the user's real
-TMDB account. No account data is stored locally (user-service local accounts
-are a separate, later feature).
+**Auth/account (endpoints 10–14) — planned change, not yet implemented:**
+these were originally a transparent pass-through to `api.themoviedb.org/3`
+(TMDB's own request-token/session-id flow). The product decision is now to
+retarget them at Filmpire's own user-service JWT auth (register/login,
+favorites, watchlist — already implemented and tested, see §3.5) instead,
+so the account features the showcase highlights are backed by Filmpire's own
+data, not TMDB's. This requires editing the React app's auth code
+(`src/services/TMDB.js`, `src/utils/index.js`, `NavBar`, `Profile`), not
+just its base URL — tracked as a follow-up to issue #33/#34.
 
 ### 5.1b Secondary API: Native `/api/v1`
 
 The already-implemented native API (`/api/v1/movies/...`, ApiResponse
-wrappers) remains for direct/Swagger consumption and future clients, but the
-TMDB facade is the contract that matters for the React app.
+wrappers, camelCase field names, HATEOAS `_links` on detail resources) reads
+and writes the exact same persisted catalog as the facade above — there is
+one dataset behind both, not a cache and a source of truth. It remains
+available for direct/Swagger consumption and future clients; the TMDB facade
+is the contract that matters for the React app.
 
 ### 5.2 OpenAPI Documentation
 

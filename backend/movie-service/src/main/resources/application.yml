@@ -36,11 +36,6 @@ tmdb:
   api:
     key: ${TMDB_API_KEY:}
     base-url: https://api.themoviedb.org/3
-  # TMDB v3 facade (ARCHITECTURE.md §5.1): how old a MongoDB-stored raw
-  # response may be before it is refreshed from the real TMDB.
-  facade:
-    list-refresh: 6h      # volatile lists: popular, search, discover
-    detail-refresh: 720h  # near-immutable details: movie docs, genre list
 
 # Eureka Client Configuration
 eureka:

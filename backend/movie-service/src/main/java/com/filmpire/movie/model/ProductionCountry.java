@@ -7,18 +7,15 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * Production company entity.
+ * A country involved in a movie's production, as TMDB reports it
+ * (ISO 3166-1 code + name).
  */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ProductionCompany {
-    private Long id;
+public class ProductionCountry {
+    @JsonProperty("iso_3166_1")
+    private String iso31661;
     private String name;
-    @JsonProperty("logo_path")
-    private String logoPath;
-    @JsonProperty("origin_country")
-    private String originCountry;
 }
-

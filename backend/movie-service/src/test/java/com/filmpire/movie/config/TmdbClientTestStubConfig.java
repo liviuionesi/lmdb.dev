@@ -4,6 +4,7 @@ import com.filmpire.movie.client.TmdbClient;
 import com.filmpire.movie.client.dto.*;
 import com.filmpire.movie.model.Genre;
 import com.filmpire.movie.model.ProductionCompany;
+import com.filmpire.movie.model.SpokenLanguage;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
@@ -44,6 +45,7 @@ public class TmdbClientTestStubConfig {
                 return new TmdbMovieResponse(
                     movieId,
                     "Stub Movie " + movieId,
+                    "Original Stub Movie " + movieId,
                     "Overview for stub movie " + movieId,
                     "/stub/poster-" + movieId + ".jpg",
                     "/stub/backdrop-" + movieId + ".jpg",
@@ -55,29 +57,35 @@ public class TmdbClientTestStubConfig {
                     "Released",
                     10000000L,
                     50000000L,
-                    List.of(new TmdbMovieResponse.SpokenLanguage("en", "English")),
+                    List.of(new SpokenLanguage("en", "English")),
                     List.of(ProductionCompany.builder()
                         .id(1L)
                         .name("Stub Studio")
                         .logoPath(null)
                         .originCountry("US")
                         .build()),
+                    List.of(),
+                    null,
+                    false,
                     "en",
                     100.0,
                     false,
                     "tt-stub-" + movieId,
                     "Stub tagline",
-                    "https://example.com/stub/" + movieId
+                    "https://example.com/stub/" + movieId,
+                    null,
+                    null
                 );
             }
 
             /**
-             * Ignores every filter (sort, genre, year, rating) and returns the shared
+             * Ignores every filter (sort, genre, year, rating, cast) and returns the shared
              * page-derived list; filter correctness is not this stub's concern.
              */
             @Override
             public TmdbMovieListResponse discoverMovies(String apiKey, Integer page, String sortBy,
-                                                         Long genreId, Integer year, Double minRating) {
+                                                         Long genreId, Integer year, Double minRating,
+                                                         Long castId) {
                 return buildStubMovieList(page);
             }
 
@@ -102,6 +110,18 @@ public class TmdbClientTestStubConfig {
             /** Top-rated movies are the shared page-derived list. */
             @Override
             public TmdbMovieListResponse getTopRatedMovies(String apiKey, Integer page) {
+                return buildStubMovieList(page);
+            }
+
+            /** Upcoming movies are the shared page-derived list. */
+            @Override
+            public TmdbMovieListResponse getUpcomingMovies(String apiKey, Integer page) {
+                return buildStubMovieList(page);
+            }
+
+            /** Now-playing movies are the shared page-derived list. */
+            @Override
+            public TmdbMovieListResponse getNowPlayingMovies(String apiKey, Integer page) {
                 return buildStubMovieList(page);
             }
 

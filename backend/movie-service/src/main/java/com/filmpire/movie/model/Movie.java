@@ -38,10 +38,16 @@ public class Movie {
     private Long tmdbId;
 
     /**
-     * Movie title.
+     * Movie title (localized/display title).
      */
     @Indexed
     private String title;
+
+    /**
+     * Movie title in its original language — distinct from {@link #title}
+     * whenever TMDB localizes the display title.
+     */
+    private String originalTitle;
 
     /**
      * Movie overview/description.
@@ -67,6 +73,7 @@ public class Movie {
     /**
      * Average vote rating.
      */
+    @Indexed
     private Double voteAverage;
 
     /**
@@ -100,14 +107,31 @@ public class Movie {
     private Long revenue;
 
     /**
-     * Spoken languages.
+     * Spoken languages (ISO 639-1 code + name).
      */
-    private List<String> spokenLanguages;
+    private List<SpokenLanguage> spokenLanguages;
 
     /**
      * Production companies.
      */
     private List<ProductionCompany> productionCompanies;
+
+    /**
+     * Countries involved in the movie's production (ISO 3166-1 code + name).
+     */
+    private List<ProductionCountry> productionCountries;
+
+    /**
+     * The franchise/collection this movie belongs to, or null for a
+     * standalone movie.
+     */
+    private MovieCollection belongsToCollection;
+
+    /**
+     * Whether the detail response returned by TMDB includes a full-length
+     * video (distinct from {@link #videos}, which are trailers/clips).
+     */
+    private Boolean video;
 
     /**
      * Original language.
@@ -139,6 +163,19 @@ public class Movie {
      * Homepage URL.
      */
     private String homepage;
+
+    /**
+     * Trailers/clips, persisted alongside the movie so a detail request with
+     * {@code append_to_response=videos} needs no second TMDB round trip once
+     * this document has been synced at least once.
+     */
+    private List<Video> videos;
+
+    /**
+     * Cast and crew, persisted alongside the movie for the same reason as
+     * {@link #videos} — backs {@code append_to_response=credits}.
+     */
+    private Credits credits;
 
     /**
      * Document creation timestamp.

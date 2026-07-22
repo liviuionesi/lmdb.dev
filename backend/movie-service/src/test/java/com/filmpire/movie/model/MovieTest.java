@@ -225,15 +225,19 @@ class MovieTest {
     }
 
     /**
-     * Spoken languages are a plain String list (not objects), and
-     * originalLanguage is a separate scalar; both must persist so the two
-     * language concepts don't get conflated.
+     * Spoken languages are ISO-639-1-code-plus-name objects (not plain
+     * strings), and originalLanguage is a separate scalar; both must persist
+     * so the two language concepts don't get conflated.
      */
     @Test
     @DisplayName("Should handle spoken languages")
     void movie_WithSpokenLanguages_ShouldWork() {
         // Arrange
-        List<String> languages = Arrays.asList("English", "Spanish", "French");
+        List<SpokenLanguage> languages = Arrays.asList(
+                SpokenLanguage.builder().iso6391("en").name("English").build(),
+                SpokenLanguage.builder().iso6391("es").name("Spanish").build(),
+                SpokenLanguage.builder().iso6391("fr").name("French").build()
+        );
 
         // Act
         Movie movie = Movie.builder()
@@ -245,7 +249,9 @@ class MovieTest {
 
         // Assert
         assertThat(movie.getSpokenLanguages()).hasSize(3);
-        assertThat(movie.getSpokenLanguages()).containsExactly("English", "Spanish", "French");
+        assertThat(movie.getSpokenLanguages())
+                .extracting(SpokenLanguage::getName)
+                .containsExactly("English", "Spanish", "French");
         assertThat(movie.getOriginalLanguage()).isEqualTo("en");
     }
 

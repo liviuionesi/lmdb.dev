@@ -11,19 +11,15 @@ import org.springframework.web.service.invoker.HttpServiceProxyFactory;
 /**
  * HTTP client configuration for the TMDB API.
  *
- * <p>Defines one shared, rate-limited {@link RestClient} and builds two
- * consumers on top of it:</p>
- * <ul>
- *   <li>{@link TmdbClient} — typed HTTP interface used by the native
- *       {@code /api/v1} API (deserializes into DTOs), and</li>
- *   <li>{@code TmdbRawClient} (facade package) — raw passthrough used by the
- *       TMDB v3 facade (returns unparsed JSON).</li>
- * </ul>
+ * <p>Defines one shared, rate-limited {@link RestClient} and builds
+ * {@link TmdbClient} on top of it — the single typed HTTP interface used by
+ * both the native {@code /api/v1} API and the TMDB v3 facade
+ * ({@code com.filmpire.movie.facade}) as of ADR-010; there is no longer a
+ * separate raw/untyped client.</p>
  *
- * <p>Sharing the single {@code RestClient} matters: the
- * {@link TmdbRateLimitInterceptor} it carries holds the token bucket, so all
- * outbound TMDB traffic from this service instance is throttled by ONE
- * bucket regardless of which consumer sends it.</p>
+ * <p>The {@link TmdbRateLimitInterceptor} carried by the shared
+ * {@code RestClient} holds the token bucket, so all outbound TMDB traffic
+ * from this service instance is throttled by ONE bucket.</p>
  */
 @Configuration
 public class TmdbClientConfig {
