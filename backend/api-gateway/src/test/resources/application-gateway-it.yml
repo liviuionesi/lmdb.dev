@@ -76,6 +76,40 @@ spring:
           predicates:
             - Path=/api/v1/actors/**
 
+        # --- TMDB v3 facade routes (#33) → WireMock stand-in downstreams ---
+        - id: tmdb-movie-facade
+          uri: http://localhost:9971
+          predicates:
+            - Path=/movie/**,/genre/**,/discover/**,/search/**
+          filters:
+            - RemoveRequestParameter=api_key
+        - id: tmdb-person-facade
+          uri: http://localhost:9971
+          predicates:
+            - Path=/person/**
+          filters:
+            - RemoveRequestParameter=api_key
+
+        # --- TMDB auth/account proxy (#33) → WireMock stands in for real TMDB.
+        # PrefixPath=/3 mirrors production; the client api_key is removed and the
+        # server-side key injected. ---
+        - id: tmdb-authentication-proxy
+          uri: http://localhost:9971
+          predicates:
+            - Path=/authentication/**
+          filters:
+            - PrefixPath=/3
+            - RemoveRequestParameter=api_key
+            - AddRequestParameter=api_key,${tmdb.api.key}
+        - id: tmdb-account-proxy
+          uri: http://localhost:9971
+          predicates:
+            - Path=/account/**
+          filters:
+            - PrefixPath=/3
+            - RemoveRequestParameter=api_key
+            - AddRequestParameter=api_key,${tmdb.api.key}
+
   data:
     redis:
       # host/port injected by @DynamicPropertySource; the test Redis has no auth
@@ -100,3 +134,8 @@ resilience4j:
         minimum-number-of-calls: 4
         wait-duration-in-open-state: 2s
         permitted-number-of-calls-in-half-open-state: 1
+
+# Server-side TMDB key injected by the auth/account proxy routes (#33).
+tmdb:
+  api:
+    key: server-side-key

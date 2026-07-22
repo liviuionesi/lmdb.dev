@@ -25,14 +25,18 @@ import java.util.Date;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.absent;
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.lessThan;
 import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
+import static com.github.tomakehurst.wiremock.client.WireMock.post;
+import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -300,6 +304,112 @@ class GatewayIntegrationTest {
                 .exchange()
                 .expectStatus().is2xxSuccessful()
                 .expectHeader().valueEquals("Access-Control-Allow-Origin", "http://localhost:3000");
+    }
+
+    // ------------------------------------------------------------------
+    // #33 — TMDB v3 facade routing + auth/account proxy
+    // ------------------------------------------------------------------
+
+    /**
+     * The bare TMDB catalog paths the React app calls (`/movie/...`,
+     * `/genre/...`, `/discover/...`, `/search/...`) must route to the
+     * movie-service facade — this is what lets the app swap its base URL to the
+     * gateway. Verifies the path reaches the downstream unchanged.
+     */
+    @Test
+    @DisplayName("Facade: TMDB movie catalog paths route to movie-service")
+    void facadeRoutesMovieCatalogToDownstream() {
+        stubFor(get(urlPathEqualTo("/movie/popular")).willReturn(okJson("{\"page\":1,\"results\":[]}")));
+        stubFor(get(urlPathEqualTo("/genre/movie/list")).willReturn(okJson("{\"genres\":[]}")));
+        stubFor(get(urlPathEqualTo("/search/movie")).willReturn(okJson("{\"results\":[]}")));
+
+        client.get().uri("/movie/popular?page=1").exchange().expectStatus().isOk();
+        client.get().uri("/genre/movie/list").exchange().expectStatus().isOk();
+        client.get().uri("/search/movie?query=matrix").exchange().expectStatus().isOk();
+
+        verify(getRequestedFor(urlPathEqualTo("/movie/popular")));
+        verify(getRequestedFor(urlPathEqualTo("/genre/movie/list")));
+        verify(getRequestedFor(urlPathEqualTo("/search/movie")));
+    }
+
+    /**
+     * The gateway must strip any client-sent {@code api_key} from facade
+     * requests so a leaked/guessed key never reaches (or is honored by) a
+     * downstream — the downstream injects the real server-side key itself.
+     * Asserts the downstream saw NO api_key parameter.
+     */
+    @Test
+    @DisplayName("Facade: strips the client-sent api_key before the downstream")
+    void facadeStripsClientApiKey() {
+        stubFor(get(urlPathEqualTo("/movie/550")).willReturn(okJson("{\"id\":550}")));
+
+        client.get().uri("/movie/550?api_key=leaked-client-key").exchange()
+                .expectStatus().isOk();
+
+        verify(getRequestedFor(urlPathEqualTo("/movie/550"))
+                .withQueryParam("api_key", absent()));
+    }
+
+    /**
+     * `/person/{id}` must route to the actor-service facade (a different
+     * downstream than the movie paths), completing the catalog surface the
+     * React app's actor page needs.
+     */
+    @Test
+    @DisplayName("Facade: /person routes to actor-service")
+    void facadeRoutesPersonToActorService() {
+        stubFor(get(urlPathEqualTo("/person/819")).willReturn(okJson("{\"id\":819,\"name\":\"Edward Norton\"}")));
+
+        client.get().uri("/person/819").exchange().expectStatus().isOk();
+
+        verify(getRequestedFor(urlPathEqualTo("/person/819")));
+    }
+
+    /**
+     * TMDB's authentication endpoints are proxied straight to the real TMDB so
+     * the app's login keeps using the user's TMDB account. The gateway must
+     * (a) restore the {@code /3} base path and (b) replace the client's api_key
+     * with the server-side key. Asserts the upstream received
+     * {@code /3/authentication/token/new?api_key=server-side-key}.
+     */
+    @Test
+    @DisplayName("Proxy: /authentication injects server key and prefixes /3")
+    void authProxyInjectsServerKeyAndPrefix() {
+        stubFor(get(urlPathEqualTo("/3/authentication/token/new"))
+                .willReturn(okJson("{\"success\":true,\"request_token\":\"rt-123\"}")));
+
+        client.get().uri("/authentication/token/new?api_key=client-key").exchange()
+                .expectStatus().isOk()
+                .expectBody().jsonPath("$.request_token").isEqualTo("rt-123");
+
+        verify(getRequestedFor(urlPathEqualTo("/3/authentication/token/new"))
+                .withQueryParam("api_key", equalTo("server-side-key")));
+    }
+
+    /**
+     * Account actions (favorites/watchlist) are also proxied to real TMDB. A
+     * POST must reach {@code /3/account/{id}/favorite} with the server key
+     * injected AND the user's {@code session_id} forwarded untouched — both are
+     * required for TMDB to accept the write against the right account.
+     */
+    @Test
+    @DisplayName("Proxy: /account POST forwards session_id and injects server key")
+    void accountProxyForwardsSessionAndInjectsKey() {
+        stubFor(post(urlPathEqualTo("/3/account/42/favorite"))
+                .willReturn(okJson("{\"success\":true,\"status_code\":1}")));
+
+        client.post()
+                .uri(b -> b.path("/account/42/favorite")
+                        .queryParam("session_id", "sess-abc")
+                        .queryParam("api_key", "client-key")
+                        .build())
+                .bodyValue("{\"media_type\":\"movie\",\"media_id\":550,\"favorite\":true}")
+                .exchange()
+                .expectStatus().isOk();
+
+        verify(postRequestedFor(urlPathEqualTo("/3/account/42/favorite"))
+                .withQueryParam("api_key", equalTo("server-side-key"))
+                .withQueryParam("session_id", equalTo("sess-abc")));
     }
 
     /**

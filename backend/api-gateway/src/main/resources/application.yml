@@ -157,7 +157,60 @@ spring:
                 key-resolver: "#{@ipKeyResolver}"
                 redis-rate-limiter.replenishRate: 20
                 redis-rate-limiter.burstCapacity: 40
-      
+
+        # ---------------------------------------------------------------
+        # TMDB v3 FACADE routes (#33) — bare TMDB paths the Filmpire React
+        # app calls. Served by the movie/actor facade controllers, which
+        # inject the server-side TMDB key themselves; the gateway strips any
+        # client-sent api_key so it never reaches a downstream.
+        # ---------------------------------------------------------------
+        - id: tmdb-movie-facade
+          uri: lb://movie-service
+          predicates:
+            - Path=/movie/**,/genre/**,/discover/**,/search/**
+          filters:
+            - RemoveRequestParameter=api_key
+            - name: CircuitBreaker
+              args:
+                name: movieServiceCircuitBreaker
+                fallbackUri: forward:/fallback/movies
+
+        - id: tmdb-person-facade
+          uri: lb://actor-service
+          predicates:
+            - Path=/person/**
+          filters:
+            - RemoveRequestParameter=api_key
+            - name: CircuitBreaker
+              args:
+                name: actorServiceCircuitBreaker
+                fallbackUri: forward:/fallback/actors
+
+        # ---------------------------------------------------------------
+        # TMDB auth/account PROXY routes (#33) — passed straight through to
+        # the real TMDB so the React app's login + favorites/watchlist keep
+        # using the user's real TMDB account. The gateway removes the
+        # client's api_key and injects the server-side key; session_id is
+        # forwarded untouched. PrefixPath=/3 restores the TMDB v3 base path.
+        # ---------------------------------------------------------------
+        - id: tmdb-authentication-proxy
+          uri: https://api.themoviedb.org
+          predicates:
+            - Path=/authentication/**
+          filters:
+            - PrefixPath=/3
+            - RemoveRequestParameter=api_key
+            - AddRequestParameter=api_key,${tmdb.api.key}
+
+        - id: tmdb-account-proxy
+          uri: https://api.themoviedb.org
+          predicates:
+            - Path=/account/**
+          filters:
+            - PrefixPath=/3
+            - RemoveRequestParameter=api_key
+            - AddRequestParameter=api_key,${tmdb.api.key}
+
       # Service discovery
       discovery:
         locator:
@@ -225,6 +278,12 @@ jwt:
   secret: ${JWT_SECRET:filmpire-secret-key-change-in-production}
   expiration: 86400000 # 24 hours in milliseconds
   refresh-expiration: 604800000 # 7 days in milliseconds
+
+# TMDB server-side API key (#33) — injected into the auth/account proxy routes
+# so the real key never lives in the browser. Set via TMDB_API_KEY in prod.
+tmdb:
+  api:
+    key: ${TMDB_API_KEY:}
 
 # Management and Actuator configuration
 management:

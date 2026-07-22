@@ -58,7 +58,21 @@ public class SecurityConfig {
                         .pathMatchers(HttpMethod.GET, "/api/v1/movies/**").permitAll()
                         .pathMatchers(HttpMethod.GET, "/api/v1/genres/**").permitAll()
                         .pathMatchers(HttpMethod.GET, "/api/v1/actors/**").permitAll()
-                        
+
+                        // TMDB v3 facade (#33): bare TMDB catalog paths are public
+                        // reads served by the movie/actor facade controllers.
+                        .pathMatchers(HttpMethod.GET, "/movie/**").permitAll()
+                        .pathMatchers(HttpMethod.GET, "/genre/**").permitAll()
+                        .pathMatchers(HttpMethod.GET, "/discover/**").permitAll()
+                        .pathMatchers(HttpMethod.GET, "/search/**").permitAll()
+                        .pathMatchers(HttpMethod.GET, "/person/**").permitAll()
+
+                        // TMDB auth/account proxy (#33): authentication is enforced
+                        // by TMDB itself via the forwarded session_id, so the gateway
+                        // does not require a local JWT on these passthrough routes.
+                        .pathMatchers("/authentication/**").permitAll()
+                        .pathMatchers("/account/**").permitAll()
+
                         // Admin endpoints (require authentication - should add role check in production)
                         .pathMatchers("/admin/**").authenticated()
                         
