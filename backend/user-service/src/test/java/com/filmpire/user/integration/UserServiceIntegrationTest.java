@@ -19,6 +19,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -101,6 +102,9 @@ class UserServiceIntegrationTest {
      * Exercises the real security chain, not a mocked one: the anonymous
      * request must die in the JWT filter, and the step-1 token must resolve
      * to the same account that registered — identity, not just validity.
+     * The {@code _links} assertions pin down the HATEOAS contract on the
+     * profile resource: self plus the favorites/watchlist relations,
+     * matching the sub-resources the controller actually exposes.
      */
     @Test
     @Order(3)
@@ -114,7 +118,10 @@ class UserServiceIntegrationTest {
                 .header("Authorization", "Bearer " + accessToken))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.username").value("liviu"))
-            .andExpect(jsonPath("$.data.email").value("liviu@example.com"));
+            .andExpect(jsonPath("$.data.email").value("liviu@example.com"))
+            .andExpect(jsonPath("$.data._links.self.href", containsString("/api/v1/users/profile")))
+            .andExpect(jsonPath("$.data._links.favorites.href", containsString("/api/v1/users/favorites")))
+            .andExpect(jsonPath("$.data._links.watchlist.href", containsString("/api/v1/users/watchlist")));
     }
 
     /**

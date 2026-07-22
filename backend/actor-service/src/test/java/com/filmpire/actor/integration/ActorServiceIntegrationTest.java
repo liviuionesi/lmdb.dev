@@ -21,6 +21,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -168,7 +169,10 @@ class ActorServiceIntegrationTest {
      * The native API parses the same raw document the facade stores and
      * projects the fields the app needs (id, name, birthplace, birthdate). The
      * follow-up repository check proves the upsert side effect fires, giving
-     * the service a locally-queryable actors table that grows with use.
+     * the service a locally-queryable actors table that grows with use. The
+     * {@code _links} assertions pin down the HATEOAS contract on the profile
+     * resource: self plus a filmography relation, matching the sub-resource
+     * the controller actually exposes.
      */
     @Test
     @DisplayName("Native /api/v1/actors/{id}: typed profile parsed and upserted")
@@ -182,7 +186,11 @@ class ActorServiceIntegrationTest {
             .andExpect(jsonPath("$.data.tmdbId").value(819))
             .andExpect(jsonPath("$.data.name").value("Edward Norton"))
             .andExpect(jsonPath("$.data.birthPlace").value("Boston, Massachusetts, USA"))
-            .andExpect(jsonPath("$.data.birthDate").value("1969-08-18"));
+            .andExpect(jsonPath("$.data.birthDate").value("1969-08-18"))
+            // HATEOAS: the profile advertises self + filmography links so a
+            // client discovers navigation instead of building URLs.
+            .andExpect(jsonPath("$.data._links.self.href", containsString("/api/v1/actors/819")))
+            .andExpect(jsonPath("$.data._links.movies.href", containsString("/api/v1/actors/819/movies")));
 
         // Side effect: the typed row exists for local querying.
         assertThat(actorRepository.findById(819L))

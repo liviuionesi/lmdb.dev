@@ -1,6 +1,7 @@
 package com.filmpire.user.controller;
 
 import com.filmpire.shared.dto.ApiResponse;
+import com.filmpire.shared.dto.HalResource;
 import com.filmpire.user.dto.AuthDtos.ChangePasswordRequest;
 import com.filmpire.user.dto.AuthDtos.MovieListEntryResponse;
 import com.filmpire.user.dto.AuthDtos.UpdateProfileRequest;
@@ -24,10 +25,20 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
+
 /**
  * Profile, favorites and watchlist endpoints for the authenticated user
  * (issue #17). Every route requires a valid Bearer token; the acting user is
  * always the token's subject — no cross-user access exists.
+ *
+ * <p>The profile resource is HATEOAS-enriched (HAL {@code _links}), matching
+ * the pattern established in movie-service and actor-service: it advertises
+ * links to itself and its favorites/watchlist sub-resources so a client
+ * discovers navigation instead of hard-coding URLs. Mutations (update
+ * profile, password change, favorites/watchlist writes) stay plain — only
+ * the single-resource GET is decorated.</p>
  */
 @RestController
 @RequestMapping("/api/v1/users")
@@ -41,12 +52,21 @@ public class UserController {
      * Returns the caller's profile.
      *
      * @param auth caller identity (JWT subject)
-     * @return 200 with the profile
+     * @return 200 with the profile as a HATEOAS resource (self + favorites/watchlist links)
      */
     @GetMapping("/profile")
     @Operation(summary = "Get the current user's profile")
-    public ResponseEntity<ApiResponse<UserProfileResponse>> getProfile(Authentication auth) {
-        return ok(userAccountService.getProfile(auth.getName()), "Profile retrieved");
+    public ResponseEntity<ApiResponse<HalResource<UserProfileResponse>>> getProfile(Authentication auth) {
+        UserProfileResponse profile = userAccountService.getProfile(auth.getName());
+        // HATEOAS: the profile advertises links to itself and the account's
+        // list sub-resources, so a client discovers favorites/watchlist
+        // instead of building URLs. Non-path args are irrelevant to the
+        // link's URI, so they're passed as null.
+        HalResource<UserProfileResponse> model = HalResource.of(profile)
+            .withLink("self", linkTo(methodOn(UserController.class).getProfile(null)).withSelfRel().getHref())
+            .withLink("favorites", linkTo(methodOn(UserController.class).getFavorites(null)).withRel("favorites").getHref())
+            .withLink("watchlist", linkTo(methodOn(UserController.class).getWatchlist(null)).withRel("watchlist").getHref());
+        return ok(model, "Profile retrieved");
     }
 
     /**

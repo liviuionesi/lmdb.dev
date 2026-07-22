@@ -8,6 +8,9 @@ dependencies {
     api 'org.springframework.boot:spring-boot-starter-validation'
     api "org.mapstruct:mapstruct:${mapstructVersion}"
     api "org.projectlombok:lombok:${lombokVersion}"
+    // Response DTOs (HalResource) use Jackson annotations directly to control
+    // serialization shape; spring-boot-starter alone doesn't pull this in.
+    implementation 'com.fasterxml.jackson.core:jackson-annotations'
     
     // Annotation processors with proper configuration
     annotationProcessor "org.mapstruct:mapstruct-processor:${mapstructVersion}"

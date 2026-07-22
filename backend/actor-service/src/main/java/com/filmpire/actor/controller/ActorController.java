@@ -5,10 +5,10 @@ import com.filmpire.actor.dto.ActorDtos.ActorSearchResponse;
 import com.filmpire.actor.dto.ActorDtos.FilmographyEntryDto;
 import com.filmpire.actor.service.ActorService;
 import com.filmpire.shared.dto.ApiResponse;
+import com.filmpire.shared.dto.HalResource;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.hateoas.EntityModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -44,12 +44,12 @@ public class ActorController {
      */
     @GetMapping("/{id}")
     @Operation(summary = "Get actor details by TMDB person id")
-    public ResponseEntity<ApiResponse<EntityModel<ActorDto>>> getActor(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<HalResource<ActorDto>>> getActor(@PathVariable Long id) {
         // HATEOAS: the profile advertises links to itself and its filmography
         // sub-resource, so a client discovers navigation instead of building URLs.
-        EntityModel<ActorDto> model = EntityModel.of(actorService.getActor(id),
-            linkTo(methodOn(ActorController.class).getActor(id)).withSelfRel(),
-            linkTo(methodOn(ActorController.class).getFilmography(id)).withRel("movies"));
+        HalResource<ActorDto> model = HalResource.of(actorService.getActor(id))
+            .withLink("self", linkTo(methodOn(ActorController.class).getActor(id)).withSelfRel().getHref())
+            .withLink("movies", linkTo(methodOn(ActorController.class).getFilmography(id)).withRel("movies").getHref());
         return ok(model, "Actor retrieved");
     }
 

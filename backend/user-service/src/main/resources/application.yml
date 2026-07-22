@@ -25,6 +25,12 @@ eureka:
   client:
     service-url:
       defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka/}
+  instance:
+    # Without this, Eureka registers the instance by hostname; on a machine
+    # where that hostname resolves to a non-routable/IPv6 address, the
+    # gateway's lb:// route to user-service hangs until connect-timeout.
+    # movie-service already sets this — matching it here.
+    prefer-ip-address: true
 
 # JWT configuration.
 # CONTRACT: jwt.secret MUST match the API gateway's jwt.secret — the gateway
