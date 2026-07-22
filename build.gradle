@@ -1,12 +1,12 @@
 plugins {
     id 'java'
-    id 'org.springframework.boot' version '3.5.8-SNAPSHOT' apply false
-    id 'io.spring.dependency-management' version '1.1.7' apply false
+    id 'org.springframework.boot' apply false
+    id 'io.spring.dependency-management' apply false
 }
 
 allprojects {
     group = 'com.filmpire'
-    version = '1.0.0-SNAPSHOT'
+    version = projectVersion
 }
 
 subprojects {
@@ -16,13 +16,13 @@ subprojects {
 
     java {
         toolchain {
-            languageVersion = JavaLanguageVersion.of(25)
+            languageVersion = JavaLanguageVersion.of(Integer.parseInt(project.property('javaVersion').toString()))
         }
     }
 
     tasks.withType(JavaCompile) {
         options.encoding = 'UTF-8'
-        options.release = 25
+        options.release = Integer.parseInt(project.property('javaVersion').toString())
         options.compilerArgs += ['-parameters']
     }
 

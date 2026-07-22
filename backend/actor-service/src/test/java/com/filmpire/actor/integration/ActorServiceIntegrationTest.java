@@ -26,6 +26,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import org.springframework.test.json.JsonCompareMode;
+
 /**
  * Integration tests for actor-service: TMDB person facade byte-fidelity and
  * save-through against real PostgreSQL, plus the native typed API parsing
@@ -100,7 +102,7 @@ class ActorServiceIntegrationTest {
 
         mockMvc.perform(get("/person/819").queryParam("api_key", "react-app-key"))
             .andExpect(status().isOk())
-            .andExpect(content().json(PERSON_819, true));
+            .andExpect(content().json(PERSON_819, JsonCompareMode.STRICT));
 
         // Server key used; client key never forwarded.
         verify(1, getRequestedFor(urlPathEqualTo("/person/819"))
@@ -128,7 +130,7 @@ class ActorServiceIntegrationTest {
         // 2. Second request: identical body, no additional TMDB traffic.
         mockMvc.perform(get("/person/819"))
             .andExpect(status().isOk())
-            .andExpect(content().json(PERSON_819, true));
+            .andExpect(content().json(PERSON_819, JsonCompareMode.STRICT));
 
         verify(1, getRequestedFor(urlPathEqualTo("/person/819")));
     }
@@ -153,12 +155,12 @@ class ActorServiceIntegrationTest {
         // Upstream 404 → replayed exactly.
         mockMvc.perform(get("/person/999999999"))
             .andExpect(status().isNotFound())
-            .andExpect(content().json(tmdbError, true));
+            .andExpect(content().json(tmdbError, JsonCompareMode.STRICT));
 
         // Non-numeric id → rejected locally, TMDB never called.
         mockMvc.perform(get("/person/not-a-person"))
             .andExpect(status().isNotFound())
-            .andExpect(content().json("{\"success\":false,\"status_code\":34}", false));
+            .andExpect(content().json("{\"success\":false,\"status_code\":34}", JsonCompareMode.LENIENT));
         verify(0, getRequestedFor(urlPathEqualTo("/person/not-a-person")));
     }
 

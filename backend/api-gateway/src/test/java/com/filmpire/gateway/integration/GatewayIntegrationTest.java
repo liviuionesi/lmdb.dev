@@ -76,6 +76,7 @@ class GatewayIntegrationTest {
 
     /** Real Redis backing the RequestRateLimiter (no auth). */
     @Container
+    @SuppressWarnings("resource")
     static GenericContainer<?> redis = new GenericContainer<>(DockerImageName.parse("redis:7.4-alpine"))
             .withExposedPorts(6379);
 

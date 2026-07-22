@@ -5,7 +5,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.data.mongodb.repository.Query;
-import org.springframework.stereotype.Repository;
+
 
 import java.time.LocalDate;
 import java.util.Optional;
@@ -14,7 +14,6 @@ import java.util.Optional;
  * MongoDB repository for Movie entity.
  * Provides custom queries for movie discovery and search.
  */
-@Repository
 public interface MovieRepository extends MongoRepository<Movie, String> {
 
     /**

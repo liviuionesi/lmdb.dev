@@ -22,6 +22,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import org.springframework.test.json.JsonCompareMode;
+
 /**
  * Integration tests for the TMDB v3 facade: full controller → service →
  * MongoDB → (WireMock-simulated) TMDB stack.
@@ -115,7 +117,7 @@ class TmdbFacadeIntegrationTest {
                 .queryParam("api_key", "react-app-client-key"))
             // Then: exact TMDB body comes back
             .andExpect(status().isOk())
-            .andExpect(content().json(POPULAR_PAGE_1, true));
+            .andExpect(content().json(POPULAR_PAGE_1, JsonCompareMode.STRICT));
 
         // And: TMDB never saw the client's key
         verify(1, getRequestedFor(urlPathEqualTo("/movie/popular"))
@@ -143,7 +145,7 @@ class TmdbFacadeIntegrationTest {
         // 2. Second request must be identical AND must not hit TMDB again.
         mockMvc.perform(get("/movie/popular").queryParam("page", "1"))
             .andExpect(status().isOk())
-            .andExpect(content().json(POPULAR_PAGE_1, true));
+            .andExpect(content().json(POPULAR_PAGE_1, JsonCompareMode.STRICT));
 
         verify(1, getRequestedFor(urlPathEqualTo("/movie/popular")));
     }
@@ -165,7 +167,7 @@ class TmdbFacadeIntegrationTest {
         mockMvc.perform(get("/movie/550")
                 .queryParam("append_to_response", "videos,credits"))
             .andExpect(status().isOk())
-            .andExpect(content().json(MOVIE_550_DETAILS, true));
+            .andExpect(content().json(MOVIE_550_DETAILS, JsonCompareMode.STRICT));
 
         verify(1, getRequestedFor(urlPathEqualTo("/movie/550"))
             .withQueryParam("append_to_response", equalTo("videos,credits")));
@@ -189,7 +191,7 @@ class TmdbFacadeIntegrationTest {
 
         mockMvc.perform(get("/movie/99999999"))
             .andExpect(status().isNotFound())
-            .andExpect(content().json(tmdbError, true));
+            .andExpect(content().json(tmdbError, JsonCompareMode.STRICT));
     }
 
     /**
@@ -204,7 +206,7 @@ class TmdbFacadeIntegrationTest {
         mockMvc.perform(get("/movie/not_a_category"))
             .andExpect(status().isNotFound())
             .andExpect(content().json(
-                "{\"success\":false,\"status_code\":34}", false));
+                "{\"success\":false,\"status_code\":34}", JsonCompareMode.LENIENT));
 
         // The bad path never leaves the service.
         verify(0, anyRequestedFor(anyUrl()));
@@ -268,13 +270,13 @@ class TmdbFacadeIntegrationTest {
         mockMvc.perform(get("/search/movie")
                 .queryParam("query", "fight club").queryParam("page", "1"))
             .andExpect(status().isOk())
-            .andExpect(content().json(emptyList, true));
+            .andExpect(content().json(emptyList, JsonCompareMode.STRICT));
 
         // Non-ASCII (accented) characters.
         mockMvc.perform(get("/search/movie")
                 .queryParam("query", "amélie").queryParam("page", "1"))
             .andExpect(status().isOk())
-            .andExpect(content().json(emptyList, true));
+            .andExpect(content().json(emptyList, JsonCompareMode.STRICT));
 
         verify(1, getRequestedFor(urlPathEqualTo("/search/movie"))
             .withQueryParam("query", equalTo("fight club")));
@@ -297,7 +299,7 @@ class TmdbFacadeIntegrationTest {
 
         mockMvc.perform(get("/genre/movie/list"))
             .andExpect(status().isOk())
-            .andExpect(content().json(genres, true));
+            .andExpect(content().json(genres, JsonCompareMode.STRICT));
 
         // Save-through persisted the raw document under its canonical key.
         org.assertj.core.api.Assertions.assertThat(
