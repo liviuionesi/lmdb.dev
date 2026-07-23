@@ -76,9 +76,9 @@ spring:
                 - name: RequestRateLimiter
                   args:
                     key-resolver: "#{@ipKeyResolver}"
-                    redis-rate-limiter.replenishRate: 10
-                    redis-rate-limiter.burstCapacity: 20
-                    redis-rate-limiter.requestedTokens: 1
+                    "[redis-rate-limiter.replenishRate]": 10
+                    "[redis-rate-limiter.burstCapacity]": 20
+                    "[redis-rate-limiter.requestedTokens]": 1
         
             # User Service Routes
             - id: user-service
@@ -93,8 +93,8 @@ spring:
                 - name: RequestRateLimiter
                   args:
                     key-resolver: "#{@ipKeyResolver}"
-                    redis-rate-limiter.replenishRate: 10
-                    redis-rate-limiter.burstCapacity: 20
+                    "[redis-rate-limiter.replenishRate]": 10
+                    "[redis-rate-limiter.burstCapacity]": 20
         
             # Authentication Routes (strict rate limiting to prevent brute force)
             - id: auth-service
@@ -109,8 +109,8 @@ spring:
                 - name: RequestRateLimiter
                   args:
                     key-resolver: "#{@ipKeyResolver}"
-                    redis-rate-limiter.replenishRate: 5
-                    redis-rate-limiter.burstCapacity: 10
+                    "[redis-rate-limiter.replenishRate]": 5
+                    "[redis-rate-limiter.burstCapacity]": 10
         
             # Actor Service Routes
             - id: actor-service
@@ -125,8 +125,8 @@ spring:
                 - name: RequestRateLimiter
                   args:
                     key-resolver: "#{@ipKeyResolver}"
-                    redis-rate-limiter.replenishRate: 10
-                    redis-rate-limiter.burstCapacity: 20
+                    "[redis-rate-limiter.replenishRate]": 10
+                    "[redis-rate-limiter.burstCapacity]": 20
         
             # AI Service Routes
             - id: ai-service
@@ -141,8 +141,8 @@ spring:
                 - name: RequestRateLimiter
                   args:
                     key-resolver: "#{@ipKeyResolver}"
-                    redis-rate-limiter.replenishRate: 5
-                    redis-rate-limiter.burstCapacity: 10
+                    "[redis-rate-limiter.replenishRate]": 5
+                    "[redis-rate-limiter.burstCapacity]": 10
         
             # Media Service Routes
             - id: media-service
@@ -157,8 +157,8 @@ spring:
                 - name: RequestRateLimiter
                   args:
                     key-resolver: "#{@ipKeyResolver}"
-                    redis-rate-limiter.replenishRate: 20
-                    redis-rate-limiter.burstCapacity: 40
+                    "[redis-rate-limiter.replenishRate]": 20
+                    "[redis-rate-limiter.burstCapacity]": 40
 
             # ---------------------------------------------------------------
             # TMDB v3 FACADE routes (#33) — bare TMDB paths the Filmpire React

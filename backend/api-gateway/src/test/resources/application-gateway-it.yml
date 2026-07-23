@@ -34,8 +34,7 @@ spring:
                   args:
                     name: cbTestCircuitBreaker
                     fallbackUri: forward:/fallback/movies
-                    statusCodes:
-                      - "500"
+                    statusCodes: 500
 
             # --- Rate-limit test route (tiny burst so it trips fast) ---
             - id: rl-test
@@ -46,9 +45,9 @@ spring:
                 - name: RequestRateLimiter
                   args:
                     key-resolver: "#{@ipKeyResolver}"
-                    redis-rate-limiter.replenishRate: 1
-                    redis-rate-limiter.burstCapacity: 3
-                    redis-rate-limiter.requestedTokens: 1
+                    "[redis-rate-limiter.replenishRate]": 1
+                    "[redis-rate-limiter.burstCapacity]": 3
+                    "[redis-rate-limiter.requestedTokens]": 1
 
             # --- Movie service (public GET; also serves /api/v1/genres) ---
             - id: movie-service
