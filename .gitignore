@@ -80,3 +80,6 @@ coverage/
 *.swo
 *~
 
+
+# newman smoke-test report (issue #47)
+newman-report.xml

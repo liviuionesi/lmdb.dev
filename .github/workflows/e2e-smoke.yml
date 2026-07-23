@@ -1,0 +1,62 @@
+name: E2E API Smoke (live stack)
+
+# Automated live-stack API acceptance test (issue #47). Brings the whole
+# Filmpire stack up with Docker Compose, waits for it to be healthy, and runs
+# the Postman/newman collection against it — so "do the live services actually
+# work end to end" is answered automatically, not by clicking through Postman.
+#
+# Triggers are deliberately NOT per-push: building six service images and the
+# full stack is heavy and needs the TMDB API key. Nightly + manual keeps CI
+# minutes (and the $0 budget, ADR-004) under control while still being
+# automatic. To also run it on pushes to main, add:
+#   push:
+#     branches: [main]
+#
+# REQUIRED SETUP (one time): add a repository secret named TMDB_API_KEY
+# (Settings → Secrets and variables → Actions). Without it the movie/actor/
+# gateway containers start but facade calls to TMDB fail.
+on:
+  workflow_dispatch:
+  schedule:
+    # 03:00 UTC nightly.
+    - cron: '0 3 * * *'
+
+jobs:
+  smoke:
+    name: Live-stack newman smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # newman runs on Node; the service images build inside their own
+      # multi-stage Dockerfiles, so no host JDK is needed here.
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run live-stack smoke test
+        # The script is the single source of truth — identical to the local
+        # `MANAGE_STACK=true ./infrastructure/docker/smoke-test.sh` invocation.
+        # It brings the stack up, waits for health, runs newman, and tears the
+        # stack down (dumping container logs first on failure).
+        env:
+          MANAGE_STACK: 'true'
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+          HEALTH_TIMEOUT: '300'
+        run: |
+          chmod +x infrastructure/docker/smoke-test.sh
+          ./infrastructure/docker/smoke-test.sh
+
+      - name: Upload newman report
+        # Keep the JUnit report whether the run passed or failed, so failures
+        # are inspectable from the Actions run without re-running anything.
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: newman-report
+          path: newman-report.xml
+          if-no-files-found: warn

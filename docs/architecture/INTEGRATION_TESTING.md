@@ -104,7 +104,40 @@ one live-dependent suite; everything else is self-contained via Testcontainers.
 
 The same journeys are also exercised through **newman** against the shared
 Postman collection (`docs/api/Filmpire-API.postman_collection.json`),
-which is the manual/CI acceptance gate.
+which is the manual/CI acceptance gate — automated by the smoke-test script
+below (#47).
+
+## Automated live-stack smoke test (`smoke-test.sh`, #47)
+
+`infrastructure/docker/smoke-test.sh` is the one-command way to answer "the
+services are up — does the API actually work?" without touching Postman. It
+waits for the gateway + movie/user/actor services to report healthy (bounded
+timeout, not a fixed sleep), runs the newman collection, and exits with
+newman's status (0 = all green) plus a JUnit report at `newman-report.xml`.
+
+It is the single source of truth for local and CI runs:
+
+```bash
+# Test a stack you already started (day-to-day):
+./infrastructure/docker/smoke-test.sh
+
+# Bring the whole stack up, test it, tear it down (what CI does):
+MANAGE_STACK=true TMDB_API_KEY=xxxx ./infrastructure/docker/smoke-test.sh
+```
+
+It detects the compose command (`docker compose` on CI runners,
+`podman-compose` on the dev machine) and is parameterized by `GATEWAY_URL`,
+`COLLECTION`, `HEALTH_TIMEOUT`, and `MANAGE_STACK`.
+
+**CI:** `.github/workflows/e2e-smoke.yml` calls the script with
+`MANAGE_STACK=true` on a nightly schedule and on manual `workflow_dispatch`
+(not per-push — building six images + the full stack is heavy and needs the
+TMDB key; nightly/manual keeps CI minutes and the $0 budget in check). It
+uploads `newman-report.xml` as a run artifact.
+
+> **One-time setup:** add a repository secret `TMDB_API_KEY`
+> (Settings → Secrets and variables → Actions). The movie/actor/gateway
+> containers need it to reach TMDB for un-cached data.
 
 ## Honest coverage notes vs. the #19 checklist
 
