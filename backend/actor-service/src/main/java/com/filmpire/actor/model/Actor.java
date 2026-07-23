@@ -84,6 +84,17 @@ public class Actor {
     @Column(name = "also_known_as")
     private List<String> alsoKnownAs;
 
+    /**
+     * Every profile image TMDB knows for this person (CDN references only —
+     * see {@link ActorProfileImage}). EAGER for the same reason as
+     * {@link #alsoKnownAs}: the facade's images endpoint reads it outside the
+     * service's transaction boundary, where LAZY would throw
+     * LazyInitializationException.
+     */
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "actor_profile_images", joinColumns = @JoinColumn(name = "actor_tmdb_id"))
+    private List<ActorProfileImage> profileImages;
+
     /** TMDB's primary department for this person (e.g. "Acting", "Directing"). */
     @Column(name = "known_for_department", length = 100)
     private String knownForDepartment;

@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClientResponseException;
 
@@ -59,6 +60,23 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ApiResponse<Void>> handleNotFound(ResourceNotFoundException e) {
         return error(HttpStatus.NOT_FOUND, e.getMessage());
+    }
+
+    /**
+     * A path variable or query param that won't convert to its declared type
+     * (e.g. {@code /api/v1/actors/popular} before {@code /popular} had its own
+     * mapping, or any non-numeric actor id) → 400, not 500. Spring raises this
+     * before the controller runs, so without this handler it would fall
+     * through to {@link #handleUnexpected} and report a server fault for what
+     * is really a malformed client request.
+     *
+     * @param e the type-conversion failure
+     * @return 400 error envelope naming the offending parameter
+     */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiResponse<Void>> handleTypeMismatch(MethodArgumentTypeMismatchException e) {
+        return error(HttpStatus.BAD_REQUEST,
+            "Invalid value for '" + e.getName() + "': expected a number");
     }
 
     /**

@@ -71,6 +71,20 @@ class ActorServiceIntegrationTest {
         {"id":1546,"title":"25th Hour","character":"Monty Brogan",\
         "release_date":"2002-12-16","poster_path":"/q.jpg","vote_average":7.6}],"id":819}""";
 
+    /** TMDB's profile-image set for person 819. */
+    private static final String IMAGES_819 = """
+        {"id":819,"profiles":[\
+        {"aspect_ratio":0.667,"height":2100,"iso_639_1":null,"file_path":"/one.jpg",\
+        "vote_average":5.3,"vote_count":7,"width":1400},\
+        {"aspect_ratio":0.667,"height":1500,"iso_639_1":null,"file_path":"/two.jpg",\
+        "vote_average":5.1,"vote_count":3,"width":1000}]}""";
+
+    /** TMDB's popular-people page 1. */
+    private static final String POPULAR = """
+        {"page":1,"results":[{"adult":false,"gender":2,"id":976,\
+        "known_for_department":"Acting","name":"Jason Statham","popularity":183.4,\
+        "profile_path":"/j.jpg"}],"total_pages":500,"total_results":10000}""";
+
     @Autowired
     private MockMvc mockMvc;
 
@@ -244,11 +258,34 @@ class ActorServiceIntegrationTest {
 
         mockMvc.perform(get("/api/v1/actors/819/movies"))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.data.length()").value(2))
+            .andExpect(jsonPath("$.data.results.length()").value(2))
+            .andExpect(jsonPath("$.data.totalItems").value(2))
             // 25th Hour (2002) released after Fight Club (1999) → first.
-            .andExpect(jsonPath("$.data[0].movieId").value(1546))
-            .andExpect(jsonPath("$.data[0].character").value("Monty Brogan"))
-            .andExpect(jsonPath("$.data[1].movieId").value(550));
+            .andExpect(jsonPath("$.data.results[0].movieId").value(1546))
+            .andExpect(jsonPath("$.data.results[0].character").value("Monty Brogan"))
+            .andExpect(jsonPath("$.data.results[1].movieId").value(550));
+    }
+
+    /**
+     * The native API pages the filmography even though TMDB's own
+     * {@code movie_credits} is unpaginated, so page 2 at size 1 must hold the
+     * second-newest credit alone while the totals still describe the full set.
+     */
+    @Test
+    @DisplayName("Native filmography: page/size slice the full credit list")
+    void nativeFilmographyPaginates() throws Exception {
+        stubFor(WireMock.get(urlPathEqualTo("/person/819/movie_credits"))
+            .willReturn(okJson(CREDITS_819)));
+
+        mockMvc.perform(get("/api/v1/actors/819/movies")
+                .queryParam("page", "2").queryParam("size", "1"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.page").value(2))
+            .andExpect(jsonPath("$.data.totalPages").value(2))
+            .andExpect(jsonPath("$.data.totalItems").value(2))
+            .andExpect(jsonPath("$.data.results.length()").value(1))
+            // Fight Club (1999) is the older of the two → alone on page 2.
+            .andExpect(jsonPath("$.data.results[0].movieId").value(550));
     }
 
     /**
@@ -324,5 +361,120 @@ class ActorServiceIntegrationTest {
         mockMvc.perform(get("/api/v1/actors/424242"))
             .andExpect(status().isNotFound())
             .andExpect(jsonPath("$.success").value(false));
+    }
+
+    /**
+     * Images follow the same ADR-010 rule as the profile: fetched from TMDB
+     * once, persisted, then served locally. Asserting the second request makes
+     * zero further TMDB calls is what distinguishes save-through from a plain
+     * proxy — and only the CDN path is stored, never the image bytes
+     * (ARCHITECTURE.md §3.8).
+     */
+    @Test
+    @DisplayName("Facade /person/{id}/images: TMDB-shaped, persisted, second call hits no TMDB")
+    void personImagesArePersistedAndServedLocally() throws Exception {
+        stubFor(WireMock.get(urlPathEqualTo("/person/819")).willReturn(okJson(PERSON_819)));
+        stubFor(WireMock.get(urlPathEqualTo("/person/819/images")).willReturn(okJson(IMAGES_819)));
+
+        // 1. First call populates the local image set from TMDB.
+        mockMvc.perform(get("/person/819/images"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value(819))
+            .andExpect(jsonPath("$.profiles.length()").value(2))
+            .andExpect(jsonPath("$.profiles[0].file_path").value("/one.jpg"))
+            .andExpect(jsonPath("$.profiles[0].aspect_ratio").value(0.667))
+            .andExpect(jsonPath("$.profiles[0].vote_count").value(7));
+
+        resetAllRequests();
+
+        // 2. Second call must be served entirely from PostgreSQL.
+        mockMvc.perform(get("/person/819/images"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.profiles.length()").value(2));
+
+        verify(0, getRequestedFor(urlPathEqualTo("/person/819/images")));
+    }
+
+    /**
+     * The native images endpoint exposes the same persisted data through the
+     * ApiResponse envelope, with camelCase field names — the native API's
+     * convention, as opposed to the facade's TMDB-mandated snake_case.
+     */
+    @Test
+    @DisplayName("Native /api/v1/actors/{id}/images: same data, native envelope and camelCase")
+    void nativeImagesUseNativeConventions() throws Exception {
+        stubFor(WireMock.get(urlPathEqualTo("/person/819")).willReturn(okJson(PERSON_819)));
+        stubFor(WireMock.get(urlPathEqualTo("/person/819/images")).willReturn(okJson(IMAGES_819)));
+
+        mockMvc.perform(get("/api/v1/actors/819/images"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.length()").value(2))
+            .andExpect(jsonPath("$.data[0].filePath").value("/one.jpg"))
+            .andExpect(jsonPath("$.data[0].voteCount").value(7));
+    }
+
+    /**
+     * Popular is a live ranking call (TMDB's ordering isn't reimplemented),
+     * but it must still grow the local catalog — so the returned people are
+     * queryable in PostgreSQL afterwards, exactly like search results.
+     */
+    @Test
+    @DisplayName("Facade /person/popular: TMDB-shaped and upserts every person")
+    void popularPersonsAreUpserted() throws Exception {
+        stubFor(WireMock.get(urlPathEqualTo("/person/popular")).willReturn(okJson(POPULAR)));
+
+        mockMvc.perform(get("/person/popular"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.page").value(1))
+            .andExpect(jsonPath("$.total_pages").value(500))
+            .andExpect(jsonPath("$.results[0].id").value(976))
+            .andExpect(jsonPath("$.results[0].profile_path").value("/j.jpg"));
+
+        assertThat(actorRepository.findById(976L))
+            .isPresent()
+            .get()
+            .satisfies(actor -> {
+                assertThat(actor.getName()).isEqualTo("Jason Statham");
+                // known_for_department rides along on the list payload.
+                assertThat(actor.getKnownForDepartment()).isEqualTo("Acting");
+            });
+    }
+
+    /**
+     * The React app searches through the gateway's TMDB-shaped route, so
+     * {@code /search/person} must exist on the facade with TMDB's snake_case
+     * envelope — not just on the native API.
+     */
+    @Test
+    @DisplayName("Facade /search/person: TMDB-shaped search envelope")
+    void facadeSearchIsTmdbShaped() throws Exception {
+        String searchResult = """
+            {"page":1,"results":[{"id":1245,"name":"Léa Seydoux",\
+            "profile_path":"/l.jpg","popularity":12.3,"known_for_department":"Acting"}],\
+            "total_pages":1,"total_results":1}""";
+        stubFor(WireMock.get(urlPathEqualTo("/search/person")).willReturn(okJson(searchResult)));
+
+        mockMvc.perform(get("/search/person").queryParam("query", "seydoux"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.total_results").value(1))
+            .andExpect(jsonPath("$.results[0].profile_path").value("/l.jpg"))
+            .andExpect(jsonPath("$.results[0].known_for_department").value("Acting"));
+    }
+
+    /**
+     * A non-numeric id on the NATIVE API is a malformed client request, so it
+     * must be a 400 in the ApiResponse envelope. Regression guard: Spring
+     * raises the conversion failure before the controller runs, and without an
+     * explicit handler it fell through to the catch-all and reported 500 —
+     * blaming the server for a bad URL.
+     */
+    @Test
+    @DisplayName("Native endpoint: non-numeric id is a 400, not a 500")
+    void nativeNonNumericIdIsBadRequest() throws Exception {
+        mockMvc.perform(get("/api/v1/actors/not-a-number"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.message").value(containsString("id")));
     }
 }

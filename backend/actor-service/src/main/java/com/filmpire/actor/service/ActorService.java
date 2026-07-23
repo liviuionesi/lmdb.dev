@@ -1,14 +1,18 @@
 package com.filmpire.actor.service;
 
 import com.filmpire.actor.client.TmdbPersonClient;
+import com.filmpire.actor.client.dto.TmdbPersonImagesResponse;
 import com.filmpire.actor.client.dto.TmdbPersonMovieCreditsResponse;
 import com.filmpire.actor.client.dto.TmdbPersonResponse;
 import com.filmpire.actor.client.dto.TmdbPersonSearchResponse;
 import com.filmpire.actor.dto.ActorDtos.ActorDto;
+import com.filmpire.actor.dto.ActorDtos.ActorImageDto;
 import com.filmpire.actor.dto.ActorDtos.ActorSearchResponse;
 import com.filmpire.actor.dto.ActorDtos.ActorSummaryDto;
 import com.filmpire.actor.dto.ActorDtos.FilmographyEntryDto;
+import com.filmpire.actor.dto.ActorDtos.FilmographyPageDto;
 import com.filmpire.actor.model.Actor;
+import com.filmpire.actor.model.ActorProfileImage;
 import com.filmpire.actor.repository.ActorRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -93,6 +97,111 @@ public class ActorService {
     }
 
     /**
+     * Returns one page of an actor's filmography.
+     *
+     * <p>Paginated in memory on purpose: TMDB's {@code movie_credits} has no
+     * page parameter — it returns every credit in one response — so the
+     * facade must keep serving the unpaginated shape while the native API
+     * still offers paging (issue #18). Requesting a page past the end yields
+     * an empty page rather than an error, matching TMDB's list behavior.</p>
+     *
+     * @param tmdbId   TMDB person id
+     * @param page     1-based page number
+     * @param pageSize credits per page
+     * @return the requested page of credits, newest release first
+     */
+    public FilmographyPageDto getFilmographyPage(Long tmdbId, int page, int pageSize) {
+        List<FilmographyEntryDto> all = getFilmography(tmdbId);
+        int totalPages = (int) Math.ceil((double) all.size() / pageSize);
+        int from = Math.min((page - 1) * pageSize, all.size());
+        int to = Math.min(from + pageSize, all.size());
+        return new FilmographyPageDto(page, totalPages, all.size(), all.subList(from, to));
+    }
+
+    /**
+     * Returns an actor's profile images, read-through/save-through against
+     * PostgreSQL like the profile itself: fetched from TMDB once, persisted on
+     * the {@link Actor}, and served locally afterwards (ADR-010).
+     *
+     * <p>Transactional and mapped to DTOs before returning, so the EAGER
+     * image collection is fully resolved inside the transaction.</p>
+     *
+     * @param tmdbId TMDB person id
+     * @return the actor's profile-image references
+     */
+    @Transactional
+    public List<ActorImageDto> getImages(Long tmdbId) {
+        return getOrFetchImages(tmdbId).stream()
+            .map(i -> new ActorImageDto(
+                i.getFilePath(), i.getAspectRatio(), i.getHeight(),
+                i.getWidth(), i.getIso6391(), i.getVoteAverage(), i.getVoteCount()))
+            .toList();
+    }
+
+    /**
+     * Core read-through/save-through image lookup shared by the native API and
+     * the facade. An actor row with no persisted images triggers one TMDB
+     * fetch, which is then saved onto the actor.
+     *
+     * @param tmdbId TMDB person id
+     * @return persisted profile images (empty if TMDB has none)
+     */
+    @Transactional
+    public List<ActorProfileImage> getOrFetchImages(Long tmdbId) {
+        Actor actor = getOrFetchActorEntity(tmdbId);
+        if (actor.getProfileImages() != null && !actor.getProfileImages().isEmpty()) {
+            return actor.getProfileImages();
+        }
+
+        log.info("Actor {} has no persisted images, fetching from TMDB", tmdbId);
+        TmdbPersonImagesResponse response = tmdbPersonClient.getPersonImages(tmdbId, tmdbApiKey);
+        List<ActorProfileImage> images = response.profiles() == null ? List.of()
+            : response.profiles().stream()
+                .map(p -> ActorProfileImage.builder()
+                    .filePath(p.filePath())
+                    .aspectRatio(p.aspectRatio())
+                    .height(p.height())
+                    .width(p.width())
+                    .iso6391(p.iso6391())
+                    .voteAverage(p.voteAverage())
+                    .voteCount(p.voteCount())
+                    .build())
+                .toList();
+
+        actor.setProfileImages(new java.util.ArrayList<>(images));
+        actorRepository.save(actor);
+        return actor.getProfileImages();
+    }
+
+    /**
+     * Returns TMDB's currently-popular people. Like search, this is a live
+     * ranking call — TMDB's popularity ordering isn't reimplemented here — but
+     * every person it returns is upserted, so the local catalog grows.
+     *
+     * @param page TMDB page (1-based)
+     * @return paged summaries
+     */
+    @Transactional
+    public ActorSearchResponse getPopular(int page) {
+        return toSearchResponse(getPopularRaw(page), page);
+    }
+
+    /**
+     * Facade-facing popular-people lookup — TMDB's own response shape. Every
+     * result is upserted.
+     *
+     * @param page page number
+     * @return raw TMDB popular-people response
+     */
+    @Transactional
+    public TmdbPersonSearchResponse getPopularRaw(int page) {
+        log.info("Fetching popular actors: page={}", page);
+        TmdbPersonSearchResponse response = tmdbPersonClient.getPopularPersons(tmdbApiKey, page);
+        response.results().forEach(this::upsertFromSearchResult);
+        return response;
+    }
+
+    /**
      * Facade-facing filmography lookup — TMDB's own response shape. Always
      * live: the referenced movies are movie-service's data, not ours.
      *
@@ -115,12 +224,24 @@ public class ActorService {
      */
     @Transactional
     public ActorSearchResponse search(String query, int page) {
-        TmdbPersonSearchResponse response = searchRaw(query, page);
+        return toSearchResponse(searchRaw(query, page), page);
+    }
+
+    /**
+     * Maps TMDB's shared person-list envelope (search and popular use the same
+     * one) into the native API's paged response, defaulting the paging fields
+     * TMDB may omit.
+     *
+     * @param response    TMDB's person-list response
+     * @param requestedPage page asked for, used when TMDB doesn't echo one back
+     * @return native paged summaries
+     */
+    private ActorSearchResponse toSearchResponse(TmdbPersonSearchResponse response, int requestedPage) {
         List<ActorSummaryDto> actors = response.results().stream()
             .map(p -> new ActorSummaryDto(p.id(), p.name(), p.profilePath(), p.popularity()))
             .toList();
         return new ActorSearchResponse(
-            response.page() != null ? response.page() : page,
+            response.page() != null ? response.page() : requestedPage,
             response.totalPages() != null ? response.totalPages() : 0,
             response.totalResults() != null ? response.totalResults() : 0,
             actors
@@ -144,12 +265,13 @@ public class ActorService {
     }
 
     /**
-     * Upserts a search-result stub into PostgreSQL. Search results only
-     * carry name/profile/popularity, so an existing, more-detailed row
-     * (biography, birth date, etc. from a prior detail fetch) is updated in
-     * place rather than clobbered.
+     * Upserts a person-list stub into PostgreSQL (used by both search and
+     * popular). List results carry only a subset of the detail endpoint's
+     * profile, so an existing, more-detailed row (biography, birth date, etc.
+     * from a prior detail fetch) is updated in place rather than clobbered —
+     * and fields the list omits are left untouched instead of nulled.
      *
-     * @param summary a single result from TMDB's person search
+     * @param summary a single result from a TMDB person-list endpoint
      */
     private void upsertFromSearchResult(TmdbPersonSearchResponse.TmdbPersonSummary summary) {
         Actor actor = actorRepository.findById(summary.id()).orElseGet(() -> {
@@ -160,6 +282,15 @@ public class ActorService {
         actor.setName(summary.name());
         actor.setProfilePath(summary.profilePath());
         actor.setPopularity(summary.popularity());
+        if (summary.knownForDepartment() != null) {
+            actor.setKnownForDepartment(summary.knownForDepartment());
+        }
+        if (summary.gender() != null) {
+            actor.setGender(summary.gender());
+        }
+        if (summary.adult() != null) {
+            actor.setAdult(summary.adult());
+        }
         actor.setSyncedAt(LocalDateTime.now());
         actorRepository.save(actor);
     }

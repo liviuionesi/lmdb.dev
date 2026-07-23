@@ -98,4 +98,46 @@ public final class ActorDtos {
         List<ActorSummaryDto> results
     ) {
     }
+
+    /**
+     * One profile image of an actor — a TMDB CDN reference plus metadata. The
+     * bytes are never stored here (ARCHITECTURE.md §3.8); the client builds
+     * the URL from {@code filePath}.
+     *
+     * @param filePath    TMDB CDN path
+     * @param aspectRatio width divided by height
+     * @param height      pixel height
+     * @param width       pixel width
+     * @param iso6391     ISO 639-1 language tag, null when language-neutral
+     * @param voteAverage TMDB community vote average
+     * @param voteCount   TMDB community vote count
+     */
+    public record ActorImageDto(
+        String filePath,
+        Double aspectRatio,
+        Integer height,
+        Integer width,
+        String iso6391,
+        Double voteAverage,
+        Integer voteCount
+    ) {
+    }
+
+    /**
+     * A page of a filmography. The native API paginates in-memory over TMDB's
+     * full credit list: TMDB's own {@code movie_credits} returns every credit
+     * unpaginated, so slicing happens here rather than upstream.
+     *
+     * @param page       current page (1-based, matching the rest of this API)
+     * @param totalPages total pages at this page size
+     * @param totalItems total credits across all pages
+     * @param results    the credits on this page
+     */
+    public record FilmographyPageDto(
+        int page,
+        int totalPages,
+        int totalItems,
+        List<FilmographyEntryDto> results
+    ) {
+    }
 }

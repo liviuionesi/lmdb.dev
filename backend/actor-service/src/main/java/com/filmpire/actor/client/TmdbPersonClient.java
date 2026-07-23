@@ -1,5 +1,6 @@
 package com.filmpire.actor.client;
 
+import com.filmpire.actor.client.dto.TmdbPersonImagesResponse;
 import com.filmpire.actor.client.dto.TmdbPersonMovieCreditsResponse;
 import com.filmpire.actor.client.dto.TmdbPersonResponse;
 import com.filmpire.actor.client.dto.TmdbPersonSearchResponse;
@@ -55,6 +56,32 @@ public interface TmdbPersonClient {
     TmdbPersonSearchResponse searchPersons(
         @RequestParam("api_key") String apiKey,
         @RequestParam("query") String query,
+        @RequestParam(value = "page", defaultValue = "1") Integer page
+    );
+
+    /**
+     * Get every profile image TMDB holds for a person.
+     *
+     * @param personId TMDB person id
+     * @param apiKey   server-side TMDB API key
+     * @return profile-image references and their metadata
+     */
+    @GetExchange("/person/{personId}/images")
+    TmdbPersonImagesResponse getPersonImages(
+        @PathVariable("personId") Long personId,
+        @RequestParam("api_key") String apiKey
+    );
+
+    /**
+     * Get the currently popular people, TMDB's ranking.
+     *
+     * @param apiKey server-side TMDB API key
+     * @param page   page number (1-based)
+     * @return paged person summaries
+     */
+    @GetExchange("/person/popular")
+    TmdbPersonSearchResponse getPopularPersons(
+        @RequestParam("api_key") String apiKey,
         @RequestParam(value = "page", defaultValue = "1") Integer page
     );
 }

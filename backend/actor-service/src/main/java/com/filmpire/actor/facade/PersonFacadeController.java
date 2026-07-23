@@ -1,6 +1,7 @@
 package com.filmpire.actor.facade;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.filmpire.actor.client.dto.TmdbPersonImagesResponse;
 import com.filmpire.actor.client.dto.TmdbPersonMovieCreditsResponse;
 import com.filmpire.actor.client.dto.TmdbPersonResponse;
 import com.filmpire.actor.model.Actor;
@@ -13,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClientResponseException;
@@ -71,6 +73,61 @@ public class PersonFacadeController {
 
         TmdbPersonMovieCreditsResponse credits = actorService.getFilmographyRaw(Long.parseLong(id));
         return ResponseEntity.ok(credits);
+    }
+
+    /**
+     * {@code GET /person/{id}/images} — the actor's profile images in TMDB's
+     * exact shape, read-through/save-through against the persisted catalog.
+     * Only TMDB CDN references are stored, never the image bytes
+     * (ARCHITECTURE.md §3.8).
+     *
+     * @param id numeric TMDB person id
+     * @return TMDB-shaped person-images JSON
+     */
+    @GetMapping(value = "/person/{id}/images", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Object> personImages(@PathVariable String id) {
+        if (!id.chars().allMatch(Character::isDigit)) {
+            log.debug("Person facade: rejecting non-numeric id '{}'", id);
+            return notFound();
+        }
+
+        long personId = Long.parseLong(id);
+        var profiles = actorService.getOrFetchImages(personId).stream()
+            .map(i -> new TmdbPersonImagesResponse.TmdbProfileImage(
+                i.getFilePath(), i.getAspectRatio(), i.getHeight(),
+                i.getWidth(), i.getIso6391(), i.getVoteAverage(), i.getVoteCount()))
+            .toList();
+        return ResponseEntity.ok(new TmdbPersonImagesResponse(personId, profiles));
+    }
+
+    /**
+     * {@code GET /person/popular} — TMDB's popular-people ranking, in TMDB's
+     * exact shape. Live upstream call (TMDB's popularity ordering isn't
+     * reimplemented here), but every person returned is upserted into the
+     * local catalog.
+     *
+     * @param page 1-based page number
+     * @return TMDB-shaped popular-people JSON
+     */
+    @GetMapping(value = "/person/popular", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Object> popularPersons(
+            @RequestParam(defaultValue = "1") int page) {
+        return ResponseEntity.ok(actorService.getPopularRaw(page));
+    }
+
+    /**
+     * {@code GET /search/person} — TMDB's person search, in TMDB's exact
+     * shape. Live ranking call; results are upserted as stubs.
+     *
+     * @param query free-text name query
+     * @param page  1-based page number
+     * @return TMDB-shaped person-search JSON
+     */
+    @GetMapping(value = "/search/person", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Object> searchPersons(
+            @RequestParam String query,
+            @RequestParam(defaultValue = "1") int page) {
+        return ResponseEntity.ok(actorService.searchRaw(query, page));
     }
 
     /**
