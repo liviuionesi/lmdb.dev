@@ -1,7 +1,7 @@
 # Filmpire Microservices - Enterprise Software Architecture Document
 
-**Version:** 1.3.0  
-**Date:** July 21, 2026 (architecture review: ADRs 001–008 recorded; Kafka event bus, distributed tracing, contract testing adopted; failure-mode matrix and SLOs added)  
+**Version:** 1.4.0  
+**Date:** July 22, 2026 (Spring Boot 3.5 → 4.1 upgrade synced throughout — ADR-009 recorded the 4.0 migration decision, gradle.properties has since moved to 4.1.0; ADR-010 TMDB facade pivot to mapped/persisted data recorded)  
 **Author:** Liviu Ionesi  
 **Purpose:** Portfolio project demonstrating enterprise-grade full-stack development for a movie platform
 
@@ -21,7 +21,7 @@ returned to the app, so the local database grows organically with use. TMDB's
 account/authentication endpoints are proxied straight through to the real
 TMDB (login and favorites keep using the user's real TMDB account).
 
-The system demonstrates modern Java 25 and Spring Boot 3.5 capabilities and
+The system demonstrates modern Java 25 and Spring Boot 4.1 capabilities and
 emphasizes enterprise best practices, comprehensive testing (TDD), IaC-based
 free-tier cloud deployment, and full observability. A dedicated Next.js web
 app and React Native mobile apps were considered and **descoped** (v1.2.0) —
@@ -54,23 +54,26 @@ the existing Filmpire React app is the only frontend.
 | Technology | Version | Installation Method | Purpose |
 |------------|---------|---------------------|---------|
 | Java | 25 | SDKMAN | Programming language |
-| Spring Boot | 3.5.8-SNAPSHOT | Gradle | Framework |
+| Spring Boot | 4.1.0 | Gradle | Framework (Framework 7, Jackson 3, Jakarta EE 11 — see ADR-009) |
 | Gradle | 9.2.0 | SDKMAN | Build tool |
-| Spring Cloud | 2025.0.0 | Gradle | Microservices infrastructure |
-| Spring AI | 1.0.0-SNAPSHOT | Gradle | AI/ML integration |
+| Spring Cloud | 2025.1.2 | Gradle | Microservices infrastructure |
+| Spring AI | 1.0.0-SNAPSHOT | Gradle | AI/ML integration (not yet enabled — see §3.7) |
 | PostgreSQL | 17-alpine | Docker/Podman | Relational database |
 | MongoDB | 8.0 | Docker/Podman | Document database |
 | Redis | 7.4-alpine | Docker/Podman | Caching layer |
 | gRPC | 1.76.0 | Gradle | Service communication |
 | JWT (jjwt) | 0.13.0 | Gradle | Authentication |
-| MapStruct | 1.6.3 | Gradle | DTO mapping |
-| Lombok | 1.18.42 | Gradle | Boilerplate reduction |
+| MapStruct | 1.6.3 | Gradle | DTO mapping (available on the classpath; not yet adopted by any service — hand-written mapping so far) |
+| Lombok | 1.18.46 | Gradle | Boilerplate reduction |
 | MinIO | 8.5.7 | Gradle | Object storage client |
 | JUnit | 5.11.3 | Gradle | Testing framework |
 | Mockito | 5.19.0 | Gradle | Mocking framework |
-| TestContainers | 1.21.2 | Gradle | Integration testing |
-| Springdoc OpenAPI | 2.8.14 | Gradle | API documentation |
+| TestContainers | 2.0.5 | Gradle | Integration testing (Postgres/Redis stable; MongoDB saw transient flakiness under podman — see ADR-009) |
+| WireMock | 3.9.1 | Gradle | Fake-TMDB HTTP stubbing in tests |
+| Bucket4j | 8.10.1 | Gradle | Gateway rate limiting (`bucket4j-core`, not the deprecated Spring starter — see §11) |
+| Springdoc OpenAPI | 3.0.3 | Gradle | API documentation |
 | JaCoCo | 0.8.14 | Gradle | Code coverage |
+| OpenRewrite | 7.37.0 | Gradle | Standing framework-migration tool (see ADR-009) |
 
 ### 1.2 Frontend — Existing Filmpire React App (consumer, not built here)
 
@@ -170,13 +173,14 @@ Significant decisions are recorded in [`adr/`](adr/):
 |-----|----------|
 | [001](adr/001-microservices-architecture.md) | Microservices over monolith (conscious over-decomposition for the learning goal) |
 | [002](adr/002-database-per-service.md) | Per-service database choices |
-| [003](adr/003-tmdb-raw-passthrough-facade.md) | TMDB facade serves raw stored JSON, not re-mapped DTOs |
+| [003](adr/003-tmdb-raw-passthrough-facade.md) | ~~TMDB facade serves raw stored JSON, not re-mapped DTOs~~ — **superseded by ADR-010** |
 | [004](adr/004-zero-budget-cloud-strategy.md) | $0 cloud budget: local-first, ephemeral free-tier clusters |
 | [005](adr/005-eureka-config-vs-kubernetes-native.md) | Eureka/Config Server in compose profile; K8s-native mechanisms in overlays |
 | [006](adr/006-kafka-event-bus.md) | Kafka event bus for save-through events & analytics |
 | [007](adr/007-distributed-tracing-zipkin.md) | Distributed tracing now (Micrometer Tracing + Zipkin) |
 | [008](adr/008-contract-testing.md) | Contract testing with Spring Cloud Contract |
-| [009](adr/009-openrewrite-spring-boot-4-migration.md) | OpenRewrite-driven Spring Boot 3.5 → 4.0 migration (Framework 7, Jackson 3, Cloud 2025.1) |
+| [009](adr/009-openrewrite-spring-boot-4-migration.md) | OpenRewrite-driven Spring Boot 3.5 → 4.0 migration (Framework 7, Jackson 3, Cloud 2025.1); a routine follow-up chore then bumped 4.0.7 → 4.1.0 |
+| [010](adr/010-tmdb-facade-mapped-persisted-schema.md) | TMDB facade serves TMDB-shaped responses backed by Filmpire's own mapped, persisted data — supersedes ADR-003's raw-passthrough model |
 
 ### 2.4 Failure-Mode Matrix
 
@@ -336,7 +340,7 @@ public class MovieService {
     private final TmdbClient tmdbClient;
     private final CacheManager cacheManager;
     
-    // Constructor injection - Spring Boot 3.5.x best practice
+    // Constructor injection - Spring Boot best practice (3.x and 4.x alike)
     public MovieService(
             MovieRepository movieRepository, 
             TmdbClient tmdbClient,
@@ -579,76 +583,65 @@ public class SecurityConfig {
 **Architecture:** Repository Pattern
 
 **Why PostgreSQL?**
-- Strong many-to-many relationships (actors ↔ movies)
-- Structured actor profiles
-- Complex join queries for filmography
-- Referential integrity
+- Structured, strongly-typed actor profiles
+- Queryable/indexable attributes (name, popularity, department)
+- Referential integrity for the actor's owned sub-collections
+- Flyway-managed schema evolution
 
-**Domain Model:**
+**Domain Model (as implemented — `Actor`, plus two element collections):**
 ```java
 @Entity
 @Table(name = "actors")
 public class Actor {
-    
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
-    
-    @Column(name = "tmdb_id", unique = true)
-    private String tmdbId;
-    
-    @Column(nullable = false)
-    private String name;
-    
-    @Column(length = 2000)
-    private String biography;
-    
-    @Column(name = "birth_date")
-    private LocalDate birthDate;
-    
-    @Column(name = "birth_place")
-    private String birthPlace;
-    
-    @Column(name = "profile_path")
-    private String profilePath;
-    
-    @Column
-    private Double popularity;
-    
-    @ManyToMany
-    @JoinTable(
-        name = "movie_cast",
-        joinColumns = @JoinColumn(name = "actor_id"),
-        inverseJoinColumns = @JoinColumn(name = "movie_id")
-    )
-    private Set<MovieReference> movies = new HashSet<>();
-}
 
-@Entity
-@Table(name = "movie_cast")
-public class MovieCast {
+    // TMDB's person id IS the primary key — no surrogate. The whole catalog
+    // is keyed by TMDB ids, so a generated UUID would add a lookup for nothing.
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-    
-    @Column(name = "actor_id")
-    private UUID actorId;
-    
-    @Column(name = "movie_id")
-    private String movieId;
-    
-    @Column(name = "character_name")
-    private String characterName;
-    
-    @Column(name = "cast_order")
-    private Integer order;
+    @Column(name = "tmdb_id")
+    private Long tmdbId;
+
+    private String name;
+    private String biography;          // TEXT — TMDB serves long ones
+    private LocalDate birthDate;
+    private String birthPlace;
+    private String profilePath;
+    private Double popularity;
+    private String knownForDepartment;
+    private Integer gender;            // TMDB code: 0/1/2/3
+    private String imdbId;
+    private String homepage;
+    private Boolean adult;
+    private LocalDateTime syncedAt;    // last refresh from TMDB
+
+    // EAGER on both: the facade reads them outside the service's transaction
+    // boundary, where LAZY would throw LazyInitializationException.
+    @ElementCollection(fetch = FetchType.EAGER)
+    private List<String> alsoKnownAs;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    private List<ActorProfileImage> profileImages;  // CDN refs only, never bytes
 }
 ```
 
-**API Endpoints:**
-- `GET /api/v1/actors/{id}` - Get actor details
-- `GET /api/v1/actors/{id}/movies` - Get actor's filmography
-- `GET /api/v1/actors/search?query={query}` - Search actors
+> **DELIBERATE DEVIATION — no actor↔movie join table.** Earlier drafts of this
+> section specced a `@ManyToMany` to movies plus a `MovieCast` entity. Neither
+> exists, and neither should: movies live in **movie-service's** database
+> (database-per-service, ADR-002), so a join table here would duplicate
+> foreign data with no owner and no way to keep it consistent. Filmography is
+> served from TMDB's `person/{id}/movie_credits` on every request instead, and
+> the credits reference movie ids that movie-service resolves. Recorded in the
+> entity's Javadoc as well.
+
+**API Endpoints (native):**
+- `GET /api/v1/actors/{id}` - Actor details (HATEOAS `_links` to movies/images)
+- `GET /api/v1/actors/{id}/movies?page=&size=` - Paged filmography
+- `GET /api/v1/actors/{id}/images` - Profile images
+- `GET /api/v1/actors/popular?page=` - Popular actors
+- `GET /api/v1/actors/search?query=&page=` - Search actors
+
+**TMDB-shaped facade endpoints** (same persisted data, TMDB's snake_case wire
+format): `/person/{id}`, `/person/{id}/movie_credits`, `/person/{id}/images`,
+`/person/popular`, `/search/person` — see §5.1.
 
 ---
 
@@ -671,7 +664,7 @@ public class MovieCast {
 3. **Chat Assistant**
 4. **Semantic Search**
 
-**Domain Model (Immutable Java Records - Spring Boot 3.5.x):**
+**Domain Model (Immutable Java Records - Spring Boot 4.x):**
 ```java
 // All DTOs, Events, and domain objects use Java records for immutability
 @Document(collection = "conversations")
@@ -1007,6 +1000,17 @@ populate that catalog.
 | 7 | `GET /movie/{id}/similar` | Details page | Movie | live ranking, results upserted |
 | 8 | `GET /person/{id}` | Actor page | Actor | read-through/save-through (PostgreSQL) |
 | 9 | `GET /discover/movie?with_cast={id}&page=` | Actor filmography | Actor (via Movie) | live ranking, results upserted |
+
+**Additional TMDB person endpoints implemented beyond the React app's current
+needs** (issue #18's acceptance criteria call for full person coverage, and
+they cost nothing extra given the typed client is already there):
+
+| TMDB v3 Endpoint | Backing service | Strategy |
+|------------------|-----------------|----------|
+| `GET /person/{id}/movie_credits` | Actor | live (the movies belong to movie-service, ADR-002 — nothing of actor-service's to persist) |
+| `GET /person/{id}/images` | Actor | read-through/save-through (PostgreSQL) — CDN *references* only, never the image bytes (§3.8) |
+| `GET /person/popular?page=` | Actor | live ranking, results upserted |
+| `GET /search/person?query=&page=` | Actor | live ranking, results upserted |
 | 10 | Login | Gateway → user-service | **planned: Filmpire JWT, not TMDB session proxy — see below** |
 | 11 | Register | Gateway → user-service | **planned: Filmpire JWT, not TMDB session proxy — see below** |
 | 12 | Profile | Gateway → user-service | **planned: Filmpire JWT, not TMDB session proxy — see below** |
@@ -1400,62 +1404,52 @@ podman-compose down -v
 
 ### 8.1 Version Lock Files
 
-**Backend: `gradle.properties`**
+**Backend: `gradle.properties`** (reproduced from the actual file — this is the
+single source of truth; if it drifts from here, trust the file)
 ```properties
 # Java
 javaVersion=25
+projectVersion=1.0.0-SNAPSHOT
 
 # Spring Boot
-springBootVersion=3.5.8-SNAPSHOT
+springBootVersion=4.1.0
 springDependencyManagementVersion=1.1.7
 
 # Spring Cloud
-springCloudVersion=2025.0.0
+springCloudVersion=2025.1.2
 
 # Spring AI
 springAiVersion=1.0.0-SNAPSHOT
 
 # Dependencies
-lombokVersion=1.18.42
+lombokVersion=1.18.46
 mapstructVersion=1.6.3
 jjwtVersion=0.13.0
 grpcVersion=1.76.0
-springdocVersion=2.8.14
+springdocVersion=3.0.3
 minioVersion=8.5.7
 
 # Testing
 junitVersion=5.11.3
 mockitoVersion=5.19.0
-testcontainersVersion=1.21.2
+testcontainersVersion=2.0.5
 jacocoVersion=0.8.14
+wiremockVersion=3.9.1
+bucket4jVersion=8.10.1
+redisTestcontainersVersion=2.2.2
+
+# Build tooling
+openRewriteVersion=7.37.0
+rewriteRecipeBomVersion=3.35.0
 ```
 
-**Frontend: `package.json`**
-```json
-{
-  "name": "filmpire-web",
-  "version": "1.0.0",
-  "engines": {
-    "node": ">=24.11.1",
-    "npm": ">=11.6.2"
-  },
-  "dependencies": {
-    "next": "16.0.0",
-    "react": "19.0.0",
-    "react-dom": "19.0.0",
-    "typescript": "5.7.2",
-    "@mui/material": "7.3.5",
-    "@mui/icons-material": "7.3.5",
-    "@emotion/react": "^11.13.5",
-    "@emotion/styled": "^11.13.5",
-    "@tanstack/react-query": "5.0.8",
-    "zustand": "5.0.8",
-    "zod": "3.24.1",
-    "react-hook-form": "7.51.0",
-    "tailwindcss": "3.4.17"
-  }
-}
-```
+**Frontend: consumer app, not built in this repo.** The real Filmpire
+frontend lives in the separate `~/Desktop/filmpire` repo (CRA + Redux
+Toolkit Query, not the Next.js stack this section originally sketched) —
+see §1.2 for its actual dependency versions. There is no frontend
+`package.json` to lock here; the descoped `frontend/web-nextjs` and
+`frontend/mobile-react-native` placeholders in this repo carry no real
+dependencies.
 
 ### 8.2 Upgrade Strategy
 
@@ -1714,7 +1708,7 @@ class MovieServiceTest {
 
 ### 10.3 Integration Testing (30% of tests)
 
-**Tools:** Spring Boot Test, TestContainers 1.21.2, RestAssured
+**Tools:** Spring Boot Test, TestContainers 2.0.5, RestAssured
 
 **Critical Requirements:**
 - ✅ Testcontainers with `@ServiceConnection` (Spring Boot 3.1+)
@@ -2259,7 +2253,7 @@ window):
 
 **Demonstrated Skills:**
 - Enterprise microservices architecture
-- Spring Boot 3.5.8 + Spring Cloud 2025.0.0
+- Spring Boot 4.1.0 + Spring Cloud 2025.1.2
 - Java 25 latest features (records, pattern matching, virtual threads)
 - REST + gRPC APIs
 - PostgreSQL + MongoDB hybrid strategy
@@ -2390,7 +2384,7 @@ filmpire-microservices/
 
 ---
 
-## Appendix B: Spring Boot 3.5.x + Java 25 Best Practices
+## Appendix B: Spring Boot 4.1.x + Java 25 Best Practices
 
 ### Critical "Antigravity" Rules (MUST FOLLOW)
 
@@ -2534,7 +2528,7 @@ public class TmdbClient {
 
 ---
 
-**Document Version:** 1.0.0  
-**Last Updated:** November 14, 2025  
-**Status:** Draft - Ready for Implementation
+**Document Version:** 1.4.0  
+**Last Updated:** July 22, 2026  
+**Status:** Living Document — Discovery/Config/Gateway/Movie/Actor/User services implemented and running on Spring Boot 4.1; AI/Media services still stubs (see §2.3 ADRs and per-service sections for current status)
 
