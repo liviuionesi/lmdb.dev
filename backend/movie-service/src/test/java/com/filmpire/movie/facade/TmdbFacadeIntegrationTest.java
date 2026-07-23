@@ -21,6 +21,7 @@ import org.testcontainers.mongodb.MongoDBContainer;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -81,6 +82,14 @@ class TmdbFacadeIntegrationTest {
 
     @Autowired
     private MovieRepository movieRepository;
+
+    /**
+     * Raw MongoDB access, used by the #46 tests to plant a document in a shape
+     * the mapped repository cannot write — and to assert on the stored form
+     * afterwards without going through conversion.
+     */
+    @Autowired
+    private org.springframework.data.mongodb.core.MongoTemplate mongoTemplate;
 
     /**
      * Points the TMDB base URL at WireMock and fixes the server API key so
@@ -321,5 +330,112 @@ class TmdbFacadeIntegrationTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.genres[0].id").value(28))
             .andExpect(jsonPath("$.genres[0].name").value("Action"));
+    }
+
+    /**
+     * Guards the two tests below from silently going vacuous.
+     *
+     * <p>They only prove anything if the document they plant is genuinely
+     * unreadable by the mapped repository. If someone later registers a
+     * {@code String -> SpokenLanguage} converter, or renames the field, the
+     * planted shape would map cleanly and those tests would pass without ever
+     * exercising the recovery path. This asserts the precondition directly, so
+     * that day shows up as a failure here rather than as false confidence.</p>
+     */
+    @Test
+    @DisplayName("Precondition: the planted pre-ADR-010 shape really is unreadable (#46)")
+    void plantedLegacyShapeIsGenuinelyUnconvertible() {
+        mongoTemplate.getCollection("movies").insertOne(
+            new org.bson.Document()
+                .append("tmdbId", 550L)
+                .append("title", "Fight Club")
+                .append("spokenLanguages", java.util.List.of("English")));
+
+        assertThatThrownBy(() -> movieRepository.findByTmdbId(550L))
+            .as("array-of-string spokenLanguages must not map to List<SpokenLanguage>")
+            .isInstanceOfAny(org.springframework.core.convert.ConversionException.class,
+                             org.springframework.data.mapping.MappingException.class);
+    }
+
+    /**
+     * End-to-end proof of the #46 self-healing contract, against a genuinely
+     * malformed document in real MongoDB rather than a mocked exception.
+     *
+     * <p>Writes the exact shape that broke production on 2026-07-23: a movie
+     * whose {@code spokenLanguages} is an array of bare strings, as the
+     * pre-ADR-010 model persisted it, where the current model expects embedded
+     * {@code SpokenLanguage} objects. Before the fix this produced a
+     * {@code ConverterNotFoundException} → HTTP 500 on every request forever,
+     * since nothing ever rewrote the document.</p>
+     *
+     * <p>The endpoint must instead return 200 with correct data, and the stored
+     * document must end up in the current shape — repaired as a side effect of
+     * an ordinary read.</p>
+     */
+    @Test
+    @DisplayName("A schema-drifted document heals itself instead of 500ing (#46)")
+    void schemaDriftedDocumentIsHealedOnRead() throws Exception {
+        // 1. Plant a document in the OLD shape, bypassing the mapped repository
+        //    (the repository could not write this shape — that is the point).
+        mongoTemplate.getCollection("movies").insertOne(
+            new org.bson.Document()
+                .append("tmdbId", 550L)
+                .append("title", "Fight Club")
+                .append("overview", "Stale document from an older model version")
+                .append("spokenLanguages", java.util.List.of("English", "German"))
+                .append("tmdbSyncVersion", 1));
+
+        assertThat(mongoTemplate.getCollection("movies").countDocuments()).isEqualTo(1);
+
+        // 2. TMDB must be reachable for the re-fetch that follows the eviction.
+        stubFor(WireMock.get(urlPathEqualTo("/movie/550"))
+            .willReturn(okJson(MOVIE_550_DETAILS)));
+
+        // 3. The request succeeds rather than 500ing, and returns real data.
+        mockMvc.perform(get("/movie/550"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value(550))
+            .andExpect(jsonPath("$.title").value("Fight Club"))
+            // Proof it is the re-fetched document, not the stale one.
+            .andExpect(jsonPath("$.overview").value("An insomniac..."));
+
+        // 4. The drifted document was replaced, not duplicated, and the movie is
+        //    now readable through the mapped repository — i.e. genuinely repaired.
+        assertThat(mongoTemplate.getCollection("movies").countDocuments()).isEqualTo(1);
+        assertThat(movieRepository.findByTmdbId(550L))
+            .as("document must now map cleanly to the current model")
+            .isPresent()
+            .get()
+            .satisfies(m -> assertThat(m.getOverview()).isEqualTo("An insomniac..."));
+
+        // 5. Exactly one TMDB call — the heal, not a retry storm.
+        verify(1, getRequestedFor(urlPathEqualTo("/movie/550")));
+    }
+
+    /**
+     * The heal must be durable, not per-request: once repaired, subsequent
+     * reads are served from MongoDB with no further TMDB traffic. A fix that
+     * re-fetched every time would still "work" but would silently burn the
+     * TMDB rate limit, so this guards the save-through half of the contract.
+     */
+    @Test
+    @DisplayName("Once healed, repeat reads are served locally with no further TMDB calls (#46)")
+    void healedDocumentIsServedLocallyAfterwards() throws Exception {
+        mongoTemplate.getCollection("movies").insertOne(
+            new org.bson.Document()
+                .append("tmdbId", 550L)
+                .append("title", "Fight Club")
+                .append("spokenLanguages", java.util.List.of("English")));
+
+        stubFor(WireMock.get(urlPathEqualTo("/movie/550"))
+            .willReturn(okJson(MOVIE_550_DETAILS)));
+
+        // First read heals it...
+        mockMvc.perform(get("/movie/550")).andExpect(status().isOk());
+        // ...second and third are pure local reads.
+        mockMvc.perform(get("/movie/550")).andExpect(status().isOk());
+        mockMvc.perform(get("/movie/550")).andExpect(status().isOk());
+
+        verify(1, getRequestedFor(urlPathEqualTo("/movie/550")));
     }
 }

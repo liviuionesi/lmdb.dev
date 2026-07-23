@@ -11,11 +11,17 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.core.convert.ConversionException;
+import org.springframework.data.mapping.MappingException;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -42,6 +48,14 @@ public class MovieService {
     private final MovieRepository movieRepository;
     private final TmdbClient tmdbClient;
     private final MovieMapper movieMapper;
+
+    /**
+     * Used only to delete schema-drifted documents by query — see
+     * {@link #findPersistedMovie(Long)}. A derived {@code deleteByTmdbId}
+     * cannot do this job: Spring Data loads the entity before deleting it,
+     * which rethrows the very mapping error we are recovering from.
+     */
+    private final MongoTemplate mongoTemplate;
 
     @Value("${tmdb.api.key}")
     private String tmdbApiKey;
@@ -77,7 +91,7 @@ public class MovieService {
     public Movie getOrFetchMovieEntity(Long tmdbId) {
         log.info("Fetching movie with TMDB ID: {}", tmdbId);
 
-        return movieRepository.findByTmdbId(tmdbId)
+        return findPersistedMovie(tmdbId)
             .map(movie -> {
                 log.info("Movie found in MongoDB: {}", tmdbId);
                 return movie;
@@ -87,7 +101,7 @@ public class MovieService {
                 lock.lock();
                 try {
                     // Double-check MongoDB inside lock
-                    return movieRepository.findByTmdbId(tmdbId)
+                    return findPersistedMovie(tmdbId)
                         .orElseGet(() -> {
                             log.info("Movie not in MongoDB, fetching from TMDB: {}", tmdbId);
                             TmdbMovieResponse tmdbMovie = tmdbClient.getMovieDetails(tmdbId, tmdbApiKey);
@@ -97,6 +111,68 @@ public class MovieService {
                     lock.unlock();
                 }
             });
+    }
+
+    /**
+     * Reads a persisted movie, treating a document that no longer maps to the
+     * current model as a MISS rather than an error (issue #46).
+     *
+     * <p>MongoDB is schemaless and, unlike the JPA services, movie-service has
+     * no Flyway/{@code ddl-auto: validate} gate that would catch schema drift
+     * at startup. So a document written by an older model version — e.g.
+     * {@code spokenLanguages} persisted as {@code List<String>} before ADR-010
+     * changed it to {@code List<SpokenLanguage>} — sits unnoticed until
+     * something reads it, and then throws on every single request, forever,
+     * because nothing ever overwrites it.</p>
+     *
+     * <p>Under ADR-010 the catalog is seeded from TMDB and re-derivable, so an
+     * unreadable document is semantically just a cache miss. Discarding it and
+     * falling through to the normal fetch + save-through path rewrites it in
+     * the current shape: the first request after a model change costs one TMDB
+     * call and self-heals, and no operator has to go delete documents by hand.</p>
+     *
+     * <p>Only mapping/conversion failures are swallowed. Genuine infrastructure
+     * faults (Mongo unreachable, auth failure) are {@code DataAccessException}s
+     * and propagate untouched — masking those as a miss would turn an outage
+     * into a silent stampede of TMDB traffic.</p>
+     *
+     * @param tmdbId TMDB movie ID
+     * @return the persisted movie, or empty if absent OR undeserializable
+     */
+    private Optional<Movie> findPersistedMovie(Long tmdbId) {
+        try {
+            return movieRepository.findByTmdbId(tmdbId);
+        } catch (ConversionException | MappingException e) {
+            // Schema drift, not an outage: the document exists but was written
+            // against an older model. Drop it and let the caller re-fetch.
+            log.warn("Movie {} is persisted in a shape the current model cannot read ({}: {}). "
+                    + "Discarding it and re-fetching from TMDB.",
+                    tmdbId, e.getClass().getSimpleName(), e.getMessage());
+            evictUnreadableMovie(tmdbId);
+            return Optional.empty();
+        }
+    }
+
+    /**
+     * Deletes a movie document by query, without ever converting it to an
+     * entity — the whole point, since converting is what fails.
+     *
+     * <p>Best-effort: if the delete itself fails the caller still proceeds to
+     * fetch fresh data from TMDB, so the request succeeds either way. The
+     * stale document would simply be retried (and re-reported) next time.</p>
+     *
+     * @param tmdbId TMDB movie ID of the document to discard
+     */
+    private void evictUnreadableMovie(Long tmdbId) {
+        try {
+            long removed = mongoTemplate
+                .remove(Query.query(Criteria.where("tmdbId").is(tmdbId)), Movie.class)
+                .getDeletedCount();
+            log.info("Evicted {} unreadable document(s) for movie {}", removed, tmdbId);
+        } catch (RuntimeException e) {
+            log.error("Could not evict unreadable document for movie {} — serving a fresh "
+                    + "fetch anyway, but the stale document is still there", tmdbId, e);
+        }
     }
 
     /**
@@ -363,7 +439,7 @@ public class MovieService {
         TmdbVideosResponse response = tmdbClient.getMovieVideos(tmdbId, tmdbApiKey);
         List<Video> videos = response.results().stream().map(this::convertTmdbVideo).toList();
 
-        movieRepository.findByTmdbId(tmdbId).ifPresent(movie -> {
+        findPersistedMovie(tmdbId).ifPresent(movie -> {
             movie.setVideos(videos);
             movie.setUpdatedAt(LocalDateTime.now());
             movieRepository.save(movie);
@@ -380,7 +456,7 @@ public class MovieService {
             .crew(response.crew().stream().map(this::convertTmdbCrew).toList())
             .build();
 
-        movieRepository.findByTmdbId(tmdbId).ifPresent(movie -> {
+        findPersistedMovie(tmdbId).ifPresent(movie -> {
             movie.setCredits(credits);
             movie.setUpdatedAt(LocalDateTime.now());
             movieRepository.save(movie);
@@ -402,7 +478,7 @@ public class MovieService {
      * @return the upserted movie
      */
     private Movie upsertFromListItem(TmdbMovieListResponse.TmdbMovieItem item) {
-        Movie movie = movieRepository.findByTmdbId(item.id()).orElseGet(() -> {
+        Movie movie = findPersistedMovie(item.id()).orElseGet(() -> {
             Movie fresh = new Movie();
             fresh.setTmdbId(item.id());
             fresh.setCreatedAt(LocalDateTime.now());

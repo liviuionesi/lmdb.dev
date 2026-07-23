@@ -1,7 +1,7 @@
 # Filmpire Microservices - Enterprise Software Architecture Document
 
-**Version:** 1.4.0  
-**Date:** July 22, 2026 (Spring Boot 3.5 → 4.1 upgrade synced throughout — ADR-009 recorded the 4.0 migration decision, gradle.properties has since moved to 4.1.0; ADR-010 TMDB facade pivot to mapped/persisted data recorded)  
+**Version:** 1.5.0  
+**Date:** July 23, 2026 (ADR-011: read-through now self-heals schema-drifted MongoDB documents instead of 500ing permanently — see §5.1)  
 **Author:** Liviu Ionesi  
 **Purpose:** Portfolio project demonstrating enterprise-grade full-stack development for a movie platform
 
@@ -181,6 +181,7 @@ Significant decisions are recorded in [`adr/`](adr/):
 | [008](adr/008-contract-testing.md) | Contract testing with Spring Cloud Contract |
 | [009](adr/009-openrewrite-spring-boot-4-migration.md) | OpenRewrite-driven Spring Boot 3.5 → 4.0 migration (Framework 7, Jackson 3, Cloud 2025.1); a routine follow-up chore then bumped 4.0.7 → 4.1.0 |
 | [010](adr/010-tmdb-facade-mapped-persisted-schema.md) | TMDB facade serves TMDB-shaped responses backed by Filmpire's own mapped, persisted data — supersedes ADR-003's raw-passthrough model |
+| [011](adr/011-self-healing-read-through-on-schema-drift.md) | Read-through treats a schema-drifted MongoDB document as a cache miss: evict + re-fetch instead of a permanent 500 |
 
 ### 2.4 Failure-Mode Matrix
 
@@ -1011,6 +1012,21 @@ they cost nothing extra given the typed client is already there):
 | `GET /person/{id}/images` | Actor | read-through/save-through (PostgreSQL) — CDN *references* only, never the image bytes (§3.8) |
 | `GET /person/popular?page=` | Actor | live ranking, results upserted |
 | `GET /search/person?query=&page=` | Actor | live ranking, results upserted |
+
+**Schema drift is a cache miss, not an error (ADR-011).** Because the facade
+now persists a *typed* catalog (ADR-010), a stored document can fall out of
+sync with the model when the model changes — and MongoDB, unlike the
+Flyway-managed PostgreSQL services, has nothing that catches this at startup.
+movie-service therefore treats a document it can no longer deserialize as a
+miss: it logs the drift, evicts the document by query (never via a derived
+`deleteBy…`, which would load the entity and rethrow), and falls through to
+the normal TMDB fetch + save-through. The document is rewritten in the current
+shape, so the first request after a model change costs one upstream call and
+self-heals. Only mapping/conversion failures are absorbed this way —
+`DataAccessException` (MongoDB unreachable) still propagates, since masking an
+outage as a miss would stampede TMDB. This is safe **only** because the catalog
+is re-derivable from TMDB; user-owned data (favorites, watchlists, accounts)
+lives in PostgreSQL under Flyway and must never adopt this pattern.
 | 10 | Login | Gateway → user-service | **planned: Filmpire JWT, not TMDB session proxy — see below** |
 | 11 | Register | Gateway → user-service | **planned: Filmpire JWT, not TMDB session proxy — see below** |
 | 12 | Profile | Gateway → user-service | **planned: Filmpire JWT, not TMDB session proxy — see below** |
@@ -2528,7 +2544,7 @@ public class TmdbClient {
 
 ---
 
-**Document Version:** 1.4.0  
-**Last Updated:** July 22, 2026  
+**Document Version:** 1.5.0  
+**Last Updated:** July 23, 2026  
 **Status:** Living Document — Discovery/Config/Gateway/Movie/Actor/User services implemented and running on Spring Boot 4.1; AI/Media services still stubs (see §2.3 ADRs and per-service sections for current status)
 

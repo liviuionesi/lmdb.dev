@@ -2,7 +2,7 @@
     "info": {
         "_postman_id": "filmpire-api-001",
         "name": "Filmpire API",
-        "description": "Complete API collection for testing all Filmpire microservices through the API Gateway, with request tracing.\n\nInfrastructure Flow:\n1. Request \u2192 API Gateway (localhost:8080)\n2. Gateway \u2192 Eureka Service Discovery (localhost:8761)\n3. Eureka \u2192 target service (movie-service:8081, user-service:8082, actor-service:8083)\n4. Service \u2192 TMDB API (external) / PostgreSQL / MongoDB / Redis as needed\n5. Response with caching where applicable\n\nHATEOAS: single-resource GET endpoints (movie/actor details, user profile) advertise navigation via `_links`. Movie details return the HATEOAS resource bare (top-level `_links`); actor details and the user profile stay inside the shared ApiResponse envelope, so their links live under `data._links` instead.\n\nAuth: run '8. User Service - Auth \u2192 Register' first (or 'Login' if you already have an account) to populate the access_token/refresh_token collection variables used by every '9. User Service - Profile & Lists' request.",
+        "description": "Complete API collection for testing all Filmpire microservices through the API Gateway, with request tracing.\n\nInfrastructure Flow:\n1. Request → API Gateway (localhost:8080)\n2. Gateway → Eureka Service Discovery (localhost:8761)\n3. Eureka → target service (movie-service:8081, user-service:8082, actor-service:8083)\n4. Service → TMDB API (external) / PostgreSQL / MongoDB / Redis as needed\n5. Response with caching where applicable\n\nHATEOAS: single-resource GET endpoints (movie/actor details, user profile) advertise navigation via `_links`. Movie details return the HATEOAS resource bare (top-level `_links`); actor details and the user profile stay inside the shared ApiResponse envelope, so their links live under `data._links` instead.\n\nAuth: run '8. User Service - Auth → Register' first (or 'Login' if you already have an account) to populate the access_token/refresh_token collection variables used by every '9. User Service - Profile & Lists' request.",
         "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
     },
     "item": [
@@ -1329,6 +1329,109 @@
                 }
             ],
             "description": "API documentation endpoints"
+        },
+        {
+            "name": "12. Schema-Drift Self-Healing (#46)",
+            "description": "Verifies ADR-011: a MongoDB document written by an OLDER version of the Movie model must be treated as a cache miss (evicted + re-fetched from TMDB), not surfaced as a 500.\n\nBefore ADR-011 this was a permanent failure: the read threw, so save-through never ran, so the bad document was never rewritten — every subsequent request failed identically until someone deleted it by hand.\n\nSETUP (run once, outside Postman — Postman cannot write a shape the app refuses to write):\n\n  podman exec filmpire-mongo mongosh -u admin -p admin123 \\\n    --authenticationDatabase admin filmpire --quiet --eval '\n      db.movies.deleteOne({tmdbId: 550});\n      db.movies.insertOne({tmdbId: 550, title: \"Fight Club\",\n        overview: \"STALE - pre-ADR-010 document\",\n        spokenLanguages: [\"English\", \"German\"]});'\n\n`spokenLanguages` as an array of strings is the pre-ADR-010 shape; the current model expects embedded SpokenLanguage objects.\n\nThen run this folder. The first request heals the document; the second proves the heal persisted and is served locally.",
+            "item": [
+                {
+                    "name": "Drifted document heals on read (expect 200, not 500)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{gateway_url}}/api/v1/movies/550",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "movies",
+                                "550"
+                            ]
+                        },
+                        "description": "Reads a movie whose stored document is in the outdated shape. The service must log the drift, evict the document by query, re-fetch from TMDB and save it in the current shape — returning 200 with real data."
+                    },
+                    "response": [],
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "// The whole point of #46: this used to be a permanent 500.",
+                                    "pm.test('Returns 200 rather than 500 on a schema-drifted document', function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "const body = pm.response.json();",
+                                    "const movie = body.data || body;",
+                                    "",
+                                    "pm.test('Returns the requested movie', function () {",
+                                    "    pm.expect(movie.tmdbId || movie.id).to.eql(550);",
+                                    "});",
+                                    "",
+                                    "// If the stale document had been served, overview would still be the",
+                                    "// planted 'STALE - ...' text. Real TMDB data proves the re-fetch ran.",
+                                    "pm.test('Serves freshly re-fetched data, not the stale document', function () {",
+                                    "    pm.expect(movie.overview).to.be.a('string').and.not.include('STALE');",
+                                    "});",
+                                    "",
+                                    "pm.test('Document is readable in the current model shape', function () {",
+                                    "    pm.expect(movie).to.have.property('title');",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Heal is durable (second read served locally)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{gateway_url}}/api/v1/movies/550",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "movies",
+                                "550"
+                            ]
+                        },
+                        "description": "The repair must be persisted, not recomputed per request. A fix that re-fetched every time would still return 200 but would silently burn the TMDB rate limit."
+                    },
+                    "response": [],
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('Still 200 after the heal', function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "const movie = pm.response.json().data || pm.response.json();",
+                                    "pm.test('Consistent data on repeat read', function () {",
+                                    "    pm.expect(movie.tmdbId || movie.id).to.eql(550);",
+                                    "    pm.expect(movie.overview).to.not.include('STALE');",
+                                    "});",
+                                    "",
+                                    "// Served from MongoDB, so it should be fast.",
+                                    "pm.test('Served locally (under 1s)', function () {",
+                                    "    pm.expect(pm.response.responseTime).to.be.below(1000);",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ]
+                }
+            ]
         }
     ],
     "variable": [

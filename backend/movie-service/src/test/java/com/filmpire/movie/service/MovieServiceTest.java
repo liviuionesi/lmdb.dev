@@ -7,9 +7,11 @@ import com.filmpire.movie.mapper.MovieMapper;
 import com.filmpire.movie.model.Credits;
 import com.filmpire.movie.model.Genre;
 import com.filmpire.movie.model.Movie;
+import com.filmpire.movie.model.SpokenLanguage;
 import com.filmpire.movie.model.Video;
 import com.filmpire.movie.repository.MovieRepository;
 import com.filmpire.shared.dto.PageResponse;
+import com.mongodb.client.result.DeleteResult;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -17,6 +19,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.core.convert.ConverterNotFoundException;
+import org.springframework.core.convert.TypeDescriptor;
+import org.springframework.dao.DataAccessResourceFailureException;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDate;
@@ -26,6 +33,9 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 /**
@@ -54,6 +64,10 @@ class MovieServiceTest {
 
     @Mock
     private MovieMapper movieMapper;
+
+    /** Only used by the schema-drift recovery path (issue #46). */
+    @Mock
+    private MongoTemplate mongoTemplate;
 
     @InjectMocks
     private MovieService movieService;
@@ -399,6 +413,115 @@ class MovieServiceTest {
         assertThat(result.get(0).name()).isEqualTo("Action");
         assertThat(result.get(1).name()).isEqualTo("Drama");
         verify(tmdbClient).getGenres(tmdbApiKey);
+    }
+
+    // Schema-drift self-healing (issue #46)
+
+    /**
+     * The core of #46: a document persisted by an older model version cannot be
+     * converted, and before the fix that exception escaped as a 500 on every
+     * request forever, because nothing ever replaced the bad document.
+     *
+     * <p>Under ADR-010 the catalog is re-derivable from TMDB, so an unreadable
+     * document is semantically a cache miss. The service must therefore swallow
+     * the conversion error, drop the document, and fetch fresh data — the
+     * request succeeds and the stored shape is repaired as a side effect.</p>
+     */
+    @Test
+    @DisplayName("getMovieById - Should treat an unconvertible document as a miss and re-fetch")
+    void getMovieById_WhenPersistedDocumentCannotBeConverted_ShouldEvictAndRefetch() {
+        // Given: MongoDB holds a document the current model cannot read — the
+        // real-world shape of this is spokenLanguages stored as List<String>
+        // before ADR-010 changed it to List<SpokenLanguage>.
+        // The first read throws; the second (the double-check inside the
+        // single-flight lock) sees the document already gone, mirroring the
+        // eviction's real side effect.
+        Long tmdbId = 550L;
+        when(movieRepository.findByTmdbId(tmdbId))
+                .thenThrow(new ConverterNotFoundException(
+                        TypeDescriptor.valueOf(String.class),
+                        TypeDescriptor.valueOf(SpokenLanguage.class)))
+                .thenReturn(Optional.empty());
+
+        TmdbMovieResponse tmdbResponse = createTestTmdbMovieResponse(tmdbId);
+        Movie savedMovie = createTestMovie(tmdbId);
+        MovieDto movieDto = createTestMovieDto(tmdbId);
+        when(tmdbClient.getMovieDetails(tmdbId, tmdbApiKey)).thenReturn(tmdbResponse);
+        when(movieRepository.save(any(Movie.class))).thenReturn(savedMovie);
+        when(movieMapper.toDto(savedMovie)).thenReturn(movieDto);
+        when(mongoTemplate.remove(any(Query.class), eq(Movie.class)))
+                .thenReturn(DeleteResult.acknowledged(1));
+
+        // When
+        MovieDto result = movieService.getMovieById(tmdbId);
+
+        // Then: the caller sees a normal successful response, not an error...
+        assertThat(result).isNotNull();
+        assertThat(result.tmdbId()).isEqualTo(tmdbId);
+
+        // ...the poisoned document was removed by query (never converted)...
+        verify(mongoTemplate).remove(any(Query.class), eq(Movie.class));
+
+        // ...and the movie was re-fetched and re-persisted in the current shape.
+        verify(tmdbClient).getMovieDetails(tmdbId, tmdbApiKey);
+        verify(movieRepository).save(any(Movie.class));
+    }
+
+    /**
+     * The safety boundary on the above. Only mapping/conversion problems mean
+     * "this document is stale"; a {@code DataAccessException} means MongoDB
+     * itself is unavailable. Swallowing that would convert an outage into a
+     * silent flood of TMDB calls (and blow the rate limit), so it must
+     * propagate and it must NOT delete anything.
+     */
+    @Test
+    @DisplayName("getMovieById - Should propagate infrastructure failures instead of masking them as a miss")
+    void getMovieById_WhenMongoIsUnavailable_ShouldPropagateAndNotEvict() {
+        // Given: MongoDB is down (not schema drift)
+        Long tmdbId = 550L;
+        when(movieRepository.findByTmdbId(tmdbId))
+                .thenThrow(new DataAccessResourceFailureException("connection refused"));
+
+        // When / Then: the failure surfaces rather than being treated as a miss
+        assertThatThrownBy(() -> movieService.getMovieById(tmdbId))
+                .isInstanceOf(DataAccessResourceFailureException.class);
+
+        // And nothing was deleted, and TMDB was never hit
+        verifyNoInteractions(tmdbClient);
+        verify(mongoTemplate, never()).remove(any(Query.class), eq(Movie.class));
+    }
+
+    /**
+     * Eviction is best-effort: if the cleanup delete itself fails, the user's
+     * request must still succeed on freshly fetched data. Losing the repair is
+     * acceptable (it retries next time); failing the request is not.
+     */
+    @Test
+    @DisplayName("getMovieById - Should still serve fresh data when evicting the bad document fails")
+    void getMovieById_WhenEvictionFails_ShouldStillReturnFreshlyFetchedMovie() {
+        // Given: an unreadable document AND a delete that fails
+        Long tmdbId = 550L;
+        when(movieRepository.findByTmdbId(tmdbId)).thenThrow(
+                new ConverterNotFoundException(
+                        TypeDescriptor.valueOf(String.class),
+                        TypeDescriptor.valueOf(SpokenLanguage.class)));
+        when(mongoTemplate.remove(any(Query.class), eq(Movie.class)))
+                .thenThrow(new DataAccessResourceFailureException("delete failed"));
+
+        TmdbMovieResponse tmdbResponse = createTestTmdbMovieResponse(tmdbId);
+        Movie savedMovie = createTestMovie(tmdbId);
+        MovieDto movieDto = createTestMovieDto(tmdbId);
+        when(tmdbClient.getMovieDetails(tmdbId, tmdbApiKey)).thenReturn(tmdbResponse);
+        when(movieRepository.save(any(Movie.class))).thenReturn(savedMovie);
+        when(movieMapper.toDto(savedMovie)).thenReturn(movieDto);
+
+        // When
+        MovieDto result = movieService.getMovieById(tmdbId);
+
+        // Then: the request succeeded anyway
+        assertThat(result).isNotNull();
+        assertThat(result.tmdbId()).isEqualTo(tmdbId);
+        verify(tmdbClient).getMovieDetails(tmdbId, tmdbApiKey);
     }
 
     // Helper methods
