@@ -40,7 +40,21 @@
     "**/.project": true,
     "**/.settings": true,
     "**/.factorypath": true,
-    "**/.gradle": true
+    "**/.gradle": true,
+    "**/.idea": true,
+    "**/.sonarlint": true,
+    "**/.claude": true,
+    "**/.cursor": true,
+    "**/build": true,
+    "**/bin": true,
+    "**/node_modules": true,
+    "**/.git": true,
+    "**/dist": true,
+    "**/out": true,
+    "**/coverage": true,
+    "**/.DS_Store": true,
+    "**/.github": true,
+    "**/.vscode": true
   },
   "java.autobuild.enabled": true
 }
