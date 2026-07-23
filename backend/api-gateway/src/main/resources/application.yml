@@ -169,7 +169,12 @@ spring:
             - id: tmdb-movie-facade
               uri: lb://movie-service
               predicates:
-                - Path=/movie/**,/genre/**,/discover/**,/search/**
+                # /search/movie, NOT /search/** — TMDB's search namespace is
+                # shared across resource types, and /search/person belongs to
+                # actor-service. A /search/** predicate here matches first
+                # (routes are evaluated in declaration order) and sends person
+                # searches to movie-service, which 404s them.
+                - Path=/movie/**,/genre/**,/discover/**,/search/movie
               filters:
                 - RemoveRequestParameter=api_key
                 - name: CircuitBreaker
@@ -180,7 +185,7 @@ spring:
             - id: tmdb-person-facade
               uri: lb://actor-service
               predicates:
-                - Path=/person/**
+                - Path=/person/**,/search/person
               filters:
                 - RemoveRequestParameter=api_key
                 - name: CircuitBreaker

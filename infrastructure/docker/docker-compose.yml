@@ -9,11 +9,18 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-filmpire}
       POSTGRES_USER: ${POSTGRES_USER:-admin}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-admin123}
-      POSTGRES_MULTIPLE_DATABASES: filmpire_users,filmpire_actors
+      # Extra databases created by init-scripts/01-create-multiple-databases.sh
+      # on FIRST volume init. user-service deliberately uses the default
+      # POSTGRES_DB (filmpire); actor-service owns filmpire_actor (ADR-002).
+      # These names must match the POSTGRES_URL of each service below.
+      POSTGRES_MULTIPLE_DATABASES: filmpire_actor
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      # Runs only when postgres_data is empty. To add a database to an
+      # already-provisioned volume, create it by hand or `down -v` first.
+      - ./init-scripts:/docker-entrypoint-initdb.d:ro
     networks:
       - filmpire-network
     healthcheck:
@@ -201,6 +208,11 @@ services:
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:-redis123}
       JWT_SECRET: ${JWT_SECRET:-filmpire-secret-key-change-in-production}
+      # REQUIRED, not optional: the tmdb-authentication/account proxy routes use
+      # `AddRequestParameter=api_key,${tmdb.api.key}`, and that filter rejects an
+      # empty value at bind time. Without this the gateway does not merely lose
+      # those routes — route refresh throws and the container crash-loops.
+      TMDB_API_KEY: ${TMDB_API_KEY}
     depends_on:
       discovery-service:
         condition: service_healthy
@@ -246,6 +258,81 @@ services:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8081/actuator/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 90s
+    restart: unless-stopped
+
+  # User Service - JWT auth, profiles, favorites & watchlist (#17)
+  # Uses the default `filmpire` database; owns no TMDB data at all.
+  user-service:
+    build:
+      context: ../..
+      dockerfile: backend/user-service/Dockerfile
+    container_name: filmpire-user-service
+    ports:
+      - "${USER_SERVICE_PORT:-8082}:8082"
+    networks:
+      - filmpire-network
+    environment:
+      SPRING_APPLICATION_NAME: user-service
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
+      SPRING_CONFIG_IMPORT: optional:configserver:http://config-service:8888
+      POSTGRES_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-filmpire}
+      POSTGRES_USERNAME: ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-admin123}
+      # CONTRACT: must match the api-gateway's JWT_SECRET — the gateway
+      # validates the access tokens this service issues (HS256, shared secret).
+      JWT_SECRET: ${JWT_SECRET:-filmpire-secret-key-change-in-production}
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+      config-service:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8082/actuator/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 90s
+    restart: unless-stopped
+
+  # Actor Service - TMDB-shaped /person facade + native actor API (#18, #32)
+  # Owns filmpire_actor (ADR-002); caches in Redis; reads TMDB as seed data.
+  actor-service:
+    build:
+      context: ../..
+      dockerfile: backend/actor-service/Dockerfile
+    container_name: filmpire-actor-service
+    ports:
+      - "${ACTOR_SERVICE_PORT:-8083}:8083"
+    networks:
+      - filmpire-network
+    environment:
+      SPRING_APPLICATION_NAME: actor-service
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
+      SPRING_CONFIG_IMPORT: optional:configserver:http://config-service:8888
+      POSTGRES_URL: jdbc:postgresql://postgres:5432/filmpire_actor
+      POSTGRES_USERNAME: ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-admin123}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis123}
+      TMDB_API_KEY: ${TMDB_API_KEY}
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+      config-service:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8083/actuator/health"]
       interval: 30s
       timeout: 3s
       retries: 3
