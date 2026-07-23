@@ -10,8 +10,8 @@ Complete Docker Compose configuration for local development environment with all
 
 | Service | Image | Port | Purpose |
 |---------|-------|------|---------|
-| **PostgreSQL** | postgres:17-alpine | 5432 | User Service, Actor Service |
-| **MongoDB** | mongo:8.0 | 27017 | Movie Service, AI Service, Media Service |
+| **PostgreSQL** | postgres:17-alpine | 5432 | User Service, Actor Service — and AI Service when built, which needs the image swapped to `pgvector/pgvector:pg17` (ADR-012) |
+| **MongoDB** | mongo:8.0 | 27017 | Movie Service, Media Service |
 | **Redis** | redis:7.4-alpine | 6379 | API Gateway (rate limiting, session) |
 | **MinIO** | minio/minio:RELEASE.2024-11-07T00-52-20Z | 9000, 9001 | Media Service (object storage) |
 

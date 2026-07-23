@@ -1,7 +1,7 @@
 # Filmpire Microservices - Enterprise Software Architecture Document
 
-**Version:** 1.5.0  
-**Date:** July 23, 2026 (ADR-011: read-through now self-heals schema-drifted MongoDB documents instead of 500ing permanently — see §5.1)  
+**Version:** 1.6.0  
+**Date:** July 23, 2026 (ADR-011 self-healing read-through; ADR-012 moves ai-service to PostgreSQL + pgvector and amends ADR-002; stale ADR-003 references cleaned up)  
 **Author:** Liviu Ionesi  
 **Purpose:** Portfolio project demonstrating enterprise-grade full-stack development for a movie platform
 
@@ -182,6 +182,7 @@ Significant decisions are recorded in [`adr/`](adr/):
 | [009](adr/009-openrewrite-spring-boot-4-migration.md) | OpenRewrite-driven Spring Boot 3.5 → 4.0 migration (Framework 7, Jackson 3, Cloud 2025.1); a routine follow-up chore then bumped 4.0.7 → 4.1.0 |
 | [010](adr/010-tmdb-facade-mapped-persisted-schema.md) | TMDB facade serves TMDB-shaped responses backed by Filmpire's own mapped, persisted data — supersedes ADR-003's raw-passthrough model |
 | [011](adr/011-self-healing-read-through-on-schema-drift.md) | Read-through treats a schema-drifted MongoDB document as a cache miss: evict + re-fetch instead of a permanent 500 |
+| [012](adr/012-ai-service-postgresql-pgvector.md) | ai-service stores conversations in PostgreSQL + pgvector, not MongoDB — amends ADR-002's AI row, since user-owned data can't be self-healed |
 
 ### 2.4 Failure-Mode Matrix
 
@@ -649,15 +650,28 @@ format): `/person/{id}`, `/person/{id}/movie_credits`, `/person/{id}/images`,
 ### 3.7 AI Service (Advanced)
 
 **Port:** 8084  
-**Database:** MongoDB  
+**Database:** PostgreSQL + pgvector (`filmpire_ai`) — **ADR-012**  
 **Protocols:** REST + gRPC  
-**Dependencies:** Spring AI, OpenAI/Ollama
+**Dependencies:** Spring AI, Ollama (local, $0 — see ADR-004)
 
-**Why MongoDB?**
-- Flexible schema for AI conversation history
-- Embedding vectors for semantic search
-- Unstructured recommendation data
-- High write throughput for logs
+**Why PostgreSQL + pgvector, not MongoDB (ADR-012 amends ADR-002):**
+- **Conversation history is user-owned and not re-derivable.** Unlike the movie
+  and actor catalogs, it cannot be re-fetched from TMDB if a document stops
+  matching the model. ADR-011's self-healing — discard the drifted record and
+  re-fetch — would therefore *destroy real user data* rather than repair it.
+- On MongoDB this service would be the only one with **neither** protection:
+  no Flyway/`ddl-auto: validate` gate to catch drift at startup, and no safe
+  recovery once it happens. PostgreSQL gives it the same guarantees
+  user-service already has for accounts and favorites.
+- `pgvector` stores embeddings in a `vector` column with an ANN index —
+  sufficient for this project's scale, and it avoids running a separate vector
+  database on 1–2 GB free-tier nodes (ADR-004).
+- Provider-specific message metadata, where the shape genuinely varies, goes in
+  a `JSONB` column: structured where structure exists, flexible where it doesn't.
+
+> Requires a Postgres image with pgvector available (`pgvector/pgvector:pg17`
+> rather than stock `postgres:17-alpine`) — a real change to `docker-compose.yml`
+> and the K8s overlays, and the main implementation cost of ADR-012.
 
 **Features:**
 1. **Voice Recognition** (Whisper API)
@@ -665,45 +679,83 @@ format): `/person/{id}`, `/person/{id}/movie_credits`, `/person/{id}/images`,
 3. **Chat Assistant**
 4. **Semantic Search**
 
-**Domain Model (Immutable Java Records - Spring Boot 4.x):**
+**Domain Model (JPA entities on PostgreSQL — ADR-012):**
+
+Conversations are relational and Flyway-managed, exactly like user-service's
+accounts and favorites, because they are user-owned data that cannot be
+regenerated. Records are still used for DTOs and events; the *persisted* model
+is entity classes, since JPA needs mutable managed instances.
+
 ```java
-// All DTOs, Events, and domain objects use Java records for immutability
-@Document(collection = "conversations")
-public record Conversation(
-    @Id String id,
-    String userId,
-    ConversationType type,
-    List<Message> messages,
-    Map<String, Object> context,
-    Instant createdAt,
-    Instant updatedAt
-) {
-    // Compact constructor for validation
-    public Conversation {
-        if (userId == null || userId.isBlank()) {
-            throw new IllegalArgumentException("userId cannot be blank");
-        }
-    }
+@Entity
+@Table(name = "conversations")
+public class Conversation {
+    @Id @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
+
+    /** Owning user (user-service's id). No FK: ADR-002 forbids cross-service joins. */
+    @Column(name = "user_id", nullable = false)
+    private UUID userId;
+
+    @Enumerated(EnumType.STRING)
+    private ConversationType type;
+
+    /** Ordered message thread; cascaded so a conversation is one aggregate. */
+    @OneToMany(mappedBy = "conversation", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("timestamp ASC")
+    private List<Message> messages = new ArrayList<>();
+
+    private Instant createdAt;
+    private Instant updatedAt;
 }
 
-public record Message(
-    String role,  // user, assistant, system
-    String content,
-    Instant timestamp,
-    Map<String, Object> metadata
-) {}
+@Entity
+@Table(name = "messages")
+public class Message {
+    @Id @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
 
-@Document(collection = "recommendations")
-public record RecommendationModel(
-    @Id String id,
-    String userId,
-    List<String> preferredGenres,
-    List<String> favoriteMovies,
-    Map<String, Double> featureWeights,
-    double[] embeddingVector,
-    Instant lastUpdated
-) {}
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "conversation_id", nullable = false)
+    private Conversation conversation;
+
+    private String role;              // user, assistant, system
+
+    @Column(columnDefinition = "text")
+    private String content;
+
+    private Instant timestamp;
+
+    /** Provider-specific fields whose shape genuinely varies — structured
+     *  where structure exists, flexible where it doesn't (ADR-012). */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "jsonb")
+    private Map<String, Object> metadata;
+}
+
+@Entity
+@Table(name = "user_taste_profiles")
+public class UserTasteProfile {
+    @Id
+    @Column(name = "user_id")
+    private UUID userId;
+
+    /** pgvector column; dimension must match the embedding model in use. */
+    @JdbcTypeCode(SqlTypes.VECTOR)
+    @Column(columnDefinition = "vector(768)")
+    private float[] embedding;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "jsonb")
+    private Map<String, Double> featureWeights;
+
+    private Instant lastUpdated;
+}
 ```
+
+Semantic search is an ANN query against the `vector` column, e.g.
+`ORDER BY embedding <=> :query LIMIT :k` with an HNSW or IVFFlat index —
+no separate vector database (ADR-004, ADR-012).
 
 **gRPC Service Definition (ai-service.proto):**
 ```protobuf
@@ -863,13 +915,19 @@ public record MediaMetadata(
 
 ### 4.1 Database Assignment Rationale
 
-| Service | Database | Reason |
-|---------|----------|--------|
-| Movie | MongoDB | Complex nested objects (cast, crew, videos), flexible schema |
-| User | PostgreSQL | ACID compliance, relational integrity, authentication |
-| Actor | PostgreSQL | Strong relationships, structured data, complex queries |
-| AI | MongoDB | Flexible schema for ML data, embedding vectors |
-| Media | MongoDB | Document-oriented metadata, nested file info |
+The organizing principle (ADR-002, sharpened by ADR-011 and ADR-012):
+**user-owned data lives in PostgreSQL under Flyway; re-derivable catalog data
+lives in MongoDB, where self-healing on schema drift is safe.** Anything that
+cannot be reconstructed from TMDB or recomputed must not sit on a store with
+neither schema validation nor a recovery path.
+
+| Service | Database | Re-derivable? | Reason |
+|---------|----------|---------------|--------|
+| Movie | MongoDB | Yes (TMDB) | Complex nested objects (cast, crew, videos), irregular shape; drift handled by ADR-011 self-healing |
+| User | PostgreSQL | No | ACID compliance, relational integrity, authentication |
+| Actor | PostgreSQL | Yes (TMDB) | Strong relationships, structured data, complex queries |
+| AI | PostgreSQL + pgvector | **No** (conversations) | **ADR-012**, superseding ADR-002's MongoDB assignment: conversation history is user-generated and unrecoverable, so it needs Flyway + `validate` like any other user data; pgvector holds the embeddings |
+| Media | MongoDB (+ MinIO) | Yes (TMDB CDN refs) | Document-oriented metadata; MinIO reserved for hypothetical user uploads, never TMDB bytes (§3.8) |
 
 ### 4.2 Data Migration Strategy
 
@@ -2544,7 +2602,7 @@ public class TmdbClient {
 
 ---
 
-**Document Version:** 1.5.0  
+**Document Version:** 1.6.0  
 **Last Updated:** July 23, 2026  
 **Status:** Living Document — Discovery/Config/Gateway/Movie/Actor/User services implemented and running on Spring Boot 4.1; AI/Media services still stubs (see §2.3 ADRs and per-service sections for current status)
 

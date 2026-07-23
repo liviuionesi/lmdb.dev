@@ -9,8 +9,10 @@
 The architecture listed event-driven messaging as "future consideration."
 For a tech-lead-grade backend, an event-driven seam is the most commonly
 probed missing skill. It needs a *real* purpose, not a toy: the TMDB facade
-(ADR-003) produces a natural event stream — every save-through is a signal
-of what users actually request.
+produces a natural event stream — every save-through is a signal of what users
+actually request. (This originally cited ADR-003's raw-passthrough facade;
+ADR-010 replaced that with a mapped/persisted catalog, but the save-through
+seam the event stream hangs off is unchanged, so the rationale still holds.)
 
 ## Decision
 

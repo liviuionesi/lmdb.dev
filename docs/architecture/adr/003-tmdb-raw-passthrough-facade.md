@@ -1,8 +1,25 @@
 # ADR-003: TMDB Facade Serves Raw Stored JSON, Not Re-Mapped DTOs
 
-**Status:** Accepted
+**Status:** ~~Accepted~~ **SUPERSEDED by [ADR-010](010-tmdb-facade-mapped-persisted-schema.md) (2026-07-22)**
 **Date:** 2026-07-21
 **Deciders:** Project owner
+
+> **This decision is no longer in force. Do not implement against it.**
+>
+> The raw-passthrough model described below was replaced one day later by
+> ADR-010: the facade now serves TMDB's exact *wire shape* from Filmpire's own
+> mapped, typed, persisted catalog rather than replaying stored TMDB bytes. The
+> reason was product-level, not technical — a byte-for-byte proxy does not
+> demonstrate backend engineering, which is the point of the project.
+>
+> Everything this ADR describes has been deleted from the codebase:
+> `TmdbDocument`, `TmdbDocumentRepository`, `TmdbRawClient`, `TmdbFacadeService`
+> and the `tmdb_raw_documents` / `tmdb_person_documents` collections
+> (commits `cecd614`, `2ce583a`).
+>
+> Kept for the record because the trade-off analysis below is still the clearest
+> statement of what was given up by moving to a mapped model — notably the
+> fidelity guarantee, which ADR-010 has to maintain by hand instead.
 
 ## Context
 
@@ -48,5 +65,8 @@ content.
   new TMDB fields flow through automatically.
 - Harder: two parallel models exist (raw facade + typed native); analytics
   on cached data needs the event stream (ADR-006) instead of the documents.
-- Revisit: TTL index and growth policy for `tmdb_raw_documents`; single-flight
-  locking for concurrent misses.
+- ~~Revisit: TTL index and growth policy for `tmdb_raw_documents`; single-flight
+  locking for concurrent misses.~~ — moot: `tmdb_raw_documents` no longer
+  exists. Single-flight locking was implemented anyway (`MovieService`'s
+  `ReentrantLock`), and growth policy for the *mapped* catalog is tracked as
+  issue #44.

@@ -325,8 +325,9 @@ dependencies {
 - ✅ Modern approach (Spring Boot 3.1+): Use `@ServiceConnection`
 - ❌ Old approach: `@DynamicPropertySource` not needed
 - Enabled for services with databases
-- PostgreSQL containers: user-service, actor-service
-- MongoDB containers: movie-service, ai-service, media-service
+- PostgreSQL containers: user-service, actor-service (and ai-service when built —
+  `pgvector/pgvector:pg17`, not the stock image, per ADR-012)
+- MongoDB containers: movie-service, media-service
 - Automatic lifecycle management in tests
 
 ## Gradle Optimization

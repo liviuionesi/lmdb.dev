@@ -884,15 +884,18 @@ public class ActorController {
 ### Prompt 11: AI Service - Spring AI Integration
 
 ```
-Create the AI Service with Spring AI, gRPC, and MongoDB:
+Create the AI Service with Spring AI, gRPC, and PostgreSQL + pgvector:
 
 **Requirements:**
-- Spring AI for LLM integration (OpenAI/Ollama)
+- Spring AI for LLM integration (Ollama, local — $0 per ADR-004)
 - Voice recognition using Whisper API
 - Movie recommendations with embeddings
 - Chat assistant
 - gRPC for internal service communication
-- MongoDB for conversation history and embeddings
+- PostgreSQL + pgvector for conversation history and embeddings (ADR-012 —
+  NOT MongoDB: conversation history is user-owned and not re-derivable, so it
+  needs Flyway migrations and `ddl-auto: validate` like user-service, and must
+  never use ADR-011's self-healing pattern)
 
 **Dependencies:**
 ```kotlin

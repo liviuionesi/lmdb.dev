@@ -11,6 +11,28 @@ spring:
         options:
           model: gpt-4
           temperature: 0.7
+  # SUPERSEDED BY ADR-012 — do not build on this.
+  #
+  # ai-service is still an unimplemented stub, and this MongoDB config is left
+  # over from ADR-002's original assignment. ADR-012 replaced it: conversation
+  # history is user-owned and NOT re-derivable, so it cannot live on a store
+  # with neither Flyway/`validate` schema checking nor a safe recovery path
+  # (ADR-011's self-healing would delete real user conversations, not repair
+  # them). The replacement is PostgreSQL + pgvector, roughly:
+  #
+  #   datasource:
+  #     url: ${POSTGRES_URL:jdbc:postgresql://localhost:5432/filmpire_ai}
+  #     username: ${POSTGRES_USERNAME:admin}
+  #     password: ${POSTGRES_PASSWORD:admin123}
+  #   jpa:
+  #     hibernate:
+  #       ddl-auto: validate      # Flyway owns the schema, as elsewhere
+  #   flyway:
+  #     enabled: true
+  #
+  # Requires the shared Postgres container to run pgvector/pgvector:pg17 rather
+  # than the stock image. Tracked as issue #36; left inert here so the stub does
+  # not claim a datasource it has no migrations for.
   mongodb:
     database: filmpire
     uri: mongodb://admin:admin123@localhost:27017/filmpire?authSource=admin
