@@ -339,6 +339,69 @@ services:
       start_period: 90s
     restart: unless-stopped
 
+  # ---------------------------------------------------------------------------
+  # SonarQube static analysis (#20). Behind the `sonar` compose profile so the
+  # normal stack — and the e2e smoke job — never starts this heavy tool. Bring
+  # it up on demand:  docker compose --profile sonar up -d
+  # ---------------------------------------------------------------------------
+
+  # Dedicated PostgreSQL for SonarQube — kept SEPARATE from the app's `postgres`
+  # (ADR-002 in spirit: a tool's store is not the app's store, and SonarQube
+  # owns/migrates its own schema).
+  sonar-db:
+    image: docker.io/library/postgres:17-alpine
+    container_name: filmpire-sonar-db
+    profiles: ["sonar"]
+    environment:
+      POSTGRES_USER: ${SONAR_DB_USER:-sonar}
+      POSTGRES_PASSWORD: ${SONAR_DB_PASSWORD:-sonar}
+      POSTGRES_DB: ${SONAR_DB_NAME:-sonar}
+    volumes:
+      - sonarqube_db_data:/var/lib/postgresql/data
+    networks:
+      - filmpire-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${SONAR_DB_USER:-sonar} -d ${SONAR_DB_NAME:-sonar}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  sonarqube:
+    # Community edition, latest. Tested against 26.7.0 (Community Build). Pin to
+    # a specific `<version>-community` tag for full reproducibility once a
+    # version is chosen — but never reuse an older version's data volume (below).
+    image: docker.io/library/sonarqube:community
+    container_name: filmpire-sonarqube
+    profiles: ["sonar"]
+    depends_on:
+      sonar-db:
+        condition: service_healthy
+    ports:
+      # Host 9010 (NOT 9000 — MinIO already binds 9000/9001) → container 9000.
+      - "${SONAR_HOST_PORT:-9010}:9000"
+    environment:
+      SONAR_JDBC_URL: jdbc:postgresql://sonar-db:5432/${SONAR_DB_NAME:-sonar}
+      SONAR_JDBC_USERNAME: ${SONAR_DB_USER:-sonar}
+      SONAR_JDBC_PASSWORD: ${SONAR_DB_PASSWORD:-sonar}
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_extensions:/opt/sonarqube/extensions
+      - sonarqube_logs:/opt/sonarqube/logs
+    networks:
+      - filmpire-network
+    # SonarQube's Elasticsearch needs a high mmap limit. This host already has
+    # vm.max_map_count >= 262144; if a fresh host fails to boot ES, set it with
+    #   sudo sysctl -w vm.max_map_count=262144
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 -O- http://localhost:9000/api/system/status 2>/dev/null | grep -q '\"status\":\"UP\"'"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 120s
+    restart: unless-stopped
+
 volumes:
   postgres_data:
     driver: local
@@ -349,6 +412,18 @@ volumes:
   redis_data:
     driver: local
   minio_data:
+    driver: local
+  # SonarQube (#20). NOTE: do not reuse volumes across major SonarQube
+  # versions — a data dir written by an older image (e.g. the old
+  # lts-community) makes the new web server crash-loop on startup while
+  # cleaning its work dir. On a version bump, `docker volume rm` these first.
+  sonarqube_db_data:
+    driver: local
+  sonarqube_data:
+    driver: local
+  sonarqube_extensions:
+    driver: local
+  sonarqube_logs:
     driver: local
 
 networks:

@@ -9,6 +9,7 @@ import com.filmpire.movie.repository.MovieRepository;
 import com.filmpire.shared.dto.PageResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.core.convert.ConversionException;
@@ -19,6 +20,7 @@ import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -57,8 +59,36 @@ public class MovieService {
      */
     private final MongoTemplate mongoTemplate;
 
+    /**
+     * Self-reference used to invoke this bean's own {@code @Cacheable} methods
+     * through the Spring proxy (issue #20 / rule java:S6809).
+     *
+     * <p>The {@code *Raw} methods are cached AND called from two directions:
+     * externally by {@link com.filmpire.movie.facade.TmdbFacadeController} (which
+     * goes through the proxy, so the cache applies) and internally by the native
+     * {@code /api/v1} methods below. A plain {@code this.getMovieCategoryRaw(...)}
+     * call bypasses the proxy entirely, so the internal path silently skipped the
+     * shared cache and re-fetched from TMDB even when the facade had just cached
+     * the identical response. Routing through the proxy lets both API layers
+     * share one cached upstream call — which matters, because TMDB rate-limits.</p>
+     *
+     * <p>{@link ObjectProvider} rather than {@code @Lazy} self-injection: it
+     * resolves on demand, so there is no circular-dependency dance at
+     * construction time and it composes with Lombok's generated constructor.</p>
+     */
+    private final ObjectProvider<MovieService> selfProvider;
+
     @Value("${tmdb.api.key}")
     private String tmdbApiKey;
+
+    /**
+     * This bean as seen through its Spring proxy, so {@code @Cacheable} applies.
+     *
+     * @return the proxied instance of this service
+     */
+    private MovieService self() {
+        return selfProvider.getObject();
+    }
 
     /**
      * Guards the fetch-from-TMDB path so concurrent misses for the same movie
@@ -166,7 +196,7 @@ public class MovieService {
     private void evictUnreadableMovie(Long tmdbId) {
         try {
             long removed = mongoTemplate
-                .remove(Query.query(Criteria.where("tmdbId").is(tmdbId)), Movie.class)
+                .remove(Query.query(Criteria.byExample(Movie.builder().tmdbId(tmdbId).build())), Movie.class)
                 .getDeletedCount();
             log.info("Evicted {} unreadable document(s) for movie {}", removed, tmdbId);
         } catch (RuntimeException e) {
@@ -208,7 +238,7 @@ public class MovieService {
      */
     @Cacheable(value = "movieLists", key = "'discover-' + #page + '-' + #size + '-' + #genreId + '-' + #year + '-' + #minRating")
     public PageResponse<MovieListDto> discoverMovies(int page, int size, Long genreId, Integer year, Double minRating) {
-        TmdbMovieListResponse response = discoverMoviesRaw(page, genreId, year, minRating, null);
+        TmdbMovieListResponse response = self().discoverMoviesRaw(page, genreId, year, minRating, null);
         return toPageResponse(response, page, size);
     }
 
@@ -245,7 +275,7 @@ public class MovieService {
      */
     @Cacheable(value = "movieLists", key = "'search-' + #query + '-' + #page")
     public PageResponse<MovieListDto> searchMovies(String query, int page, int size) {
-        TmdbMovieListResponse response = searchMoviesRaw(query, page);
+        TmdbMovieListResponse response = self().searchMoviesRaw(query, page);
         return toPageResponse(response, page, size);
     }
 
@@ -289,7 +319,7 @@ public class MovieService {
      */
     @Cacheable(value = "movieLists", key = "'popular-' + #page")
     public PageResponse<MovieListDto> getPopularMovies(int page, int size) {
-        return toPageResponse(getMovieCategoryRaw("popular", page), page, size);
+        return toPageResponse(self().getMovieCategoryRaw("popular", page), page, size);
     }
 
     /**
@@ -301,7 +331,7 @@ public class MovieService {
      */
     @Cacheable(value = "movieLists", key = "'toprated-' + #page")
     public PageResponse<MovieListDto> getTopRatedMovies(int page, int size) {
-        return toPageResponse(getMovieCategoryRaw("top_rated", page), page, size);
+        return toPageResponse(self().getMovieCategoryRaw("top_rated", page), page, size);
     }
 
     /**
@@ -363,7 +393,7 @@ public class MovieService {
      */
     @Cacheable(value = "movieLists", key = "'similar-' + #tmdbId + '-' + #page")
     public PageResponse<MovieListDto> getSimilarMovies(Long tmdbId, int page, int size) {
-        return toPageResponse(getSimilarMoviesRaw(tmdbId, page), page, size);
+        return toPageResponse(self().getSimilarMoviesRaw(tmdbId, page), page, size);
     }
 
     /**
@@ -391,7 +421,7 @@ public class MovieService {
      */
     @Cacheable(value = "movieLists", key = "'recommendations-' + #tmdbId + '-' + #page")
     public PageResponse<MovieListDto> getRecommendedMovies(Long tmdbId, int page, int size) {
-        return toPageResponse(getRecommendedMoviesRaw(tmdbId, page), page, size);
+        return toPageResponse(self().getRecommendedMoviesRaw(tmdbId, page), page, size);
     }
 
     /**
@@ -418,7 +448,7 @@ public class MovieService {
      */
     @Cacheable(value = "genres", key = "'all'")
     public List<GenreDto> getAllGenres() {
-        return getGenresRaw().genres().stream().map(movieMapper::toDto).toList();
+        return self().getGenresRaw().genres().stream().map(movieMapper::toDto).toList();
     }
 
     /**
@@ -441,7 +471,7 @@ public class MovieService {
 
         findPersistedMovie(tmdbId).ifPresent(movie -> {
             movie.setVideos(videos);
-            movie.setUpdatedAt(LocalDateTime.now());
+            movie.setUpdatedAt(LocalDateTime.now(ZoneOffset.UTC));
             movieRepository.save(movie);
         });
         return videos;
@@ -458,7 +488,7 @@ public class MovieService {
 
         findPersistedMovie(tmdbId).ifPresent(movie -> {
             movie.setCredits(credits);
-            movie.setUpdatedAt(LocalDateTime.now());
+            movie.setUpdatedAt(LocalDateTime.now(ZoneOffset.UTC));
             movieRepository.save(movie);
         });
         return credits;
@@ -481,7 +511,7 @@ public class MovieService {
         Movie movie = findPersistedMovie(item.id()).orElseGet(() -> {
             Movie fresh = new Movie();
             fresh.setTmdbId(item.id());
-            fresh.setCreatedAt(LocalDateTime.now());
+            fresh.setCreatedAt(LocalDateTime.now(ZoneOffset.UTC));
             fresh.setTmdbSyncVersion(1);
             return fresh;
         });
@@ -496,7 +526,7 @@ public class MovieService {
         movie.setPopularity(item.popularity());
         movie.setAdult(item.adult());
         movie.setOriginalLanguage(item.originalLanguage());
-        movie.setUpdatedAt(LocalDateTime.now());
+        movie.setUpdatedAt(LocalDateTime.now(ZoneOffset.UTC));
 
         return movieRepository.save(movie);
     }
@@ -507,7 +537,7 @@ public class MovieService {
 
     private PageResponse<MovieListDto> toPageResponse(TmdbMovieListResponse response, int page, int size) {
         List<MovieListDto> movies = response.results().stream().map(this::convertTmdbItemToListDto).toList();
-        return PageResponse.of(movies, page - 1, size, (long) response.totalResults());
+        return PageResponse.of(movies, page - 1, size, response.totalResults());
     }
 
     private Movie convertAndSaveMovie(TmdbMovieResponse tmdbMovie) {
@@ -537,8 +567,8 @@ public class MovieService {
             .imdbId(tmdbMovie.imdbId())
             .tagline(tmdbMovie.tagline())
             .homepage(tmdbMovie.homepage())
-            .createdAt(LocalDateTime.now())
-            .updatedAt(LocalDateTime.now())
+            .createdAt(LocalDateTime.now(ZoneOffset.UTC))
+            .updatedAt(LocalDateTime.now(ZoneOffset.UTC))
             .tmdbSyncVersion(1)
             .build();
 

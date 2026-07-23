@@ -105,8 +105,9 @@ class AuthServiceTest {
     void registerRejectsDuplicateUsername() {
         when(userRepository.existsByUsername("liviu")).thenReturn(true);
 
-        assertThatThrownBy(() -> authService.register(
-                new RegisterRequest("liviu", "liviu@example.com", "secret-password")))
+        RegisterRequest request = new RegisterRequest("liviu", "liviu@example.com", "secret-password");
+
+        assertThatThrownBy(() -> authService.register(request))
             .isInstanceOf(ValidationException.class)
             .hasMessageContaining("Username");
     }
@@ -142,10 +143,13 @@ class AuthServiceTest {
 
         // Same exception, same message for both failure modes — no
         // username-enumeration oracle.
-        assertThatThrownBy(() -> authService.login(new LoginRequest("liviu", "wrong")))
+        LoginRequest wrongPassword = new LoginRequest("liviu", "wrong");
+        LoginRequest unknownUser = new LoginRequest("ghost", "whatever");
+
+        assertThatThrownBy(() -> authService.login(wrongPassword))
             .isInstanceOf(UnauthorizedException.class)
             .hasMessage("Invalid username or password");
-        assertThatThrownBy(() -> authService.login(new LoginRequest("ghost", "whatever")))
+        assertThatThrownBy(() -> authService.login(unknownUser))
             .isInstanceOf(UnauthorizedException.class)
             .hasMessage("Invalid username or password");
     }
@@ -162,7 +166,9 @@ class AuthServiceTest {
         user.setEnabled(false);
         when(userRepository.findByUsername("liviu")).thenReturn(Optional.of(user));
 
-        assertThatThrownBy(() -> authService.login(new LoginRequest("liviu", "secret-password")))
+        LoginRequest request = new LoginRequest("liviu", "secret-password");
+
+        assertThatThrownBy(() -> authService.login(request))
             .isInstanceOf(UnauthorizedException.class);
     }
 

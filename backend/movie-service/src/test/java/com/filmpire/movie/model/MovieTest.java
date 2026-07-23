@@ -161,9 +161,10 @@ class MovieTest {
                 .build();
 
         // Act & Assert
-        assertThat(movie1).isEqualTo(movie2);
-        assertThat(movie1).isNotEqualTo(movie3);
-        assertThat(movie1.hashCode()).isEqualTo(movie2.hashCode());
+        assertThat(movie1)
+                .isEqualTo(movie2)
+                .isNotEqualTo(movie3)
+                .hasSameHashCodeAs(movie2);
     }
 
     /**

@@ -36,6 +36,9 @@ import org.springframework.web.client.RestClientResponseException;
 @RequiredArgsConstructor
 public class PersonFacadeController {
 
+    /** Logged whenever a non-numeric path id is rejected without reaching TMDB. */
+    private static final String REJECTING_NON_NUMERIC_ID = "Person facade: rejecting non-numeric id '{}'";
+
     private final ActorService actorService;
 
     /**
@@ -48,7 +51,7 @@ public class PersonFacadeController {
     @GetMapping(value = "/person/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Object> personDetails(@PathVariable String id) {
         if (!id.chars().allMatch(Character::isDigit)) {
-            log.debug("Person facade: rejecting non-numeric id '{}'", id);
+            log.debug(REJECTING_NON_NUMERIC_ID, id);
             return notFound();
         }
 
@@ -67,7 +70,7 @@ public class PersonFacadeController {
     @GetMapping(value = "/person/{id}/movie_credits", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Object> movieCredits(@PathVariable String id) {
         if (!id.chars().allMatch(Character::isDigit)) {
-            log.debug("Person facade: rejecting non-numeric id '{}'", id);
+            log.debug(REJECTING_NON_NUMERIC_ID, id);
             return notFound();
         }
 
@@ -87,7 +90,7 @@ public class PersonFacadeController {
     @GetMapping(value = "/person/{id}/images", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Object> personImages(@PathVariable String id) {
         if (!id.chars().allMatch(Character::isDigit)) {
-            log.debug("Person facade: rejecting non-numeric id '{}'", id);
+            log.debug(REJECTING_NON_NUMERIC_ID, id);
             return notFound();
         }
 

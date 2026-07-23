@@ -19,6 +19,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.core.convert.ConverterNotFoundException;
 import org.springframework.core.convert.TypeDescriptor;
 import org.springframework.dao.DataAccessResourceFailureException;
@@ -69,6 +70,16 @@ class MovieServiceTest {
     @Mock
     private MongoTemplate mongoTemplate;
 
+    /**
+     * Supplies the service's own proxy so internal calls to {@code @Cacheable}
+     * methods go through Spring (issue #20 / java:S6809). In a unit test there
+     * is no proxy, so it is stubbed in {@link #setUp()} to hand back the real
+     * instance — preserving the previous direct-call behaviour here while the
+     * production path gets genuine cache interception.
+     */
+    @Mock
+    private ObjectProvider<MovieService> selfProvider;
+
     @InjectMocks
     private MovieService movieService;
 
@@ -78,6 +89,9 @@ class MovieServiceTest {
     @BeforeEach
     void setUp() {
         ReflectionTestUtils.setField(movieService, "tmdbApiKey", tmdbApiKey);
+        // No Spring proxy in a unit test: hand back the real instance so
+        // internal self().xRaw(..) calls behave as direct calls here.
+        lenient().when(selfProvider.getObject()).thenReturn(movieService);
     }
 
     /**

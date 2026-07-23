@@ -162,17 +162,26 @@ public final class DateUtils {
     }
 
     /**
-     * Calculates the difference in hours between two date-times
+     * Calculates the elapsed hours between two date-times.
+     *
+     * <p>The arguments are resolved against {@link ZoneId#systemDefault()}
+     * before the difference is taken (the same convention {@link #toDate} uses).
+     * This matters across a daylight-saving transition: counting on bare
+     * {@link LocalDateTime} compares wall-clock readings, so a span crossing a
+     * DST boundary is off by the shift — 01:00 to 03:00 on a spring-forward day
+     * is one elapsed hour, not two. Resolving to a zone first yields real
+     * elapsed time.</p>
      *
      * @param start the start date-time
      * @param end   the end date-time
-     * @return number of hours between start and end
+     * @return number of elapsed hours between start and end
      */
     public static long hoursBetween(LocalDateTime start, LocalDateTime end) {
         if (start == null || end == null) {
             return 0;
         }
-        return ChronoUnit.HOURS.between(start, end);
+        ZoneId zone = ZoneId.systemDefault();
+        return ChronoUnit.HOURS.between(start.atZone(zone), end.atZone(zone));
     }
 
     /**

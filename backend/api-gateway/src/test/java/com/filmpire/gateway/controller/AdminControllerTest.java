@@ -249,10 +249,11 @@ class AdminControllerTest {
         assertThat(body.isSuccess()).isTrue();
         
         Map<String, Object> status = body.getData();
-        assertThat(status).isNotNull();
-        assertThat(status.get("blacklistSize")).isEqualTo(2);
-        assertThat(status.get("whitelistSize")).isEqualTo(1);
-        assertThat(status.get("whitelistModeEnabled")).isEqualTo(true);
+        assertThat(status)
+                .isNotNull()
+                .containsEntry("blacklistSize", 2)
+                .containsEntry("whitelistSize", 1)
+                .containsEntry("whitelistModeEnabled", true);
     }
 
     /**

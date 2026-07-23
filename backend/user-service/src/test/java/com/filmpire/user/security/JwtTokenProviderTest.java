@@ -62,7 +62,7 @@ class JwtTokenProviderTest {
         assertThat(claims.get().getSubject()).isEqualTo("liviu");
         assertThat(claims.get().get("userId", String.class))
             .isEqualTo(user.getId().toString());
-        assertThat(claims.get().get("roles")).isEqualTo(List.of("USER"));
+        assertThat(claims.get()).containsEntry("roles", List.of("USER"));
     }
 
     /**

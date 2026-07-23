@@ -82,7 +82,7 @@ class FullStackJourneyIT {
                             .GET().build(),
                     HttpResponse.BodyHandlers.discarding());
             stackUp = health.statusCode() >= 200 && health.statusCode() < 300;
-        } catch (Exception e) {
+        } catch (Exception _) {
             // Connection refused / timeout / interrupted: stack is not up.
             stackUp = false;
         }

@@ -229,7 +229,7 @@ class GlobalErrorWebExceptionHandlerTest {
         try {
             when(brokenMapper.writeValueAsString(any())).thenThrow(
                     new JacksonException("JSON error") {});
-        } catch (JacksonException e) {
+        } catch (JacksonException _) {
             // This won't happen in the test
         }
         

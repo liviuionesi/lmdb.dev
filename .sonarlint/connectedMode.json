@@ -1,7 +1,4 @@
 {
-  "projectKey": "filmpire-microservices",
-  "serverUrl": "",
-  "connectionId": "local"
+  "connectionId": "filmpire-local",
+  "projectKey": "filmpire-microservices"
 }
-
-

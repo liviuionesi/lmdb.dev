@@ -129,9 +129,10 @@ class MovieDtoTest {
                 .build();
 
         // Act & Assert
-        assertThat(dto1).isEqualTo(dto2);
-        assertThat(dto1).isNotEqualTo(dto3);
-        assertThat(dto1.hashCode()).isEqualTo(dto2.hashCode());
+        assertThat(dto1)
+                .isEqualTo(dto2)
+                .isNotEqualTo(dto3)
+                .hasSameHashCodeAs(dto2);
     }
 
     /**
@@ -202,9 +203,7 @@ class MovieDtoTest {
         String toString = dto.toString();
 
         // Assert
-        assertThat(toString).contains("550");
-        assertThat(toString).contains("Fight Club");
-        assertThat(toString).contains("8.4");
+        assertThat(toString).contains("550", "Fight Club", "8.4");
     }
 }
 

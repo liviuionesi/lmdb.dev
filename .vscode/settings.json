@@ -56,5 +56,26 @@
     "**/.github": true,
     "**/.vscode": true
   },
-  "java.autobuild.enabled": true
+  "java.autobuild.enabled": true,
+
+  // --- SonarQube for IDE (SonarLint) — see Sonar results inline (#20) ---
+  // The project BINDING lives in .sonarlint/connectedMode.json (committed, so
+  // everyone binds to the same SonarQube project). The server CONNECTION and
+  // its token are deliberately NOT here — they are machine-specific and must
+  // never be committed. Add them once in your IDE's *user* settings:
+  //
+  //   "sonarlint.connectedMode.connections.sonarqube": [
+  //     { "connectionId": "filmpire-local", "serverUrl": "http://localhost:9010" }
+  //   ]
+  //
+  // ...then run "SonarQube for IDE: Connect to SonarQube (Server)" and paste a
+  // token, which is stored in the OS keychain.
+  //
+  // Show ALL issues, not just those on new code. Flip to true to adopt
+  // clean-as-you-code (matching the server's New Code quality gate) once the
+  // existing findings are triaged.
+  "sonarlint.focusOnNewCode": false,
+  // Tell SonarLint which files are tests, so test-only rule relaxations apply
+  // and main-code rules aren't reported against test sources.
+  "sonarlint.testFilePattern": "**/src/test/**/*"
 }

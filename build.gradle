@@ -6,6 +6,10 @@ plugins {
     // version upgrades) as reviewable, idempotent source transformations.
     // Run `./gradlew rewriteDryRun` to preview, `./gradlew rewriteRun` to apply.
     id 'org.openrewrite.rewrite' version "${openRewriteVersion}"
+    // SonarQube static analysis (#20). Applied at the root of the multi-module
+    // build; it discovers every subproject and each module's JaCoCo XML report.
+    // Run:  ./gradlew test jacocoTestReport sonar
+    id 'org.sonarqube' version "${sonarqubePluginVersion}"
 }
 
 allprojects {
@@ -27,6 +31,57 @@ rewrite {
     // renames deprecated starters, and rewrites deprecated/renamed APIs and
     // configuration properties. See ADR-009.
     activeRecipe('org.openrewrite.java.spring.boot4.UpgradeSpringBoot_4_0')
+}
+
+// SonarQube analysis configuration (#20). Host/token come from the environment
+// so credentials never live in the repo:
+//   SONAR_HOST_URL  (default http://localhost:9010 — the compose host port,
+//                    since MinIO already binds 9000)
+//   SONAR_TOKEN     (a user token minted in SonarQube; required to publish)
+// The plugin picks up each module's JaCoCo XML report automatically; the
+// explicit path pattern below is belt-and-braces. Run:
+//   docker compose --profile sonar up -d
+//   ./gradlew test jacocoTestReport sonar
+sonar {
+    properties {
+        property 'sonar.projectKey', 'filmpire-microservices'
+        property 'sonar.projectName', 'Filmpire Microservices'
+        property 'sonar.host.url', System.getenv('SONAR_HOST_URL') ?: 'http://localhost:9010'
+        if (System.getenv('SONAR_TOKEN')) {
+            property 'sonar.token', System.getenv('SONAR_TOKEN')
+        }
+
+        // Aggregate JaCoCo coverage across every module.
+        property 'sonar.coverage.jacoco.xmlReportPaths',
+                "${rootDir}/backend/**/build/reports/jacoco/test/jacocoTestReport.xml"
+
+        // Never analyze generated or build output. MapStruct *Impl classes are
+        // generated; the descoped frontend placeholders carry no analyzable code.
+        property 'sonar.exclusions',
+                '**/generated/**,**/build/**,**/bin/**,**/*MapperImpl.java,frontend/**'
+
+        // Coverage exclusions — keep the coverage % about real logic. These are
+        // ANALYZED for bugs/smells (they stay out of sonar.exclusions), but not
+        // counted against coverage: Spring Boot main classes (one bootstrap
+        // line), @Configuration wiring, and OpenAPI/Swagger config have no
+        // branch logic worth a unit test.
+        property 'sonar.coverage.exclusions',
+                '**/*Application.java,**/config/**,**/dto/**,**/*Config.java'
+
+        // Test-file rule relaxations — the same three the prior SonarLint setup
+        // used, now the single source of truth (the old sonar-project.properties
+        // files are removed):
+        //   S100  method naming — test methods use descriptive underscores
+        //   S3305 field injection — @Autowired on fields is standard in Spring tests
+        //   S1192 string-literal duplication — readability beats DRY in tests
+        property 'sonar.issue.ignore.multicriteria', 'e1,e2,e3'
+        property 'sonar.issue.ignore.multicriteria.e1.ruleKey', 'java:S100'
+        property 'sonar.issue.ignore.multicriteria.e1.resourceKey', '**/src/test/**/*'
+        property 'sonar.issue.ignore.multicriteria.e2.ruleKey', 'java:S3305'
+        property 'sonar.issue.ignore.multicriteria.e2.resourceKey', '**/src/test/**/*'
+        property 'sonar.issue.ignore.multicriteria.e3.ruleKey', 'java:S1192'
+        property 'sonar.issue.ignore.multicriteria.e3.resourceKey', '**/src/test/**/*'
+    }
 }
 
 subprojects {

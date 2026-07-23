@@ -388,7 +388,9 @@ class ValidationUtilsTest {
      */
     @Test
     void in_shouldThrowForValueNotInCollection() {
-        assertThatThrownBy(() -> ValidationUtils.in("d", Arrays.asList("a", "b", "c"), "field"))
+        var allowed = Arrays.asList("a", "b", "c");
+
+        assertThatThrownBy(() -> ValidationUtils.in("d", allowed, "field"))
                 .isInstanceOf(ValidationException.class)
                 .hasMessageContaining("must be one of");
     }

@@ -13,7 +13,16 @@ import java.util.List;
  * Generic paginated response wrapper for list endpoints.
  * Provides pagination metadata and data in a consistent structure.
  *
- * @param <T> the type of items in the page
+ * <p>{@code T} is bounded to {@link Serializable} deliberately. This type is
+ * returned from {@code @Cacheable} service methods, and the Redis cache here
+ * uses JDK serialization — so a page whose elements are not serializable fails
+ * at runtime with {@code NotSerializableException} on the first cache write.
+ * Bounding the parameter turns that into a compile error at the call site
+ * instead (see ADR-011 and the movie-service model classes, which had to be
+ * made {@code Serializable} after exactly that failure reached production).</p>
+ *
+ * @param <T> the type of items in the page; must be {@link Serializable}
+ *            because pages are cached via JDK serialization
  * @author Filmpire Development Team
  * @version 1.0.0
  */
@@ -21,7 +30,7 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class PageResponse<T> implements Serializable {
+public class PageResponse<T extends Serializable> implements Serializable {
     @Serial
     private static final long serialVersionUID = 1L;
 
@@ -85,7 +94,7 @@ public class PageResponse<T> implements Serializable {
      * @param <T>           data type
      * @return PageResponse
      */
-    public static <T> PageResponse<T> of(
+    public static <T extends Serializable> PageResponse<T> of(
             List<T> content,
             int pageNumber,
             int pageSize,
@@ -115,7 +124,7 @@ public class PageResponse<T> implements Serializable {
      * @param <T>        data type
      * @return empty PageResponse
      */
-    public static <T> PageResponse<T> empty(int pageNumber, int pageSize) {
+    public static <T extends Serializable> PageResponse<T> empty(int pageNumber, int pageSize) {
         return PageResponse.<T>builder()
                 .content(List.of())
                 .pageNumber(pageNumber)
