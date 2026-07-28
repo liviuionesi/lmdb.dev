@@ -2282,23 +2282,25 @@
                         "method": "GET",
                         "header": [],
                         "url": {
-                            "raw": "{{gateway_url}}/authentication/token/new?api_key=fake_client_key_12345",
+                            "raw": "{{gateway_url}}/account?session_id=&api_key=fake_client_key_12345",
                             "host": [
                                 "{{gateway_url}}"
                             ],
                             "path": [
-                                "authentication",
-                                "token",
-                                "new"
+                                "account"
                             ],
                             "query": [
+                                {
+                                    "key": "session_id",
+                                    "value": ""
+                                },
                                 {
                                     "key": "api_key",
                                     "value": "fake_client_key_12345"
                                 }
                             ]
                         },
-                        "description": "The React app may send its own api_key. The gateway must strip it (RemoveRequestParameter) and inject the server key (AddRequestParameter) before forwarding.\n\nThis is a genuine load-bearing assertion: if the client key leaked through to TMDB, TMDB would reject it with 401/status_code 7 (\"Invalid API key\"). A 200 is only possible if the swap actually happened."
+                        "description": "The React app may send its own api_key. The gateway must strip it (RemoveRequestParameter) and inject the server key (AddRequestParameter) before forwarding.\n\nTMDB's two rejection codes make the outcome unambiguous, which is what makes this load-bearing rather than decorative:\n  status_code 3 (\"Authentication failed\")  -> a VALID key was used, only the session was missing. The strip+inject worked.\n  status_code 7 (\"Invalid API key\")        -> the fake client key reached TMDB. The filter is broken.\n\nDeliberately probes /account rather than /authentication/token/new: requesting a token has a side effect. TMDB returns the SAME request_token for repeated calls and resets its approval state, so a second token request silently invalidates the approval the login flow below depends on — which is exactly the bug this request used to cause."
                     },
                     "event": [
                         {
@@ -2306,14 +2308,12 @@
                             "script": {
                                 "type": "text/javascript",
                                 "exec": [
-                                    "pm.test('Status code is 200 (client api_key stripped, not rejected)', function () {",
-                                    "    pm.response.to.have.status(200);",
-                                    "});",
+                                    "const body = pm.response.json();",
                                     "",
-                                    "pm.test('TMDB accepted it, proving the fake client key never reached upstream', function () {",
-                                    "    const body = pm.response.json();",
-                                    "    pm.expect(body.success).to.be.true;",
-                                    "    pm.expect(body.request_token).to.be.a('string').and.not.empty;",
+                                    "pm.test('Client api_key was stripped, not forwarded (status_code 3, never 7)', function () {",
+                                    "    pm.response.to.have.status(401);",
+                                    "    pm.expect(body.status_code, 'status_code 7 means the fake client key reached TMDB')",
+                                    "        .to.eql(3);",
                                     "});"
                                 ]
                             }
