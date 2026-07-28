@@ -165,6 +165,22 @@ fi
 # whole login flow — session, account, favorites, watchlist — runs unattended.
 # When unset the collection asserts the error-passthrough path instead, so the
 # default CI run stays green.
+#
+# Falls back to the gitignored infrastructure/docker/.env so the password lives
+# in exactly one untracked file rather than in a shell history, a CI log, or the
+# collection. Only these two keys are read, and an already-exported value wins,
+# so CI (which sets them as secrets) is unaffected. Sourced in a subshell-free
+# read loop rather than `source`, so an unrelated line in .env cannot execute.
+ENV_FILE="${ENV_FILE:-$SCRIPT_DIR/.env}"
+if [[ -f "$ENV_FILE" ]]; then
+  while IFS='=' read -r key value; do
+    case "$key" in
+      TMDB_USERNAME) [[ -z "${TMDB_USERNAME:-}" ]] && TMDB_USERNAME="$value" ;;
+      TMDB_PASSWORD) [[ -z "${TMDB_PASSWORD:-}" ]] && TMDB_PASSWORD="$value" ;;
+    esac
+  done < <(grep -E '^TMDB_(USERNAME|PASSWORD)=' "$ENV_FILE" || true)
+fi
+
 TMDB_CREDS=()
 if [[ -n "${TMDB_USERNAME:-}" && -n "${TMDB_PASSWORD:-}" ]]; then
   TMDB_CREDS=(--env-var "tmdb_username=${TMDB_USERNAME}"
