@@ -182,11 +182,11 @@ See [Deployment Guide](./docs/guides/DEPLOYMENT.md) for detailed deployment inst
 
 ## 📝 License
 
-This project is created for portfolio demonstration purposes.
+This project is created for best practices exemplification and technological insight demonstration purposes.
 
 ## 👤 Author
 
-Filmpire Development Team
+Liviu Ionesi
 
 ---
 
