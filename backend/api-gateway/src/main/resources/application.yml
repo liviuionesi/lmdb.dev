@@ -301,6 +301,8 @@ management:
       base-path: /actuator
   endpoint:
     health:
+      probes:
+        enabled: true
       show-details: always
       show-components: always
     gateway:

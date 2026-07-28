@@ -25,10 +25,15 @@ management:
         include: health,info,metrics,prometheus
   endpoint:
     health:
+      probes:
+        enabled: true
       show-details: when-authorized
   info:
     env:
       enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
 
 info:
   app:

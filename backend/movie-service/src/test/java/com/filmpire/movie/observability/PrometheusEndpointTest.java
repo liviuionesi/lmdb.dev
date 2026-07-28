@@ -1,0 +1,79 @@
+package com.filmpire.movie.observability;
+
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.web.servlet.MockMvc;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.mongodb.MongoDBContainer;
+
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+/**
+ * Verifies this service's Prometheus scrape surface (issue #23).
+ *
+ * <p>Guards a failure mode this repo has already hit: {@code application.yml}
+ * listed {@code prometheus} under the actuator exposure list, which looks
+ * complete on inspection, but no module carried
+ * {@code micrometer-registry-prometheus}. Without a registry on the classpath
+ * Boot never creates the endpoint, so the scrape URL 404s and Prometheus
+ * silently records nothing while the config appears correct. Config alone is
+ * therefore not evidence — only a real request is.</p>
+ *
+ * <p>Boots the full context against a Testcontainers MongoDB, matching the
+ * module's other integration tests.</p>
+ */
+@SpringBootTest
+@AutoConfigureMockMvc
+@ActiveProfiles("test")
+@Testcontainers
+@DisplayName("Prometheus Endpoint Tests")
+class PrometheusEndpointTest {
+
+    /** Real MongoDB via Testcontainers; @ServiceConnection wires the URI. */
+    @Container
+    @ServiceConnection
+    static MongoDBContainer mongodb = new MongoDBContainer("mongo:8.0.0");
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    /**
+     * The endpoint must exist and speak the OpenMetrics text format Prometheus
+     * scrapes. Asserting on a JVM metric rather than merely on HTTP 200 proves
+     * a registry is actually publishing samples — an exposed-but-empty endpoint
+     * would satisfy a status-only assertion while giving Grafana nothing.
+     */
+    @Test
+    @DisplayName("/actuator/prometheus serves scrapeable metrics")
+    void prometheusEndpointServesMetrics() throws Exception {
+        mockMvc.perform(get("/actuator/prometheus"))
+            .andExpect(status().isOk())
+            .andExpect(content().string(org.hamcrest.Matchers.containsString("jvm_memory_used_bytes")));
+    }
+
+    /**
+     * Every sample must carry {@code application="movie-service"}.
+     *
+     * <p>Prometheus scrapes all services into one store, so metric names
+     * collide across them — {@code http_server_requests_seconds_count} means
+     * nothing without knowing which service emitted it. The common
+     * {@code management.metrics.tags.application} is what makes a shared
+     * Grafana dashboard able to split by service, so it is worth pinning
+     * rather than leaving to config review.</p>
+     */
+    @Test
+    @DisplayName("Metrics are tagged with the application name")
+    void metricsCarryApplicationTag() throws Exception {
+        mockMvc.perform(get("/actuator/prometheus"))
+            .andExpect(status().isOk())
+            .andExpect(content().string(org.hamcrest.Matchers.containsString("application=\"movie-service\"")));
+    }
+}

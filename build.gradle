@@ -163,6 +163,33 @@ subprojects {
         testImplementation 'org.springframework.boot:spring-boot-starter-test'
         testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     }
+
+    // Observability instrumentation (#23) — applied to every DEPLOYABLE service,
+    // identified by the Spring Boot plugin rather than a hand-maintained module
+    // list. That distinction matters: shared-library is a plain jar with no
+    // actuator to expose and no stdout of its own, while a service added later
+    // gets metrics and the shared JSON log format automatically instead of
+    // silently shipping un-instrumented. Keying off the plugin (rather than
+    // subprojects.findAll) also avoids depending on subproject evaluation order.
+    plugins.withId('org.springframework.boot') {
+        dependencies {
+            // Registry only — the actuator starter each service already declares
+            // exposes /actuator/prometheus once a registry is on the classpath.
+            // runtimeOnly because nothing compiles against it.
+            runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
+            implementation "net.logstash.logback:logstash-logback-encoder:${logstashEncoderVersion}"
+        }
+
+        // Ship the one shared logback-spring.xml (config/logging/) inside every
+        // service jar instead of duplicating it per module, so the log schema
+        // cannot drift between services. Boot picks it up from the classpath
+        // root by name.
+        tasks.named('processResources') {
+            from("$rootDir/config/logging") {
+                include 'logback-spring.xml'
+            }
+        }
+    }
 }
 
 task startInfrastructure(type: Exec) {
