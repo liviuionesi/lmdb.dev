@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Shared logging configuration for every Filmpire service (issue #23).
+
+  This file is the SINGLE source of truth for the log format. It is not copied
+  by hand into each service: the root build.gradle adds it to the resources of
+  every module that applies the Spring Boot plugin, so a newly created service
+  is instrumented the moment it exists and cannot silently ship a different log
+  schema. Edit here, and every service changes together.
+
+  Why JSON on stdout by default: per ARCHITECTURE.md §12.2 the pipeline is
+  "pods stdout (JSON) -> Filebeat -> Logstash -> Elasticsearch -> Kibana".
+  Filebeat reads the container's stdout, so anything other than one JSON object
+  per line forces brittle grok parsing downstream. Multi-line stack traces are
+  the classic breakage; LogstashEncoder folds them into the JSON string value
+  of a single event instead.
+
+  Human-readable output is still available for local work — activate the
+  "plain" Spring profile (SPRING_PROFILES_ACTIVE=plain, or add it alongside
+  your usual profile) and this file switches to the standard Boot console
+  pattern.
+-->
+<configuration>
+
+    <!--
+      Boot's defaults.xml supplies the CONSOLE_LOG_PATTERN and the property
+      defaults the plain appender below relies on. Including it explicitly
+      keeps this file self-contained rather than depending on Boot's implicit
+      base.xml, which also wires appenders we do not want.
+    -->
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+
+    <!--
+      The application name every log line is tagged with. Resolved from Spring's
+      environment, so it follows spring.application.name without a second place
+      to keep in sync; "unknown" only appears if a service failed to set one.
+    -->
+    <springProperty scope="context" name="appName" source="spring.application.name" defaultValue="unknown"/>
+
+    <!--
+      JSON appender — the deployed default.
+
+      customFields adds the "application" field the ELK index templates and
+      Kibana dashboards filter on (§12.2), and which the acceptance criteria of
+      #23 require on every line.
+
+      includeMdcKeyName pulls in exactly the MDC keys Micrometer Tracing writes
+      (ADR-007 / §12.3). Naming them explicitly rather than including the whole
+      MDC keeps unrelated per-request MDC entries out of the index mapping,
+      which is what causes Elasticsearch field explosion. These render as null
+      until tracing lands in #42 — harmless now, correct the moment it does.
+    -->
+    <appender name="JSON" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <customFields>{"application":"${appName}"}</customFields>
+            <includeMdcKeyName>traceId</includeMdcKeyName>
+            <includeMdcKeyName>spanId</includeMdcKeyName>
+        </encoder>
+    </appender>
+
+    <!-- Human-readable alternative, opt-in via the "plain" profile. -->
+    <appender name="PLAIN" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>${CONSOLE_LOG_PATTERN}</pattern>
+            <charset>utf8</charset>
+        </encoder>
+    </appender>
+
+    <springProfile name="plain">
+        <root level="INFO">
+            <appender-ref ref="PLAIN"/>
+        </root>
+    </springProfile>
+
+    <springProfile name="!plain">
+        <root level="INFO">
+            <appender-ref ref="JSON"/>
+        </root>
+    </springProfile>
+
+</configuration>
