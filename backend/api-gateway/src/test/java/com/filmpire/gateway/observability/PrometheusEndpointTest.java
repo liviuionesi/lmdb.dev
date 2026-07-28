@@ -1,26 +1,20 @@
-package com.filmpire.movie.observability;
+package com.filmpire.gateway.observability;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.web.servlet.MockMvc;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.mongodb.MongoDBContainer;
+import org.springframework.test.web.reactive.server.WebTestClient;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Verifies this service's Prometheus scrape surface (issue #23).
  *
- * <p>Guards a failure mode this repo has already hit: {@code application.yml}
+ * <p>Guards a failure mode this repo already hit: {@code application.yml}
  * listed {@code prometheus} under the actuator exposure list, which looks
  * complete on inspection, but no module carried
  * {@code micrometer-registry-prometheus}. Without a registry on the classpath
@@ -28,20 +22,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * silently records nothing while the config appears correct. Config alone is
  * therefore not evidence — only a real request is.</p>
  *
- * <p>Boots the full context against a Testcontainers MongoDB, matching the
- * module's other integration tests.</p>
+ * <p>Uses {@link WebTestClient} because the gateway is reactive (WebFlux);
+ * the servlet MockMvc used by the other services has no context here.</p>
  */
 @SpringBootTest
-@AutoConfigureMockMvc
+@AutoConfigureWebTestClient
 @ActiveProfiles("test")
-@Testcontainers
 @DisplayName("Prometheus Endpoint Tests")
 class PrometheusEndpointTest {
 
-    /** Real MongoDB via Testcontainers; @ServiceConnection wires the URI. */
-    @Container
-    @ServiceConnection
-    static MongoDBContainer mongodb = new MongoDBContainer("mongo:8.0.0");
 
     /**
      * The name metrics are expected to be tagged with. Read from configuration
@@ -53,7 +42,7 @@ class PrometheusEndpointTest {
     private String applicationName;
 
     @Autowired
-    private MockMvc mockMvc;
+    private WebTestClient webTestClient;
 
     /**
      * The endpoint must exist and speak the OpenMetrics text format Prometheus
@@ -63,28 +52,30 @@ class PrometheusEndpointTest {
      */
     @Test
     @DisplayName("/actuator/prometheus serves scrapeable metrics")
-    void prometheusEndpointServesMetrics() throws Exception {
-        mockMvc.perform(get("/actuator/prometheus"))
-            .andExpect(status().isOk())
-            .andExpect(content().string(org.hamcrest.Matchers.containsString("jvm_memory_used_bytes")));
+    void prometheusEndpointServesMetrics() {
+        webTestClient.get().uri("/actuator/prometheus")
+            .exchange()
+            .expectStatus().isOk()
+            .expectBody(String.class)
+            .value(body -> assertThat(body).contains("jvm_memory_used_bytes"));
     }
 
     /**
      * Every sample must carry {@code application=<this service's name>}.
      *
      * <p>Prometheus scrapes all services into one store, so metric names
-     * collide across them — {@code http_server_requests_seconds_count} means
-     * nothing without knowing which service emitted it. The common
-     * {@code management.metrics.tags.application} is what makes a shared
-     * Grafana dashboard able to split by service, so it is worth pinning
-     * rather than leaving to config review.</p>
+     * collide across them. The gateway matters most here: its
+     * {@code spring_cloud_gateway_*} series are the only place per-route
+     * latency is visible, and untagged they cannot be attributed.</p>
      */
     @Test
     @DisplayName("Metrics are tagged with the application name")
-    void metricsCarryApplicationTag() throws Exception {
-        mockMvc.perform(get("/actuator/prometheus"))
-            .andExpect(status().isOk())
-            .andExpect(content().string(org.hamcrest.Matchers.containsString("application=\"" + applicationName + "\"")));
+    void metricsCarryApplicationTag() {
+        webTestClient.get().uri("/actuator/prometheus")
+            .exchange()
+            .expectStatus().isOk()
+            .expectBody(String.class)
+            .value(body -> assertThat(body).contains("application=\"" + applicationName + "\""));
     }
 
     /**
@@ -95,8 +86,9 @@ class PrometheusEndpointTest {
      */
     @Test
     @DisplayName("Kubernetes liveness and readiness probes respond")
-    void healthProbesRespond() throws Exception {
-        mockMvc.perform(get("/actuator/health/liveness")).andExpect(status().isOk());
-        mockMvc.perform(get("/actuator/health/readiness")).andExpect(status().isOk());
+    void healthProbesRespond() {
+        webTestClient.get().uri("/actuator/health/liveness").exchange().expectStatus().isOk();
+        webTestClient.get().uri("/actuator/health/readiness").exchange().expectStatus().isOk();
     }
+
 }

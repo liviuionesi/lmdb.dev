@@ -5,6 +5,10 @@ server:
   forward-headers-strategy: framework
 
 spring:
+  main:
+    # The banner prints before logback initialises, so it is the only
+    # non-JSON thing on stdout and would reach Filebeat as junk (#23).
+    banner-mode: "off"
   application:
     name: actor-service
   datasource:
