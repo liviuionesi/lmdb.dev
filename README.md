@@ -6,14 +6,14 @@ Enterprise-grade microservices platform for movie discovery and management, demo
 
 This project implements a comprehensive microservices architecture with:
 
-- **8 Backend Microservices** (Spring Boot 3.5.8-SNAPSHOT, Java 25, Gradle Groovy DSL)
+- **8 Backend Microservices** (Spring Boot 4.1.0, Java 25, Gradle Groovy DSL)
 - **2 Frontend Applications** (Next.js 16, React Native 0.76.3)
 - **Hybrid Database Strategy** (PostgreSQL + MongoDB)
 - **Spring Cloud Infrastructure** (Eureka, Config Server, API Gateway)
 - **Spring AI Integration** (Voice recognition, recommendations)
 - **Complete CI/CD Pipeline** (GitHub Actions)
 
-### Development Standards (Spring Boot 3.5.x + Java 25)
+### Development Standards (Spring Boot 4.1.x + Java 25)
 
 **Core Principles:**
 - ✅ **Constructor Injection ONLY** - NO field injection
@@ -115,8 +115,8 @@ filmpire-microservices/
 ### Backend (Versions in gradle.properties)
 - **Java** 25 (via SDKMAN)
 - **Gradle** 9.2.0 (Groovy DSL via wrapper)
-- **Spring Boot** 3.5.8-SNAPSHOT
-- **Spring Cloud** 2025.0.0
+- **Spring Boot** 4.1.0
+- **Spring Cloud** 2025.1.2
 - **Spring AI** 1.0.0-SNAPSHOT
 - **PostgreSQL** 17-alpine
 - **MongoDB** 8.0
@@ -125,7 +125,7 @@ filmpire-microservices/
 ### Testing Stack
 - **JUnit** 5.11.3 (Jupiter ONLY - JUnit 4 FORBIDDEN)
 - **Mockito** 5.19.0
-- **Testcontainers** 1.21.2 (with @ServiceConnection)
+- **Testcontainers** 2.0.5 (with @ServiceConnection)
 - **AssertJ** (fluent assertions)
 - **JaCoCo** 0.8.14 (85% coverage minimum)
 

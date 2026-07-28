@@ -191,12 +191,20 @@ public class MovieService {
      * fetch fresh data from TMDB, so the request succeeds either way. The
      * stale document would simply be retried (and re-reported) next time.</p>
      *
+     * <p>Matches on {@code tmdbId} alone, deliberately. {@code Criteria.byExample}
+     * looks equivalent but is not: it derives a typed example, which adds a
+     * {@code _class} restriction to the query. A drifted document need not carry
+     * a matching {@code _class} — one written by the raw driver has none at all —
+     * so the delete silently removes nothing, the re-fetch inserts a second
+     * document alongside the broken one, and the heal never sticks. This must
+     * stay a plain field match.</p>
+     *
      * @param tmdbId TMDB movie ID of the document to discard
      */
     private void evictUnreadableMovie(Long tmdbId) {
         try {
             long removed = mongoTemplate
-                .remove(Query.query(Criteria.byExample(Movie.builder().tmdbId(tmdbId).build())), Movie.class)
+                .remove(Query.query(Criteria.where("tmdbId").is(tmdbId)), Movie.class)
                 .getDeletedCount();
             log.info("Evicted {} unreadable document(s) for movie {}", removed, tmdbId);
         } catch (RuntimeException e) {
