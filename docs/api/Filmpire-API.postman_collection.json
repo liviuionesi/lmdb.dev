@@ -2,7 +2,7 @@
     "info": {
         "_postman_id": "filmpire-api-001",
         "name": "Filmpire API",
-        "description": "Complete API collection for testing all Filmpire microservices through the API Gateway, with request tracing.\n\nInfrastructure Flow:\n1. Request → API Gateway (localhost:8080)\n2. Gateway → Eureka Service Discovery (localhost:8761)\n3. Eureka → target service (movie-service:8081, user-service:8082, actor-service:8083)\n4. Service → TMDB API (external) / PostgreSQL / MongoDB / Redis as needed\n5. Response with caching where applicable\n\nTwo API surfaces are tested:\n- **Native /api/v1/** (folders 1–12): ApiResponse-wrapped, camelCase, HATEOAS endpoints.\n- **TMDB v3 Facade** (folder 13, #33): bare TMDB-path endpoints (/movie/*, /person/*, /genre/*, /discover/*, /search/*) the React app calls — TMDB field names, snake_case, same response shapes the app expects from api.themoviedb.org.\n\nHATEOAS: single-resource GET endpoints (movie/actor details, user profile) advertise navigation via `_links`. Movie details return the HATEOAS resource bare (top-level `_links`); actor details and the user profile stay inside the shared ApiResponse envelope, so their links live under `data._links` instead.\n\nAuth: run '8. User Service - Auth → Register' first (or 'Login' if you already have an account) to populate the access_token/refresh_token collection variables used by every '9. User Service - Profile & Lists' request.",
+        "description": "Complete API collection for testing all Filmpire microservices through the API Gateway, with request tracing.\n\nInfrastructure Flow:\n1. Request → API Gateway (localhost:8080)\n2. Gateway → Eureka Service Discovery (localhost:8761)\n3. Eureka → target service (movie-service:8081, user-service:8082, actor-service:8083)\n4. Service → TMDB API (external) / PostgreSQL / MongoDB / Redis as needed\n5. Response with caching where applicable\n\nTwo API surfaces are tested:\n- **Native /api/v1/** (folders 1–12): ApiResponse-wrapped, camelCase, HATEOAS endpoints.\n- **TMDB v3 Facade** (folder 13, #33): bare TMDB-path endpoints (/movie/*, /person/*, /genre/*, /discover/*, /search/*) the React app calls — TMDB field names, snake_case, same response shapes the app expects from api.themoviedb.org.\n- **TMDB Auth & Account Proxy** (folder 14, #33): `/authentication/*` and `/account/*` proxied to the REAL api.themoviedb.org — login and per-user lists are the one part Filmpire does not clone. Runs green without a login; see that folder's description for the browser-approval step needed to exercise the authenticated path.\n\nHATEOAS: single-resource GET endpoints (movie/actor details, user profile) advertise navigation via `_links`. Movie details return the HATEOAS resource bare (top-level `_links`); actor details and the user profile stay inside the shared ApiResponse envelope, so their links live under `data._links` instead.\n\nAuth: run '8. User Service - Auth → Register' first (or 'Login' if you already have an account) to populate the access_token/refresh_token collection variables used by every '9. User Service - Profile & Lists' request.",
         "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
     },
     "item": [
@@ -2226,6 +2226,449 @@
                     ]
                 }
             ]
+        },
+        {
+            "name": "14. TMDB Auth & Account Proxy (#33)",
+            "description": "The gateway's transparent proxy to the REAL api.themoviedb.org for the two things Filmpire cannot clone: authentication and per-user account data (`/authentication/**`, `/account/**` -> `PrefixPath=/3`).\n\nUnlike folder 13, these requests leave the local stack and hit TMDB. The browser never holds the TMDB key: the gateway strips any client `api_key` and injects the server-side one, forwards `session_id` untouched, and relays TMDB's status AND body verbatim.\n\nRUNS GREEN WITHOUT A LOGIN. Each request asserts the authenticated payload when {{tmdb_session_id}} is set, and TMDB's verbatim 401 error body when it is not — so CI (which gates on this whole collection) stays green while still covering the contract.\n\nTo exercise the authenticated path (issue #33 AC2/AC3):\n  1. Run 'Proxy: Create Request Token' and open the approval URL it logs.\n  2. Approve it while signed in to themoviedb.org (this hop needs a human — TMDB offers no unattended approval).\n  3. Re-run the folder: the session is created, {{tmdb_account_id}} is resolved, and the favorites/watchlist requests run against the real account.\n\nRequires the gateway to be started with a valid TMDB_API_KEY.",
+            "item": [
+                {
+                    "name": "Proxy: Create Request Token",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{gateway_url}}/authentication/token/new",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "authentication",
+                                "token",
+                                "new"
+                            ]
+                        },
+                        "description": "Step 1 of the real TMDB login flow (issue #33 AC2). The browser sends NO api_key — the gateway injects the server-side one, so a 200 here proves the proxy route, the key injection and the upstream call all work.\n\nStores the token in {{tmdb_request_token}} and logs the approval URL. TMDB has no unattended approval path, so a human must open that URL before \"Proxy: Create Session\" can succeed."
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('Status code is 200', function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "const body = pm.response.json();",
+                                    "",
+                                    "pm.test('TMDB issued a request token (server-side api_key was injected)', function () {",
+                                    "    pm.expect(body.success).to.be.true;",
+                                    "    pm.expect(body.request_token).to.be.a('string').and.not.empty;",
+                                    "    pm.expect(body.expires_at).to.be.a('string');",
+                                    "});",
+                                    "",
+                                    "// Hand the token to the session step below. Useless until a human approves it.",
+                                    "pm.collectionVariables.set('tmdb_request_token', body.request_token);",
+                                    "console.log('Approve this token in a browser, then re-run this folder:');",
+                                    "console.log('  https://www.themoviedb.org/authenticate/' + body.request_token);"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Proxy: Client api_key is stripped and replaced",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{gateway_url}}/authentication/token/new?api_key=fake_client_key_12345",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "authentication",
+                                "token",
+                                "new"
+                            ],
+                            "query": [
+                                {
+                                    "key": "api_key",
+                                    "value": "fake_client_key_12345"
+                                }
+                            ]
+                        },
+                        "description": "The React app may send its own api_key. The gateway must strip it (RemoveRequestParameter) and inject the server key (AddRequestParameter) before forwarding.\n\nThis is a genuine load-bearing assertion: if the client key leaked through to TMDB, TMDB would reject it with 401/status_code 7 (\"Invalid API key\"). A 200 is only possible if the swap actually happened."
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('Status code is 200 (client api_key stripped, not rejected)', function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "pm.test('TMDB accepted it, proving the fake client key never reached upstream', function () {",
+                                    "    const body = pm.response.json();",
+                                    "    pm.expect(body.success).to.be.true;",
+                                    "    pm.expect(body.request_token).to.be.a('string').and.not.empty;",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Proxy: Create Session (needs an approved token)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{gateway_url}}/authentication/session/new",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "authentication",
+                                "session",
+                                "new"
+                            ]
+                        },
+                        "description": "Step 2 of the login flow. Exchanges an APPROVED request token for a session_id.\n\nUnattended this returns 401/status_code 17 (\"Session denied\") because nobody approved the token — which is itself worth asserting, since it proves the gateway relays TMDB error bodies verbatim rather than substituting its own. Once a human approves the token from request 1, this returns 200 and stores {{tmdb_session_id}}, which unlocks every account request below.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"request_token\": \"{{tmdb_request_token}}\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "const body = pm.response.json();",
+                                    "",
+                                    "if (pm.response.code === 200) {",
+                                    "    pm.test('Approved request token is exchanged for a session_id', function () {",
+                                    "        pm.expect(body.success).to.be.true;",
+                                    "        pm.expect(body.session_id).to.be.a('string').and.not.empty;",
+                                    "    });",
+                                    "    pm.collectionVariables.set('tmdb_session_id', body.session_id);",
+                                    "    console.log('session_id stored — the account requests below now run authenticated.');",
+                                    "} else {",
+                                    "    // No human approved the token, so assert the error-passthrough contract instead.",
+                                    "    pm.test('TMDB 401 is relayed verbatim (status_code 17)', function () {",
+                                    "        pm.response.to.have.status(401);",
+                                    "        pm.expect(body.success).to.be.false;",
+                                    "        pm.expect(body.status_code).to.eql(17);",
+                                    "        pm.expect(body.status_message).to.be.a('string').and.not.empty;",
+                                    "    });",
+                                    "    console.log('Token not approved — asserted TMDB error passthrough instead.');",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Proxy: Account Details",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{gateway_url}}/account?session_id={{tmdb_session_id}}",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "account"
+                            ],
+                            "query": [
+                                {
+                                    "key": "session_id",
+                                    "value": "{{tmdb_session_id}}"
+                                }
+                            ]
+                        },
+                        "description": "Step 3 of the login flow (issue #33 AC2): resolve the session to a TMDB account. On success this stores {{tmdb_account_id}}, which the favorites/watchlist requests below need for their path.\n\nWithout a session TMDB answers 401/status_code 3 and the gateway relays it unchanged."
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "const body = pm.response.json();",
+                                    "",
+                                    "if (pm.response.code === 200) {",
+                                    "    pm.test('Session resolves to a real TMDB account', function () {",
+                                    "        pm.expect(body.id).to.be.a('number');",
+                                    "        pm.expect(body.username).to.be.a('string').and.not.empty;",
+                                    "    });",
+                                    "    // The favorites/watchlist paths below are keyed by this id.",
+                                    "    pm.collectionVariables.set('tmdb_account_id', String(body.id));",
+                                    "} else {",
+                                    "    pm.test('TMDB 401 is relayed verbatim (status_code 3)', function () {",
+                                    "        pm.response.to.have.status(401);",
+                                    "        pm.expect(body.success).to.be.false;",
+                                    "        pm.expect(body.status_code).to.eql(3);",
+                                    "        pm.expect(body.status_message).to.be.a('string').and.not.empty;",
+                                    "    });",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Proxy: Favorites (GET)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{gateway_url}}/account/{{tmdb_account_id}}/favorite/movies?session_id={{tmdb_session_id}}",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "account",
+                                "{{tmdb_account_id}}",
+                                "favorite",
+                                "movies"
+                            ],
+                            "query": [
+                                {
+                                    "key": "session_id",
+                                    "value": "{{tmdb_session_id}}"
+                                }
+                            ]
+                        },
+                        "description": "Issue #33 AC3, read half. Reads the account favorites straight from TMDB through the gateway — Filmpire does not keep its own copy of these.\n\nUnauthenticated it asserts the 401 passthrough; the default {{tmdb_account_id}} of 0 is deliberate, because TMDB checks the session before the account id, so the request stays meaningful either way."
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "const body = pm.response.json();",
+                                    "",
+                                    "if (pm.response.code === 200) {",
+                                    "    pm.test('Favorites come back in the TMDB list envelope', function () {",
+                                    "        pm.expect(body.page).to.be.a('number');",
+                                    "        pm.expect(body.results).to.be.an('array');",
+                                    "        pm.expect(body.total_pages).to.be.a('number');",
+                                    "        pm.expect(body.total_results).to.be.a('number');",
+                                    "    });",
+                                    "} else {",
+                                    "    pm.test('TMDB 401 is relayed verbatim (status_code 3)', function () {",
+                                    "        pm.response.to.have.status(401);",
+                                    "        pm.expect(body.success).to.be.false;",
+                                    "        pm.expect(body.status_code).to.eql(3);",
+                                    "        pm.expect(body.status_message).to.be.a('string').and.not.empty;",
+                                    "    });",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Proxy: Add Favorite (POST)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{gateway_url}}/account/{{tmdb_account_id}}/favorite?session_id={{tmdb_session_id}}",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "account",
+                                "{{tmdb_account_id}}",
+                                "favorite"
+                            ],
+                            "query": [
+                                {
+                                    "key": "session_id",
+                                    "value": "{{tmdb_session_id}}"
+                                }
+                            ]
+                        },
+                        "description": "Issue #33 AC3, write half — marks Fight Club (550) as a favorite on the real TMDB account. Proves the proxy forwards a JSON request body and the session_id together, not just query params on GETs.\n\nTMDB answers 201 for a newly created favorite and 200 when it was already set, so both count as success.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"media_type\": \"movie\",\n  \"media_id\": 550,\n  \"favorite\": true\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "const body = pm.response.json();",
+                                    "",
+                                    "if (pm.response.code < 300) {",
+                                    "    pm.test('TMDB accepted the favorite (201 created, or 200 already set)', function () {",
+                                    "        pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                                    "        pm.expect(body.success).to.be.true;",
+                                    "        pm.expect(body.status_message).to.be.a('string').and.not.empty;",
+                                    "    });",
+                                    "} else {",
+                                    "    pm.test('TMDB 401 is relayed verbatim (status_code 3)', function () {",
+                                    "        pm.response.to.have.status(401);",
+                                    "        pm.expect(body.success).to.be.false;",
+                                    "        pm.expect(body.status_code).to.eql(3);",
+                                    "        pm.expect(body.status_message).to.be.a('string').and.not.empty;",
+                                    "    });",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Proxy: Watchlist (GET)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{gateway_url}}/account/{{tmdb_account_id}}/watchlist/movies?session_id={{tmdb_session_id}}",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "account",
+                                "{{tmdb_account_id}}",
+                                "watchlist",
+                                "movies"
+                            ],
+                            "query": [
+                                {
+                                    "key": "session_id",
+                                    "value": "{{tmdb_session_id}}"
+                                }
+                            ]
+                        },
+                        "description": "Issue #33 AC3, read half for the watchlist — the same contract as favorites, on the other TMDB list the Filmpire UI renders."
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "const body = pm.response.json();",
+                                    "",
+                                    "if (pm.response.code === 200) {",
+                                    "    pm.test('Watchlist comes back in the TMDB list envelope', function () {",
+                                    "        pm.expect(body.page).to.be.a('number');",
+                                    "        pm.expect(body.results).to.be.an('array');",
+                                    "        pm.expect(body.total_pages).to.be.a('number');",
+                                    "        pm.expect(body.total_results).to.be.a('number');",
+                                    "    });",
+                                    "} else {",
+                                    "    pm.test('TMDB 401 is relayed verbatim (status_code 3)', function () {",
+                                    "        pm.response.to.have.status(401);",
+                                    "        pm.expect(body.success).to.be.false;",
+                                    "        pm.expect(body.status_code).to.eql(3);",
+                                    "        pm.expect(body.status_message).to.be.a('string').and.not.empty;",
+                                    "    });",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Proxy: Add to Watchlist (POST)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{gateway_url}}/account/{{tmdb_account_id}}/watchlist?session_id={{tmdb_session_id}}",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "account",
+                                "{{tmdb_account_id}}",
+                                "watchlist"
+                            ],
+                            "query": [
+                                {
+                                    "key": "session_id",
+                                    "value": "{{tmdb_session_id}}"
+                                }
+                            ]
+                        },
+                        "description": "Issue #33 AC3, write half for the watchlist — adds Inception (27205) to the real TMDB account. Same 200/201 success contract as the favorite POST.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"media_type\": \"movie\",\n  \"media_id\": 27205,\n  \"watchlist\": true\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "const body = pm.response.json();",
+                                    "",
+                                    "if (pm.response.code < 300) {",
+                                    "    pm.test('TMDB accepted the watchlist add (201 created, or 200 already set)', function () {",
+                                    "        pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                                    "        pm.expect(body.success).to.be.true;",
+                                    "        pm.expect(body.status_message).to.be.a('string').and.not.empty;",
+                                    "    });",
+                                    "} else {",
+                                    "    pm.test('TMDB 401 is relayed verbatim (status_code 3)', function () {",
+                                    "        pm.response.to.have.status(401);",
+                                    "        pm.expect(body.success).to.be.false;",
+                                    "        pm.expect(body.status_code).to.eql(3);",
+                                    "        pm.expect(body.status_message).to.be.a('string').and.not.empty;",
+                                    "    });",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ]
+                }
+            ]
         }
     ],
     "variable": [
@@ -2278,6 +2721,18 @@
             "key": "refresh_token",
             "value": "",
             "type": "string"
+        },
+        {
+            "key": "tmdb_request_token",
+            "value": ""
+        },
+        {
+            "key": "tmdb_session_id",
+            "value": ""
+        },
+        {
+            "key": "tmdb_account_id",
+            "value": "0"
         }
     ]
 }
