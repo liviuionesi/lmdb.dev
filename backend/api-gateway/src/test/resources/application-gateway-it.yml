@@ -1,10 +1,23 @@
-# Test profile for GatewayIntegrationTest (#19).
+# Test profile for GatewayIntegrationTest (#19, #33).
 #
 # Boots the REAL gateway but replaces the production `lb://service` routes
-# (which resolve via Eureka) with static routes pointing at a single WireMock
-# server on port 9971 that stands in for every downstream service. Eureka and
-# the discovery route locator are disabled; Redis host/port come from a
-# Testcontainers container via @DynamicPropertySource.
+# (which resolve via Eureka) with static routes pointing at WireMock servers.
+# Eureka and the discovery route locator are disabled; Redis host/port come from
+# a Testcontainers container via @DynamicPropertySource.
+#
+# TWO WireMock servers, deliberately:
+#   * 9971 stands in for movie-service AND (on the /3/** paths) the real TMDB;
+#   * 9972 stands in for actor-service.
+# Routing "to the correct downstream" is the whole point of several assertions,
+# and a single shared server cannot prove it — every route would hit the same
+# port, so a person request mis-routed to movie-service would still pass. The
+# split port makes the destination observable.
+#
+# The predicates below MIRROR PRODUCTION EXACTLY. That matters most for the
+# /search namespace: TMDB shares it across resource types, so production splits
+# `/search/movie` (movie-service) from `/search/person` (actor-service) rather
+# than using a blanket `/search/**`. A broad predicate here would silently pass
+# while production mis-routed person searches.
 #
 # The route list here REPLACES the base application.yml routes (Spring Boot does
 # not merge list properties across profile documents). More specific test-only
@@ -71,23 +84,25 @@ spring:
                     name: userServiceCircuitBreaker
                     fallbackUri: forward:/fallback/users
 
-            # --- Actor service (public GET) ---
+            # --- Actor service (public GET) → the actor WireMock on 9972 ---
             - id: actor-service
-              uri: http://localhost:9971
+              uri: http://localhost:9972
               predicates:
                 - Path=/api/v1/actors/**
 
-            # --- TMDB v3 facade routes (#33) → WireMock stand-in downstreams ---
+            # --- TMDB v3 facade routes (#33) → WireMock stand-in downstreams.
+            # Predicates mirror production; note /search is split by resource
+            # type across the two routes below. ---
             - id: tmdb-movie-facade
               uri: http://localhost:9971
               predicates:
-                - Path=/movie/**,/genre/**,/discover/**,/search/**
+                - Path=/movie/**,/genre/**,/discover/**,/search/movie
               filters:
                 - RemoveRequestParameter=api_key
             - id: tmdb-person-facade
-              uri: http://localhost:9971
+              uri: http://localhost:9972
               predicates:
-                - Path=/person/**
+                - Path=/person/**,/search/person
               filters:
                 - RemoveRequestParameter=api_key
 
