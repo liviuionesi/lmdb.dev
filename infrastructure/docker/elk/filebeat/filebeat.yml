@@ -1,0 +1,21 @@
+# Filebeat ships container stdout to Logstash (issue #24). Local-profile
+# equivalent of the DaemonSet in ARCHITECTURE.md section 12.2 — one
+# Filebeat container tailing every other container's log file directly,
+# since there's no kubelet/CRI here to run a real DaemonSet against.
+#
+# The `container` input auto-detects podman's on-disk log format (CRI
+# "<time> <stream> <F|P> <line>", written regardless of which log driver
+# name podman is given) and lifts just the app's stdout line into
+# `message` — see docker-compose.yml's `logging.driver: k8s-file` override
+# on each app service, which is what makes these files exist at all
+# (podman's default journald driver never writes a log FILE to tail).
+filebeat.inputs:
+  - type: container
+    paths:
+      - /var/lib/containers/storage/overlay-containers/*/userdata/ctr.log
+
+output.logstash:
+  hosts: ["logstash:5044"]
+
+logging.level: info
+logging.to_stderr: true

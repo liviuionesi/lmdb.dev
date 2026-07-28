@@ -1,0 +1,21 @@
+# ServiceMonitor for user-service (issue #24, ARCHITECTURE.md section 12.1).
+# See README.md for the labeling contract this depends on.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: user-service-monitor
+  namespace: monitoring
+  labels:
+    app: user-service
+spec:
+  namespaceSelector:
+    matchNames:
+      - default
+  selector:
+    matchLabels:
+      app: user-service
+      monitoring: enabled
+  endpoints:
+    - targetPort: 8082
+      path: /actuator/prometheus
+      interval: 10s
