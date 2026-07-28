@@ -180,14 +180,27 @@ subprojects {
             implementation "net.logstash.logback:logstash-logback-encoder:${logstashEncoderVersion}"
         }
 
-        // Ship the one shared logback-spring.xml (config/logging/) inside every
-        // service jar instead of duplicating it per module, so the log schema
-        // cannot drift between services. Boot picks it up from the classpath
-        // root by name.
+        // Ship the one shared logback-spring.xml inside every service jar instead
+        // of duplicating it per module, so the log schema cannot drift between
+        // services. Boot picks it up from the classpath root by name.
+        //
+        // It lives under backend/ deliberately: each service's Dockerfile copies
+        // only gradlew, gradle/, the three root build files and backend/, so a
+        // path outside backend/ simply does not exist inside the image. That bit
+        // once already — the file sat at config/logging/, Gradle's from() treated
+        // the missing directory as an empty copy, the image built green, and every
+        // service shipped with the config silently absent.
+        def sharedLogback = file("$rootDir/backend/observability/logback-spring.xml")
         tasks.named('processResources') {
-            from("$rootDir/config/logging") {
-                include 'logback-spring.xml'
+            // Fail loudly rather than repeat that silent no-op.
+            doFirst {
+                if (!sharedLogback.exists()) {
+                    throw new GradleException(
+                        "Shared logging config missing at ${sharedLogback}. Every service " +
+                        "would start with default logging and no JSON output (#23).")
+                }
             }
+            from(sharedLogback)
         }
     }
 }
