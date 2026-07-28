@@ -2,7 +2,7 @@
     "info": {
         "_postman_id": "filmpire-api-001",
         "name": "Filmpire API",
-        "description": "Complete API collection for testing all Filmpire microservices through the API Gateway, with request tracing.\n\nInfrastructure Flow:\n1. Request → API Gateway (localhost:8080)\n2. Gateway → Eureka Service Discovery (localhost:8761)\n3. Eureka → target service (movie-service:8081, user-service:8082, actor-service:8083)\n4. Service → TMDB API (external) / PostgreSQL / MongoDB / Redis as needed\n5. Response with caching where applicable\n\nHATEOAS: single-resource GET endpoints (movie/actor details, user profile) advertise navigation via `_links`. Movie details return the HATEOAS resource bare (top-level `_links`); actor details and the user profile stay inside the shared ApiResponse envelope, so their links live under `data._links` instead.\n\nAuth: run '8. User Service - Auth → Register' first (or 'Login' if you already have an account) to populate the access_token/refresh_token collection variables used by every '9. User Service - Profile & Lists' request.",
+        "description": "Complete API collection for testing all Filmpire microservices through the API Gateway, with request tracing.\n\nInfrastructure Flow:\n1. Request → API Gateway (localhost:8080)\n2. Gateway → Eureka Service Discovery (localhost:8761)\n3. Eureka → target service (movie-service:8081, user-service:8082, actor-service:8083)\n4. Service → TMDB API (external) / PostgreSQL / MongoDB / Redis as needed\n5. Response with caching where applicable\n\nTwo API surfaces are tested:\n- **Native /api/v1/** (folders 1–12): ApiResponse-wrapped, camelCase, HATEOAS endpoints.\n- **TMDB v3 Facade** (folder 13, #33): bare TMDB-path endpoints (/movie/*, /person/*, /genre/*, /discover/*, /search/*) the React app calls — TMDB field names, snake_case, same response shapes the app expects from api.themoviedb.org.\n\nHATEOAS: single-resource GET endpoints (movie/actor details, user profile) advertise navigation via `_links`. Movie details return the HATEOAS resource bare (top-level `_links`); actor details and the user profile stay inside the shared ApiResponse envelope, so their links live under `data._links` instead.\n\nAuth: run '8. User Service - Auth → Register' first (or 'Login' if you already have an account) to populate the access_token/refresh_token collection variables used by every '9. User Service - Profile & Lists' request.",
         "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
     },
     "item": [
@@ -1425,6 +1425,800 @@
                                     "// Served from MongoDB, so it should be fast.",
                                     "pm.test('Served locally (under 1s)', function () {",
                                     "    pm.expect(pm.response.responseTime).to.be.below(1000);",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "13. TMDB v3 Facade (#33)",
+            "description": "Tests the bare TMDB v3 facade paths introduced by issue #33. These are the paths the Filmpire React app calls (same URIs it would use against api.themoviedb.org, minus the /3 prefix and api_key query param). The gateway routes them to the movie-service and actor-service facade controllers, which serve TMDB-shaped JSON from the persisted catalog.\n\nMovie facade: /genre/movie/list, /movie/{category}, /movie/{id}, /movie/{id}/recommendations, /movie/{id}/similar, /discover/movie, /search/movie\nPerson facade: /person/{id}, /person/{id}/movie_credits, /person/{id}/images, /person/popular, /search/person",
+            "item": [
+                {
+                    "name": "Facade: Genre List",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{gateway_url}}/genre/movie/list",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "genre",
+                                "movie",
+                                "list"
+                            ]
+                        },
+                        "description": "TMDB-compatible genre list (React app sidebar). Returns {genres: [{id, name}, ...]}."
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('Status code is 200', function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "const body = pm.response.json();",
+                                    "",
+                                    "pm.test('Returns a genres array', function () {",
+                                    "    pm.expect(body.genres).to.be.an('array').and.not.empty;",
+                                    "});",
+                                    "",
+                                    "pm.test('Each genre has id and name', function () {",
+                                    "    body.genres.forEach(function (g) {",
+                                    "        pm.expect(g.id).to.be.a('number');",
+                                    "        pm.expect(g.name).to.be.a('string');",
+                                    "    });",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Facade: Popular Movies",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{gateway_url}}/movie/popular?page=1",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "movie",
+                                "popular"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                }
+                            ]
+                        },
+                        "description": "TMDB-compatible popular movies list. Returns {page, results, total_pages, total_results}."
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('Status code is 200', function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "const body = pm.response.json();",
+                                    "",
+                                    "pm.test('Has TMDB list envelope (page, results, total_pages, total_results)', function () {",
+                                    "    pm.expect(body.page).to.be.a('number');",
+                                    "    pm.expect(body.results).to.be.an('array');",
+                                    "    pm.expect(body.total_pages).to.be.a('number');",
+                                    "    pm.expect(body.total_results).to.be.a('number');",
+                                    "});",
+                                    "",
+                                    "pm.test('Results contain movie objects with expected fields', function () {",
+                                    "    if (body.results.length > 0) {",
+                                    "        const movie = body.results[0];",
+                                    "        pm.expect(movie.id).to.be.a('number');",
+                                    "        pm.expect(movie.title).to.be.a('string');",
+                                    "    }",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Facade: Top Rated Movies",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{gateway_url}}/movie/top_rated?page=1",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "movie",
+                                "top_rated"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                }
+                            ]
+                        },
+                        "description": "TMDB-compatible top-rated movies list."
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('Status code is 200', function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "const body = pm.response.json();",
+                                    "",
+                                    "pm.test('Has TMDB list envelope', function () {",
+                                    "    pm.expect(body.page).to.be.a('number');",
+                                    "    pm.expect(body.results).to.be.an('array');",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Facade: Movie Details with append_to_response",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{gateway_url}}/movie/550?append_to_response=videos,credits",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "movie",
+                                "550"
+                            ],
+                            "query": [
+                                {
+                                    "key": "append_to_response",
+                                    "value": "videos,credits",
+                                    "description": "Embed videos and credits sub-resources"
+                                }
+                            ]
+                        },
+                        "description": "TMDB-compatible movie detail for Fight Club (ID: 550) with videos and credits appended — the exact call the React app makes on the movie details page."
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('Status code is 200', function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "const body = pm.response.json();",
+                                    "",
+                                    "pm.test('Has TMDB movie detail fields', function () {",
+                                    "    pm.expect(body.id).to.eql(550);",
+                                    "    pm.expect(body.title).to.be.a('string');",
+                                    "    pm.expect(body.overview).to.be.a('string');",
+                                    "    pm.expect(body.poster_path).to.be.a('string');",
+                                    "    pm.expect(body.vote_average).to.be.a('number');",
+                                    "});",
+                                    "",
+                                    "pm.test('Has appended videos sub-resource', function () {",
+                                    "    pm.expect(body.videos).to.exist;",
+                                    "    pm.expect(body.videos.results).to.be.an('array');",
+                                    "});",
+                                    "",
+                                    "pm.test('Has appended credits sub-resource', function () {",
+                                    "    pm.expect(body.credits).to.exist;",
+                                    "    pm.expect(body.credits.cast).to.be.an('array');",
+                                    "    pm.expect(body.credits.crew).to.be.an('array');",
+                                    "});",
+                                    "",
+                                    "pm.test('Credits cast entries have expected shape', function () {",
+                                    "    if (body.credits.cast.length > 0) {",
+                                    "        const c = body.credits.cast[0];",
+                                    "        pm.expect(c.id).to.be.a('number');",
+                                    "        pm.expect(c.name).to.be.a('string');",
+                                    "    }",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Facade: Movie Details (bare, no append)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{gateway_url}}/movie/550",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "movie",
+                                "550"
+                            ]
+                        },
+                        "description": "Movie detail without append_to_response — videos and credits keys must be absent."
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('Status code is 200', function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "const body = pm.response.json();",
+                                    "",
+                                    "pm.test('Has core TMDB movie fields', function () {",
+                                    "    pm.expect(body.id).to.eql(550);",
+                                    "    pm.expect(body.title).to.be.a('string');",
+                                    "});",
+                                    "",
+                                    "pm.test('Does NOT include videos/credits when not requested', function () {",
+                                    "    pm.expect(body.videos).to.be.oneOf([null, undefined]);",
+                                    "    pm.expect(body.credits).to.be.oneOf([null, undefined]);",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Facade: Movie Recommendations",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{gateway_url}}/movie/550/recommendations?page=1",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "movie",
+                                "550",
+                                "recommendations"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                }
+                            ]
+                        },
+                        "description": "TMDB-compatible recommendations for Fight Club."
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('Status code is 200', function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "const body = pm.response.json();",
+                                    "",
+                                    "pm.test('Has TMDB list envelope', function () {",
+                                    "    pm.expect(body.page).to.be.a('number');",
+                                    "    pm.expect(body.results).to.be.an('array');",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Facade: Similar Movies",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{gateway_url}}/movie/550/similar?page=1",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "movie",
+                                "550",
+                                "similar"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                }
+                            ]
+                        },
+                        "description": "TMDB-compatible similar movies for Fight Club."
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('Status code is 200', function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "const body = pm.response.json();",
+                                    "",
+                                    "pm.test('Has TMDB list envelope', function () {",
+                                    "    pm.expect(body.page).to.be.a('number');",
+                                    "    pm.expect(body.results).to.be.an('array');",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Facade: Discover by Genre",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{gateway_url}}/discover/movie?with_genres=28&page=1",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "discover",
+                                "movie"
+                            ],
+                            "query": [
+                                {
+                                    "key": "with_genres",
+                                    "value": "28",
+                                    "description": "28 = Action"
+                                },
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                }
+                            ]
+                        },
+                        "description": "TMDB-compatible discover with genre filter — the call the React app makes when the user picks a genre from the sidebar."
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('Status code is 200', function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "const body = pm.response.json();",
+                                    "",
+                                    "pm.test('Has TMDB list envelope', function () {",
+                                    "    pm.expect(body.page).to.be.a('number');",
+                                    "    pm.expect(body.results).to.be.an('array');",
+                                    "});",
+                                    "",
+                                    "pm.test('Results contain movie objects', function () {",
+                                    "    if (body.results.length > 0) {",
+                                    "        pm.expect(body.results[0].id).to.be.a('number');",
+                                    "        pm.expect(body.results[0].title).to.be.a('string');",
+                                    "    }",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Facade: Discover by Cast",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{gateway_url}}/discover/movie?with_cast=819&page=1",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "discover",
+                                "movie"
+                            ],
+                            "query": [
+                                {
+                                    "key": "with_cast",
+                                    "value": "819",
+                                    "description": "819 = Edward Norton"
+                                },
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                }
+                            ]
+                        },
+                        "description": "TMDB-compatible discover with cast filter — the call the React app makes from an actor's filmography page."
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('Status code is 200', function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "const body = pm.response.json();",
+                                    "",
+                                    "pm.test('Has TMDB list envelope', function () {",
+                                    "    pm.expect(body.results).to.be.an('array');",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Facade: Search Movies",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{gateway_url}}/search/movie?query=Inception&page=1",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "search",
+                                "movie"
+                            ],
+                            "query": [
+                                {
+                                    "key": "query",
+                                    "value": "Inception"
+                                },
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                }
+                            ]
+                        },
+                        "description": "TMDB-compatible movie search — the exact call the React app's search bar triggers."
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('Status code is 200', function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "const body = pm.response.json();",
+                                    "",
+                                    "pm.test('Has TMDB list envelope', function () {",
+                                    "    pm.expect(body.page).to.be.a('number');",
+                                    "    pm.expect(body.results).to.be.an('array');",
+                                    "});",
+                                    "",
+                                    "pm.test('Results match the search query', function () {",
+                                    "    if (body.results.length > 0) {",
+                                    "        // At least one result should mention Inception",
+                                    "        const titles = body.results.map(r => r.title || '');",
+                                    "        const match = titles.some(t => t.toLowerCase().includes('inception'));",
+                                    "        pm.expect(match).to.be.true;",
+                                    "    }",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Facade: api_key is ignored (not rejected)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{gateway_url}}/movie/popular?page=1&api_key=fake_client_key_12345",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "movie",
+                                "popular"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                },
+                                {
+                                    "key": "api_key",
+                                    "value": "fake_client_key_12345",
+                                    "description": "The gateway strips this — it must not cause an error"
+                                }
+                            ]
+                        },
+                        "description": "Verifies the gateway's RemoveRequestParameter=api_key filter: the client may send an api_key (the React app does), and it should be silently stripped, not rejected."
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('Status code is 200 (api_key stripped, not rejected)', function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "pm.test('Returns a valid movie list despite the client api_key', function () {",
+                                    "    const body = pm.response.json();",
+                                    "    pm.expect(body.results).to.be.an('array');",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Facade: Person Details (Edward Norton)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{gateway_url}}/person/819",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "person",
+                                "819"
+                            ]
+                        },
+                        "description": "TMDB-compatible person detail for Edward Norton (TMDB person ID: 819). Served by actor-service's PersonFacadeController."
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('Status code is 200', function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "const body = pm.response.json();",
+                                    "",
+                                    "pm.test('Has TMDB person detail fields', function () {",
+                                    "    pm.expect(body.id).to.eql(819);",
+                                    "    pm.expect(body.name).to.be.a('string');",
+                                    "    pm.expect(body.biography).to.be.a('string');",
+                                    "});",
+                                    "",
+                                    "pm.test('Uses TMDB field names (snake_case)', function () {",
+                                    "    // The facade must serve TMDB's snake_case names, not the",
+                                    "    // native API's camelCase.",
+                                    "    pm.expect(body).to.have.property('profile_path');",
+                                    "    pm.expect(body).to.have.property('known_for_department');",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Facade: Person Movie Credits",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{gateway_url}}/person/819/movie_credits",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "person",
+                                "819",
+                                "movie_credits"
+                            ]
+                        },
+                        "description": "TMDB-compatible movie credits (filmography) for Edward Norton."
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('Status code is 200', function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "const body = pm.response.json();",
+                                    "",
+                                    "pm.test('Has TMDB movie-credits shape (cast and/or crew arrays)', function () {",
+                                    "    pm.expect(body.cast || body.crew).to.exist;",
+                                    "    if (body.cast) pm.expect(body.cast).to.be.an('array');",
+                                    "    if (body.crew) pm.expect(body.crew).to.be.an('array');",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Facade: Person Images",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{gateway_url}}/person/819/images",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "person",
+                                "819",
+                                "images"
+                            ]
+                        },
+                        "description": "TMDB-compatible person images for Edward Norton. Returns CDN references, never actual image bytes."
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('Status code is 200', function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "const body = pm.response.json();",
+                                    "",
+                                    "pm.test('Has profiles array', function () {",
+                                    "    pm.expect(body.profiles).to.be.an('array');",
+                                    "});",
+                                    "",
+                                    "pm.test('Profile images have expected fields', function () {",
+                                    "    if (body.profiles.length > 0) {",
+                                    "        const img = body.profiles[0];",
+                                    "        pm.expect(img.file_path).to.be.a('string');",
+                                    "    }",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Facade: Popular Persons",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{gateway_url}}/person/popular?page=1",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "person",
+                                "popular"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                }
+                            ]
+                        },
+                        "description": "TMDB-compatible popular persons list."
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('Status code is 200', function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "const body = pm.response.json();",
+                                    "",
+                                    "pm.test('Has TMDB list envelope', function () {",
+                                    "    pm.expect(body.page).to.be.a('number');",
+                                    "    pm.expect(body.results).to.be.an('array');",
+                                    "});",
+                                    "",
+                                    "pm.test('Results contain person objects', function () {",
+                                    "    if (body.results.length > 0) {",
+                                    "        pm.expect(body.results[0].id).to.be.a('number');",
+                                    "        pm.expect(body.results[0].name).to.be.a('string');",
+                                    "    }",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Facade: Search Persons",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{gateway_url}}/search/person?query=Edward Norton&page=1",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "search",
+                                "person"
+                            ],
+                            "query": [
+                                {
+                                    "key": "query",
+                                    "value": "Edward Norton"
+                                },
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                }
+                            ]
+                        },
+                        "description": "TMDB-compatible person search. Routed to actor-service (not movie-service) — the gateway's /search/person predicate ensures correct routing."
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('Status code is 200', function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "const body = pm.response.json();",
+                                    "",
+                                    "pm.test('Has TMDB list envelope', function () {",
+                                    "    pm.expect(body.results).to.be.an('array');",
+                                    "});",
+                                    "",
+                                    "pm.test('Results match the search query', function () {",
+                                    "    if (body.results.length > 0) {",
+                                    "        const names = body.results.map(r => r.name || '');",
+                                    "        const match = names.some(n => n.toLowerCase().includes('norton'));",
+                                    "        pm.expect(match).to.be.true;",
+                                    "    }",
                                     "});"
                                 ]
                             }
