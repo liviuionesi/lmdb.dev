@@ -2058,8 +2058,10 @@ that. Verification is layered, not assumed:
 **Free-tier sizing reality (drives all sizing decisions):**
 - Free-tier nodes have 1 vCPU / 1–2 GB RAM. A full 8-service Spring Boot
   deployment does not fit. The cloud profile deploys the **core slice** only:
-  discovery, config, gateway, movie-service + MongoDB + Redis, with JVM flags
-  `-XX:MaxRAMPercentage=60 -Xss256k` and single replicas.
+  gateway, movie-service + MongoDB + Redis, with JVM flags
+  `-XX:MaxRAMPercentage=60 -Xss256k` and single replicas. Discovery and Config
+  are NOT part of the cloud slice — Kubernetes supplies both natively
+  (ADR-005), which conveniently also frees ~512 MB on a 1–2 GB node.
 - Everything else (user/actor/ai/media services, full ELK) runs in the
   **local** profile; the manifests are identical, only Kustomize overlays and
   replica counts differ.
@@ -2137,16 +2139,24 @@ resource "aws_instance" "k3s_server" {
 Kustomize base + overlays (no Helm for own services; Helm only for
 third-party charts):
 
+**Eureka and Config Server are deliberately absent from these manifests**
+(ADR-005): Kubernetes already provides both capabilities, so in-cluster
+services resolve each other via cluster DNS (`lb://movie-service` becomes
+`http://movie-service`) and read configuration from ConfigMaps generated from
+the same native config files. They remain first-class in the docker-compose /
+bare-JVM profile, where nothing else supplies discovery or config.
+
 ```
 infrastructure/kubernetes/
 ├── base/                      # cloud-agnostic manifests
-│   ├── discovery-service/     # Deployment, Service, probes
-│   ├── config-service/
 │   ├── api-gateway/           # + Ingress
 │   ├── movie-service/
 │   ├── user-service/
 │   ├── actor-service/
-│   ├── mongodb/               # StatefulSet + PVC
+│   ├── postgres/              # StatefulSet + PVC — user-service (filmpire)
+│   │                          #   and actor-service (filmpire_actor);
+│   │                          #   pgvector image once ai-service lands (ADR-012)
+│   ├── mongodb/               # StatefulSet + PVC — movie-service
 │   ├── redis/
 │   └── kustomization.yaml
 ├── overlays/
