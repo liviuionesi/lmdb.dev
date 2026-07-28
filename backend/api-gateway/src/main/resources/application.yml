@@ -7,6 +7,10 @@ server:
     idle-timeout: 30s         # Idle connection timeout
 
 spring:
+  main:
+    # The banner prints before logback initialises, so it is the only
+    # non-JSON thing on stdout and would reach Filebeat as junk (#23).
+    banner-mode: "off"
   application:
     name: api-gateway
   

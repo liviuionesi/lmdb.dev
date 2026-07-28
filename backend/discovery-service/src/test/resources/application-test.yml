@@ -17,7 +17,10 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        # Mirrors the production exposure list — a narrower one here would let
+        # the suite pass while the scrape endpoint is unreachable in the
+        # deployed service, which is the drift #23 exists to catch.
+        include: health,info,metrics,prometheus
 
 logging:
   level:

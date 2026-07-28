@@ -2,6 +2,10 @@ server:
   port: 8888
 
 spring:
+  main:
+    # The banner prints before logback initialises, so it is the only
+    # non-JSON thing on stdout and would reach Filebeat as junk (#23).
+    banner-mode: "off"
   application:
     name: config-service
   profiles:

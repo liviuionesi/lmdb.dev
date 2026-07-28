@@ -1,26 +1,27 @@
-package com.filmpire.movie.observability;
+package com.filmpire.actor.observability;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.mongodb.MongoDBContainer;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 
 /**
  * Verifies this service's Prometheus scrape surface (issue #23).
  *
- * <p>Guards a failure mode this repo has already hit: {@code application.yml}
+ * <p>Guards a failure mode this repo already hit: {@code application.yml}
  * listed {@code prometheus} under the actuator exposure list, which looks
  * complete on inspection, but no module carried
  * {@code micrometer-registry-prometheus}. Without a registry on the classpath
@@ -28,8 +29,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * silently records nothing while the config appears correct. Config alone is
  * therefore not evidence — only a real request is.</p>
  *
- * <p>Boots the full context against a Testcontainers MongoDB, matching the
- * module's other integration tests.</p>
+ * <p>Boots against a Testcontainers PostgreSQL, matching this module's
+ * existing integration tests.</p>
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -38,10 +39,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @DisplayName("Prometheus Endpoint Tests")
 class PrometheusEndpointTest {
 
-    /** Real MongoDB via Testcontainers; @ServiceConnection wires the URI. */
+    /** Real PostgreSQL 17; @ServiceConnection wires the datasource. */
     @Container
     @ServiceConnection
-    static MongoDBContainer mongodb = new MongoDBContainer("mongo:8.0.0");
+    static PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:17-alpine");
+
 
     /**
      * The name metrics are expected to be tagged with. Read from configuration
@@ -66,7 +68,7 @@ class PrometheusEndpointTest {
     void prometheusEndpointServesMetrics() throws Exception {
         mockMvc.perform(get("/actuator/prometheus"))
             .andExpect(status().isOk())
-            .andExpect(content().string(org.hamcrest.Matchers.containsString("jvm_memory_used_bytes")));
+            .andExpect(content().string(containsString("jvm_memory_used_bytes")));
     }
 
     /**
@@ -75,16 +77,16 @@ class PrometheusEndpointTest {
      * <p>Prometheus scrapes all services into one store, so metric names
      * collide across them — {@code http_server_requests_seconds_count} means
      * nothing without knowing which service emitted it. The common
-     * {@code management.metrics.tags.application} is what makes a shared
-     * Grafana dashboard able to split by service, so it is worth pinning
-     * rather than leaving to config review.</p>
+     * {@code management.metrics.tags.application} tag is what lets a shared
+     * Grafana dashboard split by service, so it is worth pinning rather than
+     * leaving to config review.</p>
      */
     @Test
     @DisplayName("Metrics are tagged with the application name")
     void metricsCarryApplicationTag() throws Exception {
         mockMvc.perform(get("/actuator/prometheus"))
             .andExpect(status().isOk())
-            .andExpect(content().string(org.hamcrest.Matchers.containsString("application=\"" + applicationName + "\"")));
+            .andExpect(content().string(containsString("application=\"" + applicationName + "\"")));
     }
 
     /**
@@ -99,4 +101,5 @@ class PrometheusEndpointTest {
         mockMvc.perform(get("/actuator/health/liveness")).andExpect(status().isOk());
         mockMvc.perform(get("/actuator/health/readiness")).andExpect(status().isOk());
     }
+
 }

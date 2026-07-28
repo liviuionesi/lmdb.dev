@@ -55,6 +55,15 @@
             <customFields>{"application":"${appName}"}</customFields>
             <includeMdcKeyName>traceId</includeMdcKeyName>
             <includeMdcKeyName>spanId</includeMdcKeyName>
+            <!--
+              The logger context also carries appName (the springProperty above
+              declares it at context scope), which would emit it a second time
+              alongside "application" on every single line. Dropping the context
+              keeps one canonical field instead of two identical ones — the
+              duplicate is pure index weight in Elasticsearch, multiplied by
+              every log line the cluster ever stores.
+            -->
+            <includeContext>false</includeContext>
         </encoder>
     </appender>
 
