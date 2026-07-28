@@ -1,8 +1,11 @@
 package com.filmpire.gateway.integration;
 
+import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -40,47 +43,69 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
+import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Gateway-boundary integration tests for issue #19 (Service Integration
- * Testing).
+ * Gateway-boundary integration tests for issues #19 (Service Integration
+ * Testing) and #33 (TMDB v3 facade routing + auth/account proxy).
  *
  * <p>The services are separate modules with separate databases, so there is no
  * direct service-to-service DB join to exercise; "integration" here means the
  * one place cross-service behavior actually converges — the API gateway. This
  * suite boots the REAL gateway (full route table, Spring Security, Resilience4j
- * circuit breakers, Redis rate limiting, JWT filter) and points every route at
- * a single WireMock server that stands in for the downstream services (see
+ * circuit breakers, Redis rate limiting, JWT filter) and points its routes at
+ * WireMock servers standing in for the downstreams (see
  * {@code application-gateway-it.yml}). Eureka is disabled; a Testcontainers
  * Redis backs the rate limiter.</p>
+ *
+ * <p><strong>Two WireMock servers, on purpose.</strong> Port 9971 (the
+ * {@code @WireMockTest} instance, reachable via the static {@code WireMock.*}
+ * helpers) plays movie-service and — on its {@code /3/**} paths — the real
+ * TMDB. Port 9972 ({@link #actorMock}) plays actor-service. Several assertions
+ * are about routing reaching the <em>correct</em> downstream, and one shared
+ * server cannot prove that: every route would hit the same port, so a person
+ * request mis-routed to movie-service would still pass. Splitting the ports
+ * makes the destination observable.</p>
  *
  * <p>What is proven end to end through the real Netty server + full filter
  * chain: path-based routing to the correct downstream, public vs.
  * authentication-required exchanges, JWT identity propagation
  * ({@code X-User-*} headers), downstream error passthrough, circuit-breaker
- * fallback, request rate limiting, and CORS preflight. Behaviors that don't
- * belong at this boundary (real service discovery; the per-service data logic)
- * are covered by the discovery-service and per-service suites respectively —
- * see {@code docs/architecture/INTEGRATION_TESTING.md}.</p>
+ * fallback, request rate limiting, CORS preflight, and — for #33 — the bare
+ * TMDB catalog surface, client {@code api_key} stripping, and the
+ * auth/account proxy's key injection, {@code session_id} forwarding and
+ * verbatim error passthrough. Behaviors that don't belong at this boundary
+ * (real service discovery; the per-service data logic) are covered by the
+ * discovery-service and per-service suites respectively — see
+ * {@code docs/architecture/INTEGRATION_TESTING.md}.</p>
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("gateway-it")
 @AutoConfigureWebTestClient
 @Testcontainers
 @WireMockTest(httpPort = 9971)
-@DisplayName("Gateway Integration Tests (#19)")
+@DisplayName("Gateway Integration Tests (#19, #33)")
 class GatewayIntegrationTest {
 
     /** Shared HS256 secret — MUST match the gateway's {@code jwt.secret} default
      *  so tokens minted here validate in the gateway's JwtUtil. */
     private static final String JWT_SECRET = "filmpire-secret-key-change-in-production";
 
+    /** Port the actor-service stand-in listens on; matches the
+     *  {@code actor-service} and {@code tmdb-person-facade} route URIs in
+     *  {@code application-gateway-it.yml}. */
+    private static final int ACTOR_MOCK_PORT = 9972;
+
     /** Real Redis backing the RequestRateLimiter (no auth). */
     @Container
     @SuppressWarnings("resource")
     static GenericContainer<?> redis = new GenericContainer<>(DockerImageName.parse("redis:7.4-alpine"))
             .withExposedPorts(6379);
+
+    /** Second stand-in downstream: actor-service. Managed manually because
+     *  {@code @WireMockTest} configures only one instance per class. */
+    private static WireMockServer actorMock;
 
     @LocalServerPort
     private int port;
@@ -100,14 +125,32 @@ class GatewayIntegrationTest {
         registry.add("spring.data.redis.port", () -> redis.getMappedPort(6379));
     }
 
+    /** Starts the actor-service stand-in on its fixed port. */
+    @BeforeAll
+    static void startActorMock() {
+        actorMock = new WireMockServer(options().port(ACTOR_MOCK_PORT));
+        actorMock.start();
+    }
+
+    /** Stops the actor-service stand-in so the port is free for the next class. */
+    @AfterAll
+    static void stopActorMock() {
+        if (actorMock != null) {
+            actorMock.stop();
+        }
+    }
+
     /** Builds a client bound to the random server port with a generous timeout
-     *  (some tests fire many requests). */
+     *  (some tests fire many requests), and clears the manually-managed actor
+     *  mock — {@code @WireMockTest} resets the 9971 instance itself, but 9972
+     *  would otherwise leak stubs and request counts across tests. */
     @BeforeEach
     void setUp() {
         client = WebTestClient.bindToServer()
                 .baseUrl("http://localhost:" + port)
                 .responseTimeout(Duration.ofSeconds(15))
                 .build();
+        actorMock.resetAll();
     }
 
     /**
@@ -144,20 +187,20 @@ class GatewayIntegrationTest {
     }
 
     /**
-     * A public GET for an actor must route to the actor downstream — proves
-     * path-based routing distinguishes services (a different prefix reaches the
-     * same WireMock at a different path, i.e. the actor route matched, not the
-     * movie route).
+     * A public GET for an actor must route to the ACTOR downstream (port 9972),
+     * not the movie one — with separate stand-in servers this genuinely proves
+     * path-based routing picks the right service rather than merely proving the
+     * path survived the gateway.
      */
     @Test
     @DisplayName("Routes public actor GET to the actor downstream")
     void routesActorRequestToDownstream() {
-        stubFor(get(urlEqualTo("/api/v1/actors/819")).willReturn(okJson("{\"id\":819}")));
+        actorMock.stubFor(get(urlEqualTo("/api/v1/actors/819")).willReturn(okJson("{\"id\":819}")));
 
         client.get().uri("/api/v1/actors/819").exchange()
                 .expectStatus().isOk();
 
-        verify(getRequestedFor(urlEqualTo("/api/v1/actors/819")));
+        actorMock.verify(getRequestedFor(urlEqualTo("/api/v1/actors/819")));
     }
 
     /**
@@ -354,18 +397,85 @@ class GatewayIntegrationTest {
     }
 
     /**
-     * `/person/{id}` must route to the actor-service facade (a different
-     * downstream than the movie paths), completing the catalog surface the
-     * React app's actor page needs.
+     * `/person/{id}` must route to the actor-service facade — asserted against
+     * the actor stand-in (9972) AND against the movie stand-in receiving
+     * nothing, so a predicate change that swallowed /person into the movie
+     * route would fail here.
      */
     @Test
-    @DisplayName("Facade: /person routes to actor-service")
+    @DisplayName("Facade: /person routes to actor-service, not movie-service")
     void facadeRoutesPersonToActorService() {
-        stubFor(get(urlPathEqualTo("/person/819")).willReturn(okJson("{\"id\":819,\"name\":\"Edward Norton\"}")));
+        actorMock.stubFor(get(urlPathEqualTo("/person/819"))
+                .willReturn(okJson("{\"id\":819,\"name\":\"Edward Norton\"}")));
 
         client.get().uri("/person/819").exchange().expectStatus().isOk();
 
-        verify(getRequestedFor(urlPathEqualTo("/person/819")));
+        actorMock.verify(getRequestedFor(urlPathEqualTo("/person/819")));
+        verify(0, getRequestedFor(urlPathEqualTo("/person/819")));
+    }
+
+    /**
+     * The /search namespace is shared across TMDB resource types, and routes are
+     * matched in declaration order — so a blanket {@code /search/**} on the
+     * movie route would swallow person searches and 404 them. This pins the
+     * split: {@code /search/person} must reach actor-service and
+     * {@code /search/movie} must reach movie-service, each with the other
+     * downstream untouched. It is the regression guard for the trap called out
+     * in the route config's own comment.
+     */
+    @Test
+    @DisplayName("Facade: /search is split by resource type across downstreams")
+    void facadeSplitsSearchNamespaceByResourceType() {
+        // Given: both downstreams can answer their own half of /search.
+        stubFor(get(urlPathEqualTo("/search/movie")).willReturn(okJson("{\"results\":[]}")));
+        actorMock.stubFor(get(urlPathEqualTo("/search/person")).willReturn(okJson("{\"results\":[]}")));
+
+        // When: one search of each type goes through the gateway.
+        client.get().uri("/search/movie?query=matrix").exchange().expectStatus().isOk();
+        client.get().uri("/search/person?query=norton").exchange().expectStatus().isOk();
+
+        // Then: each landed on its own service and neither leaked to the other.
+        verify(getRequestedFor(urlPathEqualTo("/search/movie")));
+        verify(0, getRequestedFor(urlPathEqualTo("/search/person")));
+        actorMock.verify(getRequestedFor(urlPathEqualTo("/search/person")));
+        actorMock.verify(0, getRequestedFor(urlPathEqualTo("/search/movie")));
+    }
+
+    /**
+     * `/discover/movie` is how the React app filters the catalog by genre, and
+     * it is the one facade path with no coverage elsewhere in this class. It
+     * must route to movie-service with the query string intact — the filter
+     * parameters are the entire point of the endpoint.
+     */
+    @Test
+    @DisplayName("Facade: /discover/movie routes to movie-service with filters intact")
+    void facadeRoutesDiscoverToMovieService() {
+        stubFor(get(urlPathEqualTo("/discover/movie")).willReturn(okJson("{\"page\":1,\"results\":[]}")));
+
+        client.get().uri("/discover/movie?with_genres=28&page=2").exchange()
+                .expectStatus().isOk();
+
+        verify(getRequestedFor(urlPathEqualTo("/discover/movie"))
+                .withQueryParam("with_genres", equalTo("28"))
+                .withQueryParam("page", equalTo("2")));
+    }
+
+    /**
+     * api_key stripping must hold on the person route too, not just the movie
+     * one — the filter is configured per-route, so it is genuinely possible to
+     * add a facade route and forget it, leaking a client-supplied key to a
+     * downstream that would otherwise use the server-side key.
+     */
+    @Test
+    @DisplayName("Facade: strips the client api_key on the person route as well")
+    void facadeStripsClientApiKeyOnPersonRoute() {
+        actorMock.stubFor(get(urlPathEqualTo("/person/819")).willReturn(okJson("{\"id\":819}")));
+
+        client.get().uri("/person/819?api_key=leaked-client-key").exchange()
+                .expectStatus().isOk();
+
+        actorMock.verify(getRequestedFor(urlPathEqualTo("/person/819"))
+                .withQueryParam("api_key", absent()));
     }
 
     /**
@@ -413,6 +523,48 @@ class GatewayIntegrationTest {
         verify(postRequestedFor(urlPathEqualTo("/3/account/42/favorite"))
                 .withQueryParam("api_key", equalTo("server-side-key"))
                 .withQueryParam("session_id", equalTo("sess-abc")));
+    }
+
+    /**
+     * The proxy is a conduit, not an interpreter: when TMDB rejects a call the
+     * client must see TMDB's own status AND its own body. The React app branches
+     * on TMDB's numeric {@code status_code}, so a gateway that swallowed the
+     * body or normalized the status into a generic 500 would break error
+     * handling (e.g. an expired session would stop being distinguishable from
+     * an outage).
+     */
+    @Test
+    @DisplayName("Proxy: relays a TMDB error status and body verbatim")
+    void authProxyRelaysUpstreamErrorVerbatim() {
+        // Given: TMDB rejects the session as invalid.
+        String tmdbError = "{\"success\":false,\"status_code\":7,\"status_message\":\"Invalid API key.\"}";
+        stubFor(get(urlPathEqualTo("/3/authentication/session/new"))
+                .willReturn(aResponse().withStatus(401)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody(tmdbError)));
+
+        // When/Then: the client sees TMDB's status and its exact body.
+        client.get().uri("/authentication/session/new?request_token=rt-bad").exchange()
+                .expectStatus().isUnauthorized()
+                .expectBody().json(tmdbError);
+    }
+
+    /**
+     * CORS is what actually lets the browser-side React app talk to the gateway,
+     * and the app calls the BARE TMDB paths — so preflight has to succeed there,
+     * not merely on the /api/v1 surface the other CORS test covers. Guards
+     * against the facade paths being added to the route table but left outside
+     * the CORS configuration.
+     */
+    @Test
+    @DisplayName("CORS preflight is allowed on the bare TMDB facade paths")
+    void corsPreflightAllowedOnFacadePath() {
+        client.options().uri("/movie/popular")
+                .header(HttpHeaders.ORIGIN, "http://localhost:3000")
+                .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "GET")
+                .exchange()
+                .expectStatus().is2xxSuccessful()
+                .expectHeader().valueEquals("Access-Control-Allow-Origin", "http://localhost:3000");
     }
 
     /**
