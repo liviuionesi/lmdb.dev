@@ -1,0 +1,21 @@
+# ServiceMonitor for api-gateway (issue #24, ARCHITECTURE.md section 12.1).
+# See README.md for the labeling contract this depends on.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: api-gateway-monitor
+  namespace: monitoring
+  labels:
+    app: api-gateway
+spec:
+  namespaceSelector:
+    matchNames:
+      - default
+  selector:
+    matchLabels:
+      app: api-gateway
+      monitoring: enabled
+  endpoints:
+    - targetPort: 8080
+      path: /actuator/prometheus
+      interval: 10s

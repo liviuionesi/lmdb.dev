@@ -158,6 +158,10 @@ services:
       SPRING_APPLICATION_NAME: discovery-service
       EUREKA_INSTANCE_HOSTNAME: discovery-service
       EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://discovery-service:8761/eureka/
+    # k8s-file (not the podman default, journald) so the local ELK stack's
+    # Filebeat has a log FILE to tail — see docker-compose.elk.yml (#24).
+    logging:
+      driver: k8s-file
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8761/actuator/health"]
       interval: 30s
@@ -180,6 +184,8 @@ services:
       SPRING_APPLICATION_NAME: config-service
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
       SPRING_CLOUD_CONFIG_SERVER_NATIVE_SEARCHLOCATIONS: classpath:/config
+    logging:
+      driver: k8s-file
     depends_on:
       discovery-service:
         condition: service_healthy
@@ -213,6 +219,8 @@ services:
       # empty value at bind time. Without this the gateway does not merely lose
       # those routes — route refresh throws and the container crash-loops.
       TMDB_API_KEY: ${TMDB_API_KEY}
+    logging:
+      driver: k8s-file
     depends_on:
       discovery-service:
         condition: service_healthy
@@ -247,6 +255,8 @@ services:
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:-redis123}
       TMDB_API_KEY: ${TMDB_API_KEY}
+    logging:
+      driver: k8s-file
     depends_on:
       discovery-service:
         condition: service_healthy
@@ -285,6 +295,8 @@ services:
       # CONTRACT: must match the api-gateway's JWT_SECRET — the gateway
       # validates the access tokens this service issues (HS256, shared secret).
       JWT_SECRET: ${JWT_SECRET:-filmpire-secret-key-change-in-production}
+    logging:
+      driver: k8s-file
     depends_on:
       discovery-service:
         condition: service_healthy
@@ -322,6 +334,8 @@ services:
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:-redis123}
       TMDB_API_KEY: ${TMDB_API_KEY}
+    logging:
+      driver: k8s-file
     depends_on:
       discovery-service:
         condition: service_healthy

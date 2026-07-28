@@ -1,0 +1,21 @@
+# ServiceMonitor for ai-service (issue #24, ARCHITECTURE.md section 12.1).
+# See README.md for the labeling contract this depends on.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: ai-service-monitor
+  namespace: monitoring
+  labels:
+    app: ai-service
+spec:
+  namespaceSelector:
+    matchNames:
+      - default
+  selector:
+    matchLabels:
+      app: ai-service
+      monitoring: enabled
+  endpoints:
+    - targetPort: 8084
+      path: /actuator/prometheus
+      interval: 10s

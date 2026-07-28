@@ -1,0 +1,21 @@
+# ServiceMonitor for media-service (issue #24, ARCHITECTURE.md section 12.1).
+# See README.md for the labeling contract this depends on.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: media-service-monitor
+  namespace: monitoring
+  labels:
+    app: media-service
+spec:
+  namespaceSelector:
+    matchNames:
+      - default
+  selector:
+    matchLabels:
+      app: media-service
+      monitoring: enabled
+  endpoints:
+    - targetPort: 8085
+      path: /actuator/prometheus
+      interval: 10s

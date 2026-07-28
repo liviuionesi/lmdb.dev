@@ -1,0 +1,133 @@
+version: '3.9'
+
+# Local ELK stack (issue #24, ARCHITECTURE.md section 12.2):
+#   pods stdout (JSON) -> Filebeat -> Logstash -> Elasticsearch -> Kibana
+#
+# Overlay file — bring it up alongside the main stack so Filebeat has app
+# containers to tail and both projects share `filmpire-network`:
+#   podman-compose -f docker-compose.yml -f docker-compose.elk.yml up -d
+#
+# Single-node, no security (xpack.security disabled): this is the local/free
+# -tier profile from section 12.2's table, not the cloud (ECK, 3-node) one.
+
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.3
+    container_name: filmpire-elasticsearch
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+    ports:
+      - "${ELASTICSEARCH_PORT:-9200}:9200"
+    volumes:
+      - elk_es_data:/usr/share/elasticsearch/data
+    networks:
+      - filmpire-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=5s || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
+    restart: unless-stopped
+
+  # One-shot: PUTs the ILM policy + index template, then exits (see
+  # elk/setup/setup.sh). Logstash/Kibana don't block on it — the pipeline
+  # works before it runs, just without the lifecycle policy on the very
+  # first index until this completes, which is seconds after ES is healthy.
+  elk-setup:
+    image: docker.io/curlimages/curl:8.10.1
+    container_name: filmpire-elk-setup
+    entrypoint: ["/bin/sh", "/setup/setup.sh"]
+    volumes:
+      - ./elk/setup/setup.sh:/setup/setup.sh:ro,z
+      - ./elk/elasticsearch/ilm-policy.json:/setup/ilm-policy.json:ro,z
+      - ./elk/elasticsearch/index-template.json:/setup/index-template.json:ro,z
+    networks:
+      - filmpire-network
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    restart: "no"
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.15.3
+    container_name: filmpire-logstash
+    environment:
+      LS_JAVA_OPTS: "-Xms256m -Xmx256m"
+    volumes:
+      - ./elk/logstash/pipeline:/usr/share/logstash/pipeline:ro,z
+      - ./elk/logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml:ro,z
+    networks:
+      - filmpire-network
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    # The HTTP monitoring API (9600) accepts the TCP connection but has been
+    # unreliable answering plain curl inside this image; the beats input
+    # (5044) is the port that actually matters for readiness (it's what
+    # Filebeat depends on), so probe that directly instead.
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'cat < /dev/null > /dev/tcp/127.0.0.1/5044' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
+    restart: unless-stopped
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.15.3
+    container_name: filmpire-kibana
+    environment:
+      ELASTICSEARCH_HOSTS: '["http://elasticsearch:9200"]'
+    ports:
+      - "${KIBANA_PORT:-5601}:5601"
+    networks:
+      - filmpire-network
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:5601/api/status || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+    restart: unless-stopped
+
+  # Tails every other container's stdout log file directly off the host's
+  # rootless podman storage (see filebeat/filebeat.yml for why). Needs
+  # `label:disable` to read that host path without SELinux relabeling
+  # podman's own storage tree out from under it.
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:8.15.3
+    container_name: filmpire-filebeat
+    user: root
+    command: ["--strict.perms=false", "-e"]
+    environment:
+      CONTAINERS_STORAGE_ROOT: ${HOME}/.local/share/containers/storage
+    volumes:
+      - ./elk/filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - ${HOME}/.local/share/containers/storage/overlay-containers:/var/lib/containers/storage/overlay-containers:ro
+    security_opt:
+      - label:disable
+    networks:
+      - filmpire-network
+    depends_on:
+      logstash:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  elk_es_data:
+    driver: local
+
+# No `external: true` here: this file is meant to run combined with
+# docker-compose.yml (`-f docker-compose.yml -f docker-compose.elk.yml`),
+# which already fully defines this network — a second, conflicting
+# definition across merged files is a compose validation error. Run this
+# file alone and podman-compose just reuses the existing network by name.
+networks:
+  filmpire-network:
+    name: filmpire-network

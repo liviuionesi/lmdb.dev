@@ -1,0 +1,105 @@
+# Helm values for prometheus-community/kube-prometheus-stack (issue #24,
+# ARCHITECTURE.md section 12.1). Local/free-tier profile: 10s scrape
+# interval, 15-day retention (section 12.5's "relaxed to 30s in cloud
+# overlays" applies to a future cloud values file, not this one).
+#
+# Install:
+#   helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+#   helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
+#     --namespace monitoring --create-namespace \
+#     -f infrastructure/kubernetes/monitoring/values.yaml
+#
+# Then apply this directory's ServiceMonitors, dashboard ConfigMaps, and
+# PrometheusRule once the release exists:
+#   kubectl apply -f infrastructure/kubernetes/monitoring/service-monitors/
+#   kubectl apply -f infrastructure/kubernetes/monitoring/dashboards/*-configmap.yaml
+#   kubectl apply -f infrastructure/kubernetes/monitoring/alerts/
+#
+# (dashboards/*.json are the raw dashboard bodies the *-configmap.yaml files
+# embed for editing convenience — don't apply them directly, they're not
+# Kubernetes manifests on their own.)
+#
+# Every Service this stack scrapes must carry the `monitoring: enabled`
+# label (section 12.1) — see service-monitors/README.md for the full
+# contract that issue #25's Kubernetes manifests need to satisfy.
+
+prometheus:
+  prometheusSpec:
+    retention: 15d
+    scrapeInterval: 10s
+    evaluationInterval: 10s
+
+    # Cluster-wide discovery: pick up every ServiceMonitor/PrometheusRule
+    # regardless of which release label they carry, not just this chart's
+    # own. Simpler than requiring every future manifest to know this
+    # release's Helm release name.
+    serviceMonitorSelectorNilUsesHelmValues: false
+    serviceMonitorNamespaceSelector: {}
+    ruleSelectorNilUsesHelmValues: false
+    ruleNamespaceSelector: {}
+
+    # Free-tier sizing (section 12.1): modest requests/limits so this fits
+    # next to the app stack on a single laptop-sized node.
+    resources:
+      requests:
+        cpu: 100m
+        memory: 512Mi
+      limits:
+        cpu: 500m
+        memory: 1Gi
+
+  # minikube's control-plane components (etcd, apiserver, scheduler,
+  # controller-manager, kube-proxy) aren't exposed the way a real cluster's
+  # are, and probing them here just produces permanently-red "down" targets
+  # that mean nothing. kubelet, cAdvisor, node-exporter, kube-state-metrics
+  # and CoreDNS all work fine on minikube and stay on.
+kubeControllerManager:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeEtcd:
+  enabled: false
+kubeProxy:
+  enabled: false
+
+alertmanager:
+  alertmanagerSpec:
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+
+grafana:
+  enabled: true
+  # Single replica, no persistence (section 12.1): dashboards are
+  # provisioned from git (this directory's ConfigMaps), so a lost pod
+  # loses nothing.
+  replicas: 1
+  persistence:
+    enabled: false
+  adminPassword: filmpire-admin
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  # Auto-load any ConfigMap labeled grafana_dashboard=1 in this namespace —
+  # what dashboards/*.yaml uses, so `kubectl apply` alone is enough to
+  # publish a dashboard.
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      labelValue: "1"
+      searchNamespace: ALL
+
+nodeExporter:
+  enabled: true
+
+kubeStateMetrics:
+  enabled: true
