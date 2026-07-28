@@ -2229,7 +2229,7 @@
         },
         {
             "name": "14. TMDB Auth & Account Proxy (#33)",
-            "description": "The gateway's transparent proxy to the REAL api.themoviedb.org for the two things Filmpire cannot clone: authentication and per-user account data (`/authentication/**`, `/account/**` -> `PrefixPath=/3`).\n\nUnlike folder 13, these requests leave the local stack and hit TMDB. The browser never holds the TMDB key: the gateway strips any client `api_key` and injects the server-side one, forwards `session_id` untouched, and relays TMDB's status AND body verbatim.\n\nRUNS GREEN WITHOUT A LOGIN. Each request asserts the authenticated payload when {{tmdb_session_id}} is set, and TMDB's verbatim 401 error body when it is not — so CI (which gates on this whole collection) stays green while still covering the contract.\n\nTo exercise the authenticated path (issue #33 AC2/AC3):\n  1. Run 'Proxy: Create Request Token' and open the approval URL it logs.\n  2. Approve it while signed in to themoviedb.org (this hop needs a human — TMDB offers no unattended approval).\n  3. Re-run the folder: the session is created, {{tmdb_account_id}} is resolved, and the favorites/watchlist requests run against the real account.\n\nRequires the gateway to be started with a valid TMDB_API_KEY.",
+            "description": "The gateway's transparent proxy to the REAL api.themoviedb.org for the two things Filmpire cannot clone: authentication and per-user account data (`/authentication/**`, `/account/**` -> `PrefixPath=/3`).\n\nUnlike folder 13, these requests leave the local stack and hit TMDB. The browser never holds the TMDB key: the gateway strips any client `api_key` and injects the server-side one, forwards `session_id` untouched, and relays TMDB's status AND body verbatim.\n\nRUNS GREEN WITHOUT A LOGIN. Each request asserts the authenticated payload when {{tmdb_session_id}} is set, and TMDB's verbatim error body when it is not — so CI (which gates on this whole collection) stays green while still covering the contract.\n\nTo exercise the authenticated path (issue #33 AC2/AC3), either:\n\nA. UNATTENDED — set {{tmdb_username}} and {{tmdb_password}} (or TMDB_USERNAME / TMDB_PASSWORD, which smoke-test.sh forwards) and run the folder once. 'Proxy: Approve Token with TMDB Login' approves the token from credentials, no browser involved. Never commit those values.\n\nB. BROWSER — run 'Proxy: Create Request Token', open the approval URL it logs, approve it while signed in to themoviedb.org, then re-run the folder.\n\nEither way the session is created, {{tmdb_account_id}} is resolved from it, and the favorites/watchlist requests execute against the real account.\n\nRequires the gateway to be started with a valid TMDB_API_KEY.",
             "item": [
                 {
                     "name": "Proxy: Create Request Token",
@@ -2321,6 +2321,78 @@
                     ]
                 },
                 {
+                    "name": "Proxy: Approve Token with TMDB Login (optional)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{gateway_url}}/authentication/token/validate_with_login",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "authentication",
+                                "token",
+                                "validate_with_login"
+                            ]
+                        },
+                        "description": "OPTIONAL, and the only way to close AC2/AC3 without a browser.\n\nTMDB approves a request token either by a human clicking Approve on themoviedb.org, or through this endpoint, which approves it directly from account credentials. Filling {{tmdb_username}} and {{tmdb_password}} therefore turns the whole login flow — approval, session, account, favorites, watchlist — into an unattended run.\n\nDO NOT COMMIT CREDENTIALS. Both variables ship empty. Supply them per-run instead:\n  newman ... --env-var tmdb_username=you --env-var tmdb_password=secret\nor via TMDB_USERNAME / TMDB_PASSWORD, which smoke-test.sh forwards for you. Setting them as collection variables in the Postman UI writes them into this file — use a Postman *environment* instead.\n\nLeft empty (the CI default) TMDB answers 400/status_code 26, which is asserted as an error-passthrough case so the request is never a no-op.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"username\": \"{{tmdb_username}}\",\n  \"password\": \"{{tmdb_password}}\",\n  \"request_token\": \"{{tmdb_request_token}}\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "const body = pm.response.json();",
+                                    "// pm.variables resolves the whole scope chain. Credentials normally arrive as an",
+                                    "// ENVIRONMENT var (newman --env-var, or smoke-test.sh forwarding TMDB_USERNAME), so",
+                                    "// reading collectionVariables here would always see the empty default and mis-branch.",
+                                    "const configured = !!pm.variables.get('tmdb_username');",
+                                    "",
+                                    "if (pm.response.code === 200) {",
+                                    "    pm.test('Credentials approved the request token', function () {",
+                                    "        pm.expect(body.success).to.be.true;",
+                                    "        pm.expect(body.request_token).to.be.a('string').and.not.empty;",
+                                    "    });",
+                                    "    console.log('Token approved without a browser — Create Session will now succeed.');",
+                                    "} else if (!configured) {",
+                                    "    // No credentials supplied: TMDB rejects the empty login. Assert the relay.",
+                                    "    pm.test('Missing credentials are relayed verbatim (status_code 26)', function () {",
+                                    "        pm.response.to.have.status(400);",
+                                    "        pm.expect(body.success).to.be.false;",
+                                    "        pm.expect(body.status_code).to.eql(26);",
+                                    "    });",
+                                    "    console.log('tmdb_username/tmdb_password not set — skipping the authenticated path.');",
+                                    "} else {",
+                                    "    // Credentials were supplied but TMDB refused them.",
+                                    "    pm.test('Bad credentials are relayed verbatim (status_code 30)', function () {",
+                                    "        pm.response.to.have.status(401);",
+                                    "        pm.expect(body.success).to.be.false;",
+                                    "        pm.expect(body.status_code).to.eql(30);",
+                                    "    });",
+                                    "    console.warn('TMDB rejected the supplied credentials — check tmdb_username/tmdb_password.');",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
                     "name": "Proxy: Create Session (needs an approved token)",
                     "request": {
                         "method": "POST",
@@ -2341,7 +2413,7 @@
                                 "new"
                             ]
                         },
-                        "description": "Step 2 of the login flow. Exchanges an APPROVED request token for a session_id.\n\nUnattended this returns 401/status_code 17 (\"Session denied\") because nobody approved the token — which is itself worth asserting, since it proves the gateway relays TMDB error bodies verbatim rather than substituting its own. Once a human approves the token from request 1, this returns 200 and stores {{tmdb_session_id}}, which unlocks every account request below.",
+                        "description": "Step 2 of the login flow. Exchanges an APPROVED request token for a session_id.\n\nWith no approval this returns 401/status_code 17 (\"Session denied\") — itself worth asserting, since it proves the gateway relays TMDB error bodies verbatim rather than substituting its own. Once the token is approved, by either route (the browser URL logged by request 1, or the credentials request above), this returns 200 and stores {{tmdb_session_id}}, which unlocks every account request below.",
                         "body": {
                             "mode": "raw",
                             "raw": "{\n  \"request_token\": \"{{tmdb_request_token}}\"\n}",
@@ -2733,6 +2805,14 @@
         {
             "key": "tmdb_account_id",
             "value": "0"
+        },
+        {
+            "key": "tmdb_username",
+            "value": ""
+        },
+        {
+            "key": "tmdb_password",
+            "value": ""
         }
     ]
 }

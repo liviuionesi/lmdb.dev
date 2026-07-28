@@ -22,6 +22,8 @@
 #   MANAGE_STACK    "true" to up/down the compose stack (default false)
 #   COMPOSE_FILE    Compose file for MANAGE_STACK     (default infrastructure/docker/docker-compose.yml)
 #   TMDB_API_KEY    Passed to the stack when managed  (required for MANAGE_STACK=true)
+#   TMDB_USERNAME   TMDB account login, optional      (unlocks folder 14's account flow)
+#   TMDB_PASSWORD   TMDB account password, optional   (never store these in the collection)
 #   NEWMAN          newman invocation                 (default "npx --yes newman")
 #
 set -euo pipefail
@@ -157,11 +159,27 @@ if [[ ! -f "$COLLECTION" ]]; then
   exit $RC
 fi
 
+# Optional TMDB account credentials (issue #33 AC2/AC3). Supplied here rather
+# than stored in the collection, which is version-controlled. When set, folder
+# 14 approves its request token via TMDB's validate_with_login endpoint and the
+# whole login flow — session, account, favorites, watchlist — runs unattended.
+# When unset the collection asserts the error-passthrough path instead, so the
+# default CI run stays green.
+TMDB_CREDS=()
+if [[ -n "${TMDB_USERNAME:-}" && -n "${TMDB_PASSWORD:-}" ]]; then
+  TMDB_CREDS=(--env-var "tmdb_username=${TMDB_USERNAME}"
+              --env-var "tmdb_password=${TMDB_PASSWORD}")
+  log "TMDB credentials supplied — folder 14 will run the authenticated account flow."
+else
+  log "No TMDB_USERNAME/TMDB_PASSWORD — folder 14 covers the unauthenticated contract only."
+fi
+
 log "Running newman against ${GATEWAY_URL}…"
 # --env-var gateway_url overrides the collection variable so the same collection
 # works against any host (localhost, a compose network alias, a remote stack).
 if $NEWMAN run "$COLLECTION" \
       --env-var "gateway_url=${GATEWAY_URL}" \
+      "${TMDB_CREDS[@]+"${TMDB_CREDS[@]}"}" \
       --reporters cli,junit \
       --reporter-junit-export "$REPORT_FILE"; then
   ok "Smoke test passed — report: $REPORT_FILE"
