@@ -31,19 +31,21 @@ the existing Filmpire React app is the only frontend.
 
 ## Table of Contents
 
-1. [Technology Stack](#technology-stack)
-2. [System Architecture](#system-architecture)
-3. [Microservices Design](#microservices-design)
-4. [Database Strategy](#database-strategy)
-5. [API Specifications](#api-specifications)
-6. [Security Architecture](#security-architecture)
-7. [Development Environment Setup](#development-environment-setup)
-8. [Version Management](#version-management)
-9. [Enterprise Development Process](#enterprise-development-process)
-10. [Testing Strategy](#testing-strategy)
-11. [Deployment Architecture](#11-deployment-architecture) — Terraform, Kubernetes, AWS & Azure free tier
-12. [Monitoring & Observability](#12-monitoring--observability) — Prometheus/Grafana, ELK stack
-13. [Success Criteria](#13-success-criteria)
+- [1. Technology Stack](#1-technology-stack)
+- [2. System Architecture](#2-system-architecture)
+- [3. Microservices Design](#3-microservices-design)
+- [4. Database Strategy](#4-database-strategy)
+- [5. API Specifications](#5-api-specifications)
+- [6. Security Architecture](#6-security-architecture)
+- [7. Development Environment Setup](#7-development-environment-setup)
+- [8. Version Management](#8-version-management)
+- [9. Enterprise Development Process](#9-enterprise-development-process)
+- [10. Testing Strategy](#10-testing-strategy)
+- [11. Deployment Architecture](#11-deployment-architecture) — Terraform, Kubernetes, AWS & Azure free tier
+- [12. Monitoring & Observability](#12-monitoring--observability) — Prometheus/Grafana, ELK stack
+- [13. Success Criteria](#13-success-criteria)
+- [Appendix A: Project Structure](#appendix-a-project-structure)
+- [Appendix B: Spring Boot 4.1.x + Java 25 Best Practices](#appendix-b-spring-boot-41x--java-25-best-practices)
 
 ---
 
