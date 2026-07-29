@@ -1,0 +1,99 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Core slice only — identical rationale and sizing to overlays/azure
+# (ARCHITECTURE.md §11.1); the AWS target is a t3.micro (1 vCPU / 1GB) k3s
+# node instead of an AKS B-series node, but the free-tier RAM ceiling and
+# therefore the JVM/container sizing are the same.
+resources:
+  - ../../base/api-gateway
+  - ../../base/movie-service
+  - ../../base/mongodb
+  - ../../base/redis
+
+secretGenerator:
+  - name: filmpire-secrets
+    envs:
+      - secrets.env
+
+images:
+  - name: filmpire/api-gateway
+    newName: ghcr.io/pehlivanu/filmpire-api-gateway
+    newTag: latest # placeholder until #28 wires SHA-tagged CI publishes
+  - name: filmpire/movie-service
+    newName: ghcr.io/pehlivanu/filmpire-movie-service
+    newTag: latest
+
+patches:
+  - target:
+      kind: Deployment
+      name: api-gateway
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/env/0/value
+        value: "-XX:MaxRAMPercentage=60 -Xss256k"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests:
+            cpu: 100m
+            memory: 160Mi
+            ephemeral-storage: 128Mi
+          limits:
+            cpu: 500m
+            memory: 300Mi
+            ephemeral-storage: 256Mi
+      - op: replace
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Always
+  - target:
+      kind: Deployment
+      name: movie-service
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/env/0/value
+        value: "-XX:MaxRAMPercentage=60 -Xss256k"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests:
+            cpu: 100m
+            memory: 160Mi
+            ephemeral-storage: 128Mi
+          limits:
+            cpu: 500m
+            memory: 300Mi
+            ephemeral-storage: 256Mi
+      - op: replace
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Always
+  - target:
+      kind: StatefulSet
+      name: mongodb
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+            ephemeral-storage: 128Mi
+          limits:
+            cpu: 300m
+            memory: 256Mi
+            ephemeral-storage: 256Mi
+  - target:
+      kind: StatefulSet
+      name: redis
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests:
+            cpu: 50m
+            memory: 32Mi
+            ephemeral-storage: 64Mi
+          limits:
+            cpu: 200m
+            memory: 96Mi
+            ephemeral-storage: 128Mi

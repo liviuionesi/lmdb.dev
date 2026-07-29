@@ -1,0 +1,17 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - deployment.yaml
+  - service.yaml
+
+configMapGenerator:
+  - name: actor-service-config
+    literals:
+      - SPRING_APPLICATION_NAME=actor-service
+      - SPRING_PROFILES_ACTIVE=prod
+      # actor-service owns its own database (ADR-002) — filmpire_actor,
+      # created by postgres/init-multiple-databases.sh on first boot.
+      - POSTGRES_URL=jdbc:postgresql://postgres:5432/filmpire_actor
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
