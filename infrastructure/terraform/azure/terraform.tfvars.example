@@ -1,0 +1,14 @@
+# Copy to terraform.tfvars (gitignored) before running `terraform apply`.
+# See ../README.md for the full bootstrap + apply/destroy walkthrough.
+
+alert_emails = ["pehlivanu@gmail.com"]
+
+# Must be the FIRST DAY of the current month, RFC3339. Compute it fresh at
+# apply time rather than hardcoding a date here — see modules/budget-guard:
+#   budget_start_date = "$(date -u +%Y-%m-01T00:00:00Z)"
+budget_start_date = "REPLACE_ME"
+
+# Uncomment to override defaults (azure/variables.tf):
+# location               = "westeurope"
+# resource_group_name    = "filmpire-demo"
+# vm_size                = "Standard_B2ats_v2"
