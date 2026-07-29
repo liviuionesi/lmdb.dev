@@ -81,13 +81,19 @@ grafana:
   persistence:
     enabled: false
   adminPassword: filmpire-admin
+  # This chart's Grafana ships the newer unified-storage/apiserver backend
+  # (SQLite + a Bleve search index + an internal apiserver), which is
+  # noticeably heavier than classic Grafana even at rest — 256Mi limits
+  # caused SQLite operations to time out under load ("context deadline
+  # exceeded", `/api/health` reporting `database: failing`). Confirmed live
+  # while verifying #24: raising the limit to 512Mi fixed it immediately.
   resources:
     requests:
       cpu: 50m
-      memory: 128Mi
-    limits:
-      cpu: 200m
       memory: 256Mi
+    limits:
+      cpu: 300m
+      memory: 512Mi
   # Auto-load any ConfigMap labeled grafana_dashboard=1 in this namespace —
   # what dashboards/*.yaml uses, so `kubectl apply` alone is enough to
   # publish a dashboard.
