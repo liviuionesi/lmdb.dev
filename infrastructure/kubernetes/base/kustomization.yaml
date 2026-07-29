@@ -1,0 +1,23 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Cloud-agnostic manifests (ARCHITECTURE.md §11.3). Eureka and Config Server
+# are deliberately absent — K8s Services + cluster DNS supply discovery, and
+# ConfigMaps supply configuration (ADR-005). overlays/local composes this
+# whole base; overlays/azure and overlays/aws reference only the core-slice
+# component directories (api-gateway, movie-service, mongodb, redis)
+# directly, since they don't deploy user-service/actor-service/postgres.
+resources:
+  - api-gateway
+  - movie-service
+  - user-service
+  - actor-service
+  - postgres
+  - mongodb
+  - redis
+
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: filmpire-microservices
+      app.kubernetes.io/managed-by: kustomize
+    includeSelectors: false

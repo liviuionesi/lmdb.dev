@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: movie-service
+  labels:
+    app: movie-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: movie-service
+  template:
+    metadata:
+      labels:
+        app: movie-service
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - name: movie-service
+          image: filmpire/movie-service:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8081
+              name: http
+          envFrom:
+            - configMapRef:
+                name: movie-service-config
+          env:
+            - name: JAVA_OPTS
+              value: "-Xms256m -Xmx512m"
+            - name: MONGODB_URI
+              valueFrom:
+                secretKeyRef:
+                  name: filmpire-secrets
+                  key: MONGODB_URI
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: filmpire-secrets
+                  key: REDIS_PASSWORD
+            - name: TMDB_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: filmpire-secrets
+                  key: TMDB_API_KEY
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8081
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8081
+            initialDelaySeconds: 50
+            periodSeconds: 15
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 200m
+              memory: 384Mi
+              ephemeral-storage: 256Mi
+            limits:
+              cpu: "1"
+              memory: 768Mi
+              ephemeral-storage: 512Mi

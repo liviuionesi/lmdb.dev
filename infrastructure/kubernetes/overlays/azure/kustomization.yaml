@@ -1,0 +1,105 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Core slice only (ARCHITECTURE.md §11.1): gateway, movie-service + MongoDB +
+# Redis. Discovery and Config are never part of any K8s overlay (ADR-005);
+# user-service/actor-service/Postgres are dropped here specifically because a
+# free-tier 1-2GB node can't fit the full 8-service stack — they still run in
+# the local overlay and the docker-compose profile.
+resources:
+  - ../../base/api-gateway
+  - ../../base/movie-service
+  - ../../base/mongodb
+  - ../../base/redis
+
+secretGenerator:
+  - name: filmpire-secrets
+    envs:
+      - secrets.env
+
+images:
+  - name: filmpire/api-gateway
+    newName: ghcr.io/pehlivanu/filmpire-api-gateway
+    newTag: latest # placeholder until #28 wires SHA-tagged CI publishes
+  - name: filmpire/movie-service
+    newName: ghcr.io/pehlivanu/filmpire-movie-service
+    newTag: latest
+
+patches:
+  # Free-tier node sizing (§11.1): -XX:MaxRAMPercentage=60 -Xss256k keeps the
+  # JVM heap inside a small container memory limit instead of the Dockerfile
+  # default fixed -Xmx512m, which would OOM-kill on a ~1GB node once
+  # MongoDB/Redis/OS overhead are accounted for. Single replicas (base
+  # already defaults to 1).
+  - target:
+      kind: Deployment
+      name: api-gateway
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/env/0/value
+        value: "-XX:MaxRAMPercentage=60 -Xss256k"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests:
+            cpu: 100m
+            memory: 160Mi
+            ephemeral-storage: 128Mi
+          limits:
+            cpu: 500m
+            memory: 300Mi
+            ephemeral-storage: 256Mi
+      - op: replace
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Always
+  - target:
+      kind: Deployment
+      name: movie-service
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/env/0/value
+        value: "-XX:MaxRAMPercentage=60 -Xss256k"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests:
+            cpu: 100m
+            memory: 160Mi
+            ephemeral-storage: 128Mi
+          limits:
+            cpu: 500m
+            memory: 300Mi
+            ephemeral-storage: 256Mi
+      - op: replace
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Always
+  - target:
+      kind: StatefulSet
+      name: mongodb
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+            ephemeral-storage: 128Mi
+          limits:
+            cpu: 300m
+            memory: 256Mi
+            ephemeral-storage: 256Mi
+  - target:
+      kind: StatefulSet
+      name: redis
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests:
+            cpu: 50m
+            memory: 32Mi
+            ephemeral-storage: 64Mi
+          limits:
+            cpu: 200m
+            memory: 96Mi
+            ephemeral-storage: 128Mi

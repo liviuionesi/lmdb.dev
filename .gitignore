@@ -56,6 +56,10 @@ web-build/
 .env.test.local
 .env.production.local
 
+# Kustomize secretGenerator inputs (#25) — real credentials, never commit.
+# Keep the checked-in secrets.env.example templates.
+infrastructure/kubernetes/**/secrets.env
+
 # Logs
 logs/
 *.log

@@ -1,0 +1,18 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - deployment.yaml
+  - service.yaml
+  - ingress.yaml
+
+configMapGenerator:
+  - name: api-gateway-config
+    literals:
+      - SPRING_APPLICATION_NAME=api-gateway
+      # "kubernetes" activates the profile added to application.yml (#25,
+      # ADR-005) that rewrites the gateway's lb:// routes to plain
+      # http://<service> cluster-DNS URIs — Eureka is not deployed here.
+      - SPRING_PROFILES_ACTIVE=prod,kubernetes
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
