@@ -4,7 +4,7 @@ const tmdbApiKey = process.env.REACT_APP_TMDB_KEY;
 
 export const tmdbApi = createApi({
   reducerPath: 'tmdbApi',
-  baseQuery: fetchBaseQuery({ baseUrl: 'https://api.themoviedb.org/3' }),
+  baseQuery: fetchBaseQuery({ baseUrl: process.env.REACT_APP_API_URL || 'https://api.themoviedb.org/3' }),
   endpoints: (builder) => ({
     //* Get Genres
     getGenres: builder.query({
