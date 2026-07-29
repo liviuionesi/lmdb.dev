@@ -1,39 +1,43 @@
-# Terraform — Azure AKS free-tier infrastructure
+# Terraform — cloud free-tier infrastructure
 
-Provisions the primary cloud target (ARCHITECTURE.md §11.1–11.2, issue #26):
-AKS with a free control plane + one node, fronted directly by the node's own
-public IP (no Standard Load Balancer, no NAT gateway — both bill hourly).
-Images are pulled from ghcr.io, which is public, so there's no
-registry/pull-secret to provision.
-
-**Live-tested 2026-07-29:** a full `apply` → `kubectl apply -k` →
-`destroy` round-trip was actually run against a real Azure subscription,
-not just planned. It surfaced real things static `validate` can't catch —
-see "Lessons from the first live run" below before you assume anything in
-this doc is still exactly right. Re-verify against your own subscription;
-several of these are subscription/region-specific and can change.
-
-The AWS side (`aws/`, k3s on EC2 t3.micro) is issue #27 and isn't part of
-this directory yet.
+Provisions the two cloud targets (ARCHITECTURE.md §11.1–11.2): Azure AKS
+(primary, issue #26) and AWS k3s-on-EC2 (secondary, issue #27). Both are
+fronted directly by the node's own public IP (no Standard Load
+Balancer/ELB, no NAT gateway — all bill hourly). Images are pulled from
+ghcr.io, which is public, so there's no registry/pull-secret to provision
+on either cloud.
 
 **Hard constraint: $0.** Read ARCHITECTURE.md §11.1 before touching this if
 you haven't — it explains the reasoning behind every choice below (ephemeral
-clusters, the budget-guard tripwire, why ACR/LB/NAT gateway are avoided).
+clusters, the budget-guard tripwire, why ACR/ECR/LB/NAT gateway are
+avoided).
 
 ## Layout
 
 ```
 infrastructure/terraform/
 ├── modules/
-│   ├── network/         # resource group, VNet, subnet, NSG (opens the demo NodePort)
-│   ├── cluster-aks/      # AKS: Free sku_tier, 1 node, node_public_ip_enabled
-│   └── budget-guard/     # zero-spend subscription budget + email alert — applied FIRST
-└── azure/                # composition: budget-guard → network → cluster-aks
+│   ├── network/            # Azure: resource group, VNet, subnet, NSG (opens the demo NodePort)
+│   ├── cluster-aks/         # Azure: AKS, Free sku_tier, 1 node, node_public_ip_enabled
+│   ├── budget-guard/        # Azure: zero-spend subscription budget + email alert — applied FIRST
+│   ├── network-aws/         # AWS: VPC, public subnet, security group (opens SSH + the demo NodePort)
+│   ├── cluster-k3s/         # AWS: EC2 t3.micro + k3s bootstrap (user_data)
+│   └── budget-guard-aws/    # AWS: zero-spend Budgets alert — applied FIRST
+├── azure/                   # composition: budget-guard → network → cluster-aks
+└── aws/                     # composition: budget-guard-aws → network-aws → cluster-k3s
 ```
+
+Azure and AWS each get their own module set rather than sharing directory
+names — `azurerm_consumption_budget_subscription` and `aws_budgets_budget`
+(same for network/VPC resources) are different resource types entirely, so
+there's no meaningful code to share between a `budget-guard` that works for
+both providers.
 
 ## Prerequisites
 
 - [Terraform](https://developer.hashicorp.com/terraform/install) >= 1.9
+
+**Azure:**
 - [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli) (`az`)
   — on Fedora, `sudo dnf install -y azure-cli` after adding Microsoft's repo
   (see Microsoft's install docs); worked cleanly on Fedora 44 despite that
@@ -46,7 +50,34 @@ infrastructure/terraform/
   subscription — `az account show` will say "No subscriptions found" until
   you separately complete the free-account signup flow.
 
-## 1. Bootstrap remote state (one-time)
+**AWS:**
+- [AWS CLI v2](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
+  — on Fedora, `sudo dnf install -y awscli2`.
+- An AWS account on the **free-tier plan** (https://aws.amazon.com/free/).
+  Note AWS's post-July-2025 free tier for new accounts is credits-based
+  (expires rather than converting to pay-as-you-go) — confirm the current
+  terms at signup, they change. Never enable pay-as-you-go beyond the
+  credits. Because the model is credit-based rather than a hard
+  never-bills guarantee like Azure's spending-limit account, the ephemeral
+  apply→demo→destroy pattern (below) and the budget-guard tripwire are
+  what actually keep this at $0-equivalent, not the account type alone.
+- An SSH key pair (`ssh-keygen -t ed25519` if you don't have one) — its
+  public key gets installed on the k3s node for kubeconfig retrieval; there
+  is no AWS equivalent of `az aks get-credentials` for a self-managed node.
+
+---
+
+## Azure (AKS)
+
+**Live-tested 2026-07-29:** a full `apply` → `kubectl apply -k` →
+`destroy` round-trip was actually run against a real Azure subscription,
+not just planned. It surfaced real things static `validate` can't catch —
+see "Lessons from the first live run" below before you assume anything in
+this section is still exactly right. Re-verify against your own
+subscription; several of these are subscription/region-specific and can
+change.
+
+### 1. Bootstrap remote state (one-time)
 
 Terraform state is never committed. It lives in an Azure Storage account
 that isn't part of the `azure/` composition itself (that would be circular —
@@ -102,7 +133,7 @@ EOF
 `backend.hcl` is gitignored — re-create it locally (or from your password
 manager) rather than committing it.
 
-## 2. Credentials
+### 2. Credentials
 
 **Local/manual apply:** just `az login`. The azurerm provider automatically
 uses your Azure CLI session when no `ARM_CLIENT_ID` is set — no service
@@ -162,7 +193,7 @@ OIDC trust above): `AZURE_CLIENT_ID` (the `$APP_ID`), `AZURE_TENANT_ID`,
 directory. Not on PRs: this repo commits straight to `main` with no PR
 workflow, so `pull_request` would be a trigger that never fires.
 
-## 3. Configure and apply
+### 3. Configure and apply
 
 ```bash
 cd infrastructure/terraform/azure
@@ -179,7 +210,7 @@ terraform plan -out=tfplan
 terraform apply tfplan    # a few minutes, mostly AKS provisioning
 ```
 
-## 4. Deploy the app and verify
+### 4. Deploy the app and verify
 
 ```bash
 az aks get-credentials \
@@ -202,7 +233,7 @@ curl "http://<EXTERNAL-IP>:$(terraform output -raw demo_inbound_port)/actuator/h
 in the NSG. If you change `demo_inbound_port` in `terraform.tfvars`, update
 that patch to match.
 
-## 5. Tear down
+### 5. Tear down
 
 ```bash
 terraform destroy
@@ -213,7 +244,7 @@ there's nothing outside the AKS-managed node resource group to clean up
 separately). Do this the same session as the demo; nothing in this
 composition is meant to run unattended.
 
-## Lessons from the first live run (2026-07-29)
+### Lessons from the first live run (2026-07-29)
 
 Static `validate`/`plan` can't catch these — all four only surfaced on a
 real `apply` against a real subscription:
@@ -247,7 +278,7 @@ real `apply` against a real subscription:
    it. `modules/cluster-aks` deliberately has no `node_public_ip` output
    because of this — see the comment in its `main.tf`.
 
-Also found live, not yet fixed (out of scope for this issue, noted for
+Also found live, not yet fixed (out of scope for that issue, noted for
 whoever picks them up): `api-gateway`/`movie-service` can't actually start
 on a fresh apply — their images (`ghcr.io/pehlivanu/filmpire-*:latest`)
 have never been published, since #28 (CI/CD image publish) doesn't exist
@@ -257,7 +288,7 @@ yet. `mongodb` also crash-looped for a separate, not-yet-diagnosed reason
 look whenever #28 unblocks the rest of the stack enough to test it
 properly). `redis` came up healthy with no issues.
 
-## Cost notes (be honest with yourself here)
+### Cost notes (be honest with yourself here)
 
 - AKS control plane: free (`sku_tier = "Free"`).
 - The node is **not free-tier in the strict sense** — see lesson 1 and 2
@@ -281,11 +312,221 @@ properly). `redis` came up healthy with no issues.
   inbound rules that LB carries no meaningful charge — see the comment in
   `modules/cluster-aks/main.tf` if you want the full reasoning.
 
-## What this doesn't cover yet
+### What this doesn't cover yet
 
 - The app itself isn't reachable end-to-end yet — blocked on #28 (CI/CD
   image publish); see "Lessons from the first live run" above. The
   infrastructure side (cluster, network, NSG, budget-guard) is confirmed
   working independent of that.
 - The `mongodb` crash-loop noted above isn't root-caused.
-- `aws/` (issue #27) is a separate task.
+
+---
+
+## AWS (k3s on EC2)
+
+Single `t3.micro` running [k3s](https://k3s.io/) (Traefik disabled, gateway
+reached directly on the node's public IP via NodePort — same reasoning as
+Azure's NSG rule). No EKS: its managed control plane is not part of the
+free tier (~$73/month), and k3s's single-binary control plane + kubelet is
+what makes a 1 vCPU/1GB instance viable at all. No ECR: images come from
+ghcr.io (public), same as Azure — the issue's original `modules/registry`
+(ECR) plan was replaced with `modules/budget-guard-aws` per the issue #27
+scope-update comment, applied first for the same reason Azure's is.
+
+### 1. Bootstrap remote state (one-time)
+
+Terraform state is never committed. It lives in an S3 bucket + DynamoDB
+lock table that aren't part of the `aws/` composition itself (same
+chicken-and-egg reasoning as Azure's storage account), so create them once
+by hand:
+
+```bash
+export TF_STATE_BUCKET=filmpire-tfstate-$RANDOM   # must be globally unique
+export TF_STATE_TABLE=filmpire-tfstate-lock
+export AWS_REGION=us-east-1                        # see the region note in aws/variables.tf
+
+aws s3api create-bucket \
+  --bucket "$TF_STATE_BUCKET" \
+  --region "$AWS_REGION" \
+  $( [ "$AWS_REGION" != "us-east-1" ] && echo --create-bucket-configuration LocationConstraint="$AWS_REGION" )
+
+aws s3api put-bucket-versioning \
+  --bucket "$TF_STATE_BUCKET" \
+  --versioning-configuration Status=Enabled
+
+aws s3api put-public-access-block \
+  --bucket "$TF_STATE_BUCKET" \
+  --public-access-block-configuration BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true
+
+aws dynamodb create-table \
+  --table-name "$TF_STATE_TABLE" \
+  --attribute-definitions AttributeName=LockID,AttributeType=S \
+  --key-schema AttributeName=LockID,KeyType=HASH \
+  --billing-mode PAY_PER_REQUEST \
+  --region "$AWS_REGION"
+```
+
+`--create-bucket-configuration` must be **omitted** for `us-east-1`
+specifically (S3 rejects an explicit `LocationConstraint` matching that
+region) but is required for every other region — the conditional `$(...)`
+above handles that. The DynamoDB table stays within the free tier
+regardless of demo frequency: `PAY_PER_REQUEST` billing on a table this
+small is fractions of a cent per apply/destroy cycle even outside the
+25 WCU/RCU always-free allowance.
+
+Save the values (not secret, just account-specific, which is why they're
+not hardcoded in `aws/backend.tf`):
+
+```bash
+cat > infrastructure/terraform/aws/backend.hcl <<EOF
+bucket         = "$TF_STATE_BUCKET"
+region         = "$AWS_REGION"
+dynamodb_table = "$TF_STATE_TABLE"
+EOF
+```
+
+`backend.hcl` is gitignored — re-create it locally (or from your password
+manager) rather than committing it.
+
+### 2. Credentials
+
+**Local/manual apply:** `aws configure` (stores a long-lived access
+key/secret in `~/.aws/credentials`) or `aws configure sso` if your account
+uses IAM Identity Center. The aws provider picks either up automatically
+via the default credential chain — no `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`
+need to be set in the shell. For a one-person demo workflow a single IAM
+user with programmatic access and the permissions below is enough; there's
+no equivalent of Azure's separate data-plane role for state (S3 bucket
+policies + IAM together cover both management- and data-plane access).
+
+Minimum IAM permissions for `apply`: EC2 (VPC/subnet/security
+group/instance/key pair/AMI describe), Budgets (`budgets:*` — the
+`aws_budgets_budget` resource), and S3 + DynamoDB scoped to the tfstate
+bucket/table from step 1.
+
+**CI — GitHub OIDC, not a stored secret (same pattern as Azure's, adapted
+for AWS):** an IAM OIDC identity provider trusts GitHub's token issuer, and
+an IAM role trusts that provider for
+`repo:pehlivanu/filmpire-microservices:ref:refs/heads/main` specifically.
+Set up once:
+
+```bash
+aws iam create-open-id-connect-provider \
+  --url https://token.actions.githubusercontent.com \
+  --client-id-list sts.amazonaws.com \
+  --thumbprint-list 6938fd4d98bab03faadb97b34396831e3780aea1
+
+# Trust policy restricts to this repo+branch — see Azure's federated-credential
+# subject for the same idea. Attach a least-privilege policy scoped to
+# read-only EC2/Budgets describe calls plus S3/DynamoDB read on the tfstate
+# bucket/table (enough for `plan`, never `apply` — same split as Azure's CI role).
+```
+
+Then set `AWS_ROLE_ARN`, `AWS_REGION`, `TF_STATE_BUCKET`, `TF_STATE_TABLE`,
+`ALERT_EMAIL` as **GitHub Actions repo variables** (not Secrets — nothing
+here is sensitive without the live OIDC trust). See
+`.github/workflows/terraform-plan.yml` for how the Azure side is consumed;
+mirror that pattern here if/when this side is wired into the same
+workflow — it isn't yet (see "What this doesn't cover yet" below).
+
+### 3. Configure and apply
+
+```bash
+cd infrastructure/terraform/aws
+cp terraform.tfvars.example terraform.tfvars
+```
+
+Edit `terraform.tfvars`: set `alert_emails` and `ssh_public_key` (contents
+of e.g. `~/.ssh/id_ed25519.pub`). Both are required with no default on
+purpose; see `modules/budget-guard-aws/variables.tf` and
+`modules/cluster-k3s/variables.tf`.
+
+```bash
+terraform init -backend-config=backend.hcl
+terraform plan -out=tfplan
+terraform apply tfplan    # a few minutes — EC2 boot + k3s install via user_data
+```
+
+### 4. Deploy the app and verify
+
+Unlike AKS, there's no cloud CLI subcommand that writes a kubeconfig for a
+self-managed k3s node — fetch it over SSH and point it at the node's public
+IP (which, unlike the AKS case, Terraform CAN safely output directly — see
+`modules/cluster-k3s/outputs.tf`):
+
+```bash
+PUBLIC_IP=$(terraform output -raw public_ip)
+
+# k3s finishes installing shortly after boot; retry if this 404s/connection-refuses.
+ssh -o StrictHostKeyChecking=accept-new "$(terraform output -raw ssh_user)@$PUBLIC_IP" \
+  sudo cat /etc/rancher/k3s/k3s.yaml > kubeconfig-aws.yaml
+export KUBECONFIG=$PWD/kubeconfig-aws.yaml
+
+# --node-external-ip/--tls-san in user_data already made k3s write this
+# kubeconfig with the public IP as the server address, so no sed-rewrite
+# of `server: https://127.0.0.1:6443` is needed here (contrast the AKS
+# node-IP output problem — this is the case where the straightforward
+# approach actually works).
+
+kubectl apply -k ../../kubernetes/overlays/aws
+kubectl get pods -w   # wait for Running/Ready
+
+curl "http://$PUBLIC_IP:$(terraform output -raw demo_inbound_port)/actuator/health"
+```
+
+`overlays/aws` patches the gateway's Service to `NodePort` 30080 (see its
+`kustomization.yaml`) so it lands on the same port `modules/network-aws`
+opened in the security group. If you change `demo_inbound_port` in
+`terraform.tfvars`, update that patch to match.
+
+### 5. Tear down
+
+```bash
+terraform destroy
+rm -f kubeconfig-aws.yaml
+```
+
+This terminates the instance (and its root volume, `delete_on_termination`
+defaults to `true` for the root device) plus the VPC/subnet/security
+group/budget. Nothing outside this composition needs separate cleanup. Do
+this the same session as the demo; nothing here is meant to run
+unattended.
+
+### Cost notes (be honest with yourself here)
+
+- The instance: `t3.micro` is free-tier eligible for 750h/month for the
+  account's first 12 months — no platform-enforced minimum blocked this
+  the way AKS's did (see the Azure section above), since k3s just runs as
+  a process on a normal instance rather than needing a managed control
+  plane's resource floor.
+- The root volume: 20GB `gp3`, within the 30GB/month free EBS allowance.
+- No Elastic IP resource: the instance's default public IP (from
+  `map_public_ip_on_launch` on the subnet) is used directly instead of
+  allocating a separate `aws_eip`. An EIP *not* attached to a running
+  instance bills hourly; an instance's default public IP does not, and
+  since this is released back on `terraform destroy` anyway, there's no
+  reason to add the extra resource.
+- The budget-guard module applies a $1 zero-spend tripwire on the account
+  **before** anything else, and emails `alert_emails` the same day if
+  actual or forecasted spend goes positive — same role as Azure's, not any
+  specific instance type's "free-tier" label.
+- No ELB/NAT gateway: same reasoning as Azure's Standard LB avoidance — both
+  bill hourly regardless of traffic, disproportionate to a demo.
+
+### What this doesn't cover yet
+
+- Not live-tested against a real AWS account yet — this section, unlike
+  the Azure one, is written from the AWS provider/API docs and k3s's own
+  install docs, not from an actual `apply` → `kubectl apply -k` →
+  `destroy` round-trip. Static `validate` passed, but the Azure section
+  above is a reminder that live API/quota/region behavior routinely
+  surfaces things `validate`/`plan` can't catch (AKS's SKU floor, blocked
+  VM families, the wrong-IP data source). Re-verify every assumption here
+  (instance type availability in your account/region, IMDSv2 behavior,
+  whether the free-tier credits model has changed again) against a real
+  apply before trusting it fully.
+- Not wired into `.github/workflows/terraform-plan.yml` — that workflow
+  currently only plans the Azure side.
+- The app itself would hit the same `#28` (CI/CD image publish) blocker
+  the Azure side did — `ghcr.io/pehlivanu/filmpire-*:latest` isn't
+  published yet.
