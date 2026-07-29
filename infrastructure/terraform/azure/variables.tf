@@ -1,7 +1,15 @@
 variable "location" {
-  description = "Azure region. Pick one with B2ats_v2 + AKS free-tier control plane availability."
+  description = <<-EOT
+    Azure region. Pick one with B2ats_v2 + AKS free-tier control plane
+    availability. Azure periodically closes specific regions to new
+    customers on brand-new subscriptions ("not currently accepting new
+    customers") — westeurope was closed for this subscription as of
+    2026-07-29 while eastus worked, but that's a live, changing
+    restriction, not a fixed fact — re-verify if this ever fails the same
+    way again rather than assuming eastus is permanently safe.
+  EOT
   type        = string
-  default     = "westeurope"
+  default     = "eastus"
 }
 
 variable "resource_group_name" {
@@ -15,9 +23,9 @@ variable "cluster_name" {
 }
 
 variable "vm_size" {
-  description = "Free-tier-eligible burstable B-series size for the single demo node."
+  description = "Node size for the single demo node — NOT free-tier B-series, see modules/cluster-aks/variables.tf for why (AKS's own 4GB minimum ruled out B2ats_v2, this subscription's region-level allow-list ruled out the whole B-series family, and F2as_v7's actual specs turned out to be 8GB not 4GB). Standard_D2ls_v7 is the confirmed-allowed size that lands exactly on AKS's 2vCPU/4GB minimum."
   type        = string
-  default     = "Standard_B2ats_v2"
+  default     = "Standard_D2ls_v7"
 }
 
 variable "node_count" {

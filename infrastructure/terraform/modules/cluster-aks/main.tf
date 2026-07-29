@@ -41,12 +41,19 @@ resource "azurerm_kubernetes_cluster" "this" {
   tags = var.tags
 }
 
-# azurerm_kubernetes_cluster doesn't expose per-node public IPs directly —
-# AKS creates the node pool's VMSS inside node_resource_group, and the IP
-# resource names aren't predictable in advance. azurerm_public_ips (plural)
-# exists for exactly this: list what's attached in that resource group
-# after the cluster (and therefore the VMSS + its IP) exists.
-data "azurerm_public_ips" "nodes" {
-  resource_group_name = azurerm_kubernetes_cluster.this.node_resource_group
-  attachment_status   = "Attached"
-}
+# Deliberately NOT trying to output the node's public IP via Terraform.
+# Tried data.azurerm_public_ips (plural) first — wrong tool: it only
+# enumerates standalone Microsoft.Network/publicIPAddresses resources, so
+# on a live cluster it silently returned the AKS-managed outbound
+# Standard LB's IP (also standalone) instead of the actual
+# node_public_ip_enabled IP, which is a VMSS INSTANCE-level public IP —
+# a different kind of resource, invisible to that data source, only
+# enumerable via `az vmss list-instance-public-ips` (confirmed against a
+# real cluster on 2026-07-29: the LB's IP never accepts NodePort traffic,
+# only the instance IP does — this isn't a cosmetic difference, the wrong
+# IP output would send you to a dead end). No clean azurerm data source
+# covers VMSS instance public IPs. Get the real one from
+# `kubectl get nodes -o wide` after `az aks get-credentials` — see
+# infrastructure/terraform/README.md step 4 — rather than trust a
+# Terraform output that's already proven capable of pointing at the wrong
+# resource.

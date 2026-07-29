@@ -1,0 +1,72 @@
+name: Terraform Plan
+
+# Adapted from ARCHITECTURE.md §11.4's original design ("plan on PRs"): this
+# repo commits straight to main with no PR workflow (CLAUDE.md), so the
+# trigger that actually fires here is push-to-main scoped to Terraform
+# paths, not pull_request.
+#
+# Auth is GitHub OIDC -> Azure AD federated credential, not a stored
+# ARM_CLIENT_SECRET (see infrastructure/terraform/README.md for how the
+# federated credential was created). Nothing sensitive is stored in this
+# repo: AZURE_CLIENT_ID/AZURE_TENANT_ID/AZURE_SUBSCRIPTION_ID and the
+# TF_STATE_* values below are plain identifiers, not credentials — they
+# only work paired with a live OIDC trust scoped to
+# repo:pehlivanu/filmpire-microservices:ref:refs/heads/main, so knowing them
+# alone doesn't grant anyone access.
+#
+# The identity behind AZURE_CLIENT_ID holds Reader on the subscription plus
+# Storage Blob Data Contributor on the tfstate storage account only — it can
+# compute a plan and read/lock state, it cannot create, modify, or delete
+# any real infrastructure. `terraform apply` stays a manual, human-run step;
+# this workflow never runs it.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'infrastructure/terraform/**'
+      - '.github/workflows/terraform-plan.yml'
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  plan:
+    name: Plan (azure)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infrastructure/terraform/azure
+    env:
+      ARM_USE_OIDC: "true"
+      ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+      ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      TF_VAR_alert_emails: '["${{ vars.ALERT_EMAIL }}"]'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~1.15"
+
+      - name: terraform fmt
+        run: terraform fmt -check -recursive ..
+
+      # Azure requires this to be the first of the current month
+      # (modules/budget-guard) — computed fresh here rather than stored,
+      # same reasoning as the local README.md walkthrough.
+      - name: Compute budget_start_date
+        run: echo "TF_VAR_budget_start_date=$(date -u +%Y-%m-01T00:00:00Z)" >> "$GITHUB_ENV"
+
+      - name: terraform init
+        run: |
+          terraform init -input=false \
+            -backend-config="resource_group_name=${{ vars.TF_STATE_RESOURCE_GROUP }}" \
+            -backend-config="storage_account_name=${{ vars.TF_STATE_STORAGE_ACCOUNT }}" \
+            -backend-config="container_name=${{ vars.TF_STATE_CONTAINER }}"
+
+      - name: terraform plan
+        run: terraform plan -input=false -lock-timeout=120s
