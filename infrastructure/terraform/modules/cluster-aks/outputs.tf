@@ -11,7 +11,7 @@ output "kube_config_raw" {
   sensitive = true
 }
 
-output "node_public_ip" {
-  description = "Public IP of the (single) demo node, once provisioned. Null until the node pool has actually come up."
-  value       = try(data.azurerm_public_ips.nodes.public_ips[0].ip_address, null)
-}
+# No node_public_ip output — see main.tf's closing comment for why (the
+# obvious data.azurerm_public_ips approach silently pointed at the wrong
+# resource on a live cluster). Get it from `kubectl get nodes -o wide`
+# instead, after `az aks get-credentials`.

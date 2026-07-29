@@ -1,7 +1,7 @@
 # Filmpire Microservices - Enterprise Software Architecture Document
 
-**Version:** 1.6.0  
-**Date:** July 23, 2026 (ADR-011 self-healing read-through; ADR-012 moves ai-service to PostgreSQL + pgvector and amends ADR-002; stale ADR-003 references cleaned up)  
+**Version:** 1.6.1  
+**Date:** July 29, 2026 (§11.1/§11.2/§11.4 corrected against a live #26 Azure apply: AKS's real 2vCPU/4GB node minimum, B-series can be subscription-blocked, `terraform plan` runs on push-to-main via GitHub OIDC not PRs — this repo has none)  
 **Author:** Liviu Ionesi  
 **Purpose:** Portfolio project demonstrating enterprise-grade full-stack development for a movie platform
 
@@ -2025,7 +2025,7 @@ both constrained to their **free tiers**:
 
 | Target | Kubernetes Flavor | Free-Tier Basis | Notes |
 |--------|-------------------|-----------------|-------|
-| **Azure** (primary) | AKS (managed) | AKS control plane is free; 750 h/month B1s/B2ats VM (12 months); $200 credit (30 days) | Preferred: managed control plane at $0 |
+| **Azure** (primary) | AKS (managed) | AKS control plane is free; $200 credit (30 days) | Managed control plane at $0 — but see the node-size note below, the node itself is not guaranteed free |
 | **AWS** (secondary) | k3s (self-managed on EC2) | 750 h/month t2.micro/t3.micro (12 months); 30 GB EBS | EKS control plane is NOT free (~$73/month) — use single-node k3s instead |
 | Local | minikube / k3d | n/a | Mirrors cloud manifests exactly |
 
@@ -2058,12 +2058,31 @@ that. Verification is layered, not assumed:
    avoid NAT gateways entirely.
 
 **Free-tier sizing reality (drives all sizing decisions):**
-- Free-tier nodes have 1 vCPU / 1–2 GB RAM. A full 8-service Spring Boot
-  deployment does not fit. The cloud profile deploys the **core slice** only:
-  gateway, movie-service + MongoDB + Redis, with JVM flags
-  `-XX:MaxRAMPercentage=60 -Xss256k` and single replicas. Discovery and Config
-  are NOT part of the cloud slice — Kubernetes supplies both natively
-  (ADR-005), which conveniently also frees ~512 MB on a 1–2 GB node.
+- **Node size/cost is not a fixed fact — verify live, every time, on the
+  actual subscription.** A live #26 apply on 2026-07-29 found two things
+  this section originally got wrong: (1) AKS enforces a hard minimum of 2
+  vCPU **and** 4GB memory for whatever SKU runs the system pool — smaller
+  burstable sizes like B1s/B2ats_v2 are rejected outright
+  (`SystemPoolSkuTooLow`), so "1 vCPU / 1-2GB" was never actually
+  achievable on AKS specifically, whatever the general B-series free-tier
+  hours suggest. (2) Even B-series sizes that DO clear that minimum
+  (Standard_B2s, 2 vCPU/4GB) can be entirely absent from a given
+  subscription's allowed-SKU list in a given region — brand-new free-trial
+  subscriptions can have the whole burstable family blocked as an
+  anti-abuse measure. Neither failure mode shows up in `terraform plan`;
+  both only surface on a live `apply`. Practical effect: budget roughly 2
+  vCPU/4GB for the node, expect it may not be a "free-tier" SKU in the
+  strict sense (small nonzero hourly cost), and treat the zero-spend
+  budget-guard tripwire — not a specific SKU name — as the actual cost
+  control. See `infrastructure/terraform/modules/cluster-aks/variables.tf`
+  for the specific size that worked and how it was found.
+- A full 8-service Spring Boot deployment does not fit on a node this
+  small regardless of which SKU it ends up being. The cloud profile
+  deploys the **core slice** only: gateway, movie-service + MongoDB +
+  Redis, with JVM flags `-XX:MaxRAMPercentage=60 -Xss256k` and single
+  replicas. Discovery and Config are NOT part of the cloud slice —
+  Kubernetes supplies both natively (ADR-005), which conveniently also
+  frees up headroom on a memory-constrained node.
 - Everything else (user/actor/ai/media services, full ELK) runs in the
   **local** profile; the manifests are identical, only Kustomize overlays and
   replica counts differ.
@@ -2095,12 +2114,24 @@ infrastructure/terraform/
 
 **Terraform rules:**
 - Remote state per cloud (S3+DynamoDB on AWS, Storage account on Azure);
-  never commit state files.
-- All resources tagged/labeled `project=filmpire`, `managed-by=terraform`.
-- Credentials come from environment (`ARM_*`, `AWS_*`) or OIDC in CI —
-  never from `.tf` files or committed `tfvars`.
-- `terraform plan` runs in CI on every PR touching `infrastructure/terraform/`;
-  `terraform apply` is manual (workflow_dispatch) only.
+  never commit state files. On Azure, state access (read/lock) goes
+  through Entra ID (`use_azuread_auth = true` on the backend) rather than
+  a Storage Account key — both local (`az login`) and CI (OIDC, below)
+  authenticate the same way, and there's no key to leak.
+- All resources tagged/labeled `project=filmpire`, `managed-by=terraform`
+  — except Azure Consumption Budgets (`modules/budget-guard`), which
+  structurally don't support a `tags` argument at all.
+- Credentials come from environment (`ARM_*`, `AWS_*`) locally, or GitHub
+  OIDC federated credentials in CI (an Azure AD App Registration trusts
+  GitHub's OIDC issuer for this repo+branch specifically, so CI requests a
+  short-lived token per run) — never a stored `ARM_CLIENT_SECRET`, never
+  from `.tf` files or committed `tfvars`.
+- `terraform plan` runs in CI on every **push to `main`** touching
+  `infrastructure/terraform/` — not on PRs: this repo commits straight to
+  `main` with no PR workflow (single collaborator, nothing to review a PR
+  against — see CLAUDE.md), so `pull_request` would be a trigger that
+  never fires. `terraform apply` is never run in CI; it's a manual,
+  human-supervised step every time, run locally against the reviewed plan.
 
 **Example — AKS free-tier cluster (modules/cluster-aks):**
 ```hcl
@@ -2112,14 +2143,30 @@ resource "azurerm_kubernetes_cluster" "filmpire" {
   sku_tier            = "Free"          # free control plane
 
   default_node_pool {
-    name       = "default"
-    node_count = 1
-    vm_size    = "Standard_B2ats_v2"    # free-tier eligible burstable
+    name                    = "default"
+    node_count              = 1
+    vm_size                 = var.vm_size # do NOT hardcode a "free-tier" SKU here — see below
+    node_public_ip_enabled  = true        # reach the gateway without a Standard LB/NAT gateway
   }
 
   identity { type = "SystemAssigned" }
 }
 ```
+`vm_size` is deliberately a variable, not a literal, and deliberately not
+shown as a specific SKU name above: a live apply found that AKS enforces a
+2 vCPU/4GB minimum for the system pool regardless of what's "free-tier
+eligible" in general (rules out B1s/B2ats_v2), and that a brand-new
+subscription can have the entire B-series family blocked in a given region
+as an anti-abuse measure (rules out B2s too, despite it clearing AKS's
+minimum). Neither is visible to `terraform plan` — both are live-API-only
+failures. Check `az vm list-skus` for what's actually allowed and its real
+specs (naming conventions like "low-memory" or "compute-optimized" aren't
+reliable across VM generations — confirmed the hard way when
+`Standard_F2as_v7`, expected to be 2 vCPU/4GB by older F-series
+convention, turned out to be 2 vCPU/8GB on this generation) before picking
+a size, every time, rather than trusting a value written here or anywhere
+else in this document. `infrastructure/terraform/modules/cluster-aks/variables.tf`
+has the full story and whatever size actually worked most recently.
 
 **Example — AWS k3s node (modules/cluster-k3s):**
 ```hcl
@@ -2181,16 +2228,23 @@ infrastructure/kubernetes/
 
 ```
 push to main
-  └─► backend-ci.yml        build + test (existing)
-        └─► docker-publish.yml   build images, tag ${GIT_SHA}, push registry
-              └─► deploy.yml (workflow_dispatch / on-tag)
-                    ├─ terraform plan/apply (manual gate)
-                    └─ kubectl apply -k overlays/<cloud>
+  ├─► backend-ci.yml        build + test (existing)
+  │     └─► docker-publish.yml   build images, tag ${GIT_SHA}, push registry (#28, not yet built)
+  │           └─► deploy.yml (workflow_dispatch / on-tag)                    (#28, not yet built)
+  │                 ├─ terraform apply (manual gate)
+  │                 └─ kubectl apply -k overlays/<cloud>
+  └─► terraform-plan.yml    plan only — paths: infrastructure/terraform/** (#26, built)
 ```
 
-- `terraform plan` posted on PRs that touch `infrastructure/terraform/`.
+- `terraform-plan.yml` runs on every push to `main` that touches
+  `infrastructure/terraform/` — not PRs (see §11.2's Terraform rules for
+  why) and independent of the backend-ci/docker-publish/deploy chain
+  above. Auth is GitHub OIDC, no stored secret. It only ever computes and
+  displays a plan; it never runs `apply`.
 - Deploys are explicit (`workflow_dispatch` with cloud choice) — never
-  automatic on merge, to protect the free-tier hour budget.
+  automatic on merge, to protect the free-tier hour budget. `apply` itself
+  stays a manual, human-run step even outside CI — see
+  `infrastructure/terraform/README.md`'s walkthrough.
 - Rollback = `kubectl rollout undo` (images are SHA-tagged and kept in the
   registry).
 
@@ -2614,7 +2668,7 @@ public class TmdbClient {
 
 ---
 
-**Document Version:** 1.6.0  
-**Last Updated:** July 23, 2026  
+**Document Version:** 1.6.1  
+**Last Updated:** July 29, 2026  
 **Status:** Living Document — Discovery/Config/Gateway/Movie/Actor/User services implemented and running on Spring Boot 4.1; AI/Media services still stubs (see §2.3 ADRs and per-service sections for current status)
 
