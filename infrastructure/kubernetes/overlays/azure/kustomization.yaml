@@ -26,6 +26,22 @@ images:
     newTag: latest
 
 patches:
+  # No Standard Load Balancer / NAT gateway for this overlay (issue #26
+  # scope update — both bill hourly): the gateway is reached directly on
+  # the node's public IP, so its Service has to be NodePort instead of the
+  # base's ClusterIP. 30080 must match modules/network's
+  # demo_inbound_port in infrastructure/terraform (that's the port opened
+  # in the NSG) — see infrastructure/terraform/README.md step 4.
+  - target:
+      kind: Service
+      name: api-gateway
+    patch: |-
+      - op: replace
+        path: /spec/type
+        value: NodePort
+      - op: add
+        path: /spec/ports/0/nodePort
+        value: 30080
   # Free-tier node sizing (§11.1): -XX:MaxRAMPercentage=60 -Xss256k keeps the
   # JVM heap inside a small container memory limit instead of the Dockerfile
   # default fixed -Xmx512m, which would OOM-kill on a ~1GB node once

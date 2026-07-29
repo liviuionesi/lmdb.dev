@@ -87,3 +87,19 @@ coverage/
 
 # newman smoke-test report (issue #47)
 newman-report.xml
+
+# Terraform (#26/#27) — state and account-specific/secret inputs never
+# committed. .terraform.lock.hcl IS meant to be committed (provider
+# version pinning) — do not add it here.
+infrastructure/terraform/**/.terraform/
+infrastructure/terraform/**/*.tfstate
+infrastructure/terraform/**/*.tfstate.*
+infrastructure/terraform/**/crash.log
+infrastructure/terraform/**/crash.*.log
+infrastructure/terraform/**/*.tfvars
+!infrastructure/terraform/**/*.tfvars.example
+infrastructure/terraform/**/backend.hcl
+infrastructure/terraform/**/override.tf
+infrastructure/terraform/**/override.tf.json
+infrastructure/terraform/**/*_override.tf
+infrastructure/terraform/**/*_override.tf.json
