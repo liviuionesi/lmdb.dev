@@ -40,7 +40,7 @@ A portfolio project: a Spring Boot backend that clones the [TMDB v3 API](https:/
 ```bash
 git clone https://github.com/pehlivanu/filmpire-microservices.git
 cd filmpire-microservices
-cp infrastructure/docker/env.example infrastructure/docker/.env
+cp infrastructure/docker/.env.example infrastructure/docker/.env
 # edit infrastructure/docker/.env and set TMDB_API_KEY
 ```
 

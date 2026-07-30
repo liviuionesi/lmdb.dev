@@ -1641,7 +1641,19 @@ Every task must meet these criteria:
 
 ### 9.3 Development Workflow
 
-**Daily Workflow:**
+> **Actual workflow (see `CLAUDE.md`'s "Where work happens"), not what's
+> sketched below:** this is a single-collaborator repo — commits go
+> straight to `main`, no `develop` branch, no feature branches, no PRs (the
+> sole collaborator can't approve their own PR, so opening one is pure
+> friction). **Branch protection is deliberately OFF** — a decision, not a
+> gap: protection rules (required reviews, status checks before merge)
+> exist to gate PRs into a shared branch, and there are no PRs to gate. The
+> daily workflow, branching diagram, and PR-based steps below describe a
+> multi-contributor process this project was drafted against early on but
+> has never actually run — kept here as the original planning reference,
+> not current practice. Revisit if a second collaborator joins.
+
+**Daily Workflow (aspirational — see the note above for what actually happens):**
 1. Pull latest changes from main
 2. Review assigned GitHub issues
 3. Create feature branch: `feature/ISSUE-123-description`

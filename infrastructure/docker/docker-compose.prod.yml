@@ -1,0 +1,81 @@
+# Production-leaning override for docker-compose.yml (#29). Not a cloud
+# deployment mechanism — that's Terraform + Kubernetes (ARCHITECTURE.md
+# §11); this is for running the same local stack with the dev-only
+# management UIs excluded and resource limits applied, e.g. to sanity-check
+# behavior under constrained memory before it ever reaches the cloud
+# overlays.
+#
+# Usage:
+#   cd infrastructure/docker
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+#
+# Adminer/Mongo Express/Redis Commander/SonarQube are already gated behind
+# the `dev-tools`/`sonar` compose profiles in docker-compose.yml, so simply
+# not passing --profile here excludes them — nothing to override for that.
+
+services:
+  postgres:
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  mongodb:
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  redis:
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  discovery-service:
+    environment:
+      JAVA_OPTS: "-Xms128m -Xmx256m"
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+
+  config-service:
+    environment:
+      JAVA_OPTS: "-Xms128m -Xmx256m"
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+
+  api-gateway:
+    environment:
+      JAVA_OPTS: "-Xms256m -Xmx512m"
+    deploy:
+      resources:
+        limits:
+          memory: 640M
+
+  movie-service:
+    environment:
+      JAVA_OPTS: "-Xms256m -Xmx512m"
+    deploy:
+      resources:
+        limits:
+          memory: 640M
+
+  user-service:
+    environment:
+      JAVA_OPTS: "-Xms256m -Xmx512m"
+    deploy:
+      resources:
+        limits:
+          memory: 640M
+
+  actor-service:
+    environment:
+      JAVA_OPTS: "-Xms256m -Xmx512m"
+    deploy:
+      resources:
+        limits:
+          memory: 640M

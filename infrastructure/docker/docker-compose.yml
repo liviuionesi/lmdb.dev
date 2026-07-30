@@ -96,10 +96,14 @@ services:
       start_period: 10s
     restart: unless-stopped
 
-  # Adminer - Database Management UI (Optional)
+  # Adminer - Database Management UI (Optional). Behind the `dev-tools`
+  # profile, same reasoning as SonarQube's `sonar` profile below — an
+  # unauthenticated DB browser has no business running by default outside
+  # local dev. Bring it up on demand: docker compose --profile dev-tools up -d
   adminer:
     image: docker.io/library/adminer:latest
     container_name: filmpire-adminer
+    profiles: ["dev-tools"]
     ports:
       - "${ADMINER_PORT:-9081}:8080"
     networks:
@@ -111,10 +115,12 @@ services:
       postgres:
         condition: service_healthy
 
-  # Mongo Express - MongoDB Management UI (Optional)
+  # Mongo Express - MongoDB Management UI (Optional). Behind `dev-tools`,
+  # see the adminer comment above.
   mongo-express:
     image: docker.io/library/mongo-express:latest
     container_name: filmpire-mongo-express
+    profiles: ["dev-tools"]
     environment:
       ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_ROOT_USER:-admin}
       ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_ROOT_PASSWORD:-admin123}
@@ -129,10 +135,12 @@ services:
       mongodb:
         condition: service_healthy
 
-  # Redis Commander - Redis Management UI (Optional)
+  # Redis Commander - Redis Management UI (Optional). Behind `dev-tools`,
+  # see the adminer comment above.
   redis-commander:
     image: docker.io/rediscommander/redis-commander:latest
     container_name: filmpire-redis-commander
+    profiles: ["dev-tools"]
     environment:
       REDIS_HOSTS: local:redis:6379:0:${REDIS_PASSWORD:-redis123}
     ports:
