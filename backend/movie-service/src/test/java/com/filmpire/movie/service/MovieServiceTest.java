@@ -123,6 +123,81 @@ class MovieServiceTest {
     }
 
     /**
+     * The progressive-enrichment gap found while verifying #34 against a live
+     * frontend: a movie whose only prior appearance was via a list endpoint is
+     * persisted with detail-only fields unset ({@code upsertFromListItem}
+     * deliberately leaves them alone). Before this fix, {@code
+     * getOrFetchMovieEntity} treated "found in MongoDB" as sufficient
+     * regardless of shape, so the facade served {@code spoken_languages:
+     * null} forever — TMDB itself never omits that field, so the React app's
+     * {@code data.spoken_languages[0].name} isn't defensive against it and
+     * crashed on every movie first seen via a list. The fix must detect this
+     * (via {@code runtime == null}, set by every real detail fetch and
+     * nothing else) and backfill from a genuine TMDB detail call.
+     */
+    @Test
+    @DisplayName("getMovieById - Should backfill detail fields when the persisted document is list-item-only")
+    void getMovieById_WhenPersistedIsListItemOnly_ShouldBackfillDetailFields() {
+        // Given: MongoDB holds a document upsertFromListItem would produce —
+        // list fields set, every detail-only field (runtime, spokenLanguages,
+        // budget, etc.) unset.
+        Long tmdbId = 1368337L;
+        Movie listItemOnly = createListItemOnlyMovie(tmdbId);
+        TmdbMovieResponse tmdbResponse = createTestTmdbMovieResponse(tmdbId);
+        Movie completedMovie = createTestMovie(tmdbId);
+        MovieDto movieDto = createTestMovieDto(tmdbId);
+
+        when(movieRepository.findByTmdbId(tmdbId)).thenReturn(Optional.of(listItemOnly));
+        when(tmdbClient.getMovieDetails(tmdbId, tmdbApiKey)).thenReturn(tmdbResponse);
+        when(movieRepository.save(listItemOnly)).thenReturn(completedMovie);
+        when(movieMapper.toDto(completedMovie)).thenReturn(movieDto);
+
+        // When
+        MovieDto result = movieService.getMovieById(tmdbId);
+
+        // Then: TMDB was consulted to fill in the gap (unlike the plain-hit
+        // case below, which must NOT call TMDB) and the enriched document —
+        // not a second, duplicate one — was saved.
+        assertThat(result).isNotNull();
+        assertThat(result.tmdbId()).isEqualTo(tmdbId);
+        verify(tmdbClient).getMovieDetails(tmdbId, tmdbApiKey);
+        verify(movieRepository).save(listItemOnly);
+        // And the in-place merge actually set a detail field the crash
+        // depended on being present — runtime stands in for the whole set
+        // (spokenLanguages, budget, tagline, ...), since applyDetailFields
+        // copies all of them from the same TMDB response in one pass.
+        assertThat(listItemOnly.getRuntime()).isEqualTo(139);
+    }
+
+    /**
+     * The counterpart to the backfill test: a document that already has
+     * detail fields populated must NOT trigger a second TMDB call just
+     * because it happens to be read again — the whole point of read-through
+     * caching. Guards against a future edit to {@code completeIfListItemOnly}
+     * accidentally treating every hit as incomplete.
+     */
+    @Test
+    @DisplayName("getMovieById - Should NOT re-fetch from TMDB when the persisted document is already detail-complete")
+    void getMovieById_WhenPersistedIsDetailComplete_ShouldNotRefetch() {
+        // Given: a fully detail-fetched document (runtime set, matching
+        // convertAndSaveMovie's output)
+        Long tmdbId = 550L;
+        Movie completeMovie = createTestMovie(tmdbId);
+        MovieDto movieDto = createTestMovieDto(tmdbId);
+
+        when(movieRepository.findByTmdbId(tmdbId)).thenReturn(Optional.of(completeMovie));
+        when(movieMapper.toDto(completeMovie)).thenReturn(movieDto);
+
+        // When
+        MovieDto result = movieService.getMovieById(tmdbId);
+
+        // Then
+        assertThat(result).isNotNull();
+        verifyNoInteractions(tmdbClient);
+        verify(movieRepository, never()).save(any(Movie.class));
+    }
+
+    /**
      * The read-through miss path: an absent movie must be fetched from TMDB and
      * persisted, so the next read is local. The two findByTmdbId invocations are
      * the double-check around the single-flight lock.
@@ -570,6 +645,34 @@ class MovieServiceTest {
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
                 .build();
+    }
+
+    /**
+     * Builds a Movie exactly as {@code upsertFromListItem} would leave it:
+     * list-endpoint fields set, every detail-only field (runtime,
+     * spokenLanguages, budget, tagline, ...) unset. The completeness signal
+     * ({@code runtime == null}) is what {@link #getMovieById_WhenPersistedIsListItemOnly_ShouldBackfillDetailFields()}
+     * exercises.
+     *
+     * @param tmdbId TMDB id to embed
+     * @return a list-item-only test movie
+     */
+    private Movie createListItemOnlyMovie(Long tmdbId) {
+        Movie movie = new Movie();
+        movie.setTmdbId(tmdbId);
+        movie.setTitle("The Odyssey");
+        movie.setOverview("Odysseus, the legendary King of Ithaca...");
+        movie.setPosterPath("/poster.jpg");
+        movie.setBackdropPath("/backdrop.jpg");
+        movie.setReleaseDate(LocalDate.of(2026, java.time.Month.JULY, 15));
+        movie.setVoteAverage(7.9);
+        movie.setVoteCount(1200);
+        movie.setPopularity(980.3);
+        movie.setAdult(false);
+        movie.setOriginalLanguage("en");
+        movie.setCreatedAt(LocalDateTime.now());
+        movie.setUpdatedAt(LocalDateTime.now());
+        return movie;
     }
 
     /**

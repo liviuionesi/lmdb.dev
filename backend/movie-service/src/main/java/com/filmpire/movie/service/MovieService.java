@@ -124,7 +124,7 @@ public class MovieService {
         return findPersistedMovie(tmdbId)
             .map(movie -> {
                 log.info("Movie found in MongoDB: {}", tmdbId);
-                return movie;
+                return completeIfListItemOnly(movie);
             })
             .orElseGet(() -> {
                 // Fetch from TMDB API with rate limiting/locking
@@ -132,6 +132,7 @@ public class MovieService {
                 try {
                     // Double-check MongoDB inside lock
                     return findPersistedMovie(tmdbId)
+                        .map(this::completeIfListItemOnly)
                         .orElseGet(() -> {
                             log.info("Movie not in MongoDB, fetching from TMDB: {}", tmdbId);
                             TmdbMovieResponse tmdbMovie = tmdbClient.getMovieDetails(tmdbId, tmdbApiKey);
@@ -141,6 +142,45 @@ public class MovieService {
                     lock.unlock();
                 }
             });
+    }
+
+    /**
+     * Backfills detail-only fields on a movie that was only ever upserted
+     * from a list endpoint, so the caller-visible invariant of {@link
+     * #getOrFetchMovieEntity} — "the returned movie has detail data" — always
+     * holds, not just for movies fetched directly by ID.
+     *
+     * <p>Found while verifying #34 against a live gateway+frontend run:
+     * {@code upsertFromListItem} deliberately leaves detail-only fields
+     * (runtime, budget, spoken languages, etc.) unset (see its Javadoc), and
+     * the ARCHITECTURE.md-documented "progressive enrichment" promise — hit
+     * the detail endpoint once and it fills in the rest — was only actually
+     * implemented for the {@code append_to_response} sub-resources (videos,
+     * credits) in {@link #getMovieForFacade}, not for these base fields. Any
+     * movie whose first appearance in the catalog was via a list (the common
+     * case — nearly every movie is seen in a list before its own detail page)
+     * stayed list-item-shaped forever, even after its detail endpoint was
+     * hit: {@code spoken_languages} serialized as {@code null} instead of an
+     * array, which crashed the React app's {@code MovieInformation} component
+     * on {@code data.spoken_languages[0].name}.</p>
+     *
+     * <p>{@code runtime} is the completeness signal: it is set by every real
+     * TMDB detail fetch ({@link #convertAndSaveMovie}/this method) and by
+     * nothing else, so {@code null} unambiguously means "list-item-only."</p>
+     *
+     * @param movie a persisted movie, possibly list-item-only
+     * @return {@code movie} unchanged if already detail-complete, otherwise
+     *         the same document with detail fields merged in and re-saved
+     */
+    private Movie completeIfListItemOnly(Movie movie) {
+        if (movie.getRuntime() != null) {
+            return movie;
+        }
+        log.info("Movie {} was only ever seen via a list — fetching full detail from TMDB", movie.getTmdbId());
+        TmdbMovieResponse tmdbMovie = tmdbClient.getMovieDetails(movie.getTmdbId(), tmdbApiKey);
+        applyDetailFields(movie, tmdbMovie);
+        movie.setUpdatedAt(LocalDateTime.now(ZoneOffset.UTC));
+        return movieRepository.save(movie);
     }
 
     /**
@@ -549,38 +589,53 @@ public class MovieService {
     }
 
     private Movie convertAndSaveMovie(TmdbMovieResponse tmdbMovie) {
-        Movie movie = Movie.builder()
-            .tmdbId(tmdbMovie.id())
-            .title(tmdbMovie.title())
-            .originalTitle(tmdbMovie.originalTitle())
-            .overview(tmdbMovie.overview())
-            .posterPath(tmdbMovie.posterPath())
-            .backdropPath(tmdbMovie.backdropPath())
-            .releaseDate(tmdbMovie.releaseDate())
-            .voteAverage(tmdbMovie.voteAverage())
-            .voteCount(tmdbMovie.voteCount())
-            .genres(tmdbMovie.genres())
-            .runtime(tmdbMovie.runtime())
-            .status(tmdbMovie.status())
-            .budget(tmdbMovie.budget())
-            .revenue(tmdbMovie.revenue())
-            .spokenLanguages(tmdbMovie.spokenLanguages())
-            .productionCompanies(tmdbMovie.productionCompanies())
-            .productionCountries(tmdbMovie.productionCountries())
-            .belongsToCollection(tmdbMovie.belongsToCollection())
-            .video(tmdbMovie.video())
-            .originalLanguage(tmdbMovie.originalLanguage())
-            .popularity(tmdbMovie.popularity())
-            .adult(tmdbMovie.adult())
-            .imdbId(tmdbMovie.imdbId())
-            .tagline(tmdbMovie.tagline())
-            .homepage(tmdbMovie.homepage())
-            .createdAt(LocalDateTime.now(ZoneOffset.UTC))
-            .updatedAt(LocalDateTime.now(ZoneOffset.UTC))
-            .tmdbSyncVersion(1)
-            .build();
+        Movie movie = new Movie();
+        movie.setTmdbId(tmdbMovie.id());
+        movie.setCreatedAt(LocalDateTime.now(ZoneOffset.UTC));
+        movie.setTmdbSyncVersion(1);
+        applyDetailFields(movie, tmdbMovie);
+        movie.setUpdatedAt(LocalDateTime.now(ZoneOffset.UTC));
 
         return movieRepository.save(Objects.requireNonNull(movie, "Movie cannot be null"));
+    }
+
+    /**
+     * Copies every field a TMDB movie-detail response carries onto a (new or
+     * already-persisted) {@link Movie}. Shared by {@link #convertAndSaveMovie}
+     * (brand-new document) and {@link #completeIfListItemOnly} (backfilling
+     * an existing list-item-only document) so the two paths cannot drift
+     * apart on which fields count as "detail data" — deliberately does NOT
+     * touch {@code id}, {@code createdAt}, or {@code tmdbSyncVersion}, which
+     * are caller-owned (identity/bookkeeping, not TMDB response data).
+     *
+     * @param movie the entity to populate, mutated in place
+     * @param tmdbMovie the TMDB detail response to copy fields from
+     */
+    private void applyDetailFields(Movie movie, TmdbMovieResponse tmdbMovie) {
+        movie.setTitle(tmdbMovie.title());
+        movie.setOriginalTitle(tmdbMovie.originalTitle());
+        movie.setOverview(tmdbMovie.overview());
+        movie.setPosterPath(tmdbMovie.posterPath());
+        movie.setBackdropPath(tmdbMovie.backdropPath());
+        movie.setReleaseDate(tmdbMovie.releaseDate());
+        movie.setVoteAverage(tmdbMovie.voteAverage());
+        movie.setVoteCount(tmdbMovie.voteCount());
+        movie.setGenres(tmdbMovie.genres());
+        movie.setRuntime(tmdbMovie.runtime());
+        movie.setStatus(tmdbMovie.status());
+        movie.setBudget(tmdbMovie.budget());
+        movie.setRevenue(tmdbMovie.revenue());
+        movie.setSpokenLanguages(tmdbMovie.spokenLanguages());
+        movie.setProductionCompanies(tmdbMovie.productionCompanies());
+        movie.setProductionCountries(tmdbMovie.productionCountries());
+        movie.setBelongsToCollection(tmdbMovie.belongsToCollection());
+        movie.setVideo(tmdbMovie.video());
+        movie.setOriginalLanguage(tmdbMovie.originalLanguage());
+        movie.setPopularity(tmdbMovie.popularity());
+        movie.setAdult(tmdbMovie.adult());
+        movie.setImdbId(tmdbMovie.imdbId());
+        movie.setTagline(tmdbMovie.tagline());
+        movie.setHomepage(tmdbMovie.homepage());
     }
 
     private MovieListDto convertTmdbItemToListDto(TmdbMovieListResponse.TmdbMovieItem item) {
