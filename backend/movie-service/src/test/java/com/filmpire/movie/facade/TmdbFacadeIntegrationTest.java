@@ -50,7 +50,7 @@ class TmdbFacadeIntegrationTest {
     /** Real MongoDB via Testcontainers; @ServiceConnection wires the URI. */
     @Container
     @ServiceConnection
-    static MongoDBContainer mongodb = new MongoDBContainer("mongo:8.0.0");
+    static MongoDBContainer mongodb = new MongoDBContainer("mongo:8.0");
 
     /** A single TMDB popular-list page fixture reused by several tests. */
     private static final String POPULAR_PAGE_1 = """
