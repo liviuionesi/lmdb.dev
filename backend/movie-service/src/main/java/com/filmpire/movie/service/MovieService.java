@@ -145,28 +145,10 @@ public class MovieService {
     }
 
     /**
-     * Backfills detail-only fields on a movie that was only ever upserted
-     * from a list endpoint, so the caller-visible invariant of {@link
-     * #getOrFetchMovieEntity} — "the returned movie has detail data" — always
-     * holds, not just for movies fetched directly by ID.
-     *
-     * <p>Found while verifying #34 against a live gateway+frontend run:
-     * {@code upsertFromListItem} deliberately leaves detail-only fields
-     * (runtime, budget, spoken languages, etc.) unset (see its Javadoc), and
-     * the ARCHITECTURE.md-documented "progressive enrichment" promise — hit
-     * the detail endpoint once and it fills in the rest — was only actually
-     * implemented for the {@code append_to_response} sub-resources (videos,
-     * credits) in {@link #getMovieForFacade}, not for these base fields. Any
-     * movie whose first appearance in the catalog was via a list (the common
-     * case — nearly every movie is seen in a list before its own detail page)
-     * stayed list-item-shaped forever, even after its detail endpoint was
-     * hit: {@code spoken_languages} serialized as {@code null} instead of an
-     * array, which crashed the React app's {@code MovieInformation} component
-     * on {@code data.spoken_languages[0].name}.</p>
-     *
-     * <p>{@code runtime} is the completeness signal: it is set by every real
-     * TMDB detail fetch ({@link #convertAndSaveMovie}/this method) and by
-     * nothing else, so {@code null} unambiguously means "list-item-only."</p>
+     * Ensures a persisted movie has its detail-only fields populated,
+     * fetching and merging them from TMDB if not. {@code runtime} is the
+     * completeness signal — it is set only by a detail fetch, never by a
+     * list upsert.
      *
      * @param movie a persisted movie, possibly list-item-only
      * @return {@code movie} unchanged if already detail-complete, otherwise
@@ -600,13 +582,9 @@ public class MovieService {
     }
 
     /**
-     * Copies every field a TMDB movie-detail response carries onto a (new or
-     * already-persisted) {@link Movie}. Shared by {@link #convertAndSaveMovie}
-     * (brand-new document) and {@link #completeIfListItemOnly} (backfilling
-     * an existing list-item-only document) so the two paths cannot drift
-     * apart on which fields count as "detail data" — deliberately does NOT
-     * touch {@code id}, {@code createdAt}, or {@code tmdbSyncVersion}, which
-     * are caller-owned (identity/bookkeeping, not TMDB response data).
+     * Copies TMDB detail-response fields onto a Movie entity. Used by both
+     * {@link #convertAndSaveMovie} and {@link #completeIfListItemOnly}. Does
+     * not touch {@code id}, {@code createdAt}, or {@code tmdbSyncVersion}.
      *
      * @param movie the entity to populate, mutated in place
      * @param tmdbMovie the TMDB detail response to copy fields from
