@@ -41,7 +41,7 @@ class PrometheusEndpointTest {
     /** Real MongoDB via Testcontainers; @ServiceConnection wires the URI. */
     @Container
     @ServiceConnection
-    static MongoDBContainer mongodb = new MongoDBContainer("mongo:8.0.0");
+    static MongoDBContainer mongodb = new MongoDBContainer("mongo:8.0");
 
     /**
      * The name metrics are expected to be tagged with. Read from configuration

@@ -59,7 +59,7 @@ class MovieServiceIntegrationTest {
 
     @Container
     @SuppressWarnings("resource")
-    static MongoDBContainer mongoDBContainer = new MongoDBContainer("mongo:8.0.0")
+    static MongoDBContainer mongoDBContainer = new MongoDBContainer("mongo:8.0")
             .waitingFor(Wait.forListeningPort())
             .withStartupTimeout(Duration.ofSeconds(60));
 

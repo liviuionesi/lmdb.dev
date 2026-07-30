@@ -51,7 +51,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class EndToEndIntegrationTest {
 
     @Container
-    static MongoDBContainer mongoDBContainer = new MongoDBContainer("mongo:8.0.0")
+    static MongoDBContainer mongoDBContainer = new MongoDBContainer("mongo:8.0")
             .waitingFor(Wait.forListeningPort())
             .withStartupTimeout(Duration.ofSeconds(60));
 

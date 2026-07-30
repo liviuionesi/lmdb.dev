@@ -44,7 +44,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class MovieRepositoryTest {
 
     @Container
-    static MongoDBContainer mongoDBContainer = new MongoDBContainer("mongo:8.0.0");
+    static MongoDBContainer mongoDBContainer = new MongoDBContainer("mongo:8.0");
 
     /**
      * Points Spring Data at the container's Mongo (replica-set URL for
