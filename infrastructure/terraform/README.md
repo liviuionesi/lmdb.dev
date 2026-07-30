@@ -314,10 +314,11 @@ properly). `redis` came up healthy with no issues.
 
 ### What this doesn't cover yet
 
-- The app itself isn't reachable end-to-end yet — blocked on #28 (CI/CD
-  image publish); see "Lessons from the first live run" above. The
-  infrastructure side (cluster, network, NSG, budget-guard) is confirmed
-  working independent of that.
+- End-to-end "gateway reachable" is still unverified live — #28 (CI/CD
+  image publish, `docker-publish.yml`/`deploy.yml`) is now built, so the
+  images that were missing during the 2026-07-29 run will exist once it
+  runs on `main`, but nobody has re-applied this infra and re-deployed
+  against them yet. See "Lessons from the first live run" above.
 - The `mongodb` crash-loop noted above isn't root-caused.
 
 ---
@@ -541,6 +542,7 @@ unattended.
   apply before trusting it fully.
 - Not wired into `.github/workflows/terraform-plan.yml` — that workflow
   currently only plans the Azure side.
-- The app itself would hit the same `#28` (CI/CD image publish) blocker
-  the Azure side did — `ghcr.io/pehlivanu/filmpire-*:latest` isn't
-  published yet.
+- `docker-publish.yml` (#28) now publishes `ghcr.io/pehlivanu/filmpire-*:latest`
+  on every green `main` build, so the image side of the Azure blocker is
+  resolved — but this AWS composition still hasn't had a live
+  apply → deploy → destroy round-trip at all, image availability aside.

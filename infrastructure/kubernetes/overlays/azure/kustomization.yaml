@@ -20,7 +20,7 @@ secretGenerator:
 images:
   - name: filmpire/api-gateway
     newName: ghcr.io/pehlivanu/filmpire-api-gateway
-    newTag: latest # placeholder until #28 wires SHA-tagged CI publishes
+    newTag: latest # docker-publish.yml (#28) pushes both :latest and :${GIT_SHA}; deploy always rolls out :latest
   - name: filmpire/movie-service
     newName: ghcr.io/pehlivanu/filmpire-movie-service
     newTag: latest

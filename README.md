@@ -10,7 +10,7 @@ A portfolio project: a Spring Boot backend that clones the [TMDB v3 API](https:/
 - **Spring Cloud infrastructure** — Eureka discovery, Config Server, Spring Cloud Gateway (JWT auth, Redis-backed rate limiting, Resilience4j circuit breakers, CORS)
 - **Observability** — every service instrumented with Actuator + Micrometer/Prometheus + JSON structured logging; full local stack (kube-prometheus-stack + Grafana + Alertmanager, ELK) verified live on minikube
 - **$0-budget cloud deployment** — Terraform provisions Azure AKS (primary) and AWS k3s-on-EC2 (secondary), both constrained to free-tier limits with a zero-spend budget tripwire; Kubernetes via Kustomize (`base` + `local`/`azure`/`aws` overlays); see ARCHITECTURE.md §11 and [`infrastructure/terraform/README.md`](infrastructure/terraform/README.md)
-- **CI** — `backend-ci.yml` (build+test on every push/PR touching `backend/**`), `e2e-smoke.yml` (nightly live-stack Postman/newman run), `terraform-plan.yml` (plan-only, GitHub OIDC, on push to `main`). Image publish + gated cloud deploy is still open (issue #28) — nothing auto-deploys today
+- **CI** — `backend-ci.yml` (build+test on every push/PR touching `backend/**`), `e2e-smoke.yml` (nightly live-stack Postman/newman run), `terraform-plan.yml` (plan-only, GitHub OIDC, on push to `main`), `docker-publish.yml` (builds all 6 backend services, pushes SHA + `latest` tags to ghcr.io after every green Backend CI run on `main`), `deploy.yml` (manual `workflow_dispatch`, `kubectl apply -k overlays/<cloud>` onto an already-applied cluster) — nothing auto-deploys, ever
 - **Spring AI** — a dependency on the classpath (`spring-ai` 1.0.0-SNAPSHOT), not yet wired into a running service; `ai-service` is where it lands (§3.7)
 
 ### Development Standards (Spring Boot 4.1.x + Java 25)
@@ -168,7 +168,7 @@ $0-budget, Terraform-provisioned, ephemeral-by-design (`apply` → demo → `des
 - **Azure AKS** (primary) — free-tier control plane, Terraform in `infrastructure/terraform/azure/`; live apply/destroy round-trip verified 2026-07-29
 - **AWS k3s on EC2** (secondary) — `infrastructure/terraform/aws/`; code written, live verification pending AWS account signup
 - **Kubernetes manifests** — Kustomize `base/` + `overlays/{local,azure,aws}`, `infrastructure/kubernetes/`
-- **Container images** — `ghcr.io` (free for public repos); publish + gated deploy workflow is not built yet (issue #28) — the cloud overlays currently reference image tags that don't exist until that ships
+- **Container images** — `ghcr.io` (free for public repos); `docker-publish.yml` builds all six backend services and pushes SHA + `latest` tags after every green Backend CI run on `main` (#28); `deploy.yml` is a manual `workflow_dispatch` that rolls `kubectl apply -k overlays/<cloud>` onto an already-Terraform-applied cluster — it never runs `terraform apply` itself
 - **Local** is the primary dev/demo environment (minikube/k3d via Podman) — cloud is a demo target only, verified separately, never the daily dev loop
 
 ## 📝 License

@@ -1,18 +1,21 @@
 name: Project Board Automation
 
+# Trimmed for #28: this repo has no PR workflow (CLAUDE.md — single
+# collaborator commits straight to main), so the pull_request/
+# pull_request_review triggers and their jobs (auto-label-by-path,
+# link-pr-to-issue, notify-ready-for-review, celebrate-merge) never had
+# anything to act on and are removed rather than left as dead code. The
+# issues trigger also previously listed assigned/closed/reopened, none of
+# which any job handled — every run on those actions completed with
+# conclusion "skipped" (see validation 2026-07-21). Only "opened" has a
+# matching job, so that's the only type left.
 on:
   issues:
-    types: [opened, assigned, closed, reopened]
-  pull_request:
-    types: [opened, converted_to_draft, ready_for_review, closed]
-  pull_request_review:
-    types: [submitted]
+    types: [opened]
 
 jobs:
-
   auto-assign-issue:
     runs-on: ubuntu-latest
-    if: github.event_name == 'issues' && github.event.action == 'opened'
     steps:
       - name: Auto-assign issue to creator
         uses: actions/github-script@v7
@@ -24,106 +27,3 @@ jobs:
               issue_number: context.issue.number,
               assignees: [context.actor]
             });
-
-  auto-label-by-path:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Label based on changed files
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const { data: files } = await github.rest.pulls.listFiles({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: context.issue.number
-            });
-            
-            const labels = new Set();
-            
-            for (const file of files) {
-              if (file.filename.startsWith('backend/movie-service')) labels.add('movie-service');
-              if (file.filename.startsWith('backend/user-service')) labels.add('user-service');
-              if (file.filename.startsWith('backend/actor-service')) labels.add('actor-service');
-              if (file.filename.startsWith('backend/ai-service')) labels.add('ai-service');
-              if (file.filename.startsWith('backend/media-service')) labels.add('media-service');
-              if (file.filename.startsWith('backend/api-gateway')) labels.add('api-gateway');
-              if (file.filename.startsWith('frontend/web-nextjs')) labels.add('frontend');
-              if (file.filename.startsWith('frontend/mobile')) labels.add('mobile');
-              if (file.filename.startsWith('infrastructure')) labels.add('infrastructure');
-              if (file.filename.startsWith('docs')) labels.add('documentation');
-              if (file.filename.includes('test')) labels.add('tests');
-            }
-            
-            if (labels.size > 0) {
-              await github.rest.issues.addLabels({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.issue.number,
-                labels: Array.from(labels)
-              });
-            }
-
-  link-pr-to-issue:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' && github.event.action == 'opened'
-    steps:
-      - name: Link PR to issue via branch name
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const branchName = context.payload.pull_request.head.ref;
-            const issueMatch = branchName.match(/^(\d+)-/);
-            
-            if (issueMatch) {
-              const issueNumber = issueMatch[1];
-              const body = context.payload.pull_request.body || '';
-              
-              if (!body.includes(`#${issueNumber}`)) {
-                const newBody = `Closes #${issueNumber}\n\n${body}`;
-                await github.rest.pulls.update({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  pull_number: context.payload.pull_request.number,
-                  body: newBody
-                });
-              }
-            }
-
-  notify-ready-for-review:
-    runs-on: ubuntu-latest
-    if: |
-      github.event_name == 'pull_request' && 
-      github.event.action == 'ready_for_review'
-    steps:
-      - name: Add ready-for-review label
-        uses: actions/github-script@v7
-        with:
-          script: |
-            await github.rest.issues.addLabels({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-              labels: ['ready-for-review']
-            });
-
-  celebrate-merge:
-    runs-on: ubuntu-latest
-    if: |
-      github.event_name == 'pull_request' && 
-      github.event.action == 'closed' && 
-      github.event.pull_request.merged == true
-    steps:
-      - name: Add success comment
-        uses: actions/github-script@v7
-        with:
-          script: |
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-              body: '🎉 Successfully merged! Great work @' + context.actor + '!'
-            });
-

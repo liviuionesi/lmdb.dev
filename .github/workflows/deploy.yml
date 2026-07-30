@@ -1,0 +1,147 @@
+name: Deploy
+
+# Manual-only app deploy (ARCHITECTURE.md §11.4 / issue #28). This workflow
+# never runs `terraform apply` — infra provisioning stays the manual,
+# human-run step documented in infrastructure/terraform/README.md (ephemeral
+# apply -> demo -> destroy, so nothing accumulates cost unattended). This
+# workflow assumes that infra already exists and only reads Terraform
+# outputs (state read, same permission level terraform-plan.yml already
+# uses) to find the cluster, then rolls the app onto it with `kubectl apply
+# -k`. Never triggered automatically on merge — only an explicit
+# workflow_dispatch protects the free-tier hour/credit budget from an
+# accidental deploy-on-push.
+on:
+  workflow_dispatch:
+    inputs:
+      cloud:
+        description: "Cloud target to deploy to"
+        required: true
+        type: choice
+        options:
+          - azure
+          - aws
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy-azure:
+    if: github.event.inputs.cloud == 'azure'
+    name: Deploy (azure)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infrastructure/terraform/azure
+    env:
+      ARM_USE_OIDC: "true"
+      ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+      ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~1.15"
+
+      - name: terraform init
+        run: |
+          terraform init -input=false \
+            -backend-config="resource_group_name=${{ vars.TF_STATE_RESOURCE_GROUP }}" \
+            -backend-config="storage_account_name=${{ vars.TF_STATE_STORAGE_ACCOUNT }}" \
+            -backend-config="container_name=${{ vars.TF_STATE_CONTAINER }}"
+
+      # Reads existing state only -- no apply. Fails loudly (empty output)
+      # if #26's infra hasn't been applied yet, which is the correct
+      # behavior: this workflow deploys onto infra, it doesn't create it.
+      - name: Read cluster info from state
+        id: tf
+        run: |
+          echo "resource_group=$(terraform output -raw resource_group_name)" >> "$GITHUB_OUTPUT"
+          echo "cluster_name=$(terraform output -raw cluster_name)" >> "$GITHUB_OUTPUT"
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Get AKS credentials
+        run: |
+          az aks get-credentials \
+            --resource-group "${{ steps.tf.outputs.resource_group }}" \
+            --name "${{ steps.tf.outputs.cluster_name }}" \
+            --overwrite-existing
+
+      - name: kubectl apply -k overlays/azure
+        run: kubectl apply -k ../../kubernetes/overlays/azure
+
+      - name: Wait for rollout
+        run: |
+          kubectl rollout status deployment/api-gateway --timeout=180s
+          kubectl rollout status deployment/movie-service --timeout=180s
+
+  deploy-aws:
+    if: github.event.inputs.cloud == 'aws'
+    name: Deploy (aws)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infrastructure/terraform/aws
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~1.15"
+
+      - name: terraform init
+        run: |
+          terraform init -input=false \
+            -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
+            -backend-config="region=${{ vars.AWS_REGION }}" \
+            -backend-config="dynamodb_table=${{ vars.TF_STATE_TABLE }}"
+
+      # Reads existing state only -- no apply, same rule as the azure job.
+      - name: Read node info from state
+        id: tf
+        run: |
+          echo "public_ip=$(terraform output -raw public_ip)" >> "$GITHUB_OUTPUT"
+          echo "ssh_user=$(terraform output -raw ssh_user)" >> "$GITHUB_OUTPUT"
+
+      # No `az aks get-credentials` equivalent for a self-managed k3s node
+      # (see infrastructure/terraform/README.md) -- fetch the kubeconfig
+      # k3s already wrote with the node's public IP as the server address
+      # over SSH, using the private half of the key `ssh_public_key`
+      # provisioned the node with.
+      - name: Fetch kubeconfig over SSH
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.AWS_K3S_SSH_PRIVATE_KEY }}" > ~/.ssh/k3s_deploy_key
+          chmod 600 ~/.ssh/k3s_deploy_key
+          ssh -o StrictHostKeyChecking=accept-new -i ~/.ssh/k3s_deploy_key \
+            "${{ steps.tf.outputs.ssh_user }}@${{ steps.tf.outputs.public_ip }}" \
+            sudo cat /etc/rancher/k3s/k3s.yaml > "$RUNNER_TEMP/kubeconfig-aws.yaml"
+          echo "KUBECONFIG=$RUNNER_TEMP/kubeconfig-aws.yaml" >> "$GITHUB_ENV"
+
+      - name: kubectl apply -k overlays/aws
+        run: kubectl apply -k ../../kubernetes/overlays/aws
+
+      - name: Wait for rollout
+        run: |
+          kubectl rollout status deployment/api-gateway --timeout=180s
+          kubectl rollout status deployment/movie-service --timeout=180s

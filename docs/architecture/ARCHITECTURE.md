@@ -1,7 +1,7 @@
 # Filmpire Microservices - Enterprise Software Architecture Document
 
-**Version:** 1.7.0  
-**Date:** July 30, 2026 (ADR-013: Filmpire React frontend merged into this repo at `frontend/filmpire/` as a monorepo, full history preserved — §1.2/§7.2/Appendix A updated, `~/Desktop/filmpire` references retired)  
+**Version:** 1.7.1  
+**Date:** July 30, 2026 (#28: `docker-publish.yml`/`deploy.yml` built, `project-automation.yml` trimmed to its one working job — §11.4 updated)  
 **Author:** Liviu Ionesi  
 **Purpose:** Portfolio project demonstrating enterprise-grade full-stack development for a movie platform
 
@@ -2253,11 +2253,13 @@ infrastructure/kubernetes/
 ```
 push to main
   ├─► backend-ci.yml        build + test (existing)
-  │     └─► docker-publish.yml   build images, tag ${GIT_SHA}, push registry (#28, not yet built)
-  │           └─► deploy.yml (workflow_dispatch / on-tag)                    (#28, not yet built)
-  │                 ├─ terraform apply (manual gate)
-  │                 └─ kubectl apply -k overlays/<cloud>
+  │     └─► docker-publish.yml   build images, tag ${GIT_SHA} + latest, push ghcr.io (#28, built)
+  │           (deploy.yml is NOT chained after this — see below)
   └─► terraform-plan.yml    plan only — paths: infrastructure/terraform/** (#26, built)
+
+workflow_dispatch (manual, human-triggered)
+  └─► deploy.yml (cloud: azure|aws)          (#28, built)
+        └─ kubectl apply -k overlays/<cloud> onto an already-applied cluster
 ```
 
 - `terraform-plan.yml` runs on every push to `main` that touches
@@ -2265,10 +2267,26 @@ push to main
   why) and independent of the backend-ci/docker-publish/deploy chain
   above. Auth is GitHub OIDC, no stored secret. It only ever computes and
   displays a plan; it never runs `apply`.
+- `docker-publish.yml` triggers on `workflow_run` of Backend CI completing
+  with `conclusion: success` on `main` — a red build/test run never
+  produces an image. It builds all six backend services (`api-gateway`,
+  `discovery-service`, `config-service`, `movie-service`, `user-service`,
+  `actor-service`) from the repo root as build context (every Dockerfile
+  does `COPY backend backend` for the multi-module Gradle build) and
+  pushes each to `ghcr.io/pehlivanu/filmpire-<service>` tagged both
+  `${GIT_SHA}` and `latest`.
 - Deploys are explicit (`workflow_dispatch` with cloud choice) — never
-  automatic on merge, to protect the free-tier hour budget. `apply` itself
-  stays a manual, human-run step even outside CI — see
-  `infrastructure/terraform/README.md`'s walkthrough.
+  automatic on merge, to protect the free-tier hour budget. `deploy.yml`
+  deliberately does NOT run `terraform apply`: infra provisioning stays the
+  manual, human-run step described in
+  `infrastructure/terraform/README.md` (ephemeral apply → demo → destroy).
+  `deploy.yml` only reads existing Terraform state (same state-read
+  permission level `terraform-plan.yml` already uses) to locate the
+  cluster, then fetches credentials (`az aks get-credentials` for Azure;
+  SSH + `cat /etc/rancher/k3s/k3s.yaml` for AWS, matching the README's
+  manual steps exactly) and runs `kubectl apply -k`. The AWS path additionally
+  needs an `AWS_ROLE_ARN` OIDC trust and an `AWS_K3S_SSH_PRIVATE_KEY` secret
+  that don't exist yet — out of scope for #28, tracked under #27.
 - Rollback = `kubectl rollout undo` (images are SHA-tagged and kept in the
   registry).
 
