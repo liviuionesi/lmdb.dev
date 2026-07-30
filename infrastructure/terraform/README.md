@@ -333,6 +333,20 @@ ghcr.io (public), same as Azure — the issue's original `modules/registry`
 (ECR) plan was replaced with `modules/budget-guard-aws` per the issue #27
 scope-update comment, applied first for the same reason Azure's is.
 
+**Untested memory-sizing risk, found by static review, not a live run —
+watch for this specifically on the first apply.** `overlays/aws`'s core
+slice (gateway + movie-service + MongoDB + Redis) sets container memory
+*limits* that sum to 952Mi on a `t3.micro`'s 1024MiB total RAM — after k3s's
+own control-plane + kubelet overhead, that's little to no headroom if
+several containers approach their limit at once, and a plausible OOM-kill
+risk under any real load. Left as-is deliberately rather than guessed-and-
+trimmed now: Azure's actual working node size only emerged from a live
+apply, not from tightening numbers on paper (see "Lessons from the first
+live run" above) — same principle applies here. If the app OOM-kills on
+first boot, this is the first thing to check; `kubectl top pods` and
+`kubectl describe node` will show which container is actually the pressure
+point before you guess at new numbers.
+
 ### 1. Bootstrap remote state (one-time)
 
 Terraform state is never committed. It lives in an S3 bucket + DynamoDB
