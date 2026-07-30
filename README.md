@@ -1,17 +1,17 @@
 # Filmpire Microservices Platform
 
-Enterprise-grade microservices platform for movie discovery and management, demonstrating best practices in software architecture, development, and deployment.
+A portfolio project: a Spring Boot backend that clones the [TMDB v3 API](https://developer.themoviedb.org/reference/intro/getting-started) closely enough that the existing **Filmpire React app** (`frontend/filmpire`) runs against it as a **drop-in replacement** for `https://api.themoviedb.org/3` — only its base URL changes. Requests are served read-through/save-through: **Redis → the service's own persisted, typed catalog (MongoDB/PostgreSQL) → real TMDB (fallback, rate-limited)**, and what's fetched from TMDB gets mapped, saved, and reserialized in TMDB's exact shape — not replayed as raw cached bytes (see [ADR-010](docs/architecture/adr/010-tmdb-facade-mapped-persisted-schema.md)). Around that core product sits a real microservices stack (service discovery, config server, gateway, rate limiting, circuit breakers), full local observability (Prometheus/Grafana + ELK), and $0-budget Terraform-provisioned cloud deployment (Azure AKS + AWS k3s) — see [`docs/architecture/ARCHITECTURE.md`](docs/architecture/ARCHITECTURE.md) for the complete, current architecture and the [ADRs](docs/architecture/adr/) for why each major decision was made.
 
 ## 🏗️ Architecture
 
-This project implements a comprehensive microservices architecture with:
-
-- **8 Backend Microservices** (Spring Boot 4.1.0, Java 25, Gradle Groovy DSL)
-- **1 Frontend Application** (`frontend/filmpire` — the existing Filmpire React app, CRA + Redux Toolkit Query + MUI + Alan AI voice, merged into this repo as a monorepo with full history preserved — see [ADR-013](docs/architecture/adr/013-frontend-merged-into-monorepo.md))
-- **Hybrid Database Strategy** (PostgreSQL + MongoDB)
-- **Spring Cloud Infrastructure** (Eureka, Config Server, API Gateway)
-- **Spring AI Integration** (Voice recognition, recommendations)
-- **Complete CI/CD Pipeline** (GitHub Actions)
+- **8 backend microservices** (Spring Boot 4.1.0, Java 25, Gradle Groovy DSL) — `api-gateway`, `discovery-service` (Eureka), `config-service`, `movie-service`, `user-service`, `actor-service` are implemented and tested; `ai-service` and `media-service` are scaffolded (`HelloController` stubs) with their target design written up in ARCHITECTURE.md §3.7/§3.8, not yet built (tracked as open issues #36/#37)
+- **1 frontend application** (`frontend/filmpire` — the existing Filmpire React app, CRA + Redux Toolkit Query + MUI + Alan AI voice, merged into this repo as a monorepo with full history preserved — see [ADR-013](docs/architecture/adr/013-frontend-merged-into-monorepo.md))
+- **Hybrid database strategy** — PostgreSQL for user-owned, non-re-derivable data (accounts, favorites); MongoDB for the TMDB-derived movie/actor catalog, which can self-heal from a schema-drifted document by re-fetching (see [ADR-002](docs/architecture/adr/002-database-per-service.md), [ADR-011](docs/architecture/adr/011-self-healing-read-through-on-schema-drift.md))
+- **Spring Cloud infrastructure** — Eureka discovery, Config Server, Spring Cloud Gateway (JWT auth, Redis-backed rate limiting, Resilience4j circuit breakers, CORS)
+- **Observability** — every service instrumented with Actuator + Micrometer/Prometheus + JSON structured logging; full local stack (kube-prometheus-stack + Grafana + Alertmanager, ELK) verified live on minikube
+- **$0-budget cloud deployment** — Terraform provisions Azure AKS (primary) and AWS k3s-on-EC2 (secondary), both constrained to free-tier limits with a zero-spend budget tripwire; Kubernetes via Kustomize (`base` + `local`/`azure`/`aws` overlays); see ARCHITECTURE.md §11 and [`infrastructure/terraform/README.md`](infrastructure/terraform/README.md)
+- **CI** — `backend-ci.yml` (build+test on every push/PR touching `backend/**`), `e2e-smoke.yml` (nightly live-stack Postman/newman run), `terraform-plan.yml` (plan-only, GitHub OIDC, on push to `main`). Image publish + gated cloud deploy is still open (issue #28) — nothing auto-deploys today
+- **Spring AI** — a dependency on the classpath (`spring-ai` 1.0.0-SNAPSHOT), not yet wired into a running service; `ai-service` is where it lands (§3.7)
 
 ### Development Standards (Spring Boot 4.1.x + Java 25)
 
@@ -28,53 +28,38 @@ This project implements a comprehensive microservices architecture with:
 
 - **Java 25** (via SDKMAN)
 - **Gradle 9.2.0** (via Gradle Wrapper)
-- **Node.js 24.11.1 LTS** (via NVM)
-- **Docker/Podman** (for containerization)
-- **PostgreSQL 17** (via Docker)
-- **MongoDB 8.0** (via Docker)
-- **Redis 7.4** (via Docker)
+- **Node.js 24.x** (via NVM) — for `frontend/filmpire`
+- **Docker or Podman** (this repo's own dev environment uses Podman + `podman-compose`/`docker compose` — either works)
+- **A TMDB API key** ([themoviedb.org](https://www.themoviedb.org/settings/api), free) — required for the movie/actor services to populate their catalog and for the gateway's auth/account proxy; set as `TMDB_API_KEY` in `infrastructure/docker/.env`
+- PostgreSQL 17, MongoDB 8.0, Redis 7.4 — run via the compose stack below, no separate install needed
 
 ## 🚀 Quick Start
 
-### 1. Clone Repository
+### 1. Clone and configure
 
 ```bash
-git clone https://github.com/yourusername/filmpire-microservices.git
+git clone https://github.com/pehlivanu/filmpire-microservices.git
 cd filmpire-microservices
+cp infrastructure/docker/env.example infrastructure/docker/.env
+# edit infrastructure/docker/.env and set TMDB_API_KEY
 ```
 
-### 2. Start Infrastructure
+### 2. Start the backend stack
 
 ```bash
-cd infrastructure/docker
-docker-compose up -d
+cd infrastructure/scripts
+./start-infrastructure.sh
 ```
 
-### 3. Build Backend Services
+This brings up the full stack via Docker/Podman Compose in one shot: Postgres, MongoDB, Redis, MinIO, Elasticsearch/Kibana, Eureka, Config Service, and all implemented application services (`api-gateway` on `:8080`, `movie-service` on `:8081`, `user-service` on `:8082`, `actor-service` on `:8083`). Smoke-test it:
 
 ```bash
-./gradlew clean build
+curl http://localhost:8080/genre/movie/list
 ```
 
-### 4. Run Services
+For iterating on a single service instead (hot-reload via `bootRun`), source `infrastructure/docker/.env` first so the required env vars (`TMDB_API_KEY`, `REDIS_PASSWORD`, DB creds) are present, then `cd backend/<service> && ../../gradlew bootRun`.
 
-```bash
-# Start Discovery Service
-cd backend/discovery-service
-./gradlew bootRun
-
-# Start Config Service (in new terminal)
-cd backend/config-service
-./gradlew bootRun
-
-# Start API Gateway (in new terminal)
-cd backend/api-gateway
-./gradlew bootRun
-
-# Start other services similarly...
-```
-
-### 5. Start Frontend
+### 3. Start the frontend
 
 ```bash
 cd frontend/filmpire
@@ -83,48 +68,56 @@ npm install
 npm start
 ```
 
-See [docs/guides/RUN_WITH_FILMPIRE_APP.md](docs/guides/RUN_WITH_FILMPIRE_APP.md) for the full runbook (starting the whole backend stack, manual E2E checklist, verifying drop-in parity with real TMDB).
+See [`docs/guides/RUN_WITH_FILMPIRE_APP.md`](docs/guides/RUN_WITH_FILMPIRE_APP.md) for the full runbook — manual E2E checklist and verifying drop-in parity against real TMDB.
 
 ## 📁 Project Structure
 
 ```
 filmpire-microservices/
-├── backend/              # Spring Boot microservices
-│   ├── api-gateway/      # API Gateway (Port 8080)
+├── backend/
+│   ├── api-gateway/       # Spring Cloud Gateway (Port 8080)
 │   ├── discovery-service/ # Eureka Server (Port 8761)
-│   ├── config-service/   # Config Server (Port 8888)
-│   ├── movie-service/    # Movie Service (Port 8081)
-│   ├── user-service/     # User Service (Port 8082)
-│   ├── actor-service/    # Actor Service (Port 8083)
-│   ├── ai-service/       # AI Service (Port 8084)
-│   ├── media-service/    # Media Service (Port 8085)
-│   └── shared-library/   # Shared utilities
+│   ├── config-service/    # Config Server (Port 8888)
+│   ├── movie-service/     # Movie/genre TMDB facade + native API (Port 8081)
+│   ├── user-service/      # Auth, favorites, watchlist (Port 8082)
+│   ├── actor-service/     # Actor/person TMDB facade + native API (Port 8083)
+│   ├── ai-service/        # Scaffolded, not yet implemented (Port 8084)
+│   ├── media-service/     # Scaffolded, not yet implemented (Port 8085)
+│   └── shared-library/    # Shared DTOs, exceptions, utilities
 ├── frontend/
-│   └── filmpire/          # Existing CRA app (merged in as a monorepo,
-│                          # full history preserved — see ADR-013)
-├── infrastructure/        # Docker, Kubernetes configs
-├── docs/                 # Documentation
-└── tools/                # Utility scripts
+│   └── filmpire/           # Existing CRA app (merged in as a monorepo,
+│                            # full history preserved — see ADR-013)
+├── infrastructure/
+│   ├── docker/             # docker-compose.yml (full local stack)
+│   ├── kubernetes/         # Kustomize base + local/azure/aws overlays
+│   ├── terraform/          # Azure AKS + AWS k3s free-tier provisioning
+│   └── scripts/            # start/stop-infrastructure.sh
+└── docs/
+    ├── architecture/       # ARCHITECTURE.md + adr/
+    ├── api/                # Postman collection
+    └── guides/              # Runbooks
 ```
 
 ## 🛠️ Technology Stack
 
-### Backend (Versions in gradle.properties)
+### Backend (versions in `gradle.properties`)
 - **Java** 25 (via SDKMAN)
 - **Gradle** 9.2.0 (Groovy DSL via wrapper)
-- **Spring Boot** 4.1.0
+- **Spring Boot** 4.1.0 (Framework 7, Jackson 3, Jakarta EE 11)
 - **Spring Cloud** 2025.1.2
-- **Spring AI** 1.0.0-SNAPSHOT
+- **Spring AI** 1.0.0-SNAPSHOT (on the classpath, not yet enabled — see §3.7)
 - **PostgreSQL** 17-alpine
 - **MongoDB** 8.0
 - **Redis** 7.4-alpine
+- **Bucket4j** — TMDB outbound rate limiting
 
 ### Testing Stack
 - **JUnit** 5.11.3 (Jupiter ONLY - JUnit 4 FORBIDDEN)
 - **Mockito** 5.19.0
-- **Testcontainers** 2.0.5 (with @ServiceConnection)
+- **Testcontainers** 2.0.5 (with `@ServiceConnection`)
 - **AssertJ** (fluent assertions)
-- **JaCoCo** 0.8.14 (85% coverage minimum)
+- **WireMock** — stubs TMDB in integration tests
+- **JaCoCo** 0.8.14 — coverage reporting; 85%+ is this project's stated target (ARCHITECTURE.md §13), not a build-enforced gate
 
 ### Frontend (`frontend/filmpire`)
 - **React (CRA)** 17.x (`react-scripts` 5)
@@ -135,22 +128,21 @@ filmpire-microservices/
 
 ## 📚 Documentation
 
-- [Architecture Document](./docs/architecture/ARCHITECTURE.md) - Complete system architecture
+- [Architecture Document](./docs/architecture/ARCHITECTURE.md) - Complete, current system architecture
+- [Architecture Decision Records](./docs/architecture/adr/) - Why each major decision was made
 - [Gradle Build Setup](./docs/architecture/GRADLE_BUILD_SETUP.md) - Build configuration & version management
-- [Spring Boot Development Rules](./.cursorrules/spring-boot-development.mdc) - Development standards
-- [API Documentation](./docs/api/) - OpenAPI specifications
+- [Spring Boot Development Rules](./.cursor/rules/spring-boot-development.mdc) - Development standards
+- [Postman Collection](./docs/api/) - All endpoints, incl. an auth pre-request script (per-service OpenAPI/Swagger UI is also available at runtime, `/swagger-ui.html`)
 - [Port Mapping](./docs/architecture/PORT_MAPPING.md) - Service ports reference
 - [Running the Frontend Against This Backend](./docs/guides/RUN_WITH_FILMPIRE_APP.md) - Runbook for `frontend/filmpire`
 
 ## 🧪 Testing
 
-**All tests run via Cursor IDE Test Runner (CodeLens "Run Test" buttons)**
-
 ```bash
-# Run all backend tests (via terminal - for CI/CD)
+# Run all backend tests
 ./gradlew test
 
-# Run specific service tests
+# Run one service's tests
 cd backend/movie-service
 ./gradlew test
 
@@ -162,20 +154,22 @@ cd frontend/filmpire
 npm test
 ```
 
-**Testing Requirements:**
+**Testing conventions:**
 - ✅ JUnit 5 (Jupiter) exclusively - NO JUnit 4
-- ✅ Minimum 85% code coverage
-- ✅ Testcontainers with `@ServiceConnection` for integration tests
-- ✅ NO H2 database - use real databases via Testcontainers
-- ✅ `testRuntimeOnly 'org.junit.platform:junit-platform-launcher'` in all services
+- ✅ Testcontainers with `@ServiceConnection` for integration tests - NO H2
+- ✅ WireMock stubs TMDB in facade/read-through tests
+- ✅ `testRuntimeOnly 'org.junit.platform:junit-platform-launcher'` in every service's `build.gradle`
+- ✅ 85%+ coverage is the target (see Testing Stack above)
 
 ## 🚢 Deployment
 
-See [Deployment Guide](./docs/guides/DEPLOYMENT.md) for detailed deployment instructions.
+$0-budget, Terraform-provisioned, ephemeral-by-design (`apply` → demo → `destroy`, nothing runs unattended in the cloud) — see ARCHITECTURE.md §11 and [`infrastructure/terraform/README.md`](infrastructure/terraform/README.md) for the full walkthrough and the real gotchas found running it live.
 
-- **Backend**: Render/Railway
-- **Frontend**: Vercel
-- **Mobile**: Expo EAS
+- **Azure AKS** (primary) — free-tier control plane, Terraform in `infrastructure/terraform/azure/`; live apply/destroy round-trip verified 2026-07-29
+- **AWS k3s on EC2** (secondary) — `infrastructure/terraform/aws/`; code written, live verification pending AWS account signup
+- **Kubernetes manifests** — Kustomize `base/` + `overlays/{local,azure,aws}`, `infrastructure/kubernetes/`
+- **Container images** — `ghcr.io` (free for public repos); publish + gated deploy workflow is not built yet (issue #28) — the cloud overlays currently reference image tags that don't exist until that ships
+- **Local** is the primary dev/demo environment (minikube/k3d via Podman) — cloud is a demo target only, verified separately, never the daily dev loop
 
 ## 📝 License
 
@@ -187,6 +181,5 @@ Liviu Ionesi
 
 ---
 
-**Status**: 🚧 In Development  
+**Status**: 🚧 In active development — see [open issues](https://github.com/pehlivanu/filmpire-microservices/issues) for what's next  
 **Version**: 1.0.0-SNAPSHOT
-
