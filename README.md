@@ -7,7 +7,7 @@ Enterprise-grade microservices platform for movie discovery and management, demo
 This project implements a comprehensive microservices architecture with:
 
 - **8 Backend Microservices** (Spring Boot 4.1.0, Java 25, Gradle Groovy DSL)
-- **2 Frontend Applications** (Next.js 16, React Native 0.76.3)
+- **1 Frontend Application** (`frontend/filmpire` — the existing Filmpire React app, CRA + Redux Toolkit Query + MUI + Alan AI voice, merged into this repo as a monorepo with full history preserved — see [ADR-013](docs/architecture/adr/013-frontend-merged-into-monorepo.md))
 - **Hybrid Database Strategy** (PostgreSQL + MongoDB)
 - **Spring Cloud Infrastructure** (Eureka, Config Server, API Gateway)
 - **Spring AI Integration** (Voice recognition, recommendations)
@@ -77,16 +77,13 @@ cd backend/api-gateway
 ### 5. Start Frontend
 
 ```bash
-# Web Application
-cd frontend/web-nextjs
-npm install
-npm run dev
-
-# Mobile Application
-cd frontend/mobile-react-native
+cd frontend/filmpire
+echo "REACT_APP_API_URL=http://localhost:8080" >> .env.local
 npm install
 npm start
 ```
+
+See [docs/guides/RUN_WITH_FILMPIRE_APP.md](docs/guides/RUN_WITH_FILMPIRE_APP.md) for the full runbook (starting the whole backend stack, manual E2E checklist, verifying drop-in parity with real TMDB).
 
 ## 📁 Project Structure
 
@@ -103,8 +100,8 @@ filmpire-microservices/
 │   ├── media-service/    # Media Service (Port 8085)
 │   └── shared-library/   # Shared utilities
 ├── frontend/
-│   ├── web-nextjs/       # Next.js 16 web app
-│   └── mobile-react-native/ # React Native mobile app
+│   └── filmpire/          # Existing CRA app (merged in as a monorepo,
+│                          # full history preserved — see ADR-013)
 ├── infrastructure/        # Docker, Kubernetes configs
 ├── docs/                 # Documentation
 └── tools/                # Utility scripts
@@ -129,13 +126,12 @@ filmpire-microservices/
 - **AssertJ** (fluent assertions)
 - **JaCoCo** 0.8.14 (85% coverage minimum)
 
-### Frontend
-- **Next.js** 16.0.0
-- **React** 19.0.2
-- **Material UI** 7.3.5
-- **TypeScript** 5.7.2
-- **React Native** 0.76.3
-- **Expo SDK** 52.0.0
+### Frontend (`frontend/filmpire`)
+- **React (CRA)** 17.x (`react-scripts` 5)
+- **Redux Toolkit Query** 1.6.x
+- **Material UI** 5.x
+- **axios** 1.6.x
+- **Alan AI SDK** 1.8.x (voice control)
 
 ## 📚 Documentation
 
@@ -144,6 +140,7 @@ filmpire-microservices/
 - [Spring Boot Development Rules](./.cursorrules/spring-boot-development.mdc) - Development standards
 - [API Documentation](./docs/api/) - OpenAPI specifications
 - [Port Mapping](./docs/architecture/PORT_MAPPING.md) - Service ports reference
+- [Running the Frontend Against This Backend](./docs/guides/RUN_WITH_FILMPIRE_APP.md) - Runbook for `frontend/filmpire`
 
 ## 🧪 Testing
 
@@ -161,7 +158,7 @@ cd backend/movie-service
 ./gradlew test jacocoTestReport
 
 # Run frontend tests
-cd frontend/web-nextjs
+cd frontend/filmpire
 npm test
 ```
 

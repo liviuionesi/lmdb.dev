@@ -1,7 +1,7 @@
 # Filmpire Microservices - Enterprise Software Architecture Document
 
-**Version:** 1.6.1  
-**Date:** July 29, 2026 (§11.1/§11.2/§11.4 corrected against a live #26 Azure apply: AKS's real 2vCPU/4GB node minimum, B-series can be subscription-blocked, `terraform plan` runs on push-to-main via GitHub OIDC not PRs — this repo has none)  
+**Version:** 1.7.0  
+**Date:** July 30, 2026 (ADR-013: Filmpire React frontend merged into this repo at `frontend/filmpire/` as a monorepo, full history preserved — §1.2/§7.2/Appendix A updated, `~/Desktop/filmpire` references retired)  
 **Author:** Liviu Ionesi  
 **Purpose:** Portfolio project demonstrating enterprise-grade full-stack development for a movie platform
 
@@ -12,7 +12,9 @@
 This document outlines the complete architecture for Filmpire, a production-ready microservices-based movie platform.
 
 **Core product goal:** clone the TMDB v3 API in Spring so that the existing
-**Filmpire React application** (`~/Desktop/filmpire`, CRA + Redux Toolkit
+**Filmpire React application** (`frontend/filmpire` — merged into this repo
+as a monorepo on 2026-07-30, full original commit history preserved; was
+previously the separate `~/Desktop/filmpire` project. CRA + Redux Toolkit
 Query + MUI + Alan AI) can consume this backend as a **drop-in replacement**
 for `https://api.themoviedb.org/3` — the React app changes only its base URL.
 Requests are served read-through: **Redis cache → MongoDB → real TMDB API
@@ -77,11 +79,18 @@ the existing Filmpire React app is the only frontend.
 | JaCoCo | 0.8.14 | Gradle | Code coverage |
 | OpenRewrite | 7.37.0 | Gradle | Standing framework-migration tool (see ADR-009) |
 
-### 1.2 Frontend — Existing Filmpire React App (consumer, not built here)
+### 1.2 Frontend — Existing Filmpire React App (consumer, built elsewhere, merged in-repo)
 
-The frontend is the pre-existing Filmpire application at `~/Desktop/filmpire`
-(separate project, not part of this repo). This backend must serve it without
-frontend changes beyond configuration:
+The frontend is the pre-existing Filmpire application, now living at
+`frontend/filmpire/` in this repo. It was originally a standalone project
+(`~/Desktop/filmpire`, github.com/pehlivanu/filmpire) and was folded into
+this repo as a monorepo on 2026-07-30 — its full commit history (44 commits,
+authorship intact) was preserved via `git filter-repo` (to relocate every
+commit's paths under `frontend/filmpire/`) followed by a
+`--allow-unrelated-histories` merge, after first scrubbing a leaked `.env`
+file and a hardcoded TMDB API key from its history. It consumes this
+backend without frontend logic changes beyond configuration — see
+`docs/guides/RUN_WITH_FILMPIRE_APP.md` for the runbook:
 
 | Technology | Version | Notes |
 |------------|---------|-------|
@@ -90,12 +99,13 @@ frontend changes beyond configuration:
 | axios | 1.6.x | Auth calls in `src/utils/index.js` |
 | Material UI | 5.x | |
 | Alan AI SDK | 1.8.x | Voice control (calls TMDB via the same services) |
-| TMDB API contract | v3 | Base URL `https://api.themoviedb.org/3` → becomes this backend's gateway |
+| TMDB API contract | v3 | Base URL `https://api.themoviedb.org/3` → becomes this backend's gateway via `REACT_APP_API_URL` |
 
 > A dedicated Next.js web app and React Native mobile apps were part of
-> earlier drafts and are **descoped** as of v1.2.0. The empty
-> `frontend/web-nextjs` and `frontend/mobile-react-native` directories are
-> legacy placeholders, out of scope.
+> earlier drafts and are **descoped** as of v1.2.0 — they were never
+> actually scaffolded in this repo (no `frontend/web-nextjs` or
+> `frontend/mobile-react-native` directory ever existed in git history),
+> despite some earlier-draft doc sections describing them as if present.
 
 ### 1.3 DevOps & Infrastructure
 
@@ -185,6 +195,7 @@ Significant decisions are recorded in [`adr/`](adr/):
 | [010](adr/010-tmdb-facade-mapped-persisted-schema.md) | TMDB facade serves TMDB-shaped responses backed by Filmpire's own mapped, persisted data — supersedes ADR-003's raw-passthrough model |
 | [011](adr/011-self-healing-read-through-on-schema-drift.md) | Read-through treats a schema-drifted MongoDB document as a cache miss: evict + re-fetch instead of a permanent 500 |
 | [012](adr/012-ai-service-postgresql-pgvector.md) | ai-service stores conversations in PostgreSQL + pgvector, not MongoDB — amends ADR-002's AI row, since user-owned data can't be self-healed |
+| [013](adr/013-frontend-merged-into-monorepo.md) | Filmpire React frontend merged into this repo at `frontend/filmpire/` with full history preserved — this is now a monorepo |
 
 ### 2.4 Failure-Mode Matrix
 
@@ -1293,8 +1304,9 @@ cd movie-service
 ./gradlew test
 ./gradlew bootRun
 
-# Frontend (existing Filmpire React app — separate project)
-cd ~/Desktop/filmpire
+# Frontend (existing Filmpire React app — now frontend/filmpire, merged into
+# this repo as a monorepo; see docs/guides/RUN_WITH_FILMPIRE_APP.md)
+cd frontend/filmpire
 echo "REACT_APP_API_URL=http://localhost:8080" >> .env.local  # point at gateway
 npm install
 npm start
@@ -1519,13 +1531,13 @@ openRewriteVersion=7.37.0
 rewriteRecipeBomVersion=3.35.0
 ```
 
-**Frontend: consumer app, not built in this repo.** The real Filmpire
-frontend lives in the separate `~/Desktop/filmpire` repo (CRA + Redux
-Toolkit Query, not the Next.js stack this section originally sketched) —
-see §1.2 for its actual dependency versions. There is no frontend
-`package.json` to lock here; the descoped `frontend/web-nextjs` and
-`frontend/mobile-react-native` placeholders in this repo carry no real
-dependencies.
+**Frontend: consumer app, own dependency set.** The Filmpire frontend now
+lives at `frontend/filmpire/` in this repo (CRA + Redux Toolkit Query, not
+the Next.js stack this section originally sketched) — merged in as a
+monorepo 2026-07-30, see §1.2. Its `package.json`/`package-lock.json` are
+its own lock files, independent of `gradle.properties` above; there was
+never a `frontend/web-nextjs` or `frontend/mobile-react-native` directory
+to have dependencies in the first place (see §1.2's note).
 
 ### 8.2 Upgrade Strategy
 
@@ -2454,26 +2466,17 @@ filmpire-microservices/
 │   ├── settings.gradle.kts
 │   └── gradle.properties
 ├── frontend/
-│   ├── web-nextjs/
-│   │   ├── app/
-│   │   │   ├── (auth)/
-│   │   │   ├── (dashboard)/
-│   │   │   ├── movies/
-│   │   │   ├── actors/
-│   │   │   └── layout.tsx
-│   │   ├── components/
-│   │   ├── lib/
-│   │   ├── public/
-│   │   ├── package.json
-│   │   ├── tsconfig.json
-│   │   ├── next.config.js
-│   │   └── README.md
-│   └── mobile-react-native/
-│       ├── app/
-│       ├── components/
-│       ├── services/
+│   └── filmpire/            # Existing CRA app, merged in as a monorepo
+│       │                    # 2026-07-30 (full original history preserved)
+│       ├── src/
+│       │   ├── components/  # App shell, NavBar, Movies, MovieInformation,
+│       │   │                # Actors, Profile, Search, Sidebar, Pagination
+│       │   ├── services/
+│       │   │   └── TMDB.js  # RTK Query — baseUrl from REACT_APP_API_URL
+│       │   ├── features/    # Redux slices (auth, genre/category)
+│       │   └── utils/       # axios client (auth), theme toggle
+│       ├── public/
 │       ├── package.json
-│       ├── app.json
 │       └── README.md
 ├── infrastructure/
 │   ├── docker/
