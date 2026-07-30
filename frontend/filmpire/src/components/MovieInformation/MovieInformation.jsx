@@ -176,16 +176,21 @@ const MovieInformation = () => {
         open={open}
         onClose={() => setOpen(false)}
       >
-        {data?.videos?.results?.length > 0 && (
-          <iframe
-            autoPlay
-            className={classes.video}
-            frameBorder="0"
-            title="Trailer"
-            src={`https://www.youtube.com/embed/${data.videos.results[0].key}`}
-            allow="autoplay"
-          />
-        )}
+        <Box className={classes.video}>
+          {data?.videos?.results?.length > 0 ? (
+            <iframe
+              autoPlay
+              width="100%"
+              height="100%"
+              frameBorder="0"
+              title="Trailer"
+              src={`https://www.youtube.com/embed/${data.videos.results[0].key}`}
+              allow="autoplay"
+            />
+          ) : (
+            <Typography variant="h6" align="center">No trailer available.</Typography>
+          )}
+        </Box>
       </Modal>
     </Grid>
   );
