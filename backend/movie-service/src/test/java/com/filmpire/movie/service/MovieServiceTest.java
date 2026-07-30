@@ -123,17 +123,8 @@ class MovieServiceTest {
     }
 
     /**
-     * The progressive-enrichment gap found while verifying #34 against a live
-     * frontend: a movie whose only prior appearance was via a list endpoint is
-     * persisted with detail-only fields unset ({@code upsertFromListItem}
-     * deliberately leaves them alone). Before this fix, {@code
-     * getOrFetchMovieEntity} treated "found in MongoDB" as sufficient
-     * regardless of shape, so the facade served {@code spoken_languages:
-     * null} forever — TMDB itself never omits that field, so the React app's
-     * {@code data.spoken_languages[0].name} isn't defensive against it and
-     * crashed on every movie first seen via a list. The fix must detect this
-     * (via {@code runtime == null}, set by every real detail fetch and
-     * nothing else) and backfill from a genuine TMDB detail call.
+     * A list-item-only document (runtime unset) must be backfilled with a
+     * real TMDB detail fetch and re-saved in place, not returned as-is.
      */
     @Test
     @DisplayName("getMovieById - Should backfill detail fields when the persisted document is list-item-only")
@@ -170,11 +161,8 @@ class MovieServiceTest {
     }
 
     /**
-     * The counterpart to the backfill test: a document that already has
-     * detail fields populated must NOT trigger a second TMDB call just
-     * because it happens to be read again — the whole point of read-through
-     * caching. Guards against a future edit to {@code completeIfListItemOnly}
-     * accidentally treating every hit as incomplete.
+     * A document that already has detail fields populated must not trigger
+     * another TMDB call or save.
      */
     @Test
     @DisplayName("getMovieById - Should NOT re-fetch from TMDB when the persisted document is already detail-complete")
@@ -648,11 +636,8 @@ class MovieServiceTest {
     }
 
     /**
-     * Builds a Movie exactly as {@code upsertFromListItem} would leave it:
-     * list-endpoint fields set, every detail-only field (runtime,
-     * spokenLanguages, budget, tagline, ...) unset. The completeness signal
-     * ({@code runtime == null}) is what {@link #getMovieById_WhenPersistedIsListItemOnly_ShouldBackfillDetailFields()}
-     * exercises.
+     * Builds a Movie with list-endpoint fields set and detail-only fields
+     * (runtime, spokenLanguages, budget, tagline, ...) unset.
      *
      * @param tmdbId TMDB id to embed
      * @return a list-item-only test movie
