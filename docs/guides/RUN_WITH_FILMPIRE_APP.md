@@ -1,9 +1,12 @@
 # Running the Filmpire React App Against This Backend
 
 This is the runbook for issue #34: pointing the existing Filmpire React app
-(`~/Desktop/filmpire`, CRA + RTK Query + Alan AI) at this repo's TMDB v3
-facade instead of the real `api.themoviedb.org`, with the smallest possible
-diff to the app. See ARCHITECTURE.md §5.1 for the facade contract and
+(`frontend/filmpire` in this repo — merged in as a monorepo per
+[ADR-013](../architecture/adr/013-frontend-merged-into-monorepo.md); was
+previously the separate `~/Desktop/filmpire` project. CRA + RTK Query +
+Alan AI) at this repo's TMDB v3 facade instead of the real
+`api.themoviedb.org`, with the smallest possible diff to the app. See
+ARCHITECTURE.md §5.1 for the facade contract and
 `docs/architecture/adr/010-tmdb-facade-mapped-persisted-schema.md` for why
 the facade is a persisted, typed catalog rather than a byte-cache proxy.
 
@@ -45,7 +48,7 @@ params, the `api_key` the app appends to every request, response field
 names) is untouched — the gateway accepts and ignores `api_key`, injecting
 its own server-side key on the auth/account proxy routes.
 
-Create `~/Desktop/filmpire/.env.local` (gitignored, CRA's standard
+Create `frontend/filmpire/.env.local` (gitignored, CRA's standard
 local-override file — never commit it):
 
 ```
@@ -59,7 +62,7 @@ what's used again if `.env.local` is removed (see step 5).
 ## 3. Start the app
 
 ```bash
-cd ~/Desktop/filmpire
+cd frontend/filmpire
 npm start
 ```
 
@@ -106,8 +109,8 @@ turn into hits (`found in MongoDB`) on repeat visits to the same movie/actor.
 ## 5. Verify drop-in parity (flip back to real TMDB)
 
 ```bash
-mv ~/Desktop/filmpire/.env.local /tmp/env.local.bak   # or just delete it
-# restart: pkill -f react-scripts; cd ~/Desktop/filmpire && npm start
+mv frontend/filmpire/.env.local /tmp/env.local.bak   # or just delete it
+# restart: pkill -f react-scripts; cd frontend/filmpire && npm start
 curl -s http://localhost:3000/static/js/bundle.js | grep -c "localhost:8080"        # expect 0
 curl -s http://localhost:3000/static/js/bundle.js | grep -c "api.themoviedb.org"    # expect > 0
 ```
