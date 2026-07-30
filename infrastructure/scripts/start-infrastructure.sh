@@ -50,7 +50,7 @@ echo ""
 # Check if .env file exists
 if [ ! -f "$DOCKER_DIR/.env" ]; then
     echo -e "${YELLOW}⚠  No .env file found. Using default values.${NC}"
-    echo -e "${YELLOW}   Copy env.example to .env to customize configuration.${NC}"
+    echo -e "${YELLOW}   Copy .env.example to .env to customize configuration.${NC}"
     echo ""
 fi
 
@@ -58,12 +58,15 @@ fi
 cd "$DOCKER_DIR"
 
 # Pull images first (skip for build services like discovery-service)
+# --profile dev-tools brings up Adminer/Mongo Express/Redis Commander too —
+# this script is the local dev entry point; docker-compose.prod.yml is the
+# profile-free, tools-excluded path (#29).
 echo -e "${BLUE}📥 Pulling container images...${NC}"
-$COMPOSE_CMD pull || echo -e "${YELLOW}⚠ Some images may need to be built${NC}"
+$COMPOSE_CMD --profile dev-tools pull || echo -e "${YELLOW}⚠ Some images may need to be built${NC}"
 
 echo ""
 echo -e "${BLUE}🚀 Starting infrastructure services...${NC}"
-$COMPOSE_CMD up -d --build
+$COMPOSE_CMD --profile dev-tools up -d --build
 
 echo ""
 echo -e "${BLUE}⏳ Waiting for services to be healthy...${NC}"

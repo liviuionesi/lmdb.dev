@@ -54,12 +54,12 @@ fi
 
 # Stop services
 echo -e "${BLUE}🛑 Stopping services...${NC}"
-$COMPOSE_CMD down
+$COMPOSE_CMD --profile dev-tools down
 
 if [ "$REMOVE_VOLUMES" = true ]; then
     echo ""
     echo -e "${BLUE}🗑  Removing volumes...${NC}"
-    $COMPOSE_CMD down -v
+    $COMPOSE_CMD --profile dev-tools down -v
     echo -e "${GREEN}✅ Services stopped and volumes removed${NC}"
 else
     echo -e "${GREEN}✅ Services stopped (data preserved)${NC}"

@@ -84,11 +84,11 @@ docker compose down -v
 
 ### Environment Variables
 
-Copy `env.example` to `.env` to customize:
+Copy `.env.example` to `.env` to customize:
 
 ```bash
 cd infrastructure/docker
-cp env.example .env
+cp .env.example .env
 # Edit .env with your preferred values
 ```
 
@@ -355,7 +355,7 @@ curl http://localhost:9000/minio/health/live
 - [x] Add health checks (all services)
 - [x] Create startup script (start-infrastructure.sh)
 - [x] Create shutdown script (stop-infrastructure.sh)
-- [x] Create env.example with all variables
+- [x] Create .env.example with all variables
 
 ### ✅ Acceptance Criteria
 
@@ -373,7 +373,7 @@ curl http://localhost:9000/minio/health/live
 infrastructure/
 ├── docker/
 │   ├── docker-compose.yml          ✅ Main configuration (7 services)
-│   └── env.example                 ✅ Environment variables template
+│   └── .env.example                 ✅ Environment variables template
 └── scripts/
     ├── start-infrastructure.sh     ✅ Startup script (executable)
     └── stop-infrastructure.sh      ✅ Shutdown script (executable)
