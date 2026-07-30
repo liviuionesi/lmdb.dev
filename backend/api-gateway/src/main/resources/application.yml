@@ -212,6 +212,8 @@ spring:
                 - PrefixPath=/3
                 - RemoveRequestParameter=api_key
                 - AddRequestParameter=api_key,${tmdb.api.key}
+                - RemoveResponseHeader=Access-Control-Allow-Origin
+                - RemoveResponseHeader=Access-Control-Allow-Credentials
 
             - id: tmdb-account-proxy
               uri: https://api.themoviedb.org
@@ -221,6 +223,8 @@ spring:
                 - PrefixPath=/3
                 - RemoveRequestParameter=api_key
                 - AddRequestParameter=api_key,${tmdb.api.key}
+                - RemoveResponseHeader=Access-Control-Allow-Origin
+                - RemoveResponseHeader=Access-Control-Allow-Credentials
 
           # Service discovery
           discovery:
@@ -480,6 +484,8 @@ spring:
                 - PrefixPath=/3
                 - RemoveRequestParameter=api_key
                 - AddRequestParameter=api_key,${tmdb.api.key}
+                - RemoveResponseHeader=Access-Control-Allow-Origin
+                - RemoveResponseHeader=Access-Control-Allow-Credentials
 
             - id: tmdb-account-proxy
               uri: https://api.themoviedb.org
@@ -489,6 +495,8 @@ spring:
                 - PrefixPath=/3
                 - RemoveRequestParameter=api_key
                 - AddRequestParameter=api_key,${tmdb.api.key}
+                - RemoveResponseHeader=Access-Control-Allow-Origin
+                - RemoveResponseHeader=Access-Control-Allow-Credentials
 
 eureka:
   client:

@@ -16,6 +16,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.web.reactive.server.EntityExchangeResult;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -497,6 +498,34 @@ class GatewayIntegrationTest {
 
         verify(getRequestedFor(urlPathEqualTo("/3/authentication/token/new"))
                 .withQueryParam("api_key", equalTo("server-side-key")));
+    }
+
+    /**
+     * TMDB's own responses carry {@code Access-Control-Allow-Origin: *}. The
+     * gateway's CORS filter also sets that header for a configured origin, so
+     * without stripping TMDB's copy the browser sees two values on one
+     * response and rejects it outright (invalid per the CORS spec) — real
+     * error seen from the actual React app hitting this route.
+     */
+    @Test
+    @DisplayName("Proxy: /authentication does not duplicate Access-Control-Allow-Origin")
+    void authProxyDoesNotDuplicateCorsHeader() {
+        stubFor(get(urlPathEqualTo("/3/authentication/token/new"))
+                .willReturn(aResponse().withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withHeader("Access-Control-Allow-Origin", "*")
+                        .withBody("{\"success\":true,\"request_token\":\"rt-123\"}")));
+
+        EntityExchangeResult<Void> result = client.get()
+                .uri("/authentication/token/new?api_key=client-key")
+                .header(HttpHeaders.ORIGIN, "http://localhost:3000")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(Void.class)
+                .returnResult();
+
+        assertThat(result.getResponseHeaders().get(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN))
+                .containsExactly("http://localhost:3000");
     }
 
     /**
