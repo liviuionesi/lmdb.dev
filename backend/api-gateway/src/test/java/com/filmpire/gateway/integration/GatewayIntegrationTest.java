@@ -501,11 +501,9 @@ class GatewayIntegrationTest {
     }
 
     /**
-     * TMDB's own responses carry {@code Access-Control-Allow-Origin: *}. The
-     * gateway's CORS filter also sets that header for a configured origin, so
-     * without stripping TMDB's copy the browser sees two values on one
-     * response and rejects it outright (invalid per the CORS spec) — real
-     * error seen from the actual React app hitting this route.
+     * TMDB's own responses carry {@code Access-Control-Allow-Origin: *}, and
+     * the gateway's CORS filter also sets that header — two values on one
+     * response, which browsers reject outright as invalid.
      */
     @Test
     @DisplayName("Proxy: /authentication does not duplicate Access-Control-Allow-Origin")
