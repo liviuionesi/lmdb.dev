@@ -15,6 +15,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DisplayName("ErrorResponse Tests")
 class ErrorResponseTest {
 
+    /**
+     * Verify that the of() factory method correctly populates status, errorCode, message,
+     * path, and creates a default non-null timestamp with no field errors.
+     */
     @Test
     @DisplayName("of() builds a response with a non-null timestamp and no field errors")
     void of_shouldBuildSimpleResponse() {
@@ -28,6 +32,10 @@ class ErrorResponseTest {
         assertThat(response.getFieldErrors()).isNull();
     }
 
+    /**
+     * Verify that the withValidationErrors() factory method correctly copies
+     * the validation field error map into the error response.
+     */
     @Test
     @DisplayName("withValidationErrors() carries the field errors through")
     void withValidationErrors_shouldCarryFieldErrors() {

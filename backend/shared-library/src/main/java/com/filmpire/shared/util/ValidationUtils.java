@@ -14,6 +14,11 @@ import java.util.regex.Pattern;
  */
 public final class ValidationUtils {
 
+    /**
+     * Private constructor to prevent instantiation of this validation utility class.
+     *
+     * @throws UnsupportedOperationException always, to prevent execution via reflection
+     */
     private ValidationUtils() {
         throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
     }

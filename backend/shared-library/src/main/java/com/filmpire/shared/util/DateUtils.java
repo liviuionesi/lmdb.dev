@@ -14,6 +14,11 @@ import java.util.Date;
  */
 public final class DateUtils {
 
+    /**
+     * Private constructor to prevent instantiation of this date/time utility class.
+     *
+     * @throws UnsupportedOperationException always, to prevent execution via reflection
+     */
     private DateUtils() {
         throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
     }

@@ -9,11 +9,12 @@ configMapGenerator:
   - name: postgres-config
     literals:
       # ADR-002 (database-per-service): the default POSTGRES_DB is
-      # user-service's database; actor-service gets its own
-      # (filmpire_actor), created by init-multiple-databases.sh on first
-      # boot — mirrors infrastructure/docker/docker-compose.yml exactly.
+      # user-service's database; actor-service and ai-service (ADR-012) get
+      # their own (filmpire_actor, filmpire_ai), created by
+      # init-multiple-databases.sh on first boot — mirrors
+      # infrastructure/docker/docker-compose.yml exactly.
       - POSTGRES_DB=filmpire
-      - POSTGRES_MULTIPLE_DATABASES=filmpire_actor
+      - POSTGRES_MULTIPLE_DATABASES=filmpire_actor,filmpire_ai
   - name: postgres-init
     files:
       - init-multiple-databases.sh

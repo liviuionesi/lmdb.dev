@@ -1,5 +1,12 @@
 server:
   port: 8084
+  forward-headers-strategy: framework
+
+# gRPC server port (#36, ARCHITECTURE.md §3.7) — separate from the REST port
+# above, started by GrpcServerLifecycle as its own Netty server.
+grpc:
+  server:
+    port: 9084
 
 spring:
   main:
@@ -8,43 +15,68 @@ spring:
     banner-mode: "off"
   application:
     name: ai-service
+  datasource:
+    # Database-per-service (ADR-002): ai-service owns filmpire_ai so its
+    # Flyway history never collides with user/actor-service's in the shared
+    # instance (which must run pgvector/pgvector:pg17 — ADR-012).
+    url: ${POSTGRES_URL:jdbc:postgresql://localhost:5432/filmpire_ai}
+    username: ${POSTGRES_USERNAME:admin}
+    password: ${POSTGRES_PASSWORD:admin123}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      # Flyway owns the schema; Hibernate only checks the mapping against it —
+      # the whole point of ADR-012 (conversations get the same protection
+      # user-service already gives accounts/favorites).
+      ddl-auto: validate
+    show-sql: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:redis123}
+      timeout: 2000ms
+  cache:
+    type: redis
+    redis:
+      # Derived/disposable artifacts only (scored candidate lists) — never
+      # conversations or taste profiles, which are the persisted PostgreSQL
+      # data ADR-012 exists to protect.
+      time-to-live: 300000  # 5 minutes, matching the movie-service facade
   ai:
-    openai:
-      api-key: ${OPENAI_API_KEY:your-api-key-here}
+    # Ollama only — no OpenAI starter on the classpath. ADR-004's $0 budget
+    # rules out a paid model provider; this runs entirely against a local
+    # model server.
+    ollama:
+      base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
       chat:
         options:
-          model: gpt-4
-          temperature: 0.7
-  # SUPERSEDED BY ADR-012 — do not build on this.
-  #
-  # ai-service is still an unimplemented stub, and this MongoDB config is left
-  # over from ADR-002's original assignment. ADR-012 replaced it: conversation
-  # history is user-owned and NOT re-derivable, so it cannot live on a store
-  # with neither Flyway/`validate` schema checking nor a safe recovery path
-  # (ADR-011's self-healing would delete real user conversations, not repair
-  # them). The replacement is PostgreSQL + pgvector, roughly:
-  #
-  #   datasource:
-  #     url: ${POSTGRES_URL:jdbc:postgresql://localhost:5432/filmpire_ai}
-  #     username: ${POSTGRES_USERNAME:admin}
-  #     password: ${POSTGRES_PASSWORD:admin123}
-  #   jpa:
-  #     hibernate:
-  #       ddl-auto: validate      # Flyway owns the schema, as elsewhere
-  #   flyway:
-  #     enabled: true
-  #
-  # Requires the shared Postgres container to run pgvector/pgvector:pg17 rather
-  # than the stock image. Tracked as issue #36; left inert here so the stub does
-  # not claim a datasource it has no migrations for.
-  mongodb:
-    database: filmpire
-    uri: mongodb://admin:admin123@localhost:27017/filmpire?authSource=admin
+          model: ${OLLAMA_CHAT_MODEL:llama3.2}
+      embedding:
+        options:
+          # 768-dimensional — must match the `vector(768)` column in
+          # V2__init_ai_schema.sql. Changing this model requires a new
+          # migration to alter that column's dimension.
+          model: ${OLLAMA_EMBEDDING_MODEL:nomic-embed-text}
+
+# Candidate pool for recommendations comes from movie-service's own catalog
+# (Filmpire's persisted data), not TMDB directly — see MovieCatalogClient.
+movie-service:
+  base-url: ${MOVIE_SERVICE_BASE_URL:lb://movie-service}
 
 eureka:
   client:
     service-url:
-      defaultZone: http://localhost:8761/eureka/
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka/}
+  instance:
+    # Without this, Eureka registers the instance by hostname; on a machine
+    # where that hostname resolves to a non-routable/IPv6 address, the
+    # gateway's lb:// route to ai-service hangs until connect-timeout.
+    # movie-service/actor-service already set this — matching it here.
+    prefer-ip-address: true
 
 management:
   endpoints:
@@ -67,4 +99,3 @@ springdoc:
     path: /v3/api-docs
   swagger-ui:
     path: /swagger-ui.html
-
