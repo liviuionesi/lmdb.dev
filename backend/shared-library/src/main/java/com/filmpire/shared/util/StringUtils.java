@@ -13,6 +13,11 @@ import java.util.stream.Collectors;
  */
 public final class StringUtils {
 
+    /**
+     * Private constructor to prevent instantiation of this string utility class.
+     *
+     * @throws UnsupportedOperationException always, to prevent execution via reflection
+     */
     private StringUtils() {
         throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
     }

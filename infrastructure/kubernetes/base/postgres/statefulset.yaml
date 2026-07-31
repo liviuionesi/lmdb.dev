@@ -20,7 +20,9 @@ spec:
       automountServiceAccountToken: false
       containers:
         - name: postgres
-          image: docker.io/library/postgres:17-alpine
+          # pgvector, not stock postgres (#36, ADR-012) — ai-service needs the
+          # vector extension. See infrastructure/docker/docker-compose.yml.
+          image: docker.io/pgvector/pgvector:pg17
           ports:
             - containerPort: 5432
               name: postgres

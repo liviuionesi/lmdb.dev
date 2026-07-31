@@ -8,6 +8,11 @@ package com.filmpire.shared.constant;
  */
 public final class ApiConstants {
 
+    /**
+     * Private constructor to prevent instantiation of this constant utility class.
+     *
+     * @throws UnsupportedOperationException always, to prevent execution via reflection
+     */
     private ApiConstants() {
         throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
     }

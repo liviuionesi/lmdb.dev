@@ -13,6 +13,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DisplayName("HalResource Tests")
 class HalResourceTest {
 
+    /**
+     * Verify that of() creates a HalResource holding the correct payload
+     * and initializes an empty links map.
+     */
     @Test
     @DisplayName("of() wraps content with no links")
     void of_shouldWrapContentWithNoLinks() {
@@ -22,6 +26,10 @@ class HalResourceTest {
         assertThat(resource.getLinks()).isEmpty();
     }
 
+    /**
+     * Verify that withLink() appends a relation/link mapping and returns the
+     * same instance to support builder-style chaining.
+     */
     @Test
     @DisplayName("withLink() adds a relation and returns the same instance for chaining")
     void withLink_shouldAddRelationAndReturnSameInstance() {

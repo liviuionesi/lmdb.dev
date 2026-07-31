@@ -1,9 +1,14 @@
 version: '3.9'
 
 services:
-  # PostgreSQL 17 - For User Service, Actor Service
+  # PostgreSQL 17 - For User Service, Actor Service, AI Service
+  # pgvector/pgvector:pg17 (not stock postgres:17-alpine) since ai-service
+  # (#36, ADR-012) needs the vector extension for embedding columns/ANN
+  # search. Debian-based rather than alpine, but otherwise a strict superset
+  # of stock postgres — user-service/actor-service, which never touch the
+  # vector extension, are unaffected.
   postgres:
-    image: docker.io/library/postgres:17-alpine
+    image: docker.io/pgvector/pgvector:pg17
     container_name: filmpire-postgres
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-filmpire}
@@ -11,9 +16,10 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-admin123}
       # Extra databases created by init-scripts/01-create-multiple-databases.sh
       # on FIRST volume init. user-service deliberately uses the default
-      # POSTGRES_DB (filmpire); actor-service owns filmpire_actor (ADR-002).
-      # These names must match the POSTGRES_URL of each service below.
-      POSTGRES_MULTIPLE_DATABASES: filmpire_actor
+      # POSTGRES_DB (filmpire); actor-service owns filmpire_actor, ai-service
+      # owns filmpire_ai (ADR-002/ADR-012). These names must match the
+      # POSTGRES_URL of each service below.
+      POSTGRES_MULTIPLE_DATABASES: filmpire_actor,filmpire_ai
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:

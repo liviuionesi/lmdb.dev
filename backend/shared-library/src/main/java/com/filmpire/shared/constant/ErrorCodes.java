@@ -9,6 +9,11 @@ package com.filmpire.shared.constant;
  */
 public final class ErrorCodes {
 
+    /**
+     * Private constructor to prevent instantiation of this constant utility class.
+     *
+     * @throws UnsupportedOperationException always, to prevent execution via reflection
+     */
     private ErrorCodes() {
         throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
     }

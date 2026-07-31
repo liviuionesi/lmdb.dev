@@ -21,7 +21,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
  * <p>Design choices worth knowing:</p>
  * <ul>
  *   <li>CSRF disabled — no cookies/session, tokens travel in headers.</li>
- *   <li>Auth endpoints, actuator, Swagger and the hello probe are public;
+ *   <li>Auth endpoints, actuator, and Swagger are public;
  *       everything else needs a valid Bearer token.</li>
  *   <li>Unauthenticated access yields a plain 401 (no redirect, no
  *       WWW-Authenticate browser popup).</li>
@@ -53,7 +53,6 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/auth/**").permitAll()
                 .requestMatchers("/actuator/**").permitAll()
                 .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
-                .requestMatchers("/hello").permitAll()
                 .anyRequest().authenticated())
             .exceptionHandling(ex ->
                 ex.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
