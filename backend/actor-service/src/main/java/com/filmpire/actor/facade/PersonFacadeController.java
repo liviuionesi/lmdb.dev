@@ -3,7 +3,7 @@ package com.filmpire.actor.facade;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.filmpire.actor.client.dto.TmdbPersonImagesResponse;
 import com.filmpire.actor.client.dto.TmdbPersonMovieCreditsResponse;
-import com.filmpire.actor.client.dto.TmdbPersonResponse;
+import com.filmpire.actor.mapper.ActorMapper;
 import com.filmpire.actor.model.Actor;
 import com.filmpire.actor.service.ActorService;
 import lombok.RequiredArgsConstructor;
@@ -40,6 +40,7 @@ public class PersonFacadeController {
     private static final String REJECTING_NON_NUMERIC_ID = "Person facade: rejecting non-numeric id '{}'";
 
     private final ActorService actorService;
+    private final ActorMapper actorMapper;
 
     /**
      * {@code GET /person/{id}} — person details in TMDB's exact shape,
@@ -50,13 +51,15 @@ public class PersonFacadeController {
      */
     @GetMapping(value = "/person/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Object> personDetails(@PathVariable String id) {
+        // Reject non-numeric person IDs locally with TMDB-shaped 404 response.
         if (!id.chars().allMatch(Character::isDigit)) {
             log.debug(REJECTING_NON_NUMERIC_ID, id);
             return notFound();
         }
 
+        // Fetch entity locally or from TMDB and map to TMDB's expected person JSON.
         Actor actor = actorService.getOrFetchActorEntity(Long.parseLong(id));
-        return ResponseEntity.ok(toTmdbPersonResponse(actor));
+        return ResponseEntity.ok(actorMapper.toTmdbPersonResponse(actor));
     }
 
     /**
@@ -69,11 +72,13 @@ public class PersonFacadeController {
      */
     @GetMapping(value = "/person/{id}/movie_credits", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Object> movieCredits(@PathVariable String id) {
+        // Validate numeric ID format before querying upstream.
         if (!id.chars().allMatch(Character::isDigit)) {
             log.debug(REJECTING_NON_NUMERIC_ID, id);
             return notFound();
         }
 
+        // Retrieve raw filmography from TMDB client.
         TmdbPersonMovieCreditsResponse credits = actorService.getFilmographyRaw(Long.parseLong(id));
         return ResponseEntity.ok(credits);
     }
@@ -89,12 +94,14 @@ public class PersonFacadeController {
      */
     @GetMapping(value = "/person/{id}/images", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Object> personImages(@PathVariable String id) {
+        // Validate numeric ID format.
         if (!id.chars().allMatch(Character::isDigit)) {
             log.debug(REJECTING_NON_NUMERIC_ID, id);
             return notFound();
         }
 
         long personId = Long.parseLong(id);
+        // Map persisted images into TMDB facade profile image DTOs.
         var profiles = actorService.getOrFetchImages(personId).stream()
             .map(i -> new TmdbPersonImagesResponse.TmdbProfileImage(
                 i.getFilePath(), i.getAspectRatio(), i.getHeight(),
@@ -115,6 +122,7 @@ public class PersonFacadeController {
     @GetMapping(value = "/person/popular", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Object> popularPersons(
             @RequestParam(defaultValue = "1") int page) {
+        // Fetch raw popular persons response from service (upserting returned entries).
         return ResponseEntity.ok(actorService.getPopularRaw(page));
     }
 
@@ -130,6 +138,7 @@ public class PersonFacadeController {
     public ResponseEntity<Object> searchPersons(
             @RequestParam String query,
             @RequestParam(defaultValue = "1") int page) {
+        // Fetch raw person search response from service (upserting returned entries).
         return ResponseEntity.ok(actorService.searchRaw(query, page));
     }
 
@@ -143,6 +152,7 @@ public class PersonFacadeController {
      */
     @ExceptionHandler(RestClientResponseException.class)
     public ResponseEntity<String> upstreamError(RestClientResponseException e) {
+        // Forward upstream HTTP status and verbatim error body string.
         return ResponseEntity.status(e.getStatusCode())
             .contentType(MediaType.APPLICATION_JSON)
             .body(e.getResponseBodyAsString());
@@ -157,36 +167,20 @@ public class PersonFacadeController {
      */
     @ExceptionHandler(ResourceAccessException.class)
     public ResponseEntity<TmdbErrorResponse> tmdbUnreachable(ResourceAccessException e) {
+        // Log network error and return 502 Bad Gateway using TMDB error envelope.
         log.error("TMDB unreachable: {}", e.getMessage());
         return ResponseEntity.status(502)
             .body(new TmdbErrorResponse(false, 502, "Upstream TMDB API is unreachable."));
     }
 
-    /**
-     * Builds TMDB's exact person-detail shape from our persisted entity.
-     *
-     * @param actor the persisted actor
-     * @return TMDB-shaped person response
-     */
-    private static TmdbPersonResponse toTmdbPersonResponse(Actor actor) {
-        return new TmdbPersonResponse(
-            actor.getTmdbId(),
-            actor.getName(),
-            actor.getBiography(),
-            actor.getBirthDate(),
-            actor.getBirthPlace(),
-            actor.getProfilePath(),
-            actor.getPopularity(),
-            actor.getAlsoKnownAs(),
-            actor.getKnownForDepartment(),
-            actor.getGender(),
-            actor.getImdbId(),
-            actor.getHomepage(),
-            actor.getAdult()
-        );
-    }
 
+    /**
+     * Returns a 404 Not Found response formatted as TMDB's standard error JSON structure.
+     *
+     * @return 404 response with TMDB error status code 34
+     */
     private static ResponseEntity<Object> notFound() {
+        // Build 404 response matching TMDB's status code 34 error message.
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
             .body(new TmdbErrorResponse(false, 34, "The resource you requested could not be found."));
     }

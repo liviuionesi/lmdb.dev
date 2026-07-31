@@ -13,7 +13,6 @@ import com.filmpire.actor.dto.ActorDtos.FilmographyPageDto;
 import com.filmpire.actor.model.Actor;
 import com.filmpire.actor.model.ActorProfileImage;
 import com.filmpire.actor.repository.ActorRepository;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,10 +20,10 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.Month;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -32,7 +31,6 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -53,6 +51,11 @@ import static org.mockito.Mockito.when;
  * the mapped entity is persisted. Complementing that, list endpoints (search,
  * popular) always call TMDB for ranking but upsert every person they return.</p>
  *
+ * <p>Since the TMDB API key is now injected transparently by the
+ * {@link org.springframework.web.client.RestClient} interceptor, these tests
+ * no longer require {@code ReflectionTestUtils} to set a key field — the
+ * mock {@link TmdbPersonClient} is called without any key parameter.</p>
+ *
  * @see ActorService
  */
 @ExtendWith(MockitoExtension.class)
@@ -60,7 +63,6 @@ import static org.mockito.Mockito.when;
 class ActorServiceTest {
 
     private static final Long BRAD_PITT_ID = 287L;
-    private static final String API_KEY = "test-api-key";
 
     @Mock
     private TmdbPersonClient tmdbPersonClient;
@@ -68,17 +70,11 @@ class ActorServiceTest {
     @Mock
     private ActorRepository actorRepository;
 
+    @org.mockito.Spy
+    private com.filmpire.actor.mapper.ActorMapper actorMapper = org.mapstruct.factory.Mappers.getMapper(com.filmpire.actor.mapper.ActorMapper.class);
+
     @InjectMocks
     private ActorService actorService;
-
-    /**
-     * Injects the TMDB API key that Spring would normally bind via
-     * {@code @Value}, which no Mockito mock can supply.
-     */
-    @BeforeEach
-    void setUp() {
-        ReflectionTestUtils.setField(actorService, "tmdbApiKey", API_KEY);
-    }
 
     /**
      * A persisted actor must be served straight from PostgreSQL. This is the
@@ -113,7 +109,7 @@ class ActorServiceTest {
     void getActorFetchesAndSavesOnMiss() {
         // Given: not in PostgreSQL, TMDB has the full profile
         when(actorRepository.findById(BRAD_PITT_ID)).thenReturn(Optional.empty());
-        when(tmdbPersonClient.getPersonDetails(BRAD_PITT_ID, API_KEY)).thenReturn(tmdbPerson());
+        when(tmdbPersonClient.getPersonDetails(BRAD_PITT_ID)).thenReturn(tmdbPerson());
         when(actorRepository.save(any(Actor.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // When
@@ -142,7 +138,7 @@ class ActorServiceTest {
             BRAD_PITT_ID, "Brad Pitt", null, null, null, null,
             null, List.of(), null, null, null, null, null);
         when(actorRepository.findById(BRAD_PITT_ID)).thenReturn(Optional.empty());
-        when(tmdbPersonClient.getPersonDetails(BRAD_PITT_ID, API_KEY)).thenReturn(noBio);
+        when(tmdbPersonClient.getPersonDetails(BRAD_PITT_ID)).thenReturn(noBio);
         when(actorRepository.save(any(Actor.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // When / Then
@@ -158,7 +154,7 @@ class ActorServiceTest {
     @DisplayName("getFilmography: sorted newest first, undated credits last")
     void getFilmographySortsNewestFirst() {
         // Given: credits deliberately out of order, including an undated one
-        when(tmdbPersonClient.getPersonMovieCredits(BRAD_PITT_ID, API_KEY)).thenReturn(
+        when(tmdbPersonClient.getPersonMovieCredits(BRAD_PITT_ID)).thenReturn(
             new TmdbPersonMovieCreditsResponse(BRAD_PITT_ID, List.of(
                 credit(1L, "Older", "1999-01-01"),
                 credit(2L, "Undated", null),
@@ -181,7 +177,7 @@ class ActorServiceTest {
     @DisplayName("getFilmographyPage: slices the full credit list, totals span all pages")
     void getFilmographyPageSlices() {
         // Given: three credits, requested two per page
-        when(tmdbPersonClient.getPersonMovieCredits(BRAD_PITT_ID, API_KEY)).thenReturn(
+        when(tmdbPersonClient.getPersonMovieCredits(BRAD_PITT_ID)).thenReturn(
             new TmdbPersonMovieCreditsResponse(BRAD_PITT_ID, List.of(
                 credit(1L, "A", "2021-01-01"),
                 credit(2L, "B", "2020-01-01"),
@@ -206,7 +202,7 @@ class ActorServiceTest {
     @DisplayName("getFilmographyPage: page beyond the end is empty, not an error")
     void getFilmographyPageBeyondEndIsEmpty() {
         // Given
-        when(tmdbPersonClient.getPersonMovieCredits(BRAD_PITT_ID, API_KEY)).thenReturn(
+        when(tmdbPersonClient.getPersonMovieCredits(BRAD_PITT_ID)).thenReturn(
             new TmdbPersonMovieCreditsResponse(BRAD_PITT_ID, List.of(credit(1L, "A", "2021-01-01"))));
 
         // When / Then
@@ -225,7 +221,7 @@ class ActorServiceTest {
         Actor actor = persistedActor();
         actor.setProfileImages(new ArrayList<>());
         when(actorRepository.findById(BRAD_PITT_ID)).thenReturn(Optional.of(actor));
-        when(tmdbPersonClient.getPersonImages(BRAD_PITT_ID, API_KEY)).thenReturn(
+        when(tmdbPersonClient.getPersonImages(BRAD_PITT_ID)).thenReturn(
             new TmdbPersonImagesResponse(BRAD_PITT_ID, List.of(
                 new TmdbPersonImagesResponse.TmdbProfileImage(
                     "/profile.jpg", 0.667, 2100, 1400, null, 5.3, 7))));
@@ -263,7 +259,7 @@ class ActorServiceTest {
         // Then: no TMDB image call, and nothing re-saved
         assertThat(images).singleElement()
             .extracting(ActorImageDto::filePath).isEqualTo("/cached.jpg");
-        verify(tmdbPersonClient, never()).getPersonImages(anyLong(), anyString());
+        verify(tmdbPersonClient, never()).getPersonImages(anyLong());
         verify(actorRepository, never()).save(any(Actor.class));
     }
 
@@ -279,7 +275,7 @@ class ActorServiceTest {
         Actor actor = persistedActor();
         actor.setProfileImages(new ArrayList<>());
         when(actorRepository.findById(BRAD_PITT_ID)).thenReturn(Optional.of(actor));
-        when(tmdbPersonClient.getPersonImages(BRAD_PITT_ID, API_KEY))
+        when(tmdbPersonClient.getPersonImages(BRAD_PITT_ID))
             .thenReturn(new TmdbPersonImagesResponse(BRAD_PITT_ID, null));
         when(actorRepository.save(any(Actor.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -296,7 +292,7 @@ class ActorServiceTest {
     @DisplayName("search: results upserted into PostgreSQL as stubs")
     void searchUpsertsResults() {
         // Given: TMDB returns two hits, neither known locally
-        when(tmdbPersonClient.searchPersons(API_KEY, "pitt", 1)).thenReturn(
+        when(tmdbPersonClient.searchPersons("pitt", 1)).thenReturn(
             new TmdbPersonSearchResponse(1, 1, 2L, List.of(
                 summary(287L, "Brad Pitt"),
                 summary(288L, "Michael Pitt"))));
@@ -323,7 +319,7 @@ class ActorServiceTest {
     void searchUpsertPreservesExistingDetail() {
         // Given: a fully-detailed actor already persisted from a prior detail fetch
         Actor existing = persistedActor();
-        when(tmdbPersonClient.searchPersons(API_KEY, "pitt", 1)).thenReturn(
+        when(tmdbPersonClient.searchPersons("pitt", 1)).thenReturn(
             new TmdbPersonSearchResponse(1, 1, 1L, List.of(summary(BRAD_PITT_ID, "Brad Pitt"))));
         when(actorRepository.findById(BRAD_PITT_ID)).thenReturn(Optional.of(existing));
         when(actorRepository.save(any(Actor.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -335,7 +331,7 @@ class ActorServiceTest {
         ArgumentCaptor<Actor> saved = ArgumentCaptor.forClass(Actor.class);
         verify(actorRepository).save(saved.capture());
         assertThat(saved.getValue().getBiography()).isEqualTo("An actor.");
-        assertThat(saved.getValue().getBirthDate()).isEqualTo(LocalDate.of(1963, 12, 18));
+        assertThat(saved.getValue().getBirthDate()).isEqualTo(LocalDate.of(1963, Month.DECEMBER, 18));
     }
 
     /**
@@ -347,7 +343,7 @@ class ActorServiceTest {
     @DisplayName("getPopular: TMDB ranking passed through, every person upserted")
     void getPopularUpsertsResults() {
         // Given
-        when(tmdbPersonClient.getPopularPersons(API_KEY, 1)).thenReturn(
+        when(tmdbPersonClient.getPopularPersons(1)).thenReturn(
             new TmdbPersonSearchResponse(1, 500, 10000L, List.of(summary(976L, "Jason Statham"))));
         when(actorRepository.findById(976L)).thenReturn(Optional.empty());
         when(actorRepository.save(any(Actor.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -371,7 +367,7 @@ class ActorServiceTest {
     @DisplayName("search: absent TMDB paging fields fall back to the requested page")
     void searchHandlesMissingPagingFields() {
         // Given: a response with every paging field null
-        when(tmdbPersonClient.searchPersons(API_KEY, "pitt", 3)).thenReturn(
+        when(tmdbPersonClient.searchPersons("pitt", 3)).thenReturn(
             new TmdbPersonSearchResponse(null, null, null, List.of()));
 
         // When
@@ -389,7 +385,7 @@ class ActorServiceTest {
             .tmdbId(BRAD_PITT_ID)
             .name("Brad Pitt")
             .biography("An actor.")
-            .birthDate(LocalDate.of(1963, 12, 18))
+            .birthDate(LocalDate.of(1963, Month.DECEMBER, 18))
             .birthPlace("Shawnee, Oklahoma, USA")
             .profilePath("/profile.jpg")
             .popularity(50.0)
@@ -406,7 +402,7 @@ class ActorServiceTest {
     /** @return TMDB's person-detail response for the same actor */
     private static TmdbPersonResponse tmdbPerson() {
         return new TmdbPersonResponse(
-            BRAD_PITT_ID, "Brad Pitt", "An actor.", LocalDate.of(1963, 12, 18),
+            BRAD_PITT_ID, "Brad Pitt", "An actor.", LocalDate.of(1963, Month.DECEMBER, 18),
             "Shawnee, Oklahoma, USA", "/profile.jpg", 50.0,
             List.of("William Bradley Pitt"), "Acting", 2, "nm0000093",
             "https://bradpitt.com", false);

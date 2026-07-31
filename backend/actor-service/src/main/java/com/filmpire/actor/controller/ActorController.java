@@ -73,6 +73,7 @@ public class ActorController {
             @PathVariable Long id,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size) {
+        // Retrieve paged filmography from service (sorted newest first) and wrap in success envelope.
         return ok(actorService.getFilmographyPage(id, page, size), "Filmography retrieved");
     }
 
@@ -85,6 +86,7 @@ public class ActorController {
     @GetMapping("/{id}/images")
     @Operation(summary = "Get an actor's profile images")
     public ResponseEntity<ApiResponse<List<ActorImageDto>>> getImages(@PathVariable Long id) {
+        // Fetch persisted or read-through profile image references for the actor.
         return ok(actorService.getImages(id), "Images retrieved");
     }
 
@@ -101,6 +103,7 @@ public class ActorController {
     @Operation(summary = "Get popular actors")
     public ResponseEntity<ApiResponse<ActorSearchResponse>> getPopular(
             @RequestParam(defaultValue = "1") int page) {
+        // Query TMDB popular actors, upsert stub entries, and return native response shape.
         return ok(actorService.getPopular(page), "Popular actors retrieved");
     }
 
@@ -116,6 +119,7 @@ public class ActorController {
     public ResponseEntity<ApiResponse<ActorSearchResponse>> search(
             @RequestParam String query,
             @RequestParam(defaultValue = "1") int page) {
+        // Perform actor name search against TMDB, upserting results to local database.
         return ok(actorService.search(query, page), "Search completed");
     }
 
@@ -128,6 +132,7 @@ public class ActorController {
      * @return 200 response
      */
     private static <T> ResponseEntity<ApiResponse<T>> ok(T data, String message) {
+        // Construct 200 OK HTTP response containing the standard ApiResponse envelope.
         return ResponseEntity.ok(ApiResponse.success(data, message, HttpStatus.OK.value()));
     }
 }
