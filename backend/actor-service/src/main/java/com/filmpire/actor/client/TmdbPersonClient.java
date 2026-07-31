@@ -14,6 +14,10 @@ import org.springframework.web.service.annotation.HttpExchange;
  * {@code /api/v1/actors} API and the TMDB-shaped facade (ADR-010) — there is
  * one client and one persisted dataset behind both, matching movie-service's
  * pattern.
+ *
+ * <p>The TMDB API key is injected transparently by the {@link RestClient}
+ * interceptor configured in {@link TmdbClientConfig}, so these method
+ * signatures carry only business-relevant parameters.</p>
  */
 @HttpExchange
 public interface TmdbPersonClient {
@@ -22,39 +26,33 @@ public interface TmdbPersonClient {
      * Get person (actor) details by TMDB id.
      *
      * @param personId TMDB person id
-     * @param apiKey   server-side TMDB API key
      * @return person details
      */
     @GetExchange("/person/{personId}")
     TmdbPersonResponse getPersonDetails(
-        @PathVariable("personId") Long personId,
-        @RequestParam("api_key") String apiKey
+        @PathVariable("personId") Long personId
     );
 
     /**
      * Get a person's movie cast/crew credits.
      *
      * @param personId TMDB person id
-     * @param apiKey   server-side TMDB API key
      * @return movie credits
      */
     @GetExchange("/person/{personId}/movie_credits")
     TmdbPersonMovieCreditsResponse getPersonMovieCredits(
-        @PathVariable("personId") Long personId,
-        @RequestParam("api_key") String apiKey
+        @PathVariable("personId") Long personId
     );
 
     /**
      * Search people by name.
      *
-     * @param apiKey server-side TMDB API key
-     * @param query  free-text name query
-     * @param page   page number (1-based)
+     * @param query free-text name query
+     * @param page  page number (1-based)
      * @return paged person summaries
      */
     @GetExchange("/search/person")
     TmdbPersonSearchResponse searchPersons(
-        @RequestParam("api_key") String apiKey,
         @RequestParam("query") String query,
         @RequestParam(value = "page", defaultValue = "1") Integer page
     );
@@ -63,25 +61,21 @@ public interface TmdbPersonClient {
      * Get every profile image TMDB holds for a person.
      *
      * @param personId TMDB person id
-     * @param apiKey   server-side TMDB API key
      * @return profile-image references and their metadata
      */
     @GetExchange("/person/{personId}/images")
     TmdbPersonImagesResponse getPersonImages(
-        @PathVariable("personId") Long personId,
-        @RequestParam("api_key") String apiKey
+        @PathVariable("personId") Long personId
     );
 
     /**
      * Get the currently popular people, TMDB's ranking.
      *
-     * @param apiKey server-side TMDB API key
-     * @param page   page number (1-based)
+     * @param page page number (1-based)
      * @return paged person summaries
      */
     @GetExchange("/person/popular")
     TmdbPersonSearchResponse getPopularPersons(
-        @RequestParam("api_key") String apiKey,
         @RequestParam(value = "page", defaultValue = "1") Integer page
     );
 }

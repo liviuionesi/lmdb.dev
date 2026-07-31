@@ -35,6 +35,7 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(RestClientResponseException.class)
     public ResponseEntity<ApiResponse<Void>> handleUpstream(RestClientResponseException e) {
+        // Forward HTTP status code received from upstream TMDB in an ApiResponse envelope.
         return error(HttpStatus.valueOf(e.getStatusCode().value()),
             "TMDB rejected the request (HTTP " + e.getStatusCode().value() + ")");
     }
@@ -47,6 +48,7 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler({ResourceAccessException.class, ServiceUnavailableException.class})
     public ResponseEntity<ApiResponse<Void>> handleUnavailable(Exception e) {
+        // Log connection or service failure details and return 503 Service Unavailable.
         log.error("Upstream unavailable: {}", e.getMessage());
         return error(HttpStatus.SERVICE_UNAVAILABLE, "Actor data is temporarily unavailable");
     }
@@ -59,6 +61,7 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ApiResponse<Void>> handleNotFound(ResourceNotFoundException e) {
+        // Return 404 Not Found with the exception's detailed error message.
         return error(HttpStatus.NOT_FOUND, e.getMessage());
     }
 
@@ -75,6 +78,7 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ApiResponse<Void>> handleTypeMismatch(MethodArgumentTypeMismatchException e) {
+        // Map parameter conversion failures to a client-friendly 400 Bad Request.
         return error(HttpStatus.BAD_REQUEST,
             "Invalid value for '" + e.getName() + "': expected a number");
     }
@@ -87,6 +91,7 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleUnexpected(Exception e) {
+        // Log full stack trace for unexpected exceptions and return generic 500 Internal Server Error.
         log.error("Unhandled exception in actor-service", e);
         return error(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred");
     }
@@ -99,6 +104,7 @@ public class GlobalExceptionHandler {
      * @return error envelope response
      */
     private static ResponseEntity<ApiResponse<Void>> error(HttpStatus status, String message) {
+        // Assemble ResponseEntity with given HTTP status and ApiResponse error body.
         return ResponseEntity.status(status)
             .body(ApiResponse.error(message, status.value()));
     }

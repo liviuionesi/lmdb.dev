@@ -67,6 +67,7 @@ public class TmdbRateLimitInterceptor implements ClientHttpRequestInterceptor {
             throw new IOException("Request interrupted while waiting for rate limit token", e);
         }
 
+        // Execute outbound HTTP request downstream once rate limit token has been consumed.
         return execution.execute(request, body);
     }
 }
