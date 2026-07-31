@@ -21,6 +21,7 @@ import java.util.List;
 @Getter
 @Setter
 @lombok.EqualsAndHashCode
+@lombok.experimental.FieldNameConstants
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
