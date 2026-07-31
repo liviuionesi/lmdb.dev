@@ -226,7 +226,7 @@ public class MovieService {
     private void evictUnreadableMovie(Long tmdbId) {
         try {
             long removed = mongoTemplate
-                .remove(Query.query(Criteria.where("tmdbId").is(tmdbId)), Movie.class)
+                .remove(Query.query(Criteria.where(Movie.Fields.tmdbId).is(tmdbId)), Movie.class)
                 .getDeletedCount();
             log.info("Evicted {} unreadable document(s) for movie {}", removed, tmdbId);
         } catch (RuntimeException e) {

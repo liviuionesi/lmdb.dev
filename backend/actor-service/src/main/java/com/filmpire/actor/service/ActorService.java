@@ -219,6 +219,7 @@ public class ActorService {
      * @param page TMDB page (1-based)
      * @return paged summaries
      */
+    @Transactional
     public ActorSearchResponse getPopular(int page) {
         // Map raw TMDB popular response into native ActorSearchResponse envelope.
         return toSearchResponse(getPopularRaw(page), page);
@@ -262,6 +263,7 @@ public class ActorService {
      * @param page  TMDB page (1-based)
      * @return paged summaries
      */
+    @Transactional
     public ActorSearchResponse search(String query, int page) {
         // Execute raw TMDB search and map output to native search response DTO.
         return toSearchResponse(searchRaw(query, page), page);
