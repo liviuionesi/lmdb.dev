@@ -11,15 +11,14 @@ import java.util.UUID;
 /**
  * Persistence for {@link UserTasteProfile}, including the ANN
  * (approximate-nearest-neighbour) semantic-search query over its pgvector
- * {@code embedding} column (#36, ARCHITECTURE.md §3.7).
+ * {@code embedding} column.
  */
 public interface UserTasteProfileRepository extends JpaRepository<UserTasteProfile, UUID> {
 
     /**
      * Finds the {@code k} users whose taste embedding is closest (cosine
      * distance, backed by the {@code idx_user_taste_profiles_embedding}
-     * HNSW index) to {@code queryVector} — the ANN query ARCHITECTURE.md
-     * §3.7 specifies for semantic search. Each row is
+     * HNSW index) to {@code queryVector}. Each row is
      * {@code [user_id (UUID), distance (Double)]}, closest first.
      *
      * <p>{@code queryVector} is pgvector's text input format

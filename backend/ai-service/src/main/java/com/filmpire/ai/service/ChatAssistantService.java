@@ -16,9 +16,10 @@ import java.time.Instant;
 import java.util.stream.Collectors;
 
 /**
- * The conversational assistant feature (#36, ARCHITECTURE.md §3.7): a
- * user's back-and-forth with the AI, persisted as a {@link Conversation}
- * aggregate so history survives a restart (ADR-012's whole point).
+ * The conversational assistant feature: a user's back-and-forth with the
+ * AI, persisted as a {@link Conversation} aggregate so history survives a
+ * restart. Collaborates with Spring AI's {@link ChatClient} for the model
+ * call and {@link ConversationRepository} for persistence.
  */
 @Service
 @Slf4j
@@ -34,6 +35,10 @@ public class ChatAssistantService {
     private final ChatClient chatClient;
     private final ConversationRepository conversationRepository;
 
+    /**
+     * @param chatClientBuilder      builder for the Spring AI {@link ChatClient} used to generate replies
+     * @param conversationRepository persistence for {@link Conversation} aggregates
+     */
     public ChatAssistantService(ChatClient.Builder chatClientBuilder, ConversationRepository conversationRepository) {
         this.chatClient = chatClientBuilder.build();
         this.conversationRepository = conversationRepository;
@@ -84,6 +89,10 @@ public class ChatAssistantService {
     /**
      * Loads the conversation named by the request, scoped to its owner, or
      * starts a new one when {@code conversationId} is absent.
+     *
+     * @param request the incoming chat request
+     * @return an existing, owned conversation, or a new unsaved one
+     * @throws ResourceNotFoundException if {@code request.conversationId()} doesn't exist or isn't owned by {@code request.userId()}
      */
     private Conversation resolveConversation(ChatRequestDto request) {
         if (request.conversationId() == null) {

@@ -48,14 +48,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /**
  * Integration tests for ai-service: full controller → service → PostgreSQL
- * (pgvector) → (WireMock-simulated) movie-service stack (#36).
+ * (pgvector) → (WireMock-simulated) movie-service stack.
  *
  * <p>{@link ChatModel} and {@link EmbeddingModel} are Mockito mocks
  * ({@link AiTestConfig}) standing in for Ollama, which isn't reachable in
  * CI — everything else (Flyway migration, JPA mapping, the ANN query, the
- * REST contract) runs against real infrastructure. A successful context
- * load here IS the "{@code ddl-auto: validate} passes against the Flyway
- * schema" acceptance criterion (ADR-012).</p>
+ * REST contract) runs against real infrastructure via Testcontainers
+ * (a {@code pgvector/pgvector} PostgreSQL container) and WireMock stands in
+ * for movie-service.</p>
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -113,6 +113,14 @@ class AiServiceIntegrationTest {
             .thenReturn(zeroVector());
     }
 
+    /**
+     * Sends a chat request with no {@code conversationId} and verifies a new
+     * {@link com.filmpire.ai.model.Conversation} is created holding both the
+     * user's message and the assistant's reply — the persistence half of the
+     * chat contract, not just the HTTP response shape.
+     *
+     * @throws Exception if the MockMvc request fails to execute
+     */
     @Test
     @DisplayName("POST /api/v1/ai/chat with no conversationId starts a new conversation and persists both turns")
     void chatStartsNewConversationAndPersistsBothTurns() throws Exception {
@@ -133,6 +141,15 @@ class AiServiceIntegrationTest {
         assertThat(conversationRepository.findAll().get(0).getMessages()).hasSize(2);
     }
 
+    /**
+     * Sends a second chat request carrying the {@code conversationId} from
+     * the first, and verifies the two turns land in the same conversation
+     * (one row, four messages) rather than each request creating its own —
+     * proving {@code conversationId} really is a continuation key, not just
+     * an echoed field.
+     *
+     * @throws Exception if the MockMvc request fails to execute
+     */
     @Test
     @DisplayName("POST /api/v1/ai/chat with an existing conversationId appends to it instead of starting a new one")
     void chatContinuesExistingConversation() throws Exception {
@@ -156,6 +173,15 @@ class AiServiceIntegrationTest {
         assertThat(conversationRepository.findAll().get(0).getMessages()).hasSize(4);
     }
 
+    /**
+     * Creates a conversation as one user, then attempts to continue it as a
+     * different user, and verifies the request is rejected with 404 — the
+     * ownership check in {@link com.filmpire.ai.repository.ConversationRepository#findByIdAndUserId}
+     * must reject the mismatch rather than the conversation being globally
+     * addressable by id.
+     *
+     * @throws Exception if the MockMvc request fails to execute
+     */
     @Test
     @DisplayName("POST /api/v1/ai/chat with another user's conversationId returns 404, not someone else's history")
     void chatWithAnotherUsersConversationReturns404() throws Exception {
@@ -175,6 +201,15 @@ class AiServiceIntegrationTest {
             .andExpect(status().isNotFound());
     }
 
+    /**
+     * Stubs movie-service (via WireMock) to return one candidate movie and
+     * stubs the chat model to recommend exactly that candidate, then
+     * verifies the recommendation response echoes the candidate's real
+     * {@code movieId} and score — confirming recommendations flow through
+     * the WireMock-simulated catalog rather than being fabricated locally.
+     *
+     * @throws Exception if the MockMvc request fails to execute
+     */
     @Test
     @DisplayName("POST /api/v1/ai/recommendations ranks candidates fetched from movie-service, never invented ones")
     void recommendReturnsRankedRecommendationsFromCatalog() throws Exception {
@@ -202,6 +237,15 @@ class AiServiceIntegrationTest {
             .andExpect(jsonPath("$.recommendations[0].score").value(0.95));
     }
 
+    /**
+     * Stubs movie-service to return zero candidates and verifies the
+     * response is a 200 with an empty recommendations list, not an error —
+     * {@link com.filmpire.ai.service.RecommendationService#recommend} must
+     * short-circuit before ever calling the chat model when there's nothing
+     * to rank.
+     *
+     * @throws Exception if the MockMvc request fails to execute
+     */
     @Test
     @DisplayName("POST /api/v1/ai/recommendations returns an empty list rather than failing when movie-service has nothing to offer")
     void recommendWithNoCandidatesReturnsEmptyList() throws Exception {
@@ -220,6 +264,17 @@ class AiServiceIntegrationTest {
             .andExpect(jsonPath("$.recommendations").isEmpty());
     }
 
+    /**
+     * Creates three taste profiles via the recommendations endpoint (an
+     * action fan, a romance fan, and a caller who is also an action fan),
+     * then searches for "explosions" with an embedding close to the action
+     * profile. Verifies the action fan ranks first, the romance fan second,
+     * and the caller itself never appears — the {@code excludeUserId} clause
+     * in {@link com.filmpire.ai.repository.UserTasteProfileRepository#findNearestNeighbours}
+     * must exclude the caller's own row even though it's the closest match.
+     *
+     * @throws Exception if the MockMvc request fails to execute
+     */
     @Test
     @DisplayName("GET /api/v1/ai/search/semantic returns the nearest taste profile first, excludes the caller")
     void semanticSearchReturnsNearestNeighbourExcludingSelf() throws Exception {
@@ -253,6 +308,17 @@ class AiServiceIntegrationTest {
             .andExpect(jsonPath("$[1].userId").value(romanceFan.toString()));
     }
 
+    /**
+     * Creates a taste profile as a side effect of a recommendations request
+     * — {@link com.filmpire.ai.service.RecommendationService} is the only
+     * writer of {@link com.filmpire.ai.model.UserTasteProfile}, so tests
+     * that need a profile to exist go through this endpoint rather than
+     * inserting one directly.
+     *
+     * @param userId           the user to create a profile for
+     * @param recentMoviesText the text embedded to produce that user's taste vector
+     * @throws Exception if the MockMvc request fails to execute
+     */
     private void createTasteProfile(UUID userId, String recentMoviesText) throws Exception {
         String body = objectMapper.writeValueAsString(Map.of(
             "userId", userId, "recentMovies", List.of(recentMoviesText), "count", 1));
@@ -260,24 +326,58 @@ class AiServiceIntegrationTest {
             .andExpect(status().isOk());
     }
 
+    /**
+     * Stubs the mocked {@link ChatModel} to return a fixed reply for any prompt.
+     *
+     * @param reply the assistant reply the next chat call should produce
+     */
     private void stubAssistantReply(String reply) {
         when(chatModel.call(any(Prompt.class))).thenReturn(chatResponse(reply));
     }
 
+    /**
+     * Wraps plain text in the {@link ChatResponse}/{@link Generation} shape
+     * Spring AI's {@link ChatModel} contract requires.
+     *
+     * @param text the assistant reply text
+     * @return a single-generation chat response containing {@code text}
+     */
     private static ChatResponse chatResponse(String text) {
         return new ChatResponse(List.of(new Generation(new AssistantMessage(text))));
     }
 
+    /**
+     * @return a 768-dimension all-zero embedding, matching {@code nomic-embed-text}'s dimension
+     */
     private static float[] zeroVector() {
         return new float[768];
     }
 
+    /**
+     * Builds a unit vector with a single 1.0 component, used so distinct
+     * taste profiles are trivially distinguishable by cosine distance in
+     * assertions.
+     *
+     * @param index the dimension set to 1.0
+     * @return a 768-dimension vector, all zero except {@code index}
+     */
     private static float[] oneHot(int index) {
         float[] v = new float[768];
         v[index] = 1.0f;
         return v;
     }
 
+    /**
+     * Builds a vector mostly aligned with one dimension but nudged toward
+     * the next, so it's closer (by cosine distance) to {@link #oneHot} at
+     * {@code index} than to any other one-hot vector, without being
+     * identical to it.
+     *
+     * @param index     the dominant dimension
+     * @param secondary the weight given to {@code index + 1}; the dominant
+     *                  dimension gets {@code 1.0 - secondary}
+     * @return a 768-dimension vector split between {@code index} and {@code index + 1}
+     */
     private static float[] mostlyOneHot(int index, float secondary) {
         float[] v = new float[768];
         v[index] = 1.0f - secondary;

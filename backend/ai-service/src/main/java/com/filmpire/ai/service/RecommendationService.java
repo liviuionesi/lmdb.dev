@@ -19,11 +19,10 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Movie recommendations computed from Filmpire's own catalog (#36,
- * ARCHITECTURE.md §3.7) — never proxied from TMDB's own recommendation
- * endpoint. Candidates come from {@link MovieCatalogClient}
- * (movie-service's persisted data); the assistant ranks and explains them
- * against the user's recent viewing.
+ * Movie recommendations computed from Filmpire's own catalog — never
+ * proxied from TMDB's own recommendation endpoint. Candidates come from
+ * {@link MovieCatalogClient} (movie-service's persisted data); the
+ * assistant ranks and explains them against the user's recent viewing.
  *
  * <p>As a side effect, this also refreshes the user's {@link UserTasteProfile}
  * embedding from their recent-movies text, which is what backs the semantic
@@ -49,6 +48,12 @@ public class RecommendationService {
     private final MovieCatalogClient movieCatalogClient;
     private final UserTasteProfileRepository tasteProfileRepository;
 
+    /**
+     * @param chatClientBuilder      builder for the Spring AI {@link ChatClient} used to rank and explain candidates
+     * @param embeddingModel         model used to embed the user's recent-movies text into a taste vector
+     * @param movieCatalogClient     source of candidate movies from movie-service's own catalog
+     * @param tasteProfileRepository persistence for the resulting {@link UserTasteProfile}
+     */
     public RecommendationService(
         ChatClient.Builder chatClientBuilder,
         EmbeddingModel embeddingModel,
@@ -104,7 +109,9 @@ public class RecommendationService {
     /**
      * Embeds the user's recent-movies text and upserts it as their taste
      * profile — the persisted artifact semantic search runs its ANN query
-     * against.
+     * against. Does nothing if the request carries no recent movies to embed.
+     *
+     * @param request the recommendation request whose {@code recentMovies} are embedded
      */
     private void refreshTasteProfile(RecommendationRequestDto request) {
         if (request.recentMovies() == null || request.recentMovies().isEmpty()) {

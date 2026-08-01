@@ -13,6 +13,12 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class EmbeddingFormatTest {
 
+    /**
+     * Formats a three-element vector and verifies the output matches
+     * pgvector's exact text syntax — no extra whitespace, no trailing comma
+     * — since {@link UserTasteProfileRepository#findNearestNeighbours} casts
+     * this string straight into a SQL {@code vector} literal.
+     */
     @Test
     @DisplayName("formats a vector as a bracketed, comma-separated pgvector literal")
     void formatsVectorAsPgvectorLiteral() {
@@ -22,6 +28,11 @@ class EmbeddingFormatTest {
         assertThat(literal).isEqualTo("[0.1,0.2,0.3]");
     }
 
+    /**
+     * Formats a zero-length vector and verifies it produces {@code "[]"}
+     * rather than throwing or producing malformed brackets — the empty-input
+     * edge case of the same join logic used for non-empty vectors.
+     */
     @Test
     @DisplayName("formats an empty vector as an empty pgvector literal")
     void formatsEmptyVectorAsEmptyLiteral() {

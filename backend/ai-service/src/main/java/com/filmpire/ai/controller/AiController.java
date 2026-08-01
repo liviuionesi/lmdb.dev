@@ -25,11 +25,11 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * REST surface for ai-service's three features (#36, ARCHITECTURE.md §3.7):
- * catalog-grounded recommendations, the conversational assistant, and
- * semantic search over user taste profiles. The same operations are also
- * exposed over gRPC by {@link com.filmpire.ai.grpc.AiGrpcService} for the
- * recommendation and chat features.
+ * REST surface for ai-service's three features: catalog-grounded
+ * recommendations, the conversational assistant, and semantic search over
+ * user taste profiles. The same operations are also exposed over gRPC by
+ * {@link com.filmpire.ai.grpc.AiGrpcService} for the recommendation and
+ * chat features.
  */
 @RestController
 @RequestMapping("/api/v1/ai")

@@ -56,6 +56,13 @@ public class GlobalExceptionHandler {
         return error(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred");
     }
 
+    /**
+     * Wraps a status and message in the shared {@link ApiResponse} error envelope.
+     *
+     * @param status  the HTTP status to respond with
+     * @param message the error message to surface to the caller
+     * @return the fully-built error response
+     */
     private static ResponseEntity<ApiResponse<Void>> error(HttpStatus status, String message) {
         return ResponseEntity.status(status).body(ApiResponse.error(message, status.value()));
     }

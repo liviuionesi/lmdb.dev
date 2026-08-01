@@ -23,9 +23,9 @@ import java.util.UUID;
 
 /**
  * One turn in a {@link Conversation}'s thread. Always accessed through its
- * owning conversation (ADR-012's aggregate) — {@link #conversation} is
- * {@code LAZY} because nothing reads a message without already holding the
- * conversation it belongs to.
+ * owning conversation — {@link #conversation} is {@code LAZY} because
+ * nothing reads a message without already holding the conversation it
+ * belongs to.
  */
 @Entity
 @Table(name = "messages")
@@ -54,8 +54,7 @@ public class Message {
 
     /**
      * Provider-specific fields whose shape genuinely varies — structured
-     * where structure exists (the columns above), flexible where it
-     * doesn't (ADR-012).
+     * where structure exists (the columns above), flexible where it doesn't.
      */
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")

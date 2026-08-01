@@ -14,6 +14,11 @@ import org.springframework.web.client.RestClient;
 @Configuration
 public class RestClientConfig {
 
+    /**
+     * @return a plain {@link RestClient.Builder}, marked {@code @LoadBalanced}
+     *         so Spring Cloud LoadBalancer intercepts requests to {@code lb://}
+     *         hosts and resolves them via Eureka
+     */
     @Bean
     @LoadBalanced
     public RestClient.Builder loadBalancedRestClientBuilder() {
