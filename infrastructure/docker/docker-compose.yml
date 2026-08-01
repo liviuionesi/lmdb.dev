@@ -411,6 +411,12 @@ services:
       REDIS_PASSWORD: ${REDIS_PASSWORD:-redis123}
       OLLAMA_BASE_URL: http://ollama:11434
       MOVIE_SERVICE_BASE_URL: lb://movie-service
+      # Voice control (#68) — model fetched by scripts/download-vosk-model.sh,
+      # not baked into the image; missing model degrades to 503, doesn't
+      # block the rest of ai-service from starting (see SpeechToTextService).
+      VOSK_MODEL_PATH: /models/vosk-model-small-en-us-0.15
+    volumes:
+      - ./models:/models:ro
     logging:
       driver: k8s-file
     depends_on:

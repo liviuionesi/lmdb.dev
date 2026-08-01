@@ -1,5 +1,6 @@
 package com.filmpire.ai.config;
 
+import com.filmpire.ai.service.SpeechToTextService;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -56,5 +57,17 @@ public class AiTestConfig {
     @Primary
     public RestClient.Builder nonLoadBalancedRestClientBuilder() {
         return RestClient.builder();
+    }
+
+    /**
+     * @return a Mockito mock standing in for the real Vosk-backed {@link SpeechToTextService}
+     *         — no model is downloaded in CI (#68), and this exercises the
+     *         controller's multipart/HTTP contract, not Vosk itself (that's
+     *         {@link com.filmpire.ai.service.SpeechToTextServiceTest}'s job)
+     */
+    @Bean
+    @Primary
+    public SpeechToTextService speechToTextService() {
+        return mock(SpeechToTextService.class);
     }
 }

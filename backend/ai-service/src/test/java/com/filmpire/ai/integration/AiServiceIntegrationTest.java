@@ -3,6 +3,7 @@ package com.filmpire.ai.integration;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.filmpire.ai.config.AiTestConfig;
 import com.filmpire.ai.repository.ConversationRepository;
+import com.filmpire.ai.service.SpeechToTextService;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,6 +21,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -42,6 +44,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -88,6 +91,9 @@ class AiServiceIntegrationTest {
     @Autowired
     private EmbeddingModel embeddingModel;
 
+    @Autowired
+    private SpeechToTextService speechToTextService;
+
     /** Points MovieCatalogClient at WireMock instead of {@code lb://movie-service}. */
     @DynamicPropertySource
     static void movieServiceProperties(DynamicPropertyRegistry registry) {
@@ -105,6 +111,7 @@ class AiServiceIntegrationTest {
     void cleanSlate() {
         reset(chatModel);
         reset(embeddingModel);
+        reset(speechToTextService);
         // ChatClient's internals call chatModel.getOptions().mutate() unconditionally
         // (DefaultChatClientUtils) — an unstubbed mock returns null there and NPEs
         // before the prompt is ever built, regardless of what call() is stubbed to do.
@@ -306,6 +313,46 @@ class AiServiceIntegrationTest {
             .andExpect(jsonPath("$", org.hamcrest.Matchers.hasSize(2)))
             .andExpect(jsonPath("$[0].userId").value(actionFan.toString()))
             .andExpect(jsonPath("$[1].userId").value(romanceFan.toString()));
+    }
+
+    /**
+     * Given an audio upload, when the transcription succeeds, then the
+     * endpoint returns the recognized text — verifies the multipart request
+     * contract and response shape. {@link SpeechToTextService} itself is a
+     * Mockito mock ({@link com.filmpire.ai.config.AiTestConfig}) since no
+     * Vosk model is downloaded in CI; real audio-handling behaviour is
+     * covered by {@link com.filmpire.ai.service.SpeechToTextServiceTest}.
+     */
+    @Test
+    @DisplayName("POST /api/v1/ai/speech-to-text returns the transcribed text")
+    void speechToTextReturnsTranscribedText() throws Exception {
+        when(speechToTextService.transcribe(any())).thenReturn("show me action movies");
+
+        MockMultipartFile audio = new MockMultipartFile(
+            "audio", "command.wav", "audio/wav", "fake-wav-bytes".getBytes());
+
+        mockMvc.perform(multipart("/api/v1/ai/speech-to-text").file(audio))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.text").value("show me action movies"));
+    }
+
+    /**
+     * Given the recognizer understood nothing, when speech-to-text is
+     * called, then the endpoint still returns 200 with empty text rather
+     * than treating silence/noise as an error — matches
+     * {@link SpeechToTextService}'s own empty-string-not-null contract.
+     */
+    @Test
+    @DisplayName("POST /api/v1/ai/speech-to-text returns empty text when nothing was recognized")
+    void speechToTextReturnsEmptyTextWhenNothingRecognized() throws Exception {
+        when(speechToTextService.transcribe(any())).thenReturn("");
+
+        MockMultipartFile silence = new MockMultipartFile(
+            "audio", "silence.wav", "audio/wav", "fake-silent-wav-bytes".getBytes());
+
+        mockMvc.perform(multipart("/api/v1/ai/speech-to-text").file(silence))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.text").value(""));
     }
 
     /**

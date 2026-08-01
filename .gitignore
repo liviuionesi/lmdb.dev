@@ -60,6 +60,9 @@ web-build/
 # Keep the checked-in secrets.env.example templates.
 infrastructure/kubernetes/**/secrets.env
 
+# Vosk speech-to-text model (#68) — fetched by infrastructure/scripts/download-vosk-model.sh
+infrastructure/docker/models/
+
 # Logs
 logs/
 *.log
