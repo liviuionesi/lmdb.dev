@@ -58,6 +58,9 @@ public abstract class AbstractMongoIntegrationTest {
      */
     @DynamicPropertySource
     static void mongoProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.data.mongodb.uri", () -> MONGO_CONTAINER.getReplicaSetUrl() + "?directConnection=true");
+        registry.add("spring.data.mongodb.uri", () -> {
+            String baseUrl = MONGO_CONTAINER.getReplicaSetUrl();
+            return baseUrl.contains("?") ? baseUrl + "&directConnection=true" : baseUrl + "?directConnection=true";
+        });
     }
 }
