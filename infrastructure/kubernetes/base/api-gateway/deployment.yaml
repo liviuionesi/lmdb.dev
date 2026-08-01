@@ -43,11 +43,22 @@ spec:
                 secretKeyRef:
                   name: filmpire-secrets
                   key: TMDB_API_KEY
+          # Reactive Spring Boot's cold start can exceed the old fixed
+          # initialDelaySeconds under a demo node's tight CPU limit (found
+          # live on #27's k3s apply — see infrastructure/terraform/README.md),
+          # killing the container mid-boot. A startupProbe absorbs that
+          # variance: liveness/readiness only start counting once this
+          # succeeds, so steady-state failure detection stays fast.
+          startupProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8080
+            periodSeconds: 5
+            failureThreshold: 24
           readinessProbe:
             httpGet:
               path: /actuator/health/readiness
               port: 8080
-            initialDelaySeconds: 20
             periodSeconds: 10
             timeoutSeconds: 3
             failureThreshold: 3
@@ -55,7 +66,6 @@ spec:
             httpGet:
               path: /actuator/health/liveness
               port: 8080
-            initialDelaySeconds: 40
             periodSeconds: 15
             timeoutSeconds: 3
             failureThreshold: 3

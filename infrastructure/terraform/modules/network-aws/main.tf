@@ -67,7 +67,19 @@ resource "aws_security_group" "k3s" {
   }
 
   ingress {
-    description = "Gateway NodePort, reached directly on the node's public IP"
+    # Same scoping as SSH above: the fetched kubeconfig's `server:` field
+    # points kubectl straight at this node's public IP (rewritten from k3s's
+    # loopback default — see the README), so whoever can SSH in to fetch the
+    # kubeconfig also needs to reach 6443 to use it.
+    description = "k3s API server, for kubectl against the fetched kubeconfig"
+    from_port   = 6443
+    to_port     = 6443
+    protocol    = "tcp"
+    cidr_blocks = [var.ssh_cidr]
+  }
+
+  ingress {
+    description = "Gateway NodePort, reached directly on the nodes public IP"
     from_port   = var.demo_inbound_port
     to_port     = var.demo_inbound_port
     protocol    = "tcp"

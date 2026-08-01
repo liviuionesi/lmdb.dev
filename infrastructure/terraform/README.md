@@ -514,7 +514,10 @@ unattended.
   the way AKS's did (see the Azure section above), since k3s just runs as
   a process on a normal instance rather than needing a managed control
   plane's resource floor.
-- The root volume: 20GB `gp3`, within the 30GB/month free EBS allowance.
+- The root volume: 30GB `gp3` — the al2023 AMI's root snapshot won't boot on
+  anything smaller (found on the first live apply, not in AMI docs), which
+  happens to be exactly the full 30GB/month free EBS allowance, not under
+  it.
 - No Elastic IP resource: the instance's default public IP (from
   `map_public_ip_on_launch` on the subnet) is used directly instead of
   allocating a separate `aws_eip`. An EIP *not* attached to a running

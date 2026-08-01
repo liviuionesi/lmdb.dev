@@ -20,9 +20,9 @@ variable "instance_type" {
 }
 
 variable "root_volume_size" {
-  description = "Root EBS volume size in GB. 20GB stays within the 30GB/month free-tier EBS allowance (ARCHITECTURE.md §11.1)."
+  description = "Root EBS volume size in GB. 30GB is the al2023 AMI's minimum root snapshot size and also the full 30GB/month free-tier EBS allowance (ARCHITECTURE.md §11.1) — there's no smaller value that still boots this AMI."
   type        = number
-  default     = 20
+  default     = 30
 }
 
 variable "subnet_id" {

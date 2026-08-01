@@ -25,6 +25,23 @@ images:
     newTag: latest
 
 patches:
+  # The README documented this Service as already patched to NodePort 30080
+  # (matching modules/network-aws's security-group rule) but the patch was
+  # never actually written — found on #27's first live apply, where the
+  # gateway was unreachable from outside the cluster despite every pod
+  # being Ready. Traefik is disabled in the node's k3s install (see
+  # modules/cluster-k3s), so the base Ingress resource has no controller to
+  # serve it; NodePort is the only path in.
+  - target:
+      kind: Service
+      name: api-gateway
+    patch: |-
+      - op: replace
+        path: /spec/type
+        value: NodePort
+      - op: add
+        path: /spec/ports/0/nodePort
+        value: 30080
   - target:
       kind: Deployment
       name: api-gateway
