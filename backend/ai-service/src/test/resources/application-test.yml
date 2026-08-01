@@ -1,0 +1,27 @@
+# Test profile: no discovery infra, no Redis (cache no-op); the PostgreSQL
+# (pgvector) datasource comes from Testcontainers via @ServiceConnection.
+# ChatModel/EmbeddingModel are replaced by @Primary Mockito mocks
+# (AiTestConfig) rather than excluding Spring AI's autoconfiguration — no
+# real Ollama server is reachable in CI.
+spring:
+  cloud:
+    discovery:
+      enabled: false
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+  cache:
+    type: none
+
+eureka:
+  client:
+    enabled: false
+    register-with-eureka: false
+    fetch-registry: false
+
+# Ephemeral (OS-assigned) port so the gRPC server never collides with
+# another test run or a real local ai-service instance.
+grpc:
+  server:
+    port: 0

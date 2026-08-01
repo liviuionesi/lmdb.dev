@@ -3,7 +3,7 @@ package com.filmpire.movie.integration;
 import com.filmpire.movie.config.TmdbClientTestStubConfig;
 import com.filmpire.movie.model.Movie;
 import com.filmpire.movie.repository.MovieRepository;
-import org.junit.jupiter.api.AfterAll;
+import com.filmpire.movie.support.AbstractMongoIntegrationTest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -11,18 +11,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
-import org.testcontainers.containers.wait.strategy.Wait;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.mongodb.MongoDBContainer;
-
-import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -44,26 +36,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
 @Import(TmdbClientTestStubConfig.class)
-@Testcontainers
 @ActiveProfiles("test")
 @DisplayName("End-to-End Integration Tests")
-@SuppressWarnings("resource")
-class EndToEndIntegrationTest {
-
-    @Container
-    static MongoDBContainer mongoDBContainer = new MongoDBContainer("mongo:8.0")
-            .waitingFor(Wait.forListeningPort())
-            .withStartupTimeout(Duration.ofSeconds(60));
-
-    /**
-     * Points Spring Data at the container's Mongo.
-     *
-     * @param registry Spring test property registry
-     */
-    @DynamicPropertySource
-    static void configureProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.data.mongodb.uri", mongoDBContainer::getReplicaSetUrl);
-    }
+class EndToEndIntegrationTest extends AbstractMongoIntegrationTest {
 
     private final MockMvc mockMvc;
     private final MovieRepository movieRepository;
@@ -78,14 +53,6 @@ class EndToEndIntegrationTest {
     EndToEndIntegrationTest(MockMvc mockMvc, MovieRepository movieRepository) {
         this.mockMvc = mockMvc;
         this.movieRepository = movieRepository;
-    }
-
-    /** Stops the container after the class. */
-    @AfterAll
-    static void cleanup() {
-        if (mongoDBContainer != null && mongoDBContainer.isRunning()) {
-            mongoDBContainer.stop();
-        }
     }
 
     /** Empties the collection before each test for deterministic state. */

@@ -73,6 +73,13 @@ public class SecurityConfig {
                         .pathMatchers("/authentication/**").permitAll()
                         .pathMatchers("/account/**").permitAll()
 
+                        // AI service (#36): every feature (chat, recommendations, semantic
+                        // search) is scoped to a userId — conversations and taste
+                        // profiles are user-owned data (ADR-012), so these routes are
+                        // explicitly JWT-gated rather than left to the anyExchange()
+                        // catch-all below.
+                        .pathMatchers("/api/v1/ai/**").authenticated()
+
                         // Admin endpoints (require authentication - should add role check in production)
                         .pathMatchers("/admin/**").authenticated()
                         

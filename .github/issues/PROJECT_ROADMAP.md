@@ -53,8 +53,8 @@ integration testing (open), #20 SonarQube (open).
 **Dependencies:** movie-service ✓; #32 depends on #18.
 
 ### 🔄 Phase 5: Advanced Services
-**Issues:** #35 (Epic), #36 AI service (Spring AI + gRPC, Ollama for $0),
-#37 media service (MinIO). Spec: [PHASE4_ADVANCED_SERVICES.md](PHASE4_ADVANCED_SERVICES.md)
+**Issues:** #35 (Epic), #36 AI service ✓ (Spring AI 2.0.0 + gRPC, Ollama for $0),
+#37 media service (MinIO, open). Spec: [PHASE4_ADVANCED_SERVICES.md](PHASE4_ADVANCED_SERVICES.md)
 (file kept under its historical name).
 
 ### 🔄 Phase 6: Comprehensive Testing

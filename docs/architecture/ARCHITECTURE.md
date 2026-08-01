@@ -1,7 +1,7 @@
 # Filmpire Microservices - Enterprise Software Architecture Document
 
-**Version:** 1.7.1  
-**Date:** July 30, 2026 (#28: `docker-publish.yml`/`deploy.yml` built, `project-automation.yml` trimmed to its one working job — §11.4 updated)  
+**Version:** 1.7.2  
+**Date:** August 1, 2026 (#36: ai-service implemented — Spring AI 2.0.0 + Ollama, PostgreSQL/pgvector per ADR-012, REST + gRPC — §3.7 updated)  
 **Author:** Liviu Ionesi  
 **Purpose:** Portfolio project demonstrating enterprise-grade full-stack development for a movie platform
 
@@ -662,7 +662,18 @@ format): `/person/{id}`, `/person/{id}/movie_credits`, `/person/{id}/images`,
 
 ### 3.7 AI Service (Advanced)
 
-**Port:** 8084  
+**Status: implemented (#36).** Built as specced below with two deliberate
+deviations: **Spring AI 2.0.0** (not the 1.0.0-SNAPSHOT this doc originally
+named — 2.x is what tracks Spring Boot 4.x), and **Ollama only, no OpenAI
+starter on the classpath at all** (not "OpenAI/Ollama" — ADR-004's $0 budget
+rules out a paid provider outright, so there's nothing to switch between).
+Voice recognition (Whisper) from the feature list below is **not
+implemented** — it needs a paid OpenAI key and isn't in #36's checklist.
+Semantic search is nearest-neighbour search over `user_taste_profiles`
+embeddings specifically (no separate per-movie embedding store exists), see
+`backend/ai-service/README.md` for the exact API surface.
+
+**Port:** 8084 (REST), 9084 (gRPC)  
 **Database:** PostgreSQL + pgvector (`filmpire_ai`) — **ADR-012**  
 **Protocols:** REST + gRPC  
 **Dependencies:** Spring AI, Ollama (local, $0 — see ADR-004)
@@ -2226,9 +2237,11 @@ infrastructure/kubernetes/
 │   ├── movie-service/
 │   ├── user-service/
 │   ├── actor-service/
-│   ├── postgres/              # StatefulSet + PVC — user-service (filmpire)
-│   │                          #   and actor-service (filmpire_actor);
-│   │                          #   pgvector image once ai-service lands (ADR-012)
+│   ├── ai-service/            # REST (8084) + gRPC (9084) — #36
+│   ├── ollama/                # StatefulSet + PVC — local model server for ai-service
+│   ├── postgres/              # StatefulSet + PVC (pgvector/pgvector:pg17, ADR-012) —
+│   │                          #   user-service (filmpire), actor-service (filmpire_actor),
+│   │                          #   ai-service (filmpire_ai)
 │   ├── mongodb/               # StatefulSet + PVC — movie-service
 │   ├── redis/
 │   └── kustomization.yaml

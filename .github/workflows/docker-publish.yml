@@ -27,6 +27,7 @@ jobs:
           - movie-service
           - user-service
           - actor-service
+          - ai-service
     steps:
       - name: Checkout the commit Backend CI verified
         uses: actions/checkout@v4

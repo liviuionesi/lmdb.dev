@@ -12,6 +12,8 @@ resources:
   - movie-service
   - user-service
   - actor-service
+  - ai-service
+  - ollama
   - postgres
   - mongodb
   - redis

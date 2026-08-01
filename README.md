@@ -4,14 +4,14 @@ A portfolio project: a Spring Boot backend that clones the [TMDB v3 API](https:/
 
 ## 🏗️ Architecture
 
-- **8 backend microservices** (Spring Boot 4.1.0, Java 25, Gradle Groovy DSL) — `api-gateway`, `discovery-service` (Eureka), `config-service`, `movie-service`, `user-service`, `actor-service` are implemented and tested; `ai-service` and `media-service` are scaffolded (`HelloController` stubs) with their target design written up in ARCHITECTURE.md §3.7/§3.8, not yet built (tracked as open issues #36/#37)
+- **8 backend microservices** (Spring Boot 4.1.0, Java 25, Gradle Groovy DSL) — `api-gateway`, `discovery-service` (Eureka), `config-service`, `movie-service`, `user-service`, `actor-service`, `ai-service` are implemented and tested; `media-service` is still scaffolded (`HelloController` stub), design written up in ARCHITECTURE.md §3.8, not yet built (tracked as open issue #37)
 - **1 frontend application** (`frontend/filmpire` — the existing Filmpire React app, CRA + Redux Toolkit Query + MUI + Alan AI voice, merged into this repo as a monorepo with full history preserved — see [ADR-013](docs/architecture/adr/013-frontend-merged-into-monorepo.md))
 - **Hybrid database strategy** — PostgreSQL for user-owned, non-re-derivable data (accounts, favorites); MongoDB for the TMDB-derived movie/actor catalog, which can self-heal from a schema-drifted document by re-fetching (see [ADR-002](docs/architecture/adr/002-database-per-service.md), [ADR-011](docs/architecture/adr/011-self-healing-read-through-on-schema-drift.md))
 - **Spring Cloud infrastructure** — Eureka discovery, Config Server, Spring Cloud Gateway (JWT auth, Redis-backed rate limiting, Resilience4j circuit breakers, CORS)
 - **Observability** — every service instrumented with Actuator + Micrometer/Prometheus + JSON structured logging; full local stack (kube-prometheus-stack + Grafana + Alertmanager, ELK) verified live on minikube
 - **$0-budget cloud deployment** — Terraform provisions Azure AKS (primary) and AWS k3s-on-EC2 (secondary), both constrained to free-tier limits with a zero-spend budget tripwire; Kubernetes via Kustomize (`base` + `local`/`azure`/`aws` overlays); see ARCHITECTURE.md §11 and [`infrastructure/terraform/README.md`](infrastructure/terraform/README.md)
-- **CI** — `backend-ci.yml` (build+test on every push/PR touching `backend/**`), `e2e-smoke.yml` (nightly live-stack Postman/newman run), `terraform-plan.yml` (plan-only, GitHub OIDC, on push to `main`), `docker-publish.yml` (builds all 6 backend services, pushes SHA + `latest` tags to ghcr.io after every green Backend CI run on `main`), `deploy.yml` (manual `workflow_dispatch`, `kubectl apply -k overlays/<cloud>` onto an already-applied cluster) — nothing auto-deploys, ever
-- **Spring AI** — a dependency on the classpath (`spring-ai` 1.0.0-SNAPSHOT), not yet wired into a running service; `ai-service` is where it lands (§3.7)
+- **CI** — `backend-ci.yml` (build+test on every push/PR touching `backend/**`), `e2e-smoke.yml` (nightly live-stack Postman/newman run), `terraform-plan.yml` (plan-only, GitHub OIDC, on push to `main`), `docker-publish.yml` (builds all 7 implemented backend services, pushes SHA + `latest` tags to ghcr.io after every green Backend CI run on `main`), `deploy.yml` (manual `workflow_dispatch`, `kubectl apply -k overlays/<cloud>` onto an already-applied cluster) — nothing auto-deploys, ever
+- **Spring AI 2.0.0 + Ollama** — `ai-service` (#36): PostgreSQL/pgvector-backed conversations and taste profiles (ADR-012), catalog-grounded recommendations, chat assistant, semantic search over taste embeddings, REST + gRPC, $0 against a local Ollama model (ADR-004) — no OpenAI key anywhere
 
 ### Development Standards (Spring Boot 4.1.x + Java 25)
 
@@ -81,7 +81,7 @@ filmpire-microservices/
 │   ├── movie-service/     # Movie/genre TMDB facade + native API (Port 8081)
 │   ├── user-service/      # Auth, favorites, watchlist (Port 8082)
 │   ├── actor-service/     # Actor/person TMDB facade + native API (Port 8083)
-│   ├── ai-service/        # Scaffolded, not yet implemented (Port 8084)
+│   ├── ai-service/        # Spring AI + Ollama, PostgreSQL/pgvector, REST + gRPC (Port 8084/9084, #36)
 │   ├── media-service/     # Scaffolded, not yet implemented (Port 8085)
 │   └── shared-library/    # Shared DTOs, exceptions, utilities
 ├── frontend/

@@ -1,6 +1,7 @@
 package com.filmpire.movie.facade;
 
 import com.filmpire.movie.repository.MovieRepository;
+import com.filmpire.movie.support.AbstractMongoIntegrationTest;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import org.junit.jupiter.api.BeforeEach;
@@ -8,16 +9,12 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.json.JsonCompareMode;
 import org.springframework.test.web.servlet.MockMvc;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.mongodb.MongoDBContainer;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -42,15 +39,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-@Testcontainers
 @WireMockTest(httpPort = 9990)
 @DisplayName("TMDB Facade Integration Tests")
-class TmdbFacadeIntegrationTest {
-
-    /** Real MongoDB via Testcontainers; @ServiceConnection wires the URI. */
-    @Container
-    @ServiceConnection
-    static MongoDBContainer mongodb = new MongoDBContainer("mongo:8.0");
+class TmdbFacadeIntegrationTest extends AbstractMongoIntegrationTest {
 
     /** A single TMDB popular-list page fixture reused by several tests. */
     private static final String POPULAR_PAGE_1 = """

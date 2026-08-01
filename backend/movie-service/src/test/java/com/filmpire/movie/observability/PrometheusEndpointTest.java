@@ -1,17 +1,14 @@
 package com.filmpire.movie.observability;
 
+import com.filmpire.movie.support.AbstractMongoIntegrationTest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.mongodb.MongoDBContainer;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -28,20 +25,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * silently records nothing while the config appears correct. Config alone is
  * therefore not evidence — only a real request is.</p>
  *
- * <p>Boots the full context against a Testcontainers MongoDB, matching the
- * module's other integration tests.</p>
+ * <p>Boots the full context against the module's shared Testcontainers
+ * MongoDB ({@link AbstractMongoIntegrationTest}).</p>
  */
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-@Testcontainers
 @DisplayName("Prometheus Endpoint Tests")
-class PrometheusEndpointTest {
-
-    /** Real MongoDB via Testcontainers; @ServiceConnection wires the URI. */
-    @Container
-    @ServiceConnection
-    static MongoDBContainer mongodb = new MongoDBContainer("mongo:8.0");
+class PrometheusEndpointTest extends AbstractMongoIntegrationTest {
 
     /**
      * The name metrics are expected to be tagged with. Read from configuration
