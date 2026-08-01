@@ -2,6 +2,7 @@ package com.filmpire.actor.model;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
+import java.io.Serializable;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -23,7 +24,7 @@ import lombok.Setter;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ActorProfileImage {
+public class ActorProfileImage implements Serializable {
 
     /** TMDB CDN path, e.g. {@code /kU3B75TyRiCgE270EyZnHjfivoq.jpg}. */
     @Column(name = "file_path", nullable = false, length = 255)
