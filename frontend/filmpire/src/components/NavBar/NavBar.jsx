@@ -8,12 +8,15 @@ import { useDispatch, useSelector } from 'react-redux';
 import { ColorModeContext } from '../../utils/ToggleColorMode';
 import { setUser, userSelector } from '../../features/auth';
 import { Sidebar, Search } from '..';
-import { fetchToken, createSessionId, moviesApi } from '../../utils';
+import { useGetProfileQuery } from '../../services/user';
+import { clearAuthTokens } from '../../utils';
+import LoginDialog from './LoginDialog';
 import useStyles from './styles';
 
 const NavBar = () => {
   const { isAuthenticated, user } = useSelector(userSelector);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [loginOpen, setLoginOpen] = useState(false);
   const classes = useStyles();
   const isMobile = useMediaQuery('(max-width:600px)');
   const theme = useTheme();
@@ -21,28 +24,27 @@ const NavBar = () => {
 
   const colorMode = useContext(ColorModeContext);
 
-  const token = localStorage.getItem('request_token');
-  const sessionIdFromLocalStorage = localStorage.getItem('session_id');
+  const hasStoredSession = !!localStorage.getItem('access_token');
+
+  // Restores the redux session from a previously issued JWT on page load,
+  // rather than re-authenticating — skipped once the store already has a
+  // user (e.g. right after LoginDialog's own setUser dispatch).
+  const { data: profile, error: profileError } = useGetProfileQuery(undefined, {
+    skip: !hasStoredSession || isAuthenticated,
+  });
 
   useEffect(() => {
-    const logInUser = async () => {
-      if (token) {
-        if (sessionIdFromLocalStorage) {
-          const { data: userData } = await moviesApi.get(`/account?session_id=${sessionIdFromLocalStorage}`);
+    if (profile) {
+      dispatch(setUser(profile));
+    }
+  }, [profile, dispatch]);
 
-          dispatch(setUser(userData));
-        } else {
-          const sessionId = await createSessionId();
-
-          const { data: userData } = await moviesApi.get(`/account?session_id=${sessionId}`);
-
-          dispatch(setUser(userData));
-        }
-      }
-    };
-
-    logInUser();
-  }, [token]);
+  useEffect(() => {
+    // Stored JWT is expired/invalid — drop it so we stop retrying on every mount.
+    if (profileError) {
+      clearAuthTokens();
+    }
+  }, [profileError]);
 
   return (
     <>
@@ -65,7 +67,7 @@ const NavBar = () => {
           {!isMobile && <Search />}
           <div>
             {!isAuthenticated ? (
-              <Button color="inherit" onClick={fetchToken}>
+              <Button color="inherit" onClick={() => setLoginOpen(true)}>
                 Login &nbsp; <AccountCircle />
               </Button>
             ) : (
@@ -74,14 +76,11 @@ const NavBar = () => {
                 component={Link}
                 to={`/profile/${user.id}`}
                 className={classes.linkButton}
-                onClick={() => {}}
               >
                 {!isMobile && <>My Movies &nbsp;</>}
-                <Avatar
-                  style={{ width: 30, height: 30 }}
-                  alt="Profile"
-                  src={`https://www.themoviedb.org/t/p/w64_and_h64_face${user?.avatar?.tmdb?.avatar_path}`}
-                />
+                <Avatar style={{ width: 30, height: 30 }} alt={user?.username}>
+                  {user?.username?.[0]?.toUpperCase()}
+                </Avatar>
               </Button>
             )}
           </div>
@@ -108,6 +107,7 @@ const NavBar = () => {
           )}
         </nav>
       </div>
+      <LoginDialog open={loginOpen} onClose={() => setLoginOpen(false)} />
     </>
   );
 };
