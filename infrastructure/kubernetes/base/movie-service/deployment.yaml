@@ -6,6 +6,16 @@ metadata:
     app: movie-service
 spec:
   replicas: 1
+  # See api-gateway/deployment.yaml's identical strategy for why: default
+  # RollingUpdate surges a second JVM instance before killing the first,
+  # which OOM-thrashed the free-tier demo node during a routine secret
+  # rotation (#27's live apply). maxSurge:0 trades a brief unavailability
+  # window for never running two instances at once.
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
   selector:
     matchLabels:
       app: movie-service

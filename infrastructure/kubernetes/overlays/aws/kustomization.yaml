@@ -88,16 +88,21 @@ patches:
       kind: StatefulSet
       name: mongodb
     patch: |-
+      # 300m/256Mi was too tight even in steady state, not just during
+      # first-boot init — found live on #27's apply: simple queries
+      # (listIndexes) took 2800ms+ under CPU starvation, and the slow
+      # first-boot createUser step was the direct cause of an auth-broken
+      # restart. t3.small has 2 full vCPUs; MongoDB gets a real share.
       - op: replace
         path: /spec/template/spec/containers/0/resources
         value:
           requests:
-            cpu: 100m
+            cpu: 250m
             memory: 128Mi
             ephemeral-storage: 128Mi
           limits:
-            cpu: 300m
-            memory: 256Mi
+            cpu: 800m
+            memory: 384Mi
             ephemeral-storage: 256Mi
   - target:
       kind: StatefulSet
