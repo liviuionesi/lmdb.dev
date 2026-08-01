@@ -50,10 +50,22 @@ spec:
           # and restart an otherwise-healthy mongod in a loop. A bare TCP
           # check on the listener port needs no subprocess and is standard
           # practice for mongod probes.
+          # First-ever boot runs MONGO_INITDB_ROOT_* user creation, which can
+          # outlast a fixed initialDelaySeconds under contended CPU (found
+          # live on #27's apply): the liveness probe killed mongod mid-init,
+          # and on restart it saw partial WiredTiger files and skipped
+          # createUser entirely, leaving auth enabled with NO users at all —
+          # silent and only surfaced when a client tried to authenticate.
+          # startupProbe absorbs first-boot variance; liveness/readiness
+          # below only start counting once it succeeds.
+          startupProbe:
+            tcpSocket:
+              port: 27017
+            periodSeconds: 5
+            failureThreshold: 60
           readinessProbe:
             tcpSocket:
               port: 27017
-            initialDelaySeconds: 10
             periodSeconds: 10
             timeoutSeconds: 5
             failureThreshold: 3

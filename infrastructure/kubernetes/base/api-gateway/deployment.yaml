@@ -6,6 +6,17 @@ metadata:
     app: api-gateway
 spec:
   replicas: 1
+  # Default RollingUpdate (25% surge, rounded up to 1 for a single replica)
+  # starts the new pod BEFORE killing the old one, briefly doubling JVM
+  # memory/CPU demand. On the free-tier demo nodes (#26/#27) that doubling
+  # was enough to OOM-thrash the whole node during a routine secret
+  # rotation — found live on #27's apply. A brief unavailability window is
+  # the correct trade here, not a surge.
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
   selector:
     matchLabels:
       app: api-gateway
