@@ -32,9 +32,9 @@ variable "instance_name" {
 }
 
 variable "instance_type" {
-  description = "See modules/cluster-k3s/variables.tf for why t3.micro works here without the platform-enforced-minimum issues AKS had."
+  description = "See modules/cluster-k3s/variables.tf — t3.micro OOM-thrashes under this app's real footprint (found live, #27); t3.small is the smallest size that actually stays up."
   type        = string
-  default     = "t3.micro"
+  default     = "t3.small"
 }
 
 variable "root_volume_size" {
