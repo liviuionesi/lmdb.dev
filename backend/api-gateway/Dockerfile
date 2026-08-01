@@ -48,7 +48,7 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:8080/actuator/health || exit 1
 
 # Environment variables with defaults
-ENV JAVA_OPTS="-Xms256m -Xmx512m" \
+ENV JAVA_OPTS="-Xms256m -Xmx512m -Djava.net.preferIPv4Stack=true" \
     SPRING_PROFILES_ACTIVE=prod \
     EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka/ \
     REDIS_HOST=redis \

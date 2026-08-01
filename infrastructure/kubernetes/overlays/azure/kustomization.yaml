@@ -47,13 +47,21 @@ patches:
   # default fixed -Xmx512m, which would OOM-kill on a ~1GB node once
   # MongoDB/Redis/OS overhead are accounted for. Single replicas (base
   # already defaults to 1).
+  #
+  # -Djava.net.preferIPv4Stack=true: found live on #26's apply — this
+  # AKS overlay network's DNS resolves external hosts (TMDB, even
+  # google.com) to IPv6-only addresses that the overlay network has no
+  # actual route for. Without this flag, the JVM tries the AAAA record
+  # first and every outbound call (movie-service -> TMDB) hangs until the
+  # gateway's circuit breaker times out. Harmless everywhere else, so set
+  # unconditionally rather than only where the symptom was seen.
   - target:
       kind: Deployment
       name: api-gateway
     patch: |-
       - op: replace
         path: /spec/template/spec/containers/0/env/0/value
-        value: "-XX:MaxRAMPercentage=60 -Xss256k"
+        value: "-XX:MaxRAMPercentage=60 -Xss256k -Djava.net.preferIPv4Stack=true"
       - op: replace
         path: /spec/template/spec/containers/0/resources
         value:
@@ -74,7 +82,7 @@ patches:
     patch: |-
       - op: replace
         path: /spec/template/spec/containers/0/env/0/value
-        value: "-XX:MaxRAMPercentage=60 -Xss256k"
+        value: "-XX:MaxRAMPercentage=60 -Xss256k -Djava.net.preferIPv4Stack=true"
       - op: replace
         path: /spec/template/spec/containers/0/resources
         value:

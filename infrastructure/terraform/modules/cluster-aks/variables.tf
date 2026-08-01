@@ -74,6 +74,12 @@ variable "enable_node_public_ip" {
   default     = true
 }
 
+variable "demo_inbound_port" {
+  description = "NodePort the gateway is exposed on. Needed here (not just modules/network's subnet-level NSG) because AKS auto-creates a SECOND, NIC-level NSG on the node's VMSS when enable_node_public_ip is true — see the security rule below."
+  type        = number
+  default     = 30080
+}
+
 variable "tags" {
   type    = map(string)
   default = {}

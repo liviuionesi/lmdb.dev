@@ -42,13 +42,19 @@ patches:
       - op: add
         path: /spec/ports/0/nodePort
         value: 30080
+  # -Djava.net.preferIPv4Stack=true: found live on #26's Azure apply — an
+  # overlay network whose DNS resolves external hosts to IPv6-only
+  # addresses with no actual route hangs every outbound JVM call until the
+  # gateway's circuit breaker times out. AWS's overlay hasn't shown this
+  # symptom, but the flag is harmless, so it's set unconditionally here
+  # too rather than waiting to find out the hard way.
   - target:
       kind: Deployment
       name: api-gateway
     patch: |-
       - op: replace
         path: /spec/template/spec/containers/0/env/0/value
-        value: "-XX:MaxRAMPercentage=60 -Xss256k"
+        value: "-XX:MaxRAMPercentage=60 -Xss256k -Djava.net.preferIPv4Stack=true"
       - op: replace
         path: /spec/template/spec/containers/0/resources
         value:
@@ -69,7 +75,7 @@ patches:
     patch: |-
       - op: replace
         path: /spec/template/spec/containers/0/env/0/value
-        value: "-XX:MaxRAMPercentage=60 -Xss256k"
+        value: "-XX:MaxRAMPercentage=60 -Xss256k -Djava.net.preferIPv4Stack=true"
       - op: replace
         path: /spec/template/spec/containers/0/resources
         value:
