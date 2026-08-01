@@ -9,10 +9,6 @@ updates:
       time: "09:00"
     open-pull-requests-limit: 10
     target-branch: "main"
-    labels:
-      - "dependencies"
-      - "backend"
-      - "automated"
     commit-message:
       prefix: "chore(deps)"
       include: "scope"
@@ -41,10 +37,6 @@ updates:
       time: "09:00"
     open-pull-requests-limit: 10
     target-branch: "main"
-    labels:
-      - "dependencies"
-      - "frontend"
-      - "automated"
     commit-message:
       prefix: "chore(deps)"
       include: "scope"
@@ -72,10 +64,6 @@ updates:
       time: "09:00"
     open-pull-requests-limit: 5
     target-branch: "main"
-    labels:
-      - "dependencies"
-      - "github-actions"
-      - "automated"
     commit-message:
       prefix: "chore(ci)"
       include: "scope"
@@ -87,9 +75,5 @@ updates:
       interval: "monthly"
     open-pull-requests-limit: 5
     target-branch: "main"
-    labels:
-      - "dependencies"
-      - "docker"
-      - "automated"
     commit-message:
       prefix: "chore(docker)"
