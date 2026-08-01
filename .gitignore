@@ -99,6 +99,8 @@ infrastructure/terraform/**/crash.*.log
 infrastructure/terraform/**/*.tfvars
 !infrastructure/terraform/**/*.tfvars.example
 infrastructure/terraform/**/backend.hcl
+infrastructure/terraform/**/tfplan
+infrastructure/terraform/**/kubeconfig-*.yaml
 infrastructure/terraform/**/override.tf
 infrastructure/terraform/**/override.tf.json
 infrastructure/terraform/**/*_override.tf

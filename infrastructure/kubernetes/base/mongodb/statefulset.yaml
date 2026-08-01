@@ -43,18 +43,23 @@ spec:
             - name: mongodb-config-data
               mountPath: /data/configdb
               subPath: configdb
-          # Matches the healthcheck already proven working in
-          # infrastructure/docker/docker-compose.yml.
+          # `mongosh --eval` (matching docker-compose.yml's healthcheck) spins
+          # up a full Node.js process per probe — found, on a live k3s apply
+          # (#27), to reliably exceed its 5s timeout under the CPU limits the
+          # aws/azure overlays set (as low as 300m), causing kubelet to kill
+          # and restart an otherwise-healthy mongod in a loop. A bare TCP
+          # check on the listener port needs no subprocess and is standard
+          # practice for mongod probes.
           readinessProbe:
-            exec:
-              command: ["mongosh", "--eval", "db.adminCommand('ping')"]
+            tcpSocket:
+              port: 27017
             initialDelaySeconds: 10
             periodSeconds: 10
             timeoutSeconds: 5
             failureThreshold: 3
           livenessProbe:
-            exec:
-              command: ["mongosh", "--eval", "db.adminCommand('ping')"]
+            tcpSocket:
+              port: 27017
             initialDelaySeconds: 20
             periodSeconds: 20
             timeoutSeconds: 5
