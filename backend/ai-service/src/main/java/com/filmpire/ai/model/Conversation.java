@@ -23,11 +23,9 @@ import java.util.UUID;
 
 /**
  * A conversation thread with the AI assistant — the persisted, user-owned
- * aggregate root behind the chat and recommendation features (#36,
- * ARCHITECTURE.md §3.7). Relational and Flyway-managed rather than MongoDB
- * (ADR-012): conversation history cannot be re-derived the way a movie can,
- * so it needs the same schema-drift protection user-service already gives
- * accounts and favorites.
+ * aggregate root behind the chat and recommendation features. Backed by a
+ * Flyway-managed relational schema, with {@link Message} rows cascading as
+ * part of the same aggregate.
  */
 @Entity
 @Table(name = "conversations")
@@ -42,7 +40,7 @@ public class Conversation {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    /** Owning user (user-service's id). No FK: ADR-002 forbids cross-service joins. */
+    /** Owning user (user-service's id). No foreign key — cross-service references are id-only. */
     private UUID userId;
 
     @Enumerated(EnumType.STRING)

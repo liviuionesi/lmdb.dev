@@ -10,7 +10,7 @@ import org.springframework.web.client.RestClient;
 import static org.mockito.Mockito.mock;
 
 /**
- * Test-only bean overrides for ai-service's integration tests (#36):
+ * Test-only bean overrides for ai-service's integration tests:
  *
  * <ul>
  *   <li>{@link ChatModel}/{@link EmbeddingModel} become Mockito mocks — no
@@ -30,18 +30,28 @@ import static org.mockito.Mockito.mock;
 @TestConfiguration
 public class AiTestConfig {
 
+    /**
+     * @return a Mockito mock standing in for the real Ollama-backed {@link ChatModel}
+     */
     @Bean
     @Primary
     public ChatModel chatModel() {
         return mock(ChatModel.class);
     }
 
+    /**
+     * @return a Mockito mock standing in for the real Ollama-backed {@link EmbeddingModel}
+     */
     @Bean
     @Primary
     public EmbeddingModel embeddingModel() {
         return mock(EmbeddingModel.class);
     }
 
+    /**
+     * @return a plain (non-{@code @LoadBalanced}) builder so tests can point
+     *         it at WireMock's {@code http://localhost:<port>} directly
+     */
     @Bean
     @Primary
     public RestClient.Builder nonLoadBalancedRestClientBuilder() {

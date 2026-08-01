@@ -19,10 +19,9 @@ import java.util.UUID;
 
 /**
  * A user's embedded taste vector, backing the semantic-search / "sensible
- * neighbours" feature (#36, ARCHITECTURE.md §3.7, ADR-012). One row per
- * user — {@link #userId} is both the primary key and, like every other
- * cross-service reference in this system, a plain column with no foreign
- * key (ADR-002).
+ * neighbours" feature. One row per user — {@link #userId} is both the
+ * primary key and a plain column with no foreign key, since it references a
+ * user owned by a different service.
  */
 @Entity
 @Table(name = "user_taste_profiles")

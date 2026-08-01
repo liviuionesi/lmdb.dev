@@ -25,11 +25,20 @@ public class GrpcServerLifecycle implements SmartLifecycle {
     private final int port;
     private Server server;
 
+    /**
+     * @param aiGrpcService the gRPC service implementation to bind to the server
+     * @param port          the port to listen on, {@code grpc.server.port}, default 9084
+     */
     public GrpcServerLifecycle(AiGrpcService aiGrpcService, @Value("${grpc.server.port:9084}") int port) {
         this.aiGrpcService = aiGrpcService;
         this.port = port;
     }
 
+    /**
+     * Builds and starts the gRPC server bound to {@link #aiGrpcService}.
+     *
+     * @throws IllegalStateException if the server fails to bind to {@link #port}
+     */
     @Override
     public void start() {
         try {
@@ -43,6 +52,11 @@ public class GrpcServerLifecycle implements SmartLifecycle {
         }
     }
 
+    /**
+     * Shuts down the gRPC server, waiting up to 5 seconds for in-flight
+     * calls to finish before returning. Restores the thread's interrupt
+     * status if interrupted while waiting, rather than swallowing it.
+     */
     @Override
     public void stop() {
         if (server != null) {
@@ -56,6 +70,9 @@ public class GrpcServerLifecycle implements SmartLifecycle {
         }
     }
 
+    /**
+     * @return {@code true} if the gRPC server has been started and not yet shut down
+     */
     @Override
     public boolean isRunning() {
         return server != null && !server.isShutdown();

@@ -15,7 +15,7 @@ import org.springframework.stereotype.Component;
 import java.util.UUID;
 
 /**
- * gRPC surface for recommendations and chat (#36, ai_service.proto),
+ * gRPC surface for recommendations and chat (defined by {@code ai_service.proto}),
  * delegating to the same {@link RecommendationService} and
  * {@link ChatAssistantService} the REST controller uses — one set of
  * business logic, two transports.
@@ -27,11 +27,24 @@ public class AiGrpcService extends AIServiceGrpc.AIServiceImplBase {
     private final RecommendationService recommendationService;
     private final ChatAssistantService chatAssistantService;
 
+    /**
+     * @param recommendationService the recommendation logic shared with the REST controller
+     * @param chatAssistantService  the chat logic shared with the REST controller
+     */
     public AiGrpcService(RecommendationService recommendationService, ChatAssistantService chatAssistantService) {
         this.recommendationService = recommendationService;
         this.chatAssistantService = chatAssistantService;
     }
 
+    /**
+     * Handles the {@code GetRecommendations} RPC: validates the request's
+     * user id, delegates to {@link RecommendationService}, and translates
+     * the result into the gRPC response message.
+     *
+     * @param request          the recommendation request, with {@code user_id} as a string UUID
+     * @param responseObserver receives either the ranked recommendations or an
+     *                         {@code INVALID_ARGUMENT} error if {@code user_id} isn't a valid UUID
+     */
     @Override
     public void getRecommendations(
         RecommendationRequest request,
@@ -61,6 +74,16 @@ public class AiGrpcService extends AIServiceGrpc.AIServiceImplBase {
         responseObserver.onCompleted();
     }
 
+    /**
+     * Handles the {@code ChatWithAssistant} RPC: validates the request's user
+     * and (optional) conversation ids, delegates to {@link ChatAssistantService},
+     * and translates the result into the gRPC response message.
+     *
+     * @param request          the chat request, with {@code user_id} and optional
+     *                         {@code conversation_id} as string UUIDs
+     * @param responseObserver receives either the assistant's reply or an
+     *                         {@code INVALID_ARGUMENT} error if either id isn't a valid UUID
+     */
     @Override
     public void chatWithAssistant(ChatRequest request, StreamObserver<ChatResponse> responseObserver) {
         UUID userId;

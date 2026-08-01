@@ -11,13 +11,9 @@ import java.util.List;
 
 /**
  * Fetches recommendation candidates from movie-service's own persisted
- * catalog (via Eureka/{@code lb://}), never from TMDB directly — the point
- * of #36's acceptance criterion "recommendations are computed from
- * Filmpire's own catalog, not proxied from TMDB". movie-service's
- * {@code /api/v1/movies} controller already serves purely from its own
- * MongoDB/Redis-backed store (falling back to TMDB itself only on a cache
- * miss, per ADR-011) — this client is one hop further removed from TMDB
- * than that.
+ * catalog (via Eureka/{@code lb://}), never from TMDB directly. Calls
+ * movie-service's {@code /api/v1/movies/popular} endpoint, which itself
+ * serves from its own MongoDB/Redis-backed store.
  */
 @Component
 @Slf4j

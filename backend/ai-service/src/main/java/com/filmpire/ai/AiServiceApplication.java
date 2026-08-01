@@ -4,13 +4,20 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 /**
- * AI Service Application.
- * Provides AI-powered features: voice recognition, recommendations, and intelligent search.
- * Eureka client is auto-configured when eureka-client dependency is present.
+ * Spring Boot entry point for ai-service, which serves movie recommendations,
+ * a conversational chat assistant, and semantic search over user taste
+ * profiles, exposed over both REST ({@link com.filmpire.ai.controller.AiController})
+ * and gRPC ({@link com.filmpire.ai.grpc.AiGrpcService}). Eureka client
+ * registration is auto-configured when the eureka-client dependency is present.
  */
 @SpringBootApplication
 public class AiServiceApplication {
 
+    /**
+     * Boots the Spring application context.
+     *
+     * @param args standard Java command-line arguments, passed through to Spring Boot
+     */
     public static void main(String[] args) {
         SpringApplication.run(AiServiceApplication.class, args);
     }

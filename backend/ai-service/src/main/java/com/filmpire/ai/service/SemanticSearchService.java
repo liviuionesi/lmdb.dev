@@ -11,9 +11,9 @@ import java.util.UUID;
 
 /**
  * Semantic search over {@link com.filmpire.ai.model.UserTasteProfile}
- * embeddings (#36, ARCHITECTURE.md §3.7): "find users whose taste is
- * closest to this description" — an ANN query against the pgvector index,
- * no separate vector database (ADR-004, ADR-012).
+ * embeddings: "find users whose taste is closest to this description" — an
+ * ANN query run directly against the pgvector index via
+ * {@link UserTasteProfileRepository}, with no separate vector database.
  */
 @Service
 public class SemanticSearchService {
@@ -21,6 +21,10 @@ public class SemanticSearchService {
     private final EmbeddingModel embeddingModel;
     private final UserTasteProfileRepository tasteProfileRepository;
 
+    /**
+     * @param embeddingModel         model used to embed the free-text query
+     * @param tasteProfileRepository source of the ANN nearest-neighbour query
+     */
     public SemanticSearchService(EmbeddingModel embeddingModel, UserTasteProfileRepository tasteProfileRepository) {
         this.embeddingModel = embeddingModel;
         this.tasteProfileRepository = tasteProfileRepository;

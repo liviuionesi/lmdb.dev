@@ -9,7 +9,7 @@ import java.util.UUID;
 /**
  * Persistence for {@link Conversation} aggregates. Messages are never
  * queried independently — they load with their owning conversation via the
- * {@code @OneToMany} mapping (ADR-012's aggregate).
+ * {@code @OneToMany} mapping.
  */
 public interface ConversationRepository extends JpaRepository<Conversation, UUID> {
 
