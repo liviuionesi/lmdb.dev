@@ -1,60 +1,58 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Modal, Typography, Button, ButtonGroup, Grid, Box, CircularProgress, Rating } from '@mui/material';
 import { Movie as MovieIcon, Theaters, Language, PlusOne, Favorite, FavoriteBorderOutlined, Remove, ArrowBack } from '@mui/icons-material';
 import { Link, useParams } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import axios from 'axios';
 
 import { selectGenreOrCategory } from '../../features/currentGenreOrCategory';
 import useStyles from './styles';
-import { useGetMovieQuery, useGetRecommendationsQuery, useGetListQuery } from '../../services/TMDB';
+import { useGetMovieQuery, useGetRecommendationsQuery } from '../../services/TMDB';
+import {
+  useGetFavoritesQuery,
+  useGetWatchlistQuery,
+  useAddFavoriteMutation,
+  useRemoveFavoriteMutation,
+  useAddToWatchlistMutation,
+  useRemoveFromWatchlistMutation,
+} from '../../services/user';
 import genreIcons from '../../assets/genres';
 import { MovieList } from '..';
 import { userSelector } from '../../features/auth';
 
 const MovieInformation = () => {
-  const { user } = useSelector(userSelector);
+  const { isAuthenticated } = useSelector(userSelector);
   const { id } = useParams();
   const classes = useStyles();
   const dispatch = useDispatch();
   const [open, setOpen] = useState(false);
 
   const { data, isFetching, error } = useGetMovieQuery(id);
-  const { data: favoriteMovies } = useGetListQuery({ listName: 'favorite/movies', accountId: user.id, sessionId: localStorage.getItem('session_id'), page: 1 });
-  const { data: watchlistMovies } = useGetListQuery({ listName: 'watchlist/movies', accountId: user.id, sessionId: localStorage.getItem('session_id'), page: 1 });
-  const { data: recommendations, isFetching: isRecommendationsFetching } = useGetRecommendationsQuery({ list: '/recommendations', movie_id: id });
+  const { data: favorites } = useGetFavoritesQuery(undefined, { skip: !isAuthenticated });
+  const { data: watchlist } = useGetWatchlistQuery(undefined, { skip: !isAuthenticated });
+  const { data: recommendations } = useGetRecommendationsQuery({ list: '/recommendations', movie_id: id });
 
-  const [isMovieFavorited, setIsMovieFavorited] = useState(false);
-  const [isMovieWatchlisted, setIsMovieWatchlisted] = useState(false);
+  const [addFavorite] = useAddFavoriteMutation();
+  const [removeFavorite] = useRemoveFavoriteMutation();
+  const [addToWatchlistMutation] = useAddToWatchlistMutation();
+  const [removeFromWatchlist] = useRemoveFromWatchlistMutation();
 
-  useEffect(() => {
-    setIsMovieFavorited(!!favoriteMovies?.results?.find((movie) => movie?.id === data?.id));
-  }, [favoriteMovies, data]);
-
-  useEffect(() => {
-    setIsMovieWatchlisted(!!watchlistMovies?.results?.find((movie) => movie?.id === data?.id));
-  }, [watchlistMovies, data]);
+  const isMovieFavorited = !!favorites?.some((entry) => entry.movieId === Number(id));
+  const isMovieWatchlisted = !!watchlist?.some((entry) => entry.movieId === Number(id));
 
   const addToFavorites = async () => {
-    await axios.post(`https://api.themoviedb.org/3/account/${user.id}/favorite?api_key=${process.env.REACT_APP_TMDB_KEY}&session_id=${localStorage.getItem('session_id')}`, {
-      media_type: 'movie',
-      media_id: id,
-      favorite: !isMovieFavorited,
-    });
-
-    setIsMovieFavorited((prev) => !prev);
+    if (isMovieFavorited) {
+      await removeFavorite(id);
+    } else {
+      await addFavorite(id);
+    }
   };
 
-  console.log({ isMovieWatchlisted });
-
   const addToWatchlist = async () => {
-    await axios.post(`https://api.themoviedb.org/3/account/${user.id}/watchlist?api_key=${process.env.REACT_APP_TMDB_KEY}&session_id=${localStorage.getItem('session_id')}`, {
-      media_type: 'movie',
-      media_id: id,
-      watchlist: !isMovieWatchlisted,
-    });
-
-    setIsMovieWatchlisted((prev) => !prev);
+    if (isMovieWatchlisted) {
+      await removeFromWatchlist(id);
+    } else {
+      await addToWatchlistMutation(id);
+    }
   };
 
   if (isFetching) {

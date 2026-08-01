@@ -5,7 +5,8 @@ import { useHistory } from 'react-router-dom';
 
 import { selectGenreOrCategory, searchMovie } from '../features/currentGenreOrCategory';
 import { ColorModeContext } from '../utils/ToggleColorMode';
-import { fetchToken } from '../utils';
+import { clearUser } from '../features/auth';
+import { clearAuthTokens } from '../utils';
 
 const useAlan = () => {
   const { setMode } = useContext(ColorModeContext);
@@ -33,10 +34,9 @@ const useAlan = () => {
           } else {
             setMode('dark');
           }
-        } else if (command === 'login') {
-          fetchToken();
         } else if (command === 'logout') {
-          localStorage.clear();
+          clearAuthTokens();
+          dispatch(clearUser());
           history.push('/');
         } else if (command === 'search') {
           dispatch(searchMovie(query));
