@@ -1,7 +1,7 @@
 # Filmpire Microservices - Enterprise Software Architecture Document
 
-**Version:** 1.7.2  
-**Date:** August 1, 2026 (#36: ai-service implemented — Spring AI 2.0.0 + Ollama, PostgreSQL/pgvector per ADR-012, REST + gRPC — §3.7 updated)  
+**Version:** 1.7.3  
+**Date:** August 1, 2026 (#36: ai-service implemented — Spring AI 2.0.0 + Ollama, PostgreSQL/pgvector per ADR-012, REST + gRPC — §3.7 updated; dependency versions synchronized with codebase)  
 **Author:** Liviu Ionesi  
 **Purpose:** Portfolio project demonstrating enterprise-grade full-stack development for a movie platform
 
@@ -59,25 +59,29 @@ the existing Filmpire React app is the only frontend.
 |------------|---------|---------------------|---------|
 | Java | 25 | SDKMAN | Programming language |
 | Spring Boot | 4.1.0 | Gradle | Framework (Framework 7, Jackson 3, Jakarta EE 11 — see ADR-009) |
-| Gradle | 9.2.0 | SDKMAN | Build tool |
+| Gradle | 9.6.1 | Wrapper / SDKMAN | Build tool |
 | Spring Cloud | 2025.1.2 | Gradle | Microservices infrastructure |
-| Spring AI | 1.0.0-SNAPSHOT | Gradle | AI/ML integration (not yet enabled — see §3.7) |
-| PostgreSQL | 17-alpine | Docker/Podman | Relational database |
+| Spring AI | 2.0.0 | Gradle | AI/ML integration (implemented in ai-service — see §3.7) |
+| PostgreSQL | 17 (pgvector) | Docker/Podman | Relational database (`pgvector/pgvector:pg17` for ai-service embeddings per ADR-012) |
 | MongoDB | 8.0 | Docker/Podman | Document database |
 | Redis | 7.4-alpine | Docker/Podman | Caching layer |
 | gRPC | 1.76.0 | Gradle | Service communication |
 | JWT (jjwt) | 0.13.0 | Gradle | Authentication |
-| MapStruct | 1.6.3 | Gradle | DTO mapping (available on the classpath; not yet adopted by any service — hand-written mapping so far) |
+| MapStruct | 1.6.3 | Gradle | DTO mapping (available on the classpath; hand-written DTO mapping so far) |
 | Lombok | 1.18.46 | Gradle | Boilerplate reduction |
 | MinIO | 8.5.7 | Gradle | Object storage client |
+| Logstash Logback Encoder | 8.1 | Gradle | JSON structured logging for ELK pipeline (#23) |
+| Protobuf Plugin | 0.9.6 | Gradle | gRPC code generation plugin for Gradle (#36) |
+| Protoc | 4.29.3 | Gradle | Protocol Buffer compiler (#36) |
 | JUnit | 5.11.3 | Gradle | Testing framework |
 | Mockito | 5.19.0 | Gradle | Mocking framework |
 | TestContainers | 2.0.5 | Gradle | Integration testing (Postgres/Redis stable; MongoDB saw transient flakiness under podman — see ADR-009) |
 | WireMock | 3.9.1 | Gradle | Fake-TMDB HTTP stubbing in tests |
-| Bucket4j | 8.10.1 | Gradle | Gateway rate limiting (`bucket4j-core`, not the deprecated Spring starter — see §11) |
+| Bucket4j | 8.10.1 | Gradle | Gateway rate limiting (`bucket4j-core`, not deprecated starter — see §11) |
 | Springdoc OpenAPI | 3.0.3 | Gradle | API documentation |
 | JaCoCo | 0.8.14 | Gradle | Code coverage |
 | OpenRewrite | 7.37.0 | Gradle | Standing framework-migration tool (see ADR-009) |
+| SonarQube Plugin | 6.2.0.5505 | Gradle | Static code analysis Gradle plugin (#20) |
 
 ### 1.2 Frontend — Existing Filmpire React App (consumer, built elsewhere, merged in-repo)
 
@@ -94,11 +98,13 @@ backend without frontend logic changes beyond configuration — see
 
 | Technology | Version | Notes |
 |------------|---------|-------|
-| React (CRA) | 17.x | `react-scripts` 5 |
-| Redux Toolkit Query | 1.6.x | All TMDB calls in `src/services/TMDB.js` |
-| axios | 1.6.x | Auth calls in `src/utils/index.js` |
-| Material UI | 5.x | |
-| Alan AI SDK | 1.8.x | Voice control (calls TMDB via the same services) |
+| React (CRA) | 17.0.2 | `react-scripts` 5.0.1 |
+| Redux Toolkit | 1.6.2 | `@reduxjs/toolkit` 1.6.2 (`react-redux` 7.2.5) — TMDB calls in `src/services/TMDB.js` |
+| axios | 1.6.8 | Auth calls in `src/utils/index.js` |
+| Material UI | 5.15.18 | `@mui/material` & `@mui/styles` 5.15.18, `@mui/icons-material` 5.0.3 |
+| Emotion | 11.4.1 / 11.3.0 | `@emotion/react` 11.4.1, `@emotion/styled` 11.3.0 |
+| Alan AI SDK | 1.8.28 | `@alan-ai/alan-sdk-web` 1.8.28 — Voice control (calls TMDB via same services) |
+| React Router DOM | 5.3.0 | Client-side routing |
 | TMDB API contract | v3 | Base URL `https://api.themoviedb.org/3` → becomes this backend's gateway via `REACT_APP_API_URL` |
 
 > A dedicated Next.js web app and React Native mobile apps were part of
@@ -117,7 +123,9 @@ backend without frontend logic changes beyond configuration — see
 | kubectl | 1.31.x | Kubernetes CLI |
 | k9s | Latest | Kubernetes TUI |
 | GitHub Actions | Latest | CI/CD |
-| SonarQube | Latest | Code quality |
+| SonarQube | Community (Plugin 6.2.0.5505) | Static code analysis (#20) |
+| ELK Stack | 8.15.3 | Elasticsearch, Logstash, Kibana, Filebeat (#24) |
+| Ollama | Latest | Local LLM model runner backing ai-service (#36) |
 
 ---
 
@@ -1272,7 +1280,7 @@ sdk install java 25-open
 sdk default java 25-open
 java -version
 
-# Gradle is managed via wrapper (gradle-9.2.0)
+# Gradle is managed via wrapper (gradle-9.6.1)
 # No need to install separately
 gradle -version
 
@@ -1510,15 +1518,19 @@ single source of truth; if it drifts from here, trust the file)
 javaVersion=25
 projectVersion=1.0.0-SNAPSHOT
 
-# Spring Boot
+# Spring Boot  
 springBootVersion=4.1.0
 springDependencyManagementVersion=1.1.7
 
 # Spring Cloud
 springCloudVersion=2025.1.2
 
-# Spring AI
-springAiVersion=1.0.0-SNAPSHOT
+# Spring AI (2.x tracks Spring Boot 4.x; ai-service is the only consumer — #36)
+springAiVersion=2.0.0
+
+# gRPC codegen (ai-service.proto — #36)
+protobufPluginVersion=0.9.6
+protocVersion=4.29.3
 
 # Dependencies
 lombokVersion=1.18.46
@@ -1527,6 +1539,7 @@ jjwtVersion=0.13.0
 grpcVersion=1.76.0
 springdocVersion=3.0.3
 minioVersion=8.5.7
+logstashEncoderVersion=8.1
 
 # Testing
 junitVersion=5.11.3
@@ -1540,15 +1553,16 @@ redisTestcontainersVersion=2.2.2
 # Build tooling
 openRewriteVersion=7.37.0
 rewriteRecipeBomVersion=3.35.0
+sonarqubePluginVersion=6.2.0.5505
 ```
 
-**Frontend: consumer app, own dependency set.** The Filmpire frontend now
-lives at `frontend/filmpire/` in this repo (CRA + Redux Toolkit Query, not
-the Next.js stack this section originally sketched) — merged in as a
-monorepo 2026-07-30, see §1.2. Its `package.json`/`package-lock.json` are
-its own lock files, independent of `gradle.properties` above; there was
-never a `frontend/web-nextjs` or `frontend/mobile-react-native` directory
-to have dependencies in the first place (see §1.2's note).
+**Frontend: consumer app, own dependency set.** The Filmpire frontend lives at
+`frontend/filmpire/` in this repo (CRA + Redux Toolkit Query, see §1.2). Its `package.json`/`package-lock.json`
+are its own lock files. 
+
+Automated checking and refactoring tools integrated in `frontend/filmpire/package.json`:
+- **Dependency Version Checker (`ncu`)**: `npm run deps:check` (inspects available package updates) and `npm run deps:update` (upgrades package versions).
+- **Automated JS/React Refactoring (`Codemod`)**: Installed via `@codemod/cli`. Run `npm run codemod` (interactive AST transformations), `npm run codemod:react18` (React 18 migration recipes), or `npm run codemod:mui` (Material UI codemods). Serves as the frontend equivalent to OpenRewrite.
 
 ### 8.2 Upgrade Strategy
 
@@ -2714,7 +2728,7 @@ public class TmdbClient {
 
 ---
 
-**Document Version:** 1.6.1  
-**Last Updated:** July 29, 2026  
-**Status:** Living Document — Discovery/Config/Gateway/Movie/Actor/User services implemented and running on Spring Boot 4.1; AI/Media services still stubs (see §2.3 ADRs and per-service sections for current status)
+**Document Version:** 1.7.3  
+**Last Updated:** August 1, 2026  
+**Status:** Living Document — Discovery/Config/Gateway/Movie/Actor/User/AI services implemented and running on Spring Boot 4.1; Media service remaining stub (see §2.3 ADRs and per-service sections for current status)
 
