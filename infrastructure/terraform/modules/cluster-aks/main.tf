@@ -12,6 +12,15 @@ resource "azurerm_kubernetes_cluster" "this" {
     vm_size                = var.vm_size
     vnet_subnet_id         = var.subnet_id
     node_public_ip_enabled = var.enable_node_public_ip
+
+    # AKS silently applies this default server-side even when omitted here,
+    # which without an explicit block causes perpetual drift on every plan
+    # (Terraform sees state -> null, AKS reports null -> populated) --
+    # found live on #26's second apply. Declaring it explicitly, matching
+    # AKS's own default, makes plans stable again.
+    upgrade_settings {
+      max_surge = "10%"
+    }
   }
 
   identity {
@@ -39,6 +48,43 @@ resource "azurerm_kubernetes_cluster" "this" {
   # replaced modules/registry with modules/budget-guard for this reason).
 
   tags = var.tags
+}
+
+# AKS auto-creates a SECOND network security group on the node VMSS's own
+# NIC (name pattern "aks-agentpool-<hash>-nsg", inside node_resource_group)
+# whenever enable_node_public_ip is true — separate from and in ADDITION
+# to modules/network's subnet-level NSG, starting with zero rules (deny
+# all inbound from the internet by default). Found live on #26's apply:
+# the subnet NSG's allow-gateway-nodeport rule alone was not enough —
+# traffic was silently dropped at this second, AKS-managed layer, and
+# `kubectl get pods` showing everything Ready gave no hint why the
+# gateway was unreachable from outside the cluster. Both NSGs must allow
+# the NodePort; this data source finds the auto-created one so we can
+# open it too, entirely via Terraform, no manual `az network nsg rule
+# create` step required after apply.
+data "azurerm_resources" "node_nsg" {
+  # resource_group_name already references azurerm_kubernetes_cluster.this,
+  # which is enough for Terraform's dependency graph — an explicit
+  # depends_on here made this data source (and everything reading it)
+  # look "known after apply" on every plan that touches the cluster
+  # resource at all, even for unrelated drift, which forced a spurious
+  # destroy+recreate of the security rule below on every apply.
+  resource_group_name = azurerm_kubernetes_cluster.this.node_resource_group
+  type                 = "Microsoft.Network/networkSecurityGroups"
+}
+
+resource "azurerm_network_security_rule" "allow_gateway_nodeport_on_node_nsg" {
+  name                        = "allow-gateway-nodeport"
+  priority                    = 100
+  direction                   = "Inbound"
+  access                      = "Allow"
+  protocol                    = "Tcp"
+  source_port_range           = "*"
+  destination_port_range      = var.demo_inbound_port
+  source_address_prefix       = "Internet"
+  destination_address_prefix  = "*"
+  resource_group_name         = azurerm_kubernetes_cluster.this.node_resource_group
+  network_security_group_name = data.azurerm_resources.node_nsg.resources[0].name
 }
 
 # Deliberately NOT trying to output the node's public IP via Terraform.

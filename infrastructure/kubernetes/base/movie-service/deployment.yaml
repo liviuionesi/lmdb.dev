@@ -53,11 +53,22 @@ spec:
                 secretKeyRef:
                   name: filmpire-secrets
                   key: TMDB_API_KEY
+          # Same issue as api-gateway's identical fix: a fixed-delay
+          # liveness probe killed this container mid-boot under a free-tier
+          # node's CPU limit (found live on #26's Azure apply, same root
+          # cause already documented on AWS's #27). startupProbe absorbs
+          # first-boot variance; liveness/readiness only start counting
+          # once it succeeds.
+          startupProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8081
+            periodSeconds: 5
+            failureThreshold: 24
           readinessProbe:
             httpGet:
               path: /actuator/health/readiness
               port: 8081
-            initialDelaySeconds: 30
             periodSeconds: 10
             timeoutSeconds: 3
             failureThreshold: 3
@@ -65,7 +76,6 @@ spec:
             httpGet:
               path: /actuator/health/liveness
               port: 8081
-            initialDelaySeconds: 50
             periodSeconds: 15
             timeoutSeconds: 3
             failureThreshold: 3

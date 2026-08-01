@@ -30,5 +30,6 @@ module "cluster_aks" {
   vm_size               = var.vm_size
   node_count            = var.node_count
   enable_node_public_ip = var.enable_node_public_ip
+  demo_inbound_port     = var.demo_inbound_port
   tags                  = var.tags
 }
