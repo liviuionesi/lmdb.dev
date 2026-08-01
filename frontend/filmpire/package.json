@@ -26,6 +26,7 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
+    "lint": "NODE_ENV=development eslint src --ext .js,.jsx",
     "deps:check": "ncu",
     "deps:update": "ncu -u && npm install",
     "codemod": "codemod",
@@ -36,7 +37,13 @@
     "extends": [
       "react-app",
       "react-app/jest"
-    ]
+    ],
+    "parserOptions": {
+      "requireConfigFile": false,
+      "babelOptions": {
+        "presets": ["babel-preset-react-app"]
+      }
+    }
   },
   "browserslist": {
     "production": [

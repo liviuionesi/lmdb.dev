@@ -344,14 +344,22 @@ public class Movie {
 }
 ```
 
-**TMDB Endpoints Replicated:**
-- `GET /api/v1/movies/popular` - Popular movies
-- `GET /api/v1/movies/top-rated` - Top rated movies
-- `GET /api/v1/movies/upcoming` - Upcoming movies
-- `GET /api/v1/movies/search?query={query}` - Search movies
-- `GET /api/v1/movies/{id}` - Get movie details
-- `GET /api/v1/movies/discover?genre={id}` - Discover by genre
-- `GET /api/v1/genres` - Get all genres
+**TMDB v3 Facade Endpoints Replicated (drop-in frontend compatibility — see §5.1):**
+- `GET /genre/movie/list` - Get movie genres
+- `GET /movie/popular` - Popular movies
+- `GET /movie/top_rated` - Top rated movies
+- `GET /movie/upcoming` - Upcoming movies
+- `GET /movie/now_playing` - Now playing movies
+- `GET /movie/{id}?append_to_response=videos,credits` - Movie details with append parameters
+- `GET /movie/{id}/recommendations` - Recommended movies
+- `GET /movie/{id}/similar` - Similar movies
+- `GET /discover/movie?with_genres={id}` - Discover movies by genre or cast
+- `GET /search/movie?query={query}` - Search movies
+
+**Native Internal Microservice Endpoints (`/api/v1/movies/...`):**
+- `GET /api/v1/movies/{id}` - Get movie DTO
+- `GET /api/v1/movies/search?query={query}` - Native search
+- `GET /api/v1/genres` - Native genres DTO
 
 **Service Layer (Constructor Injection - NO Field Injection):**
 ```java

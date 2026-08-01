@@ -8,7 +8,7 @@ const ToggleColorMode = ({ children }) => {
     // Check if user has a saved preference
     const savedMode = localStorage.getItem('themeMode');
     if (savedMode) return savedMode;
-    
+
     // Check system preference
     if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
       return 'dark';
