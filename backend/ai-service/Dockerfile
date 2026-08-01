@@ -1,6 +1,11 @@
 # Multi-stage Dockerfile for AI Service
 # Stage 1: Build
-FROM docker.io/library/eclipse-temurin:25-jdk-alpine AS build
+# Not -alpine here (unlike the other services): protoc-gen-grpc-java ships a
+# precompiled native binary linked against glibc, which Alpine's musl libc
+# can't run — generateProto fails with "Plugin failed with status code 1".
+# The runtime stage below stays on -jre-alpine; only the build stage that
+# actually invokes protoc needs glibc.
+FROM docker.io/library/eclipse-temurin:25-jdk AS build
 
 WORKDIR /app
 
