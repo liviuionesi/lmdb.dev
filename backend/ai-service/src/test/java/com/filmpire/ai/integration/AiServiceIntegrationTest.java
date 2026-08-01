@@ -103,7 +103,8 @@ class AiServiceIntegrationTest {
      */
     @BeforeEach
     void cleanSlate() {
-        reset(chatModel, embeddingModel);
+        reset(chatModel);
+        reset(embeddingModel);
         // ChatClient's internals call chatModel.getOptions().mutate() unconditionally
         // (DefaultChatClientUtils) — an unstubbed mock returns null there and NPEs
         // before the prompt is ever built, regardless of what call() is stubbed to do.

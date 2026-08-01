@@ -106,7 +106,17 @@ subprojects {
 
     tasks.withType(Test) {
         useJUnitPlatform()
-        
+
+        // Explicit: a Gradle 9.6.1 upgrade silently stopped emitting these by
+        // default, which broke both local diagnosis (build/test-results/test/
+        // was binary-only, no XML/HTML) and backend-ci.yml's artifact upload
+        // step (`backend/*/build/test-results/test/**/*.xml`), which would
+        // have started uploading nothing without anyone noticing.
+        reports {
+            junitXml.required = true
+            html.required = true
+        }
+
         // Clean, readable test output
         testLogging {
             // Only show failures and skipped tests by default (less noise)
