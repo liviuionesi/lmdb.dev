@@ -6,17 +6,18 @@ variable "instance_name" {
 
 variable "instance_type" {
   description = <<-EOT
-    EC2 instance type for the single k3s node. t3.micro is the AWS
-    free-tier-eligible size for the first 12 months (750 h/month,
-    ARCHITECTURE.md §11.1). Unlike AKS's system-pool minimum (see
-    modules/cluster-aks — 2 vCPU/4GB hard floor enforced by the platform),
-    there's no equivalent platform-enforced floor here: k3s runs as a
-    normal process on a normal instance, so t3.micro's 1 vCPU/1GB is tight
-    but workable specifically because it's k3s (single binary) and not a
-    full kubeadm control plane sharing the node.
+    EC2 instance type for the single k3s node. t3.micro (1 vCPU/1GB,
+    AWS's free-tier-eligible size, ARCHITECTURE.md §11.1) was the original
+    target, but a live apply (#27, 2026-08-01) found it OOM-thrashes under
+    this app's real footprint — not a tight-but-workable squeeze, a
+    genuine crash-inducing shortage (see infrastructure/terraform/README.md's
+    "Lessons from the first live run"). t3.medium is blocked outright on
+    this account (FreeTierRestrictionError). t3.small (2 vCPU/2GB) is the
+    smallest size that actually stays up — a small-but-real hourly cost,
+    not free-tier; the budget-guard tripwire is the actual cost control.
   EOT
   type        = string
-  default     = "t3.micro"
+  default     = "t3.small"
 }
 
 variable "root_volume_size" {

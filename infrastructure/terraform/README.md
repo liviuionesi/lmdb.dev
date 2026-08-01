@@ -20,7 +20,7 @@ infrastructure/terraform/
 │   ├── network/            # Azure: resource group, VNet, subnet, NSG (opens the demo NodePort)
 │   ├── cluster-aks/         # Azure: AKS, Free sku_tier, 1 node, node_public_ip_enabled
 │   ├── budget-guard/        # Azure: zero-spend subscription budget + email alert — applied FIRST
-│   ├── network-aws/         # AWS: VPC, public subnet, security group (opens SSH + the demo NodePort)
+│   ├── network-aws/         # AWS: VPC, public subnet, security group (opens SSH + k3s API + the demo NodePort)
 │   ├── cluster-k3s/         # AWS: EC2 t3.micro + k3s bootstrap (user_data)
 │   └── budget-guard-aws/    # AWS: zero-spend Budgets alert — applied FIRST
 ├── azure/                   # composition: budget-guard → network → cluster-aks
@@ -325,28 +325,35 @@ properly). `redis` came up healthy with no issues.
 
 ## AWS (k3s on EC2)
 
-Single `t3.micro` running [k3s](https://k3s.io/) (Traefik disabled, gateway
+**Live-tested 2026-08-01:** a full `apply` → `kubectl apply -k` → verify
+round-trip was actually run against a real AWS account. It surfaced ten
+real bugs static `validate`/`plan` couldn't catch — see "Lessons from the
+first live run" below before assuming anything in this section is exactly
+right. `terraform destroy` has **not** been run against this apply yet
+(left running deliberately for further inspection); the destroy leg of
+issue #27's acceptance criteria remains unverified.
+
+Single EC2 instance running [k3s](https://k3s.io/) (Traefik disabled, gateway
 reached directly on the node's public IP via NodePort — same reasoning as
 Azure's NSG rule). No EKS: its managed control plane is not part of the
 free tier (~$73/month), and k3s's single-binary control plane + kubelet is
-what makes a 1 vCPU/1GB instance viable at all. No ECR: images come from
+what makes a small instance viable at all. No ECR: images come from
 ghcr.io (public), same as Azure — the issue's original `modules/registry`
 (ECR) plan was replaced with `modules/budget-guard-aws` per the issue #27
 scope-update comment, applied first for the same reason Azure's is.
 
-**Untested memory-sizing risk, found by static review, not a live run —
-watch for this specifically on the first apply.** `overlays/aws`'s core
-slice (gateway + movie-service + MongoDB + Redis) sets container memory
-*limits* that sum to 952Mi on a `t3.micro`'s 1024MiB total RAM — after k3s's
-own control-plane + kubelet overhead, that's little to no headroom if
-several containers approach their limit at once, and a plausible OOM-kill
-risk under any real load. Left as-is deliberately rather than guessed-and-
-trimmed now: Azure's actual working node size only emerged from a live
-apply, not from tightening numbers on paper (see "Lessons from the first
-live run" above) — same principle applies here. If the app OOM-kills on
-first boot, this is the first thing to check; `kubectl top pods` and
-`kubectl describe node` will show which container is actually the pressure
-point before you guess at new numbers.
+**This is no longer free-tier — read before assuming $0.** `t3.micro`
+(1 vCPU/1GB), the size issue #27 was literally titled for, OOM-thrashed
+repeatedly under this app's real footprint (load average 15+ on 2 vCPUs,
+<70MiB free with no swap) — not a tight-but-survivable squeeze, a genuine
+crash-inducing shortage. `t3.medium` (2 vCPU/4GB) is flatly rejected by
+this account (`FreeTierRestrictionError: This operation is not available
+for free plan accounts`), mirroring Azure's blocked-B-series discovery —
+another live-only, subscription-specific wall. `t3.small` (2 vCPU/2GB) is
+the smallest size that actually stays up; `aws/variables.tf`'s default now
+reflects that. It is a small-but-real hourly cost, not free-tier — the
+budget-guard tripwire, not any size's label, is what actually keeps this
+at $0-equivalent (see Cost notes below).
 
 ### 1. Bootstrap remote state (one-time)
 
@@ -475,13 +482,27 @@ PUBLIC_IP=$(terraform output -raw public_ip)
 # k3s finishes installing shortly after boot; retry if this 404s/connection-refuses.
 ssh -o StrictHostKeyChecking=accept-new "$(terraform output -raw ssh_user)@$PUBLIC_IP" \
   sudo cat /etc/rancher/k3s/k3s.yaml > kubeconfig-aws.yaml
-export KUBECONFIG=$PWD/kubeconfig-aws.yaml
 
-# --node-external-ip/--tls-san in user_data already made k3s write this
-# kubeconfig with the public IP as the server address, so no sed-rewrite
-# of `server: https://127.0.0.1:6443` is needed here (contrast the AKS
-# node-IP output problem — this is the case where the straightforward
-# approach actually works).
+# --node-external-ip/--tls-san only affect the node's own advertised
+# address and cert SANs — k3s ALWAYS writes this kubeconfig's `server:`
+# field as https://127.0.0.1:6443 regardless. Found live: the rewrite
+# below is required, the opposite of what this section used to claim.
+sed -i "s#https://127.0.0.1:6443#https://$PUBLIC_IP:6443#" kubeconfig-aws.yaml
+
+# The cert's SAN list is baked in at first boot from that same PUBLIC_IP,
+# so it's valid for THIS apply — but if the instance ever stops/starts
+# without an Elastic IP, the public IP changes and invalidates it (see
+# "Lessons from the first live run" below). insecure-skip-tls-verify
+# sidesteps that; SSH access already establishes trust in the box.
+python3 -c "
+import re
+with open('kubeconfig-aws.yaml') as f:
+    content = f.read()
+content = re.sub(r'    certificate-authority-data: .*\n', '    insecure-skip-tls-verify: true\n', content)
+with open('kubeconfig-aws.yaml', 'w') as f:
+    f.write(content)
+"
+export KUBECONFIG=$PWD/kubeconfig-aws.yaml
 
 kubectl apply -k ../../kubernetes/overlays/aws
 kubectl get pods -w   # wait for Running/Ready
@@ -509,11 +530,11 @@ unattended.
 
 ### Cost notes (be honest with yourself here)
 
-- The instance: `t3.micro` is free-tier eligible for 750h/month for the
-  account's first 12 months — no platform-enforced minimum blocked this
-  the way AKS's did (see the Azure section above), since k3s just runs as
-  a process on a normal instance rather than needing a managed control
-  plane's resource floor.
+- The instance: **not free-tier** — see the callout above. `t3.micro`
+  (the free-tier-eligible size) can't actually run this app's core slice
+  without OOM-thrashing; `t3.small` (the smallest size that works) is a
+  small-but-real hourly cost. `t3.medium` isn't even an option — blocked
+  outright on this account.
 - The root volume: 30GB `gp3` — the al2023 AMI's root snapshot won't boot on
   anything smaller (found on the first live apply, not in AMI docs), which
   happens to be exactly the full 30GB/month free EBS allowance, not under
@@ -531,21 +552,108 @@ unattended.
 - No ELB/NAT gateway: same reasoning as Azure's Standard LB avoidance — both
   bill hourly regardless of traffic, disproportionate to a demo.
 
+### Lessons from the first live run (2026-08-01)
+
+Static `validate`/`plan` couldn't catch any of these — all ten only
+surfaced on a real `apply` against a real AWS account:
+
+1. **AWS SG description field rejects apostrophes.** A route/ingress
+   `description` containing `"node's"` failed `terraform plan` outright —
+   AWS's validation regex for that field excludes `'`.
+2. **The al2023 AMI's root snapshot has its own minimum size**, independent
+   of any free-tier allowance: `RunInstances` rejected a 20GB root volume
+   with `InvalidBlockDeviceMapping: Volume of size 20GB is smaller than
+   snapshot`. 30GB is the floor for this AMI — see Cost notes.
+3. **The security group never opened 6443**, so the fetched kubeconfig
+   couldn't reach the k3s API server from outside the cluster at all —
+   only SSH and the app NodePort were open. Fixed by scoping a 6443 rule
+   to the same CIDR as SSH.
+4. **k3s always writes its kubeconfig's `server:` as `127.0.0.1`**,
+   regardless of `--node-external-ip`/`--tls-san` — those only affect the
+   node's own advertised address and the cert's SAN list, not the
+   generated kubeconfig. A local `sed` rewrite is required; see "Deploy
+   the app and verify" above (this directly contradicted what that
+   section used to claim).
+5. **No Elastic IP means the k3s server TLS cert breaks on every
+   stop/start.** The cert's SAN is fixed at first boot to whatever public
+   IP existed then; a later IP change (stop/start, or a `terraform apply`
+   that replaces the instance) invalidates it for `kubectl`.
+   `insecure-skip-tls-verify: true` in the local kubeconfig sidesteps
+   this — acceptable given SSH access already established trust in the
+   box for a short-lived demo, not something to do for anything longer-
+   lived.
+6. **`user_data` only runs on first boot, not on restart** — k3s's
+   systemd unit hardcodes whatever public IP existed at first boot into
+   `--node-external-ip`/`--tls-san`. After a `stop`/`start` cycle (e.g.
+   resizing the instance), that stale IP breaks the `kubernetes` Service's
+   own registered API-server endpoint, which cascades into **cluster-wide
+   DNS failure** (CoreDNS can't sync with a dead endpoint, so no Service
+   name resolves) — a much less obvious symptom than the TLS cert issue
+   above, from the same root cause. Fix was a direct `sed` on the node's
+   `/etc/systemd/system/k3s.service` plus `systemctl restart k3s`; there
+   is no code fix for this yet (see "Still open" below).
+7. **`mongosh`-based liveness/readiness probes reliably exceed their
+   timeout under any real CPU limit**, crash-looping an otherwise-healthy
+   `mongod` — `mongosh` spins up a full Node.js process per probe.
+   Switched to `tcpSocket` probes.
+8. **MongoDB's own first-boot `MONGO_INITDB_ROOT_*` user creation runs
+   inside a temporary, localhost-only `mongod`** — a fixed-delay liveness
+   probe (even after fix 7) killed it mid-init before `createUser`
+   committed, and on restart `mongod` found partial WiredTiger files and
+   skipped init entirely, leaving auth enabled with **zero users** — a
+   silent failure that only surfaced as an opaque "Authentication failed"
+   from client services, not from MongoDB's own probes (which only check
+   the port, not auth). A `startupProbe` fixes the symptom.
+9. **The actual root cause of both 7 and 8: 300m CPU was too tight for
+   MongoDB even in steady state**, not just during init — simple
+   `listIndexes` queries took 2800ms+ under contention. Raised to 800m;
+   first boot dropped from 5+ minutes (with a crash-restart) to a clean
+   21 seconds. The `startupProbe` from fix 8 is now a safety margin, not
+   the load-bearing fix.
+10. **`secrets.env` had never actually been filled in** — every value was
+    still the literal `CHANGE_ME` placeholder, and `TMDB_API_KEY` was
+    empty. `JWT_SECRET` being 9 characters (72 bits, `HMAC` requires
+    ≥256) crashed api-gateway's boot outright with a clear
+    `WeakKeyException`; the empty `TMDB_API_KEY` crashed it more subtly —
+    Spring Cloud Gateway's `AddRequestParameter=api_key,${tmdb.api.key}`
+    filter rejects a null/empty bind at boot. Real values now populate
+    both `overlays/aws/secrets.env` and `overlays/azure/secrets.env`
+    (both gitignored, never committed) — reuse
+    `infrastructure/docker/.env`'s `TMDB_API_KEY` as the source of truth
+    for a working key.
+
+Also found live and fixed at the manifest level (not AWS-specific — same
+risk applies to Azure): Deployments defaulted to surge-first
+`RollingUpdate`, briefly running an old and new pod together on every
+secret rotation. On a resource-constrained demo node that was enough to
+OOM-thrash the whole node, not just the one Deployment. `maxSurge: 0`
+trades a brief unavailability window for never doubling JVM memory
+demand.
+
 ### What this doesn't cover yet
 
-- Not live-tested against a real AWS account yet — this section, unlike
-  the Azure one, is written from the AWS provider/API docs and k3s's own
-  install docs, not from an actual `apply` → `kubectl apply -k` →
-  `destroy` round-trip. Static `validate` passed, but the Azure section
-  above is a reminder that live API/quota/region behavior routinely
-  surfaces things `validate`/`plan` can't catch (AKS's SKU floor, blocked
-  VM families, the wrong-IP data source). Re-verify every assumption here
-  (instance type availability in your account/region, IMDSv2 behavior,
-  whether the free-tier credits model has changed again) against a real
-  apply before trusting it fully.
+- **`terraform destroy` has not been run against this live apply.** The
+  apply → deploy → verify leg is proven; the destroy leg of issue #27's
+  acceptance criteria ("apply/destroy round-trip with zero manual console
+  steps") remains unverified. Run it in the same session as any future
+  demo, per the Tear down section above.
+- **Fix 6 (stale IP after restart breaking cluster DNS) has no code fix
+  yet** — only a manual live-node hotfix was applied. A durable fix would
+  mean not hardcoding the public IP into k3s's own advertise-address at
+  all (e.g. using the node's private IP for `--advertise-address`
+  specifically, distinct from `--node-external-ip`), or documenting that
+  this composition must never be resized/restarted in place, only
+  destroyed and recreated. Whoever picks this up next should resolve it
+  before treating stop/start as a safe operation on this node.
 - Not wired into `.github/workflows/terraform-plan.yml` — that workflow
   currently only plans the Azure side.
-- `docker-publish.yml` (#28) now publishes `ghcr.io/pehlivanu/filmpire-*:latest`
-  on every green `main` build, so the image side of the Azure blocker is
-  resolved — but this AWS composition still hasn't had a live
-  apply → deploy → destroy round-trip at all, image availability aside.
+- `docker-publish.yml` (#28) publishes `ghcr.io/pehlivanu/filmpire-*:latest`
+  on every green `main` build, but as of this live run Backend CI itself
+  has been failing on every push to `main` (Mongo Testcontainers timing
+  out in the CI environment specifically — passes locally, a separate,
+  unrelated bug), so `docker-publish.yml` has never actually fired. The
+  images used for this run were built and pushed manually, then flipped
+  from GitHub's default-private visibility using a Kubernetes
+  `imagePullSecret` (GitHub's Packages API has no endpoint to change
+  visibility programmatically — that step needs the web UI once Backend
+  CI is fixed for real).
