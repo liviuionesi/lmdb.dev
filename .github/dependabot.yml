@@ -8,7 +8,7 @@ updates:
       day: "monday"
       time: "09:00"
     open-pull-requests-limit: 10
-    target-branch: "develop"
+    target-branch: "main"
     labels:
       - "dependencies"
       - "backend"
@@ -32,19 +32,18 @@ updates:
           - "org.mockito:*"
           - "org.testcontainers:*"
 
-  # Frontend - Next.js Web App
+  # Frontend - Filmpire React App (CRA)
   - package-ecosystem: "npm"
-    directory: "/frontend/web-nextjs"
+    directory: "/frontend/filmpire"
     schedule:
       interval: "weekly"
       day: "monday"
       time: "09:00"
     open-pull-requests-limit: 10
-    target-branch: "develop"
+    target-branch: "main"
     labels:
       - "dependencies"
       - "frontend"
-      - "web"
       - "automated"
     commit-message:
       prefix: "chore(deps)"
@@ -54,43 +53,15 @@ updates:
         patterns:
           - "react"
           - "react-dom"
-          - "next"
+          - "react-scripts"
       mui:
         patterns:
           - "@mui/*"
+          - "@emotion/*"
       dev-dependencies:
         patterns:
-          - "@types/*"
           - "eslint*"
-          - "typescript"
-
-  # Frontend - React Native Mobile App
-  - package-ecosystem: "npm"
-    directory: "/frontend/mobile-react-native"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "09:00"
-    open-pull-requests-limit: 10
-    target-branch: "develop"
-    labels:
-      - "dependencies"
-      - "frontend"
-      - "mobile"
-      - "automated"
-    commit-message:
-      prefix: "chore(deps)"
-      include: "scope"
-    groups:
-      react-native:
-        patterns:
-          - "react-native"
-          - "expo"
-          - "@expo/*"
-      dev-dependencies:
-        patterns:
-          - "@types/*"
-          - "typescript"
+          - "@babel/*"
 
   # GitHub Actions workflows
   - package-ecosystem: "github-actions"
@@ -100,7 +71,7 @@ updates:
       day: "monday"
       time: "09:00"
     open-pull-requests-limit: 5
-    target-branch: "develop"
+    target-branch: "main"
     labels:
       - "dependencies"
       - "github-actions"
@@ -109,17 +80,16 @@ updates:
       prefix: "chore(ci)"
       include: "scope"
 
-  # Docker dependencies (if we add Dockerfiles)
+  # Container Dockerfiles
   - package-ecosystem: "docker"
-    directory: "/backend/discovery-service"
+    directory: "/infrastructure/docker"
     schedule:
       interval: "monthly"
     open-pull-requests-limit: 5
-    target-branch: "develop"
+    target-branch: "main"
     labels:
       - "dependencies"
       - "docker"
       - "automated"
     commit-message:
       prefix: "chore(docker)"
-
