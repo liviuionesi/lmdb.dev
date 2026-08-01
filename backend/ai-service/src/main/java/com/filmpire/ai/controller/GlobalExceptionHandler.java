@@ -2,6 +2,8 @@ package com.filmpire.ai.controller;
 
 import com.filmpire.shared.dto.ApiResponse;
 import com.filmpire.shared.exception.ResourceNotFoundException;
+import com.filmpire.shared.exception.ServiceUnavailableException;
+import com.filmpire.shared.exception.ValidationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -40,6 +42,31 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleTypeMismatch(MethodArgumentTypeMismatchException e) {
         return error(HttpStatus.BAD_REQUEST,
             "Invalid value for '" + e.getName() + "': expected a number");
+    }
+
+    /**
+     * A speech-to-text upload that isn't a readable audio file → 400.
+     *
+     * @param e audio-format validation failure
+     * @return 400 error envelope
+     */
+    @ExceptionHandler(ValidationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleValidation(ValidationException e) {
+        return error(HttpStatus.BAD_REQUEST, e.getMessage());
+    }
+
+    /**
+     * A local, optional dependency isn't ready — the Vosk speech-to-text
+     * model hasn't been downloaded yet, mirroring how an unreachable Ollama
+     * degrades rather than crashing the request thread.
+     *
+     * @param e dependency-not-ready error
+     * @return 503 error envelope
+     */
+    @ExceptionHandler(ServiceUnavailableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleUnavailable(ServiceUnavailableException e) {
+        log.warn("Dependency unavailable: {}", e.getMessage());
+        return error(HttpStatus.SERVICE_UNAVAILABLE, e.getMessage());
     }
 
     /**

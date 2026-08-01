@@ -28,10 +28,19 @@ COPY backend backend
 RUN ./gradlew :backend:ai-service:bootJar --no-daemon -x test
 
 # Stage 2: Runtime
-FROM docker.io/library/eclipse-temurin:25-jre-alpine
+# Also not -alpine (#68): Vosk's speech-to-text native library (JNA/JNI, C++)
+# is a precompiled glibc/libstdc++ binary, same class of problem as the
+# protoc-gen-grpc-java issue above — Alpine's musl libc can't dlopen it
+# ("Error loading shared library libstdc++.so.6"), confirmed live.
+FROM docker.io/library/eclipse-temurin:25-jre
 
-# Create non-root user
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+# wget for the HEALTHCHECK below — unlike -alpine's busybox, this base image
+# doesn't bundle it. libstdc++6 (Vosk's dependency, see above) IS already
+# present, so nothing to add for that. Non-root user in the same layer
+# (Debian-based image — no addgroup/adduser -S flags).
+RUN apt-get update && apt-get install -y --no-install-recommends wget \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --system appgroup && useradd --system --gid appgroup appuser
 
 WORKDIR /app
 
