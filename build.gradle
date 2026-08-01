@@ -10,8 +10,6 @@ plugins {
     // build; it discovers every subproject and each module's JaCoCo XML report.
     // Run:  ./gradlew test jacocoTestReport sonar
     id 'org.sonarqube' version "${sonarqubePluginVersion}"
-    // Dependency updates checker. Run `./gradlew dependencyUpdates` to see available updates.
-    id 'io.github.ben-manes.versions' version "${gradleVersionsPluginVersion}"
 }
 
 allprojects {
