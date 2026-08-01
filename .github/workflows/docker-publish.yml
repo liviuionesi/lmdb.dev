@@ -47,7 +47,7 @@ jobs:
       # multi-module Gradle build needs all modules present to build one
       # service's bootJar.
       - name: Build and push ${{ matrix.service }}
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: backend/${{ matrix.service }}/Dockerfile
