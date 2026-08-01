@@ -93,16 +93,21 @@ patches:
       kind: StatefulSet
       name: mongodb
     patch: |-
+      # 300m was too tight even in steady state, not just during first-boot
+      # init -- same root cause as the AWS overlay's identical bug (#27's
+      # live-run findings): simple queries stall under CPU starvation, and
+      # a slow first-boot createUser can get killed by a probe before it
+      # commits. Standard_D2ls_v7 has 2 full vCPUs; MongoDB gets a real share.
       - op: replace
         path: /spec/template/spec/containers/0/resources
         value:
           requests:
-            cpu: 100m
+            cpu: 250m
             memory: 128Mi
             ephemeral-storage: 128Mi
           limits:
-            cpu: 300m
-            memory: 256Mi
+            cpu: 800m
+            memory: 384Mi
             ephemeral-storage: 256Mi
   - target:
       kind: StatefulSet
