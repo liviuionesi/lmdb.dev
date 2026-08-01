@@ -1,112 +1,69 @@
 # AI Service
 
-AI-powered features including movie recommendations, voice recognition, and chat assistant.
+AI-powered features: catalog-grounded movie recommendations, a chat assistant, and semantic search over user taste profiles (#36, ARCHITECTURE.md §3.7, ADR-012).
 
-**Port:** 8084  
-**Database:** MongoDB  
+**Port:** 8084 (REST), 9084 (gRPC)
+**Database:** PostgreSQL + pgvector (`filmpire_ai`)
 **Protocols:** REST + gRPC
+**Model provider:** Ollama only (local, $0 — ADR-004). No OpenAI/paid API key anywhere in this service.
 
 ## Responsibilities
 
-- Movie recommendations using AI
-- Voice recognition (Whisper API)
-- Chat assistant for movie queries
-- Semantic search with embeddings
-- Conversation history management
+- Movie recommendations computed from Filmpire's own catalog (movie-service), never proxied from TMDB's own recommendation endpoint
+- Chat assistant with persisted conversation history
+- Semantic search: ANN query over user taste embeddings (pgvector `<=>` operator, HNSW index)
+- Voice recognition (Whisper) from the original architecture sketch is **not implemented** — it needs a paid OpenAI API key, which conflicts with the $0 budget, and isn't in #36's checklist
 
-## Technology Stack
+## Why PostgreSQL, not MongoDB
 
-- Spring Boot 3.5.8
-- Spring AI 1.1.0
-- OpenAI API / Ollama
-- Spring Data MongoDB
-- gRPC
-- Eureka Client
+See [ADR-012](../../docs/architecture/adr/012-ai-service-postgresql-pgvector.md). In short: conversation history is user-owned and not re-derivable (unlike the movie/actor catalog), so it needs Flyway + `ddl-auto: validate` the same way user-service protects accounts and favorites — MongoDB's schemaless drift tolerance (ADR-011) would be unsafe here.
 
 ## Running Locally
 
 ```bash
-# Start MongoDB
-docker-compose up -d mongodb
+# Start infra (Postgres must be pgvector/pgvector:pg17 — see docker-compose.yml)
+docker-compose up -d postgres redis ollama
 
-# Set OpenAI API key
-export SPRING_AI_OPENAI_API_KEY="your-api-key"
+# Pull the models this service is configured for (one-time; ~2.3GB total)
+docker exec -it filmpire-ollama ollama pull llama3.2
+docker exec -it filmpire-ollama ollama pull nomic-embed-text
 
-# Run service
 ./gradlew :backend:ai-service:bootRun
 ```
 
 ## Docker
 
 ```bash
-docker build -t filmpire/ai-service:latest .
-docker run -p 8084:8084 -e SPRING_AI_OPENAI_API_KEY="your-key" filmpire/ai-service:latest
+docker build -f backend/ai-service/Dockerfile -t filmpire/ai-service:local .
+docker run -p 8084:8084 -p 9084:9084 filmpire/ai-service:local
 ```
 
-## API Endpoints
+## API
 
-### REST API
+### REST — `/api/v1/ai`
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/api/v1/ai/recommendations` | POST | Get movie recommendations |
-| `/api/v1/ai/transcribe` | POST | Transcribe voice to text |
-| `/api/v1/ai/chat` | POST | Chat with AI assistant |
+| `/recommendations` | POST | Ranked, explained recommendations from Filmpire's catalog |
+| `/chat` | POST | Continue (or start) a conversation with the assistant |
+| `/search/semantic` | GET | Nearest taste-profile neighbours to a free-text query |
 
-### gRPC Service
-- `GetRecommendations`: Get personalized recommendations
-- `TranscribeVoice`: Voice to text transcription
-- `ChatWithAssistant`: Conversational interface
+All three are JWT-gated at the gateway (`SecurityConfig`) — every feature is scoped to a `userId`.
+
+### gRPC — `ai_service.proto`
+- `GetRecommendations` — same logic as the REST endpoint
+- `ChatWithAssistant` — same logic as the REST endpoint
 
 ## Database Schema
 
-```javascript
-// Conversations collection
-{
-  _id: ObjectId,
-  userId: String,
-  type: String, // RECOMMENDATION, CHAT, VOICE
-  messages: Array<{
-    role: String, // user, assistant, system
-    content: String,
-    timestamp: Date,
-    metadata: Object
-  }>,
-  context: Object,
-  createdAt: Date,
-  updatedAt: Date
-}
+Flyway-managed (`src/main/resources/db/migration`), relational — see ADR-012 for why this isn't MongoDB:
 
-// Recommendations collection
-{
-  _id: ObjectId,
-  userId: String,
-  preferredGenres: Array<String>,
-  favoriteMovies: Array<String>,
-  featureWeights: Object,
-  embeddingVector: Array<Number>,
-  lastUpdated: Date
-}
+```sql
+conversations(id, user_id, type, created_at, updated_at)
+messages(id, conversation_id, role, content, timestamp, metadata jsonb)
+user_taste_profiles(user_id, embedding vector(768), feature_weights jsonb, last_updated)
 ```
 
-## AI Models
-
-- **Chat:** GPT-4 (configurable)
-- **Voice:** Whisper API
-- **Embeddings:** text-embedding-ada-002
-
-## Configuration
-
-```yaml
-spring:
-  ai:
-    openai:
-      api-key: ${OPENAI_API_KEY}
-      chat:
-        model: gpt-4
-        temperature: 0.7
-      embedding:
-        model: text-embedding-ada-002
-```
+`user_id` has no foreign key — ADR-002 forbids cross-service joins; user-service owns that identity.
 
 ## Testing
 
@@ -115,8 +72,9 @@ spring:
 ./gradlew :backend:ai-service:jacocoTestReport
 ```
 
+`AiServiceIntegrationTest` runs against a real `pgvector/pgvector:pg17` Testcontainer (proving the Flyway schema and `ddl-auto: validate` actually work) with `ChatModel`/`EmbeddingModel` replaced by Mockito mocks (no Ollama in CI) and movie-service stubbed with WireMock.
+
 ## OpenAPI Documentation
 
 - Swagger UI: http://localhost:8084/swagger-ui.html
 - OpenAPI Spec: http://localhost:8084/v3/api-docs
-

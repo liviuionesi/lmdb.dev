@@ -1,0 +1,46 @@
+package com.filmpire.ai.service;
+
+import com.filmpire.ai.dto.SimilarUserDto;
+import com.filmpire.ai.repository.EmbeddingFormat;
+import com.filmpire.ai.repository.UserTasteProfileRepository;
+import org.springframework.ai.embedding.EmbeddingModel;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.UUID;
+
+/**
+ * Semantic search over {@link com.filmpire.ai.model.UserTasteProfile}
+ * embeddings (#36, ARCHITECTURE.md §3.7): "find users whose taste is
+ * closest to this description" — an ANN query against the pgvector index,
+ * no separate vector database (ADR-004, ADR-012).
+ */
+@Service
+public class SemanticSearchService {
+
+    private final EmbeddingModel embeddingModel;
+    private final UserTasteProfileRepository tasteProfileRepository;
+
+    public SemanticSearchService(EmbeddingModel embeddingModel, UserTasteProfileRepository tasteProfileRepository) {
+        this.embeddingModel = embeddingModel;
+        this.tasteProfileRepository = tasteProfileRepository;
+    }
+
+    /**
+     * Embeds {@code query} and returns the {@code k} nearest taste
+     * profiles, excluding the caller.
+     *
+     * @param query         free-text description of a taste ("gritty sci-fi with practical effects")
+     * @param requestingUserId the caller, excluded from its own results
+     * @param k             how many neighbours to return
+     * @return the nearest users, closest first
+     */
+    public List<SimilarUserDto> findSimilarUsers(String query, UUID requestingUserId, int k) {
+        float[] queryEmbedding = embeddingModel.embed(query);
+        String queryVector = EmbeddingFormat.toPgvectorLiteral(queryEmbedding);
+
+        return tasteProfileRepository.findNearestNeighbours(queryVector, requestingUserId, k).stream()
+            .map(row -> new SimilarUserDto((UUID) row[0], ((Number) row[1]).doubleValue()))
+            .toList();
+    }
+}

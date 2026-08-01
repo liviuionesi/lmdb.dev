@@ -1,6 +1,6 @@
 package com.filmpire.movie;
 
-import org.junit.jupiter.api.AfterAll;
+import com.filmpire.movie.support.AbstractMongoIntegrationTest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -8,29 +8,24 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.mongodb.MongoDBContainer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Smoke tests for MovieServiceApplication bootstrapping.
  * <p>
- * Boots the full Spring context against a real MongoDB 7.0 instance managed by Testcontainers;
- * caching, Eureka registration and Spring Cloud Config are disabled via
- * {@link DynamicPropertySource} so no infrastructure beyond a Docker daemon is required.
+ * Boots the full Spring context against the module's shared MongoDB
+ * Testcontainer ({@link AbstractMongoIntegrationTest}); caching, Eureka
+ * registration and Spring Cloud Config are disabled via
+ * {@link DynamicPropertySource} so no infrastructure beyond a Docker daemon
+ * is required.
  * <p>
  * Maintainer note: the {@link ApplicationContext} is injected through the constructor, which
  * relies on the Jupiter/Spring extension activated by {@code @SpringBootTest}.
  */
 @SpringBootTest
-@Testcontainers
 @DisplayName("MovieServiceApplication Tests")
-class MovieServiceApplicationTest {
-
-    @Container
-    static MongoDBContainer mongoDBContainer = new MongoDBContainer("mongo:7.0");
+class MovieServiceApplicationTest extends AbstractMongoIntegrationTest {
 
     private final ApplicationContext applicationContext;
 
@@ -43,27 +38,16 @@ class MovieServiceApplicationTest {
     }
 
     /**
-     * Points Spring Data at the Testcontainers-managed MongoDB and switches off caching, Eureka
-     * and Cloud Config. Without these overrides the context would try to reach infrastructure
-     * that does not exist in CI, and the smoke test would fail for the wrong reason.
+     * Switches off caching, Eureka and Cloud Config (the Mongo URI itself
+     * comes from {@link AbstractMongoIntegrationTest}). Without these
+     * overrides the context would try to reach infrastructure that does not
+     * exist in CI, and the smoke test would fail for the wrong reason.
      */
     @DynamicPropertySource
     static void setProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.data.mongodb.uri", mongoDBContainer::getReplicaSetUrl);
         registry.add("spring.cache.type", () -> "none");
         registry.add("eureka.client.enabled", () -> "false");
         registry.add("spring.cloud.config.enabled", () -> "false");
-    }
-
-    /**
-     * Stops the MongoDB container once the class is done. The running-state guard makes the
-     * hook safe even when the container failed to start and every test was skipped.
-     */
-    @AfterAll
-    static void cleanup() {
-        if (mongoDBContainer != null && mongoDBContainer.isRunning()) {
-            mongoDBContainer.stop();
-        }
     }
 
     /**
@@ -91,4 +75,3 @@ class MovieServiceApplicationTest {
         assertThat(applicationContext.containsBean("genreController")).isTrue();
     }
 }
-

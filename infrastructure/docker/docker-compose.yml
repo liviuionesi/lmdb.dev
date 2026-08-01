@@ -367,6 +367,71 @@ services:
       start_period: 90s
     restart: unless-stopped
 
+  # Ollama — local model server backing ai-service (#36), $0 per ADR-004: no
+  # OpenAI API key, ever. Models aren't bundled in the image; pull them once
+  # after first start:
+  #   docker exec -it filmpire-ollama ollama pull llama3.2
+  #   docker exec -it filmpire-ollama ollama pull nomic-embed-text
+  ollama:
+    image: docker.io/ollama/ollama:latest
+    container_name: filmpire-ollama
+    ports:
+      - "${OLLAMA_PORT:-11434}:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - filmpire-network
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+
+  ai-service:
+    build:
+      context: ../..
+      dockerfile: backend/ai-service/Dockerfile
+    container_name: filmpire-ai-service
+    ports:
+      - "${AI_SERVICE_PORT:-8084}:8084"
+      - "${AI_SERVICE_GRPC_PORT:-9084}:9084"
+    networks:
+      - filmpire-network
+    environment:
+      SPRING_APPLICATION_NAME: ai-service
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
+      SPRING_CONFIG_IMPORT: optional:configserver:http://config-service:8888
+      POSTGRES_URL: jdbc:postgresql://postgres:5432/filmpire_ai
+      POSTGRES_USERNAME: ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-admin123}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis123}
+      OLLAMA_BASE_URL: http://ollama:11434
+      MOVIE_SERVICE_BASE_URL: lb://movie-service
+    logging:
+      driver: k8s-file
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+      config-service:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8084/actuator/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 90s
+    restart: unless-stopped
+
   # ---------------------------------------------------------------------------
   # SonarQube static analysis (#20). Behind the `sonar` compose profile so the
   # normal stack — and the e2e smoke job — never starts this heavy tool. Bring
@@ -440,6 +505,8 @@ volumes:
   redis_data:
     driver: local
   minio_data:
+    driver: local
+  ollama_data:
     driver: local
   # SonarQube (#20). NOTE: do not reuse volumes across major SonarQube
   # versions — a data dir written by an older image (e.g. the old

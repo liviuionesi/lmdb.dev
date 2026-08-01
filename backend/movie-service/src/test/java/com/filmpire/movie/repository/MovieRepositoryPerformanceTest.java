@@ -2,7 +2,7 @@ package com.filmpire.movie.repository;
 
 import com.filmpire.movie.model.Genre;
 import com.filmpire.movie.model.Movie;
-import org.junit.jupiter.api.AfterAll;
+import com.filmpire.movie.support.AbstractMongoIntegrationTest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -13,11 +13,6 @@ import com.filmpire.movie.support.TestCacheConfig;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.mongodb.MongoDBContainer;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -41,22 +36,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 @DataMongoTest
 @Import(TestCacheConfig.class)
-@Testcontainers
 @DisplayName("MovieRepository Performance Tests")
-class MovieRepositoryPerformanceTest {
-
-    @Container
-    static MongoDBContainer mongoDBContainer = new MongoDBContainer("mongo:7.0");
-
-    /**
-     * Points Spring Data at the container's Mongo.
-     *
-     * @param registry Spring test property registry
-     */
-    @DynamicPropertySource
-    static void configureProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.data.mongodb.uri", mongoDBContainer::getReplicaSetUrl);
-    }
+class MovieRepositoryPerformanceTest extends AbstractMongoIntegrationTest {
 
     private final MovieRepository movieRepository;
 
@@ -68,14 +49,6 @@ class MovieRepositoryPerformanceTest {
     @org.springframework.beans.factory.annotation.Autowired
     MovieRepositoryPerformanceTest(MovieRepository movieRepository) {
         this.movieRepository = movieRepository;
-    }
-
-    /** Stops the container after the class. */
-    @AfterAll
-    static void cleanup() {
-        if (mongoDBContainer != null && mongoDBContainer.isRunning()) {
-            mongoDBContainer.stop();
-        }
     }
 
     /** Empties the collection before each test for a known starting size. */

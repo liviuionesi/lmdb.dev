@@ -9,6 +9,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.Array;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -38,6 +39,7 @@ public class UserTasteProfile {
 
     /** pgvector column; dimension must match the embedding model in use (nomic-embed-text, 768). */
     @JdbcTypeCode(SqlTypes.VECTOR)
+    @Array(length = 768)
     @Column(columnDefinition = "vector(768)")
     private float[] embedding;
 

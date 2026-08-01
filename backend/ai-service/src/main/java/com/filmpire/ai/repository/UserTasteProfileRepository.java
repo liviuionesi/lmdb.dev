@@ -16,33 +16,37 @@ import java.util.UUID;
 public interface UserTasteProfileRepository extends JpaRepository<UserTasteProfile, UUID> {
 
     /**
-     * Finds the {@code k} taste profiles whose embedding is closest (cosine
+     * Finds the {@code k} users whose taste embedding is closest (cosine
      * distance, backed by the {@code idx_user_taste_profiles_embedding}
      * HNSW index) to {@code queryVector} — the ANN query ARCHITECTURE.md
-     * §3.7 specifies for semantic search.
+     * §3.7 specifies for semantic search. Each row is
+     * {@code [user_id (UUID), distance (Double)]}, closest first.
      *
      * <p>{@code queryVector} is pgvector's text input format
-     * ({@code "[0.1,0.2,...]"}, see {@code EmbeddingFormat}) bound as a
+     * ({@code "[0.1,0.2,...]"}, see {@link EmbeddingFormat}) bound as a
      * parameter and cast in SQL, rather than relying on JDBC array binding
      * for a native query — the same representation the driver would produce
-     * either way, made explicit.</p>
+     * either way, made explicit. A native query (rather than a projection
+     * interface) is what returns the computed distance as a plain column
+     * alongside the id.</p>
      *
      * @param queryVector    the query embedding, pgvector text format
      * @param excludeUserId  a user to exclude from results (typically the
      *                       caller, so "similar users" never returns yourself)
      * @param limit          maximum number of neighbours to return
-     * @return the nearest profiles, closest first
+     * @return rows of {@code [user_id, distance]}, closest first
      */
     @Query(
         value = """
-            SELECT * FROM user_taste_profiles
+            SELECT user_id, embedding <=> CAST(:queryVector AS vector) AS distance
+            FROM user_taste_profiles
             WHERE user_id != :excludeUserId
-            ORDER BY embedding <=> CAST(:queryVector AS vector)
+            ORDER BY distance
             LIMIT :limit
             """,
         nativeQuery = true
     )
-    List<UserTasteProfile> findNearestNeighbours(
+    List<Object[]> findNearestNeighbours(
         @Param("queryVector") String queryVector,
         @Param("excludeUserId") UUID excludeUserId,
         @Param("limit") int limit
