@@ -31,12 +31,19 @@ fi
 
 cd "$DOCKER_DIR"
 
+# Must match start-infrastructure.sh's compose file set, or the ELK-overlay
+# containers (elasticsearch/logstash/kibana/filebeat) won't be found.
+COMPOSE_FILES="-f docker-compose.yml -f docker-compose.elk.yml"
+
 SERVICE="$1"
-if [ -n "$SERVICE" ]; then
+if [ "$SERVICE" == "frontend" ]; then
+    echo -e "${BLUE}📜 Following frontend log... (Ctrl+C to stop)${NC}"
+    tail -f /tmp/filmpire-frontend.log
+elif [ -n "$SERVICE" ]; then
     echo -e "${BLUE}📜 Following logs for ${GREEN}${SERVICE}${BLUE}... (Ctrl+C to stop)${NC}"
-    $COMPOSE_CMD --profile dev-tools logs -f --tail=200 "$SERVICE"
+    $COMPOSE_CMD $COMPOSE_FILES --profile dev-tools logs -f --tail=200 "$SERVICE"
 else
     echo -e "${BLUE}📜 Following logs for all services... (Ctrl+C to stop)${NC}"
-    echo -e "${YELLOW}   Tip: ./logs.sh <service-name> to follow just one${NC}"
-    $COMPOSE_CMD --profile dev-tools logs -f --tail=100
+    echo -e "${YELLOW}   Tip: ./logs.sh <service-name> to follow just one, or ./logs.sh frontend${NC}"
+    $COMPOSE_CMD $COMPOSE_FILES --profile dev-tools logs -f --tail=100
 fi
