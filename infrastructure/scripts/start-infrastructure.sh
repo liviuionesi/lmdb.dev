@@ -47,26 +47,28 @@ fi
 echo -e "${GREEN}✓ Container runtime ready${NC}"
 echo ""
 
-# Check if .env file exists
-if [ ! -f "$DOCKER_DIR/.env" ]; then
-    echo -e "${YELLOW}⚠  No .env file found. Using default values.${NC}"
-    echo -e "${YELLOW}   Copy .env.example to .env to customize configuration.${NC}"
-    echo ""
-fi
+# Loads TMDB_API_KEY etc. and exports every other .env var so the summary
+# printed at the end reflects any port/credential overrides.
+source "$SCRIPT_DIR/env.sh"
+echo ""
 
 # Change to docker directory
 cd "$DOCKER_DIR"
+
+# Both files together bring up the app stack plus the ELK overlay
+# (Elasticsearch/Logstash/Kibana/Filebeat) in one `up`.
+COMPOSE_FILES="-f docker-compose.yml -f docker-compose.elk.yml"
 
 # Pull images first (skip for build services like discovery-service)
 # --profile dev-tools brings up Adminer/Mongo Express/Redis Commander too —
 # this script is the local dev entry point; docker-compose.prod.yml is the
 # profile-free, tools-excluded path (#29).
 echo -e "${BLUE}📥 Pulling container images...${NC}"
-$COMPOSE_CMD --profile dev-tools pull || echo -e "${YELLOW}⚠ Some images may need to be built${NC}"
+$COMPOSE_CMD $COMPOSE_FILES --profile dev-tools pull || echo -e "${YELLOW}⚠ Some images may need to be built${NC}"
 
 echo ""
-echo -e "${BLUE}🚀 Starting infrastructure services...${NC}"
-$COMPOSE_CMD --profile dev-tools up -d --build
+echo -e "${BLUE}🚀 Starting infrastructure services (incl. ELK)...${NC}"
+$COMPOSE_CMD $COMPOSE_FILES --profile dev-tools up -d --build
 
 echo ""
 echo -e "${BLUE}⏳ Waiting for services to be healthy...${NC}"
@@ -75,7 +77,41 @@ sleep 5
 # Check service health
 echo ""
 echo -e "${BLUE}📊 Service Status:${NC}"
-$COMPOSE_CMD ps
+$COMPOSE_CMD $COMPOSE_FILES ps
+
+# ---------------------------------------------------------------------------
+# Frontend (frontend/filmpire) has no compose service — it's a plain
+# background npm process, logged to /tmp and stopped by
+# stop-infrastructure.sh via pkill.
+# ---------------------------------------------------------------------------
+FRONTEND_DIR="$SCRIPT_DIR/../../frontend/filmpire"
+FRONTEND_LOG="/tmp/filmpire-frontend.log"
+
+echo ""
+if [ ! -d "$FRONTEND_DIR" ]; then
+    echo -e "${YELLOW}⚠  Frontend directory not found at $FRONTEND_DIR — skipping.${NC}"
+elif ! command -v npm &> /dev/null; then
+    echo -e "${YELLOW}⚠  npm not found on PATH — skipping frontend startup. Install Node.js 24.x (NVM) and run:${NC}"
+    echo "     cd frontend/filmpire && npm install && npm start"
+elif pgrep -f "react-scripts start" > /dev/null; then
+    echo -e "${GREEN}✓ Frontend dev server already running.${NC}"
+else
+    # .env.local is CRA's gitignored local-override file — point it at this
+    # stack's gateway so the app doesn't fall back to the real TMDB API.
+    if [ ! -f "$FRONTEND_DIR/.env.local" ]; then
+        echo "REACT_APP_API_URL=http://localhost:${API_GATEWAY_PORT:-8080}" > "$FRONTEND_DIR/.env.local"
+        echo -e "${GREEN}✓ Created frontend/filmpire/.env.local (REACT_APP_API_URL=http://localhost:${API_GATEWAY_PORT:-8080})${NC}"
+    fi
+
+    if [ ! -d "$FRONTEND_DIR/node_modules" ]; then
+        echo -e "${BLUE}📦 Installing frontend dependencies (first run only)...${NC}"
+        (cd "$FRONTEND_DIR" && npm install) || echo -e "${YELLOW}⚠ npm install failed — start the frontend manually.${NC}"
+    fi
+
+    echo -e "${BLUE}💻 Starting frontend (React) dev server on port 3000...${NC}"
+    (cd "$FRONTEND_DIR" && BROWSER=none nohup npm start > "$FRONTEND_LOG" 2>&1 &)
+    echo -e "${GREEN}✓ Frontend launch triggered — log: $FRONTEND_LOG${NC}"
+fi
 
 echo ""
 echo -e "${GREEN}✅ Infrastructure started successfully!${NC}"
@@ -98,6 +134,18 @@ echo "  MinIO Console:          http://localhost:${MINIO_CONSOLE_PORT:-9001}"
 echo ""
 echo -e "${GREEN}Infrastructure Services:${NC}"
 echo "  Discovery Service (Eureka): http://localhost:${DISCOVERY_SERVICE_PORT:-8761}"
+echo "  API Gateway:                http://localhost:${API_GATEWAY_PORT:-8080}"
+echo ""
+echo -e "${GREEN}Observability:${NC}"
+echo "  Kibana:                 http://localhost:${KIBANA_PORT:-5601}"
+echo "  Elasticsearch:           http://localhost:${ELASTICSEARCH_PORT:-9200}"
+echo "  Gateway metrics:         http://localhost:${API_GATEWAY_PORT:-8080}/actuator/prometheus"
+echo "  (Prometheus/Grafana are provisioned via the minikube/k8s monitoring"
+echo "   stack, not this docker-compose stack — see infrastructure/kubernetes/monitoring)"
+echo ""
+echo -e "${GREEN}Frontend:${NC}"
+echo "  Filmpire app:            http://localhost:3000"
+echo "  Frontend log:            tail -f $FRONTEND_LOG"
 echo ""
 echo -e "${GREEN}Credentials (default):${NC}"
 echo "  PostgreSQL:  admin / admin123"
@@ -107,10 +155,10 @@ echo "  MinIO:       minioadmin / minioadmin123"
 echo ""
 echo -e "${BLUE}================================================${NC}"
 echo -e "${YELLOW}Useful Commands:${NC}"
-echo "  View logs:       $COMPOSE_CMD logs -f [service]"
-echo "  Stop services:   ./stop-infrastructure.sh"
-echo "  Restart:         $COMPOSE_CMD restart [service]"
-echo "  Status:          $COMPOSE_CMD ps"
+echo "  View logs:       $COMPOSE_CMD $COMPOSE_FILES logs -f [service]"
+echo "  Stop everything: ./stop-infrastructure.sh"
+echo "  Restart:         $COMPOSE_CMD $COMPOSE_FILES restart [service]"
+echo "  Status:          $COMPOSE_CMD $COMPOSE_FILES ps"
 echo -e "${BLUE}================================================${NC}"
 echo ""
 

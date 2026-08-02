@@ -37,6 +37,18 @@ echo ""
 # Change to docker directory
 cd "$DOCKER_DIR"
 
+# Must match start-infrastructure.sh's compose file set, or `down` won't see
+# the ELK-overlay containers/network and will leave them running.
+COMPOSE_FILES="-f docker-compose.yml -f docker-compose.elk.yml"
+
+# Frontend (frontend/filmpire) isn't part of the compose stack — it's a
+# plain background npm process started by start-infrastructure.sh.
+if pgrep -f "react-scripts start" > /dev/null; then
+    echo -e "${BLUE}🛑 Stopping frontend dev server...${NC}"
+    pkill -f "react-scripts start" && echo -e "${GREEN}✓ Frontend stopped${NC}"
+    echo ""
+fi
+
 # Parse command line arguments
 REMOVE_VOLUMES=false
 if [ "$1" == "--volumes" ] || [ "$1" == "-v" ]; then
@@ -54,12 +66,12 @@ fi
 
 # Stop services
 echo -e "${BLUE}🛑 Stopping services...${NC}"
-$COMPOSE_CMD --profile dev-tools down
+$COMPOSE_CMD $COMPOSE_FILES --profile dev-tools down
 
 if [ "$REMOVE_VOLUMES" = true ]; then
     echo ""
     echo -e "${BLUE}🗑  Removing volumes...${NC}"
-    $COMPOSE_CMD --profile dev-tools down -v
+    $COMPOSE_CMD $COMPOSE_FILES --profile dev-tools down -v
     echo -e "${GREEN}✅ Services stopped and volumes removed${NC}"
 else
     echo -e "${GREEN}✅ Services stopped (data preserved)${NC}"
