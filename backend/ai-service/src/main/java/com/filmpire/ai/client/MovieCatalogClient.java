@@ -27,11 +27,8 @@ public class MovieCatalogClient {
      *                          so {@code lb://movie-service} resolves via Eureka
      * @param movieServiceBaseUrl movie-service's base URL, {@code lb://movie-service} by default
      */
-    public MovieCatalogClient(
-        RestClient.Builder restClientBuilder,
-        @Value("${movie-service.base-url}") String movieServiceBaseUrl
-    ) {
-        this.restClient = restClientBuilder.baseUrl(movieServiceBaseUrl).build();
+    public MovieCatalogClient(RestClient movieServiceRestClient) {
+        this.restClient = movieServiceRestClient;
     }
 
     /**
