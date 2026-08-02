@@ -38,8 +38,12 @@ services:
     restart: unless-stopped
 
   # MongoDB 8.0 - For Movie Service, AI Service, Media Service
+  # Pinned to a digest instead of the floating :8.0 tag: newer :8.0 pulls
+  # refuse to start on Linux kernel 6.19+ (MongoDB SERVER-121912 startup
+  # guard, not yet fixed in the published :8.0 tag) — this digest is the
+  # 8.0.0 release, which predates the guard.
   mongodb:
-    image: docker.io/library/mongo:8.0
+    image: docker.io/library/mongo@sha256:0c17421487ae4a5cae88e7652a26ef72a8162adbc599a0730805526f5ff5ee83
     container_name: filmpire-mongo
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:-admin}
