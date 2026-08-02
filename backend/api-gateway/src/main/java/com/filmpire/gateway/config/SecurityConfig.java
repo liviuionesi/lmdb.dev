@@ -73,8 +73,15 @@ public class SecurityConfig {
                         .pathMatchers("/authentication/**").permitAll()
                         .pathMatchers("/account/**").permitAll()
 
-                        // AI service (#36): every feature (chat, recommendations, semantic
-                        // search) is scoped to a userId — conversations and taste
+                        // Voice control (#68): unlike the rest of ai-service, speech-to-text
+                        // isn't scoped to a user (no conversation/taste-profile data touched)
+                        // — it replaces Alan AI's voice button, which worked for anonymous
+                        // visitors too (theme toggle, genre browsing). Must be listed before
+                        // the /api/v1/ai/** rule below, which requires auth for everything else.
+                        .pathMatchers(HttpMethod.POST, "/api/v1/ai/speech-to-text").permitAll()
+
+                        // AI service (#36): every other feature (chat, recommendations,
+                        // semantic search) is scoped to a userId — conversations and taste
                         // profiles are user-owned data (ADR-012), so these routes are
                         // explicitly JWT-gated rather than left to the anyExchange()
                         // catch-all below.
