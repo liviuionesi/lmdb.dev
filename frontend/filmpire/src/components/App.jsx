@@ -5,7 +5,7 @@ import { Route, Switch } from 'react-router-dom';
 import useStyles from './styles';
 import VoiceControl from './VoiceControl/VoiceControl';
 
-import { Actors, MovieInformation, Movies, NavBar, Profile } from '.';
+import { Actors, AdminDashboard, MovieInformation, Movies, NavBar, Profile } from '.';
 
 const App = () => {
   const classes = useStyles();
@@ -22,6 +22,9 @@ const App = () => {
           </Route>
           <Route exact path="/actors/:id">
             <Actors />
+          </Route>
+          <Route exact path="/admin">
+            <AdminDashboard />
           </Route>
           <Route exact path="/">
             <Movies />

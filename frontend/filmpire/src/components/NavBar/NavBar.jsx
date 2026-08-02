@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { AppBar, IconButton, Toolbar, Drawer, Button, Avatar, useMediaQuery } from '@mui/material';
-import { Menu, AccountCircle, Brightness4, Brightness7 } from '@mui/icons-material';
+import { AppBar, IconButton, Toolbar, Drawer, Button, Avatar, useMediaQuery, Box } from '@mui/material';
+import { Menu, AccountCircle, Brightness4, Brightness7, AdminPanelSettings } from '@mui/icons-material';
 import { Link } from 'react-router-dom';
 import { useTheme } from '@mui/material/styles';
 import { useDispatch, useSelector } from 'react-redux';
@@ -71,17 +71,30 @@ const NavBar = () => {
                 Login &nbsp; <AccountCircle />
               </Button>
             ) : (
-              <Button
-                color="inherit"
-                component={Link}
-                to={`/profile/${user.id}`}
-                className={classes.linkButton}
-              >
-                {!isMobile && <>My Movies &nbsp;</>}
-                <Avatar style={{ width: 30, height: 30 }} alt={user?.username}>
-                  {user?.username?.[0]?.toUpperCase()}
-                </Avatar>
-              </Button>
+              <Box display="flex" alignItems="center">
+                {user?.role === 'ADMIN' && (
+                  <Button
+                    color="inherit"
+                    component={Link}
+                    to="/admin"
+                    className={classes.linkButton}
+                    startIcon={<AdminPanelSettings />}
+                  >
+                    {!isMobile && 'Admin'}
+                  </Button>
+                )}
+                <Button
+                  color="inherit"
+                  component={Link}
+                  to={`/profile/${user.id}`}
+                  className={classes.linkButton}
+                >
+                  {!isMobile && <>My Movies &nbsp;</>}
+                  <Avatar style={{ width: 30, height: 30 }} alt={user?.username}>
+                    {user?.username?.[0]?.toUpperCase()}
+                  </Avatar>
+                </Button>
+              </Box>
             )}
           </div>
           {isMobile && <Search />}
