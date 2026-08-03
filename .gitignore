@@ -108,3 +108,7 @@ infrastructure/terraform/**/override.tf
 infrastructure/terraform/**/override.tf.json
 infrastructure/terraform/**/*_override.tf
 infrastructure/terraform/**/*_override.tf.json
+
+# OWASP Dependency-Check's local NVD database cache (#101) — several
+# hundred MB, restored from the CI cache action, never committed.
+.dependency-check-data/

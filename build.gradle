@@ -10,6 +10,13 @@ plugins {
     // build; it discovers every subproject and each module's JaCoCo XML report.
     // Run:  ./gradlew test jacocoTestReport sonar
     id 'org.sonarqube' version "${sonarqubePluginVersion}"
+    // Formatting gate (#101) — applied per-subproject below. Declared here
+    // (apply false) so every module resolves the same plugin version.
+    id 'com.diffplug.spotless' version "${spotlessVersion}" apply false
+    // Dependency/security-scan gate (#101). Aggregate mode: one report
+    // across every subproject's resolved dependencies, not per-module.
+    // Run:  ./gradlew dependencyCheckAggregate
+    id 'org.owasp.dependencycheck' version "${owaspDependencyCheckVersion}"
 }
 
 allprojects {
@@ -87,10 +94,53 @@ sonar {
     }
 }
 
+// OWASP Dependency-Check (#101) — scans every subproject's resolved
+// dependencies for known CVEs (NVD database). Optional NVD_API_KEY env var
+// raises the NVD download rate limit; without it the first run is slower
+// but still works. failBuildOnCVSS is set to Critical-only (9.0) for now —
+// this is a brand-new gate on dependencies that predate it, so it starts
+// conservative rather than immediately red; tightening the threshold is a
+// deliberate follow-up, not something to silently ratchet down here.
+// Run: ./gradlew dependencyCheckAggregate
+dependencyCheck {
+    failBuildOnCVSS = 9.0
+    // HTML only — that's the one CI actually uploads as an artifact.
+    formats = ['HTML']
+    // Fixed, predictable path so CI can cache the NVD database across runs
+    // instead of re-downloading it every time (it's several hundred MB).
+    data {
+        directory = "${rootDir}/.dependency-check-data"
+    }
+    nvd {
+        if (System.getenv('NVD_API_KEY')) {
+            apiKey = System.getenv('NVD_API_KEY')
+        }
+    }
+    suppressionFile = "${rootDir}/dependency-check-suppressions.xml"
+    analyzers {
+        assemblyEnabled = false
+        nodeAuditEnabled = false
+        nodeEnabled = false
+        // frontend/filmpire is scanned separately via `npm audit` in CI —
+        // this plugin only needs to cover the Gradle/Java dependency graph.
+    }
+}
+
 subprojects {
     apply plugin: 'java'
     apply plugin: 'io.spring.dependency-management'
     apply plugin: 'jacoco'
+    apply plugin: 'com.diffplug.spotless'
+
+    spotless {
+        java {
+            target 'src/**/*.java'
+            googleJavaFormat()
+            removeUnusedImports()
+            trimTrailingWhitespace()
+            endWithNewline()
+        }
+    }
 
     java {
         toolchain {

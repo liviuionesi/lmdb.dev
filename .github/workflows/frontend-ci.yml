@@ -12,6 +12,43 @@ on:
       - 'frontend/**'
 
 jobs:
+  filmpire:
+    name: Filmpire React app
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend/filmpire
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: frontend/filmpire/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run linter
+        run: npm run lint
+
+      - name: Dependency/security scan (#101)
+        # Critical-only for now — 30 pre-existing high/moderate/low findings
+        # are transitive react-scripts/webpack-dev-server dev-tooling
+        # vulnerabilities with no non-breaking fix available (see #101).
+        # Tightening this threshold is a deliberate follow-up, not a
+        # silent ratchet-down.
+        run: npm audit --audit-level=critical
+
+      - name: Build application
+        run: npm run build
+        env:
+          CI: true
+
   web-nextjs:
     name: Web (Next.js)
     runs-on: ubuntu-latest

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<suppressions xmlns="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.4.xsd">
+    <!-- Empty on purpose (#101). Add a <suppress> entry here only for a
+         specific CVE that's a real false positive or an accepted, reasoned
+         risk — never to blanket-silence a finding. -->
+</suppressions>

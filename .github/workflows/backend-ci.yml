@@ -35,8 +35,10 @@ jobs:
       
       - name: Make gradlew executable
         run: chmod +x ./gradlew
-      
+
       - name: Build all services
+        # Also runs `check`, which now includes spotlessCheck (#101) —
+        # formatting violations fail the build here, no separate step needed.
         run: ./gradlew clean build -x test
         env:
           GRADLE_OPTS: "-Dorg.gradle.daemon=false"
@@ -50,7 +52,43 @@ jobs:
         run: ./gradlew jacocoTestReport
         env:
           GRADLE_OPTS: "-Dorg.gradle.daemon=false"
-      
+
+      - name: Compute cache week
+        id: dc-week
+        # %G/%V (ISO week-based year/week), not %Y/%V — late-December ISO
+        # week 1 can belong to the next Gregorian year, which would
+        # otherwise mislabel the cache key right at the year boundary.
+        run: echo "week=$(date -u +%G-W%V)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache OWASP Dependency-Check NVD database
+        uses: actions/cache@v4
+        with:
+          path: .dependency-check-data
+          # The NVD feed changes daily; a weekly key keeps CI fast on
+          # repeat runs without the cache going stale for too long.
+          key: dependency-check-nvd-${{ steps.dc-week.outputs.week }}
+          restore-keys: dependency-check-nvd-
+
+      - name: Dependency/security scan (#101)
+        # No NVD_API_KEY secret is configured yet — without one, a
+        # cache-miss run's NVD sync can take 30-60+ min (confirmed locally).
+        # timeout-minutes makes that fail fast and visibly instead of
+        # quietly eating the job's time budget. Setting a real
+        # NVD_API_KEY secret (free, from https://nvd.nist.gov/developers/request-an-api-key)
+        # is a recommended follow-up, tracked in #101's notes.
+        timeout-minutes: 20
+        run: ./gradlew dependencyCheckAggregate
+        env:
+          GRADLE_OPTS: "-Dorg.gradle.daemon=false"
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+
+      - name: Upload dependency-check report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: dependency-check-report
+          path: build/reports/dependency-check-report.html
+
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v7
