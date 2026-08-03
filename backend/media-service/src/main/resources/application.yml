@@ -10,7 +10,7 @@ spring:
     name: media-service
   mongodb:
     database: filmpire
-    uri: mongodb://admin:admin123@localhost:27017/filmpire?authSource=admin
+    uri: ${MONGODB_URI:mongodb://admin:admin123@localhost:27017/filmpire?authSource=admin}
 
 minio:
   endpoint: http://localhost:9000
