@@ -84,13 +84,21 @@ sonar {
         //   S100  method naming — test methods use descriptive underscores
         //   S3305 field injection — @Autowired on fields is standard in Spring tests
         //   S1192 string-literal duplication — readability beats DRY in tests
-        property 'sonar.issue.ignore.multicriteria', 'e1,e2,e3'
+        property 'sonar.issue.ignore.multicriteria', 'e1,e2,e3,e4'
         property 'sonar.issue.ignore.multicriteria.e1.ruleKey', 'java:S100'
         property 'sonar.issue.ignore.multicriteria.e1.resourceKey', '**/src/test/**/*'
         property 'sonar.issue.ignore.multicriteria.e2.ruleKey', 'java:S3305'
         property 'sonar.issue.ignore.multicriteria.e2.resourceKey', '**/src/test/**/*'
         property 'sonar.issue.ignore.multicriteria.e3.ruleKey', 'java:S1192'
         property 'sonar.issue.ignore.multicriteria.e3.resourceKey', '**/src/test/**/*'
+
+        // e4: local-dev-only default credentials in application.yml
+        // (admin123/redis123/minioadmin123 — same values docker-compose.yml
+        // uses for its local containers). Real deployments must override via
+        // env vars (MONGODB_URI/POSTGRES_PASSWORD/REDIS_PASSWORD/etc. are all
+        // ${VAR:default}-overridable); these are not production secrets.
+        property 'sonar.issue.ignore.multicriteria.e4.ruleKey', 'secrets:S6694'
+        property 'sonar.issue.ignore.multicriteria.e4.resourceKey', '**/src/main/resources/application*.yml'
     }
 }
 
