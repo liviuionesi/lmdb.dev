@@ -1,56 +1,29 @@
 ---
 name: Task
-about: Development task or technical work
+about: A technical subtask under a User Story (or standalone technical work with no user-facing slice)
 title: '[TASK] '
 labels: task
-assignees: ''
 ---
 
-## Task Description
-<!-- Clear description of what needs to be done -->
+## Task
+<!-- What needs to be done, and why, in a few sentences or bullets. -->
 
-## Context
-<!-- Why is this task necessary? -->
+## Parent Story
+<!-- Parent: #N — delete this line if there's genuinely no parent Story
+     (pure technical/infra work with no user-facing slice). -->
 
-## Implementation Details
-<!-- Specific steps or approach -->
-1. Step 1
-2. Step 2
-3. Step 3
-
-## Files to Create/Modify
-<!-- List of files that will be changed -->
-- `path/to/file.java`
-- `path/to/test.java`
-- `path/to/config.yml`
-
-## Testing Requirements
-- [ ] Unit tests
-- [ ] Integration tests
-- [ ] Manual testing steps
+## Scope
+<!-- Only if it's not obvious what's excluded. Delete this section otherwise. -->
 
 ## Acceptance Criteria
-- [ ] Specific outcome 1
-- [ ] Specific outcome 2
-- [ ] Specific outcome 3
+<!-- At most 5. Each one is a real, independently checkable milestone —
+     something you can point at and say "done" or "not done". If honest
+     scope needs more than 5, the task is too big: split it instead. -->
+- [ ]
+- [ ]
 
-## Dependencies
-<!-- Issues that must be completed first -->
-- Depends on: #X
+## Estimate
+**Hours:** <Tasks are hour-estimated, not pointed — points size Stories, hours size the within-Sprint work of implementing one>
 
-## Definition of Done
-- [ ] Code implemented
-- [ ] Tests written and passing
-- [ ] Code reviewed
-- [ ] Documentation updated
-- [ ] CI/CD passing
-
-## Estimated Time
-**Story Points:** X  
-**Time Estimate:** X hours
-
----
-**Priority:** P0/P1/P2/P3  
-**Sprint:** Sprint X  
-**Service:** service-name
-
+## Notes
+<!-- Only if something genuinely needs flagging. Not a running log. -->

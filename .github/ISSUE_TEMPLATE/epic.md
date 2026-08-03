@@ -1,43 +1,24 @@
 ---
 name: Epic
-about: Large body of work that can be broken down into user stories
+about: A large body of work spanning multiple Sprints, broken into Stories
 title: '[EPIC] '
 labels: epic
-assignees: ''
 ---
 
-## Epic Description
-<!-- Brief description of this epic -->
+## Epic
+<!-- The outcome/value this epic delivers, in a few sentences. -->
 
 ## Business Value
-<!-- Why is this important? What value does it provide? -->
+<!-- Why this matters, in one or two sentences. Skip if the Epic line already covers it. -->
 
-## Acceptance Criteria
-<!-- High-level criteria for completion -->
-- [ ] Criterion 1
-- [ ] Criterion 2
-- [ ] Criterion 3
+## Product Goal alignment
+<!-- Which Product Goal (see docs/process/) this epic serves. -->
 
-## User Stories
-<!-- List of user stories that make up this epic -->
-- [ ] #<!-- issue number -->
-- [ ] #<!-- issue number -->
+## Child Stories
+<!-- Keep this list current — it's the actual source of truth for what's
+     left, not a re-derived summary. Checked when the Story is closed. -->
+- [ ] #
+- [ ] #
 
-## Technical Considerations
-<!-- Any technical constraints or considerations -->
-
-## Definition of Done
-- [ ] All user stories completed
-- [ ] Documentation updated
-- [ ] Tests passing (>85% coverage)
-- [ ] Code reviewed and merged
-- [ ] Deployed to dev environment
-
-## Related Issues
-<!-- Link to related epics, stories, or tasks -->
-
-## Sprint Planning
-**Target Sprint:** Sprint X  
-**Story Points:** XX  
-**Priority:** P0/P1/P2/P3
-
+## Notes
+<!-- Only if something genuinely needs flagging. Not a running log. -->

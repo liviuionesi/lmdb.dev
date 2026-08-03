@@ -1,0 +1,41 @@
+#!/bin/sh
+# Blocks a commit if staged code doesn't compile — a hard gate, not just
+# the agent's own judgment. Scoped to what's actually staged, so this
+# stays fast. Installed via `git config core.hooksPath .githooks`.
+set -eu
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+
+STAGED=$(git diff --cached --name-only --diff-filter=ACM)
+FAIL=0
+
+# Java: compile only the backend modules that actually have staged changes.
+JAVA_MODULES=$(printf '%s\n' "$STAGED" | grep -E '^backend/[^/]+/src/' | cut -d/ -f2 | sort -u || true)
+if [ -n "$JAVA_MODULES" ]; then
+  TASKS=""
+  for m in $JAVA_MODULES; do
+    TASKS="$TASKS :backend:$m:compileJava :backend:$m:compileTestJava"
+  done
+  echo "pre-commit: compiling changed backend module(s):$JAVA_MODULES"
+  if ! ./gradlew $TASKS -q --console=plain; then
+    echo "pre-commit: compile failed — fix before committing." >&2
+    FAIL=1
+  fi
+fi
+
+# Frontend: a fast syntax check on each staged JS/JSX file (not a full
+# webpack build, which is too slow for a pre-commit gate).
+JS_FILES=$(printf '%s\n' "$STAGED" | grep -E '^frontend/filmpire/src/.*\.(js|jsx)$' || true)
+if [ -n "$JS_FILES" ] && command -v node >/dev/null 2>&1; then
+  echo "$JS_FILES" | while IFS= read -r f; do
+    [ -f "$f" ] || continue
+    if ! node --check "$f" 2>/tmp/precommit-js-err; then
+      echo "pre-commit: syntax error in $f:" >&2
+      cat /tmp/precommit-js-err >&2
+      exit 1
+    fi
+  done || FAIL=1
+fi
+
+exit $FAIL

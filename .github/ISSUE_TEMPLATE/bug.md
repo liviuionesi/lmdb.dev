@@ -1,54 +1,29 @@
 ---
-name: Bug Report
-about: Report a bug or issue
+name: Bug
+about: Something is broken, with a known (or suspected) repro
 title: '[BUG] '
 labels: bug
-assignees: ''
 ---
 
-## Bug Description
-<!-- Clear and concise description of the bug -->
+## Bug
+<!-- What's broken, and how to see it — repro steps, a command, or a log
+     excerpt. Confirmed live or just suspected? Say which. -->
 
-## Steps to Reproduce
-1. Go to '...'
-2. Click on '...'
-3. Scroll down to '...'
-4. See error
+## Root Cause
+<!-- Fill in once known. Delete this section while still investigating. -->
 
-## Expected Behavior
-<!-- What should happen -->
+## Severity vs. Priority
+<!-- Two different axes, set independently — a low-severity bug can still
+     be P0 (e.g. it's blocking a demo), and a Blocker-severity bug in dead
+     code can be P3. -->
+**Severity (technical impact):** Blocker / Critical / Major / Minor
+**Priority (business urgency):** P0 / P1 / P2 / P3
 
-## Actual Behavior
-<!-- What actually happens -->
+## Acceptance Criteria
+<!-- At most 5. Verified against the real running system, not just a unit
+     test or a shortcut path that skips the layer the bug is actually in. -->
+- [ ] Fixed and verified live
+- [ ] Regression test added
 
-## Screenshots/Logs
-<!-- If applicable, add screenshots or error logs -->
-```
-paste error logs here
-```
-
-## Environment
-- **Service:** movie-service / user-service / etc.
-- **OS:** Linux / macOS / Windows
-- **Java Version:** 25
-- **Spring Boot Version:** 3.5.8
-- **Browser** (if frontend): Chrome / Firefox / Safari
-
-## Possible Solution
-<!-- If you have suggestions on how to fix -->
-
-## Related Issues
-<!-- Link to related bugs or tasks -->
-
-## Priority
-**Priority:** P0 (Critical) / P1 (High) / P2 (Medium) / P3 (Low)  
-**Severity:** Blocker / Critical / Major / Minor
-
-## Definition of Done
-- [ ] Bug reproduced and confirmed
-- [ ] Root cause identified
-- [ ] Fix implemented
-- [ ] Tests added to prevent regression
-- [ ] Code reviewed
-- [ ] Deployed and verified
-
+## Notes
+<!-- Only if something genuinely needs flagging. Not a running log. -->
