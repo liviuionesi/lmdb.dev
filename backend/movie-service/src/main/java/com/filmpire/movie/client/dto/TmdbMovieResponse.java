@@ -11,10 +11,10 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * TMDB API response for movie details. Fields mirror TMDB's real
- * {@code /movie/{id}} shape (ADR-010) so this same record can be reused to
- * serialize our own persisted {@link com.filmpire.movie.model.Movie} back
- * out through the facade, not just to deserialize TMDB's response.
+ * TMDB API response for movie details. Fields mirror TMDB's real {@code /movie/{id}} shape
+ * (ADR-010) so this same record can be reused to serialize our own persisted {@link
+ * com.filmpire.movie.model.Movie} back out through the facade, not just to deserialize TMDB's
+ * response.
  */
 public record TmdbMovieResponse(
     Long id,
@@ -43,6 +43,4 @@ public record TmdbMovieResponse(
     String tagline,
     String homepage,
     @JsonInclude(JsonInclude.Include.NON_NULL) TmdbVideosResponse videos,
-    @JsonInclude(JsonInclude.Include.NON_NULL) TmdbCreditsResponse credits
-) {
-}
+    @JsonInclude(JsonInclude.Include.NON_NULL) TmdbCreditsResponse credits) {}

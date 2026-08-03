@@ -9,9 +9,7 @@ import java.time.LocalDate;
 import java.util.List;
 import lombok.Builder;
 
-/**
- * DTO for Movie entity.
- */
+/** DTO for Movie entity. */
 @Builder
 public record MovieDto(
     String id,
@@ -39,5 +37,5 @@ public record MovieDto(
     Boolean adult,
     String imdbId,
     String tagline,
-    String homepage
-) implements Serializable {}
+    String homepage)
+    implements Serializable {}

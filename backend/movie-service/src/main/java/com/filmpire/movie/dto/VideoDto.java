@@ -3,9 +3,7 @@ package com.filmpire.movie.dto;
 import java.io.Serializable;
 import lombok.Builder;
 
-/**
- * DTO for Video (trailers, clips).
- */
+/** DTO for Video (trailers, clips). */
 @Builder
 public record VideoDto(
     String id,
@@ -15,5 +13,5 @@ public record VideoDto(
     Integer size,
     String type,
     Boolean official,
-    String publishedAt
-) implements Serializable {}
+    String publishedAt)
+    implements Serializable {}

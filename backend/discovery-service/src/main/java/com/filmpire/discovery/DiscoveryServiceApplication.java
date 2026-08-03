@@ -6,19 +6,19 @@ import org.springframework.cloud.netflix.eureka.server.EnableEurekaServer;
 
 /**
  * Discovery Service Application - Eureka Server
- * 
- * <p>This service acts as the service registry for the Filmpire microservices architecture.
- * It enables service discovery and registration for all microservices in the system.</p>
- * 
+ *
+ * <p>This service acts as the service registry for the Filmpire microservices architecture. It
+ * enables service discovery and registration for all microservices in the system.
+ *
  * <p>Key features:
+ *
  * <ul>
- *   <li>Service registration and discovery</li>
- *   <li>Health monitoring</li>
- *   <li>Load balancing support</li>
- *   <li>Web-based dashboard</li>
+ *   <li>Service registration and discovery
+ *   <li>Health monitoring
+ *   <li>Load balancing support
+ *   <li>Web-based dashboard
  * </ul>
- * </p>
- * 
+ *
  * @author Filmpire Team
  * @version 1.0.0
  */
@@ -26,13 +26,12 @@ import org.springframework.cloud.netflix.eureka.server.EnableEurekaServer;
 @EnableEurekaServer
 public class DiscoveryServiceApplication {
 
-    /**
-     * Main entry point for the Discovery Service application.
-     * 
-     * @param args command line arguments
-     */
-    public static void main(String[] args) {
-        SpringApplication.run(DiscoveryServiceApplication.class, args);
-    }
+  /**
+   * Main entry point for the Discovery Service application.
+   *
+   * @param args command line arguments
+   */
+  public static void main(String[] args) {
+    SpringApplication.run(DiscoveryServiceApplication.class, args);
+  }
 }
-

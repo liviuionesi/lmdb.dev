@@ -15,17 +15,16 @@ import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 /**
- * Spring Security configuration: stateless JWT authentication
- * (ARCHITECTURE.md §3.5 / §6).
+ * Spring Security configuration: stateless JWT authentication (ARCHITECTURE.md §3.5 / §6).
  *
- * <p>Design choices worth knowing:</p>
+ * <p>Design choices worth knowing:
+ *
  * <ul>
- *   <li>CSRF disabled — no cookies/session, tokens travel in headers.</li>
- *   <li>Auth endpoints, actuator, and Swagger are public;
- *       everything else needs a valid Bearer token.</li>
- *   <li>Unauthenticated access yields a plain 401 (no redirect, no
- *       WWW-Authenticate browser popup).</li>
- *   <li>BCrypt strength 12 per the security checklist.</li>
+ *   <li>CSRF disabled — no cookies/session, tokens travel in headers.
+ *   <li>Auth endpoints, actuator, and Swagger are public; everything else needs a valid Bearer
+ *       token.
+ *   <li>Unauthenticated access yields a plain 401 (no redirect, no WWW-Authenticate browser popup).
+ *   <li>BCrypt strength 12 per the security checklist.
  * </ul>
  */
 @Configuration
@@ -34,40 +33,44 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+  private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
-    /**
-     * The stateless filter chain.
-     *
-     * @param http builder
-     * @return configured chain
-     * @throws Exception per Spring Security contract
-     */
-    @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http
-            .csrf(csrf -> csrf.disable())
-            .sessionManagement(session ->
-                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/v1/auth/**").permitAll()
-                .requestMatchers("/actuator/**").permitAll()
-                .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
-                .anyRequest().authenticated())
-            .exceptionHandling(ex ->
-                ex.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+  /**
+   * The stateless filter chain.
+   *
+   * @param http builder
+   * @return configured chain
+   * @throws Exception per Spring Security contract
+   */
+  @Bean
+  public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    http.csrf(csrf -> csrf.disable())
+        .sessionManagement(
+            session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+        .authorizeHttpRequests(
+            auth ->
+                auth.requestMatchers("/api/v1/auth/**")
+                    .permitAll()
+                    .requestMatchers("/actuator/**")
+                    .permitAll()
+                    .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**")
+                    .permitAll()
+                    .anyRequest()
+                    .authenticated())
+        .exceptionHandling(
+            ex -> ex.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
+        .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
-        return http.build();
-    }
+    return http.build();
+  }
 
-    /**
-     * BCrypt with strength 12 (security checklist requirement).
-     *
-     * @return password encoder used for hashing and verification
-     */
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder(12);
-    }
+  /**
+   * BCrypt with strength 12 (security checklist requirement).
+   *
+   * @return password encoder used for hashing and verification
+   */
+  @Bean
+  public PasswordEncoder passwordEncoder() {
+    return new BCryptPasswordEncoder(12);
+  }
 }

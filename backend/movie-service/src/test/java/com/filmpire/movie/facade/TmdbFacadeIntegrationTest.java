@@ -1,5 +1,13 @@
 package com.filmpire.movie.facade;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
 import com.filmpire.movie.repository.MovieRepository;
 import com.filmpire.movie.support.AbstractMongoIntegrationTest;
 import com.github.tomakehurst.wiremock.client.WireMock;
@@ -16,25 +24,16 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.json.JsonCompareMode;
 import org.springframework.test.web.servlet.MockMvc;
 
-import static com.github.tomakehurst.wiremock.client.WireMock.*;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
 /**
- * Integration tests for the TMDB v3 facade: full controller → service →
- * MongoDB → (WireMock-simulated) TMDB stack.
+ * Integration tests for the TMDB v3 facade: full controller → service → MongoDB →
+ * (WireMock-simulated) TMDB stack.
  *
- * <p>These tests prove the ADR-010 facade contract: responses use TMDB's
- * exact field names/envelope (movie/actor pages don't need any frontend
- * changes beyond the base URL), but the data behind them is genuinely
- * persisted and mapped, not a replayed raw copy — so unlike the pre-ADR-010
- * facade, assertions here check the TMDB-shaped fields the React app
- * actually reads rather than full byte-for-byte body equality, and one test
- * asserts directly against MongoDB to prove the catalog is real.</p>
+ * <p>These tests prove the ADR-010 facade contract: responses use TMDB's exact field names/envelope
+ * (movie/actor pages don't need any frontend changes beyond the base URL), but the data behind them
+ * is genuinely persisted and mapped, not a replayed raw copy — so unlike the pre-ADR-010 facade,
+ * assertions here check the TMDB-shaped fields the React app actually reads rather than full
+ * byte-for-byte body equality, and one test asserts directly against MongoDB to prove the catalog
+ * is real.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -43,15 +42,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @DisplayName("TMDB Facade Integration Tests")
 class TmdbFacadeIntegrationTest extends AbstractMongoIntegrationTest {
 
-    /** A single TMDB popular-list page fixture reused by several tests. */
-    private static final String POPULAR_PAGE_1 = """
+  /** A single TMDB popular-list page fixture reused by several tests. */
+  private static final String POPULAR_PAGE_1 =
+      """
         {"page":1,"results":[{"adult":false,"backdrop_path":"/x.jpg","genre_ids":[28,12],\
         "id":550,"original_language":"en","original_title":"Fight Club",\
         "overview":"An insomniac...","popularity":61.4,"poster_path":"/p.jpg",\
         "release_date":"1999-10-15","title":"Fight Club",\
         "vote_average":8.4,"vote_count":26280}],"total_pages":500,"total_results":10000}""";
 
-    private static final String MOVIE_550_DETAILS = """
+  private static final String MOVIE_550_DETAILS =
+      """
         {"id":550,"title":"Fight Club","original_title":"Fight Club",\
         "overview":"An insomniac...","poster_path":"/p.jpg","backdrop_path":"/x.jpg",\
         "release_date":"1999-10-15","vote_average":8.4,"vote_count":26280,\
@@ -59,316 +60,336 @@ class TmdbFacadeIntegrationTest extends AbstractMongoIntegrationTest {
         "budget":63000000,"revenue":100853753,"original_language":"en",\
         "popularity":61.4,"adult":false,"imdb_id":"tt0137523"}""";
 
-    private static final String MOVIE_550_VIDEOS = """
+  private static final String MOVIE_550_VIDEOS =
+      """
         {"id":550,"results":[{"id":"v1","key":"abc123","name":"Trailer",\
         "site":"YouTube","size":1080,"type":"Trailer","official":true,\
         "published_at":"1999-09-01T00:00:00.000Z"}]}""";
 
-    private static final String MOVIE_550_CREDITS = """
+  private static final String MOVIE_550_CREDITS =
+      """
         {"id":550,"cast":[{"id":819,"name":"Edward Norton","character":"The Narrator",\
         "profile_path":"/e.jpg","order":0}],"crew":[]}""";
 
-    @Autowired
-    private MockMvc mockMvc;
+  @Autowired private MockMvc mockMvc;
 
-    @Autowired
-    private MovieRepository movieRepository;
+  @Autowired private MovieRepository movieRepository;
 
-    /**
-     * Raw MongoDB access, used by the #46 tests to plant a document in a shape
-     * the mapped repository cannot write — and to assert on the stored form
-     * afterwards without going through conversion.
-     */
-    @Autowired
-    private org.springframework.data.mongodb.core.MongoTemplate mongoTemplate;
+  /**
+   * Raw MongoDB access, used by the #46 tests to plant a document in a shape the mapped repository
+   * cannot write — and to assert on the stored form afterwards without going through conversion.
+   */
+  @Autowired private org.springframework.data.mongodb.core.MongoTemplate mongoTemplate;
 
-    /**
-     * Points the TMDB base URL at WireMock and fixes the server API key so
-     * requests can assert on it.
-     *
-     * @param registry Spring test property registry
-     */
-    @DynamicPropertySource
-    static void tmdbProperties(DynamicPropertyRegistry registry) {
-        registry.add("tmdb.api.base-url", () -> "http://localhost:9990");
-        registry.add("tmdb.api.key", () -> "server-side-key");
-    }
+  /**
+   * Points the TMDB base URL at WireMock and fixes the server API key so requests can assert on it.
+   *
+   * @param registry Spring test property registry
+   */
+  @DynamicPropertySource
+  static void tmdbProperties(DynamicPropertyRegistry registry) {
+    registry.add("tmdb.api.base-url", () -> "http://localhost:9990");
+    registry.add("tmdb.api.key", () -> "server-side-key");
+  }
 
-    /**
-     * Starts every test from a clean slate: no persisted movies and no
-     * recorded WireMock requests (stubs are re-declared per test).
-     */
-    @BeforeEach
-    void cleanSlate() {
-        movieRepository.deleteAll();
-        resetAllRequests();
-    }
+  /**
+   * Starts every test from a clean slate: no persisted movies and no recorded WireMock requests
+   * (stubs are re-declared per test).
+   */
+  @BeforeEach
+  void cleanSlate() {
+    movieRepository.deleteAll();
+    resetAllRequests();
+  }
 
-    /**
-     * The facade's two load-bearing promises for list endpoints: TMDB's own
-     * field names/shape come back (no camelCase, no envelope changes) and
-     * the client-sent {@code api_key} is discarded in favor of the server
-     * key — asserted by checking WireMock saw only the server key.
-     */
-    @Test
-    @DisplayName("Popular list is TMDB-shaped and the client api_key is swapped for the server key")
-    void popularListIsTmdbShapedAndKeyIsSwapped() throws Exception {
-        stubFor(WireMock.get(urlPathEqualTo("/movie/popular"))
+  /**
+   * The facade's two load-bearing promises for list endpoints: TMDB's own field names/shape come
+   * back (no camelCase, no envelope changes) and the client-sent {@code api_key} is discarded in
+   * favor of the server key — asserted by checking WireMock saw only the server key.
+   */
+  @Test
+  @DisplayName("Popular list is TMDB-shaped and the client api_key is swapped for the server key")
+  void popularListIsTmdbShapedAndKeyIsSwapped() throws Exception {
+    stubFor(
+        WireMock.get(urlPathEqualTo("/movie/popular"))
             .withQueryParam("api_key", equalTo("server-side-key"))
             .willReturn(okJson(POPULAR_PAGE_1)));
 
-        mockMvc.perform(get("/movie/popular")
+    mockMvc
+        .perform(
+            get("/movie/popular")
                 .queryParam("page", "1")
                 .queryParam("api_key", "react-app-client-key"))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.page").value(1))
-            .andExpect(jsonPath("$.total_pages").value(500))
-            .andExpect(jsonPath("$.total_results").value(10000))
-            .andExpect(jsonPath("$.results[0].id").value(550))
-            .andExpect(jsonPath("$.results[0].poster_path").value("/p.jpg"))
-            .andExpect(jsonPath("$.results[0].vote_average").value(8.4))
-            .andExpect(jsonPath("$.results[0].genre_ids[0]").value(28));
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.page").value(1))
+        .andExpect(jsonPath("$.total_pages").value(500))
+        .andExpect(jsonPath("$.total_results").value(10000))
+        .andExpect(jsonPath("$.results[0].id").value(550))
+        .andExpect(jsonPath("$.results[0].poster_path").value("/p.jpg"))
+        .andExpect(jsonPath("$.results[0].vote_average").value(8.4))
+        .andExpect(jsonPath("$.results[0].genre_ids[0]").value(28));
 
-        verify(1, getRequestedFor(urlPathEqualTo("/movie/popular"))
+    verify(
+        1,
+        getRequestedFor(urlPathEqualTo("/movie/popular"))
             .withQueryParam("api_key", equalTo("server-side-key")));
-        verify(0, getRequestedFor(urlPathEqualTo("/movie/popular"))
+    verify(
+        0,
+        getRequestedFor(urlPathEqualTo("/movie/popular"))
             .withQueryParam("api_key", equalTo("react-app-client-key")));
-    }
+  }
 
-    /**
-     * Proves ADR-010's central claim: a list response's movies are genuinely
-     * persisted, not just cached bytes. Querying MongoDB directly (bypassing
-     * the API entirely) must find the same movie the list response reported.
-     */
-    @Test
-    @DisplayName("Every movie in a list response is upserted into MongoDB")
-    void listResultsAreUpsertedIntoMongo() throws Exception {
-        stubFor(WireMock.get(urlPathEqualTo("/movie/popular"))
-            .willReturn(okJson(POPULAR_PAGE_1)));
+  /**
+   * Proves ADR-010's central claim: a list response's movies are genuinely persisted, not just
+   * cached bytes. Querying MongoDB directly (bypassing the API entirely) must find the same movie
+   * the list response reported.
+   */
+  @Test
+  @DisplayName("Every movie in a list response is upserted into MongoDB")
+  void listResultsAreUpsertedIntoMongo() throws Exception {
+    stubFor(WireMock.get(urlPathEqualTo("/movie/popular")).willReturn(okJson(POPULAR_PAGE_1)));
 
-        mockMvc.perform(get("/movie/popular").queryParam("page", "1"))
-            .andExpect(status().isOk());
+    mockMvc.perform(get("/movie/popular").queryParam("page", "1")).andExpect(status().isOk());
 
-        assertThat(movieRepository.findByTmdbId(550L))
-            .isPresent()
-            .get()
-            .satisfies(movie -> {
-                assertThat(movie.getTitle()).isEqualTo("Fight Club");
-                assertThat(movie.getVoteAverage()).isEqualTo(8.4);
-                assertThat(movie.getPosterPath()).isEqualTo("/p.jpg");
+    assertThat(movieRepository.findByTmdbId(550L))
+        .isPresent()
+        .get()
+        .satisfies(
+            movie -> {
+              assertThat(movie.getTitle()).isEqualTo("Fight Club");
+              assertThat(movie.getVoteAverage()).isEqualTo(8.4);
+              assertThat(movie.getPosterPath()).isEqualTo("/p.jpg");
             });
-    }
+  }
 
-    /**
-     * Detail lookups are read-through/save-through against MongoDB (unlike
-     * list endpoints, which always ask TMDB live): a second identical
-     * request must return the same shape while WireMock records exactly one
-     * upstream hit — the guarantee that repeated browsing of the same movie
-     * doesn't multiply TMDB traffic.
-     */
-    @Test
-    @DisplayName("Second identical movie-detail request is served from MongoDB — zero further TMDB calls")
-    void secondDetailRequestServedFromMongo() throws Exception {
-        stubFor(WireMock.get(urlPathEqualTo("/movie/550"))
-            .willReturn(okJson(MOVIE_550_DETAILS)));
+  /**
+   * Detail lookups are read-through/save-through against MongoDB (unlike list endpoints, which
+   * always ask TMDB live): a second identical request must return the same shape while WireMock
+   * records exactly one upstream hit — the guarantee that repeated browsing of the same movie
+   * doesn't multiply TMDB traffic.
+   */
+  @Test
+  @DisplayName(
+      "Second identical movie-detail request is served from MongoDB — zero further TMDB calls")
+  void secondDetailRequestServedFromMongo() throws Exception {
+    stubFor(WireMock.get(urlPathEqualTo("/movie/550")).willReturn(okJson(MOVIE_550_DETAILS)));
 
-        mockMvc.perform(get("/movie/550"))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.title").value("Fight Club"));
+    mockMvc
+        .perform(get("/movie/550"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.title").value("Fight Club"));
 
-        mockMvc.perform(get("/movie/550"))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.title").value("Fight Club"))
-            .andExpect(jsonPath("$.budget").value(63000000));
+    mockMvc
+        .perform(get("/movie/550"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.title").value("Fight Club"))
+        .andExpect(jsonPath("$.budget").value(63000000));
 
-        verify(1, getRequestedFor(urlPathEqualTo("/movie/550")));
-    }
+    verify(1, getRequestedFor(urlPathEqualTo("/movie/550")));
+  }
 
-    /**
-     * The React app requests details as {@code /movie/{id}?append_to_response=
-     * videos,credits}; the facade must fetch (and persist) both sub-resources
-     * and embed them on the SAME response object, matching TMDB's own
-     * append_to_response merge behavior.
-     */
-    @Test
-    @DisplayName("Movie details with append_to_response embeds videos and credits")
-    void movieDetailsWithAppendToResponse() throws Exception {
-        stubFor(WireMock.get(urlPathEqualTo("/movie/550"))
-            .willReturn(okJson(MOVIE_550_DETAILS)));
-        stubFor(WireMock.get(urlPathEqualTo("/movie/550/videos"))
-            .willReturn(okJson(MOVIE_550_VIDEOS)));
-        stubFor(WireMock.get(urlPathEqualTo("/movie/550/credits"))
-            .willReturn(okJson(MOVIE_550_CREDITS)));
+  /**
+   * The React app requests details as {@code /movie/{id}?append_to_response= videos,credits}; the
+   * facade must fetch (and persist) both sub-resources and embed them on the SAME response object,
+   * matching TMDB's own append_to_response merge behavior.
+   */
+  @Test
+  @DisplayName("Movie details with append_to_response embeds videos and credits")
+  void movieDetailsWithAppendToResponse() throws Exception {
+    stubFor(WireMock.get(urlPathEqualTo("/movie/550")).willReturn(okJson(MOVIE_550_DETAILS)));
+    stubFor(WireMock.get(urlPathEqualTo("/movie/550/videos")).willReturn(okJson(MOVIE_550_VIDEOS)));
+    stubFor(
+        WireMock.get(urlPathEqualTo("/movie/550/credits")).willReturn(okJson(MOVIE_550_CREDITS)));
 
-        mockMvc.perform(get("/movie/550").queryParam("append_to_response", "videos,credits"))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.title").value("Fight Club"))
-            .andExpect(jsonPath("$.videos.results[0].key").value("abc123"))
-            .andExpect(jsonPath("$.credits.cast[0].name").value("Edward Norton"));
+    mockMvc
+        .perform(get("/movie/550").queryParam("append_to_response", "videos,credits"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.title").value("Fight Club"))
+        .andExpect(jsonPath("$.videos.results[0].key").value("abc123"))
+        .andExpect(jsonPath("$.credits.cast[0].name").value("Edward Norton"));
 
-        // Fetched sub-resources are persisted alongside the movie …
-        assertThat(movieRepository.findByTmdbId(550L)).get().satisfies(movie -> {
-            assertThat(movie.getVideos()).hasSize(1);
-            assertThat(movie.getCredits().getCast()).hasSize(1);
-        });
+    // Fetched sub-resources are persisted alongside the movie …
+    assertThat(movieRepository.findByTmdbId(550L))
+        .get()
+        .satisfies(
+            movie -> {
+              assertThat(movie.getVideos()).hasSize(1);
+              assertThat(movie.getCredits().getCast()).hasSize(1);
+            });
 
-        // … so a second append_to_response request needs no further TMDB calls.
-        mockMvc.perform(get("/movie/550").queryParam("append_to_response", "videos,credits"))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.videos.results[0].key").value("abc123"));
+    // … so a second append_to_response request needs no further TMDB calls.
+    mockMvc
+        .perform(get("/movie/550").queryParam("append_to_response", "videos,credits"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.videos.results[0].key").value("abc123"));
 
-        verify(1, getRequestedFor(urlPathEqualTo("/movie/550/videos")));
-        verify(1, getRequestedFor(urlPathEqualTo("/movie/550/credits")));
-    }
+    verify(1, getRequestedFor(urlPathEqualTo("/movie/550/videos")));
+    verify(1, getRequestedFor(urlPathEqualTo("/movie/550/credits")));
+  }
 
-    /**
-     * A real TMDB 404 must be replayed with both its status and its exact
-     * error body (captured from {@link org.springframework.web.client.RestClientResponseException}),
-     * so the React app sees TMDB's own error shape.
-     */
-    @Test
-    @DisplayName("TMDB 404 error body passes through verbatim")
-    void tmdbNotFoundPassesThrough() throws Exception {
-        String tmdbError = "{\"success\":false,\"status_code\":34,"
+  /**
+   * A real TMDB 404 must be replayed with both its status and its exact error body (captured from
+   * {@link org.springframework.web.client.RestClientResponseException}), so the React app sees
+   * TMDB's own error shape.
+   */
+  @Test
+  @DisplayName("TMDB 404 error body passes through verbatim")
+  void tmdbNotFoundPassesThrough() throws Exception {
+    String tmdbError =
+        "{\"success\":false,\"status_code\":34,"
             + "\"status_message\":\"The resource you requested could not be found.\"}";
 
-        stubFor(WireMock.get(urlPathEqualTo("/movie/99999999"))
-            .willReturn(aResponse().withStatus(404)
-                .withHeader("Content-Type", "application/json")
-                .withBody(tmdbError)));
+    stubFor(
+        WireMock.get(urlPathEqualTo("/movie/99999999"))
+            .willReturn(
+                aResponse()
+                    .withStatus(404)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(tmdbError)));
 
-        mockMvc.perform(get("/movie/99999999"))
-            .andExpect(status().isNotFound())
-            .andExpect(content().json(tmdbError, JsonCompareMode.STRICT));
-    }
+    mockMvc
+        .perform(get("/movie/99999999"))
+        .andExpect(status().isNotFound())
+        .andExpect(content().json(tmdbError, JsonCompareMode.STRICT));
+  }
 
-    /**
-     * A {@code /movie/{x}} where x is neither a known category nor a numeric
-     * id is malformed, so the facade must answer a TMDB-shaped 404 LOCALLY
-     * and never call TMDB — spending a rate-limit token on a request that
-     * can't succeed would be wasteful.
-     */
-    @Test
-    @DisplayName("Unknown movie category yields TMDB-shaped 404 without calling TMDB")
-    void unknownCategoryIsLocal404() throws Exception {
-        mockMvc.perform(get("/movie/not_a_category"))
-            .andExpect(status().isNotFound())
-            .andExpect(jsonPath("$.success").value(false))
-            .andExpect(jsonPath("$.status_code").value(34));
+  /**
+   * A {@code /movie/{x}} where x is neither a known category nor a numeric id is malformed, so the
+   * facade must answer a TMDB-shaped 404 LOCALLY and never call TMDB — spending a rate-limit token
+   * on a request that can't succeed would be wasteful.
+   */
+  @Test
+  @DisplayName("Unknown movie category yields TMDB-shaped 404 without calling TMDB")
+  void unknownCategoryIsLocal404() throws Exception {
+    mockMvc
+        .perform(get("/movie/not_a_category"))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.success").value(false))
+        .andExpect(jsonPath("$.status_code").value(34));
 
-        verify(0, anyRequestedFor(anyUrl()));
-    }
+    verify(0, anyRequestedFor(anyUrl()));
+  }
 
-    /**
-     * The single {@code /discover/movie} endpoint backs two distinct app
-     * features — genre browsing ({@code with_genres}) and actor filmography
-     * ({@code with_cast}) — so both filter params must be forwarded.
-     */
-    @Test
-    @DisplayName("Discover by genre and by cast are both forwarded")
-    void discoverForwardsFilters() throws Exception {
-        String discoverBody = "{\"page\":1,\"results\":[],\"total_pages\":0,\"total_results\":0}";
+  /**
+   * The single {@code /discover/movie} endpoint backs two distinct app features — genre browsing
+   * ({@code with_genres}) and actor filmography ({@code with_cast}) — so both filter params must be
+   * forwarded.
+   */
+  @Test
+  @DisplayName("Discover by genre and by cast are both forwarded")
+  void discoverForwardsFilters() throws Exception {
+    String discoverBody = "{\"page\":1,\"results\":[],\"total_pages\":0,\"total_results\":0}";
 
-        stubFor(WireMock.get(urlPathEqualTo("/discover/movie"))
-            .willReturn(okJson(discoverBody)));
+    stubFor(WireMock.get(urlPathEqualTo("/discover/movie")).willReturn(okJson(discoverBody)));
 
-        mockMvc.perform(get("/discover/movie")
-                .queryParam("with_genres", "28").queryParam("page", "1"))
-            .andExpect(status().isOk());
+    mockMvc
+        .perform(get("/discover/movie").queryParam("with_genres", "28").queryParam("page", "1"))
+        .andExpect(status().isOk());
 
-        mockMvc.perform(get("/discover/movie")
-                .queryParam("with_cast", "819").queryParam("page", "1"))
-            .andExpect(status().isOk());
+    mockMvc
+        .perform(get("/discover/movie").queryParam("with_cast", "819").queryParam("page", "1"))
+        .andExpect(status().isOk());
 
-        verify(1, getRequestedFor(urlPathEqualTo("/discover/movie"))
+    verify(
+        1,
+        getRequestedFor(urlPathEqualTo("/discover/movie"))
             .withQueryParam("with_genres", equalTo("28")));
-        verify(1, getRequestedFor(urlPathEqualTo("/discover/movie"))
+    verify(
+        1,
+        getRequestedFor(urlPathEqualTo("/discover/movie"))
             .withQueryParam("with_cast", equalTo("819")));
-    }
+  }
 
-    /**
-     * Regression guard ported from the pre-ADR-010 facade: a query with a
-     * space ("fight club") must reach TMDB decoded, not double-encoded.
-     */
-    @Test
-    @DisplayName("Search queries with spaces reach TMDB intact")
-    void searchQueryEncodingSurvivesForwarding() throws Exception {
-        String emptyList = "{\"page\":1,\"results\":[],\"total_pages\":0,\"total_results\":0}";
+  /**
+   * Regression guard ported from the pre-ADR-010 facade: a query with a space ("fight club") must
+   * reach TMDB decoded, not double-encoded.
+   */
+  @Test
+  @DisplayName("Search queries with spaces reach TMDB intact")
+  void searchQueryEncodingSurvivesForwarding() throws Exception {
+    String emptyList = "{\"page\":1,\"results\":[],\"total_pages\":0,\"total_results\":0}";
 
-        stubFor(WireMock.get(urlPathEqualTo("/search/movie"))
+    stubFor(
+        WireMock.get(urlPathEqualTo("/search/movie"))
             .withQueryParam("query", equalTo("fight club"))
             .willReturn(okJson(emptyList)));
 
-        mockMvc.perform(get("/search/movie").queryParam("query", "fight club"))
-            .andExpect(status().isOk());
+    mockMvc
+        .perform(get("/search/movie").queryParam("query", "fight club"))
+        .andExpect(status().isOk());
 
-        verify(1, getRequestedFor(urlPathEqualTo("/search/movie"))
+    verify(
+        1,
+        getRequestedFor(urlPathEqualTo("/search/movie"))
             .withQueryParam("query", equalTo("fight club")));
-    }
+  }
 
-    /**
-     * The genre catalog (React app sidebar) must come back in TMDB's shape —
-     * a bare {@code {"genres": [...]}} envelope, not the native API's
-     * ApiResponse wrapper.
-     */
-    @Test
-    @DisplayName("Genre list is TMDB-shaped")
-    void genreListIsTmdbShaped() throws Exception {
-        stubFor(WireMock.get(urlPathEqualTo("/genre/movie/list"))
+  /**
+   * The genre catalog (React app sidebar) must come back in TMDB's shape — a bare {@code {"genres":
+   * [...]}} envelope, not the native API's ApiResponse wrapper.
+   */
+  @Test
+  @DisplayName("Genre list is TMDB-shaped")
+  void genreListIsTmdbShaped() throws Exception {
+    stubFor(
+        WireMock.get(urlPathEqualTo("/genre/movie/list"))
             .willReturn(okJson("{\"genres\":[{\"id\":28,\"name\":\"Action\"}]}")));
 
-        mockMvc.perform(get("/genre/movie/list"))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.genres[0].id").value(28))
-            .andExpect(jsonPath("$.genres[0].name").value("Action"));
-    }
+    mockMvc
+        .perform(get("/genre/movie/list"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.genres[0].id").value(28))
+        .andExpect(jsonPath("$.genres[0].name").value("Action"));
+  }
 
-    /**
-     * Guards the two tests below from silently going vacuous.
-     *
-     * <p>They only prove anything if the document they plant is genuinely
-     * unreadable by the mapped repository. If someone later registers a
-     * {@code String -> SpokenLanguage} converter, or renames the field, the
-     * planted shape would map cleanly and those tests would pass without ever
-     * exercising the recovery path. This asserts the precondition directly, so
-     * that day shows up as a failure here rather than as false confidence.</p>
-     */
-    @Test
-    @DisplayName("Precondition: the planted pre-ADR-010 shape really is unreadable (#46)")
-    void plantedLegacyShapeIsGenuinelyUnconvertible() {
-        mongoTemplate.getCollection("movies").insertOne(
+  /**
+   * Guards the two tests below from silently going vacuous.
+   *
+   * <p>They only prove anything if the document they plant is genuinely unreadable by the mapped
+   * repository. If someone later registers a {@code String -> SpokenLanguage} converter, or renames
+   * the field, the planted shape would map cleanly and those tests would pass without ever
+   * exercising the recovery path. This asserts the precondition directly, so that day shows up as a
+   * failure here rather than as false confidence.
+   */
+  @Test
+  @DisplayName("Precondition: the planted pre-ADR-010 shape really is unreadable (#46)")
+  void plantedLegacyShapeIsGenuinelyUnconvertible() {
+    mongoTemplate
+        .getCollection("movies")
+        .insertOne(
             new org.bson.Document()
                 .append("tmdbId", 550L)
                 .append("title", "Fight Club")
                 .append("spokenLanguages", java.util.List.of("English")));
 
-        assertThatThrownBy(() -> movieRepository.findByTmdbId(550L))
-            .as("array-of-string spokenLanguages must not map to List<SpokenLanguage>")
-            .isInstanceOfAny(org.springframework.core.convert.ConversionException.class,
-                             org.springframework.data.mapping.MappingException.class);
-    }
+    assertThatThrownBy(() -> movieRepository.findByTmdbId(550L))
+        .as("array-of-string spokenLanguages must not map to List<SpokenLanguage>")
+        .isInstanceOfAny(
+            org.springframework.core.convert.ConversionException.class,
+            org.springframework.data.mapping.MappingException.class);
+  }
 
-    /**
-     * End-to-end proof of the #46 self-healing contract, against a genuinely
-     * malformed document in real MongoDB rather than a mocked exception.
-     *
-     * <p>Writes the exact shape that broke production on 2026-07-23: a movie
-     * whose {@code spokenLanguages} is an array of bare strings, as the
-     * pre-ADR-010 model persisted it, where the current model expects embedded
-     * {@code SpokenLanguage} objects. Before the fix this produced a
-     * {@code ConverterNotFoundException} → HTTP 500 on every request forever,
-     * since nothing ever rewrote the document.</p>
-     *
-     * <p>The endpoint must instead return 200 with correct data, and the stored
-     * document must end up in the current shape — repaired as a side effect of
-     * an ordinary read.</p>
-     */
-    @Test
-    @DisplayName("A schema-drifted document heals itself instead of 500ing (#46)")
-    void schemaDriftedDocumentIsHealedOnRead() throws Exception {
-        // 1. Plant a document in the OLD shape, bypassing the mapped repository
-        //    (the repository could not write this shape — that is the point).
-        mongoTemplate.getCollection("movies").insertOne(
+  /**
+   * End-to-end proof of the #46 self-healing contract, against a genuinely malformed document in
+   * real MongoDB rather than a mocked exception.
+   *
+   * <p>Writes the exact shape that broke production on 2026-07-23: a movie whose {@code
+   * spokenLanguages} is an array of bare strings, as the pre-ADR-010 model persisted it, where the
+   * current model expects embedded {@code SpokenLanguage} objects. Before the fix this produced a
+   * {@code ConverterNotFoundException} → HTTP 500 on every request forever, since nothing ever
+   * rewrote the document.
+   *
+   * <p>The endpoint must instead return 200 with correct data, and the stored document must end up
+   * in the current shape — repaired as a side effect of an ordinary read.
+   */
+  @Test
+  @DisplayName("A schema-drifted document heals itself instead of 500ing (#46)")
+  void schemaDriftedDocumentIsHealedOnRead() throws Exception {
+    // 1. Plant a document in the OLD shape, bypassing the mapped repository
+    //    (the repository could not write this shape — that is the point).
+    mongoTemplate
+        .getCollection("movies")
+        .insertOne(
             new org.bson.Document()
                 .append("tmdbId", 550L)
                 .append("title", "Fight Club")
@@ -376,57 +397,57 @@ class TmdbFacadeIntegrationTest extends AbstractMongoIntegrationTest {
                 .append("spokenLanguages", java.util.List.of("English", "German"))
                 .append("tmdbSyncVersion", 1));
 
-        assertThat(mongoTemplate.getCollection("movies").countDocuments()).isEqualTo(1);
+    assertThat(mongoTemplate.getCollection("movies").countDocuments()).isEqualTo(1);
 
-        // 2. TMDB must be reachable for the re-fetch that follows the eviction.
-        stubFor(WireMock.get(urlPathEqualTo("/movie/550"))
-            .willReturn(okJson(MOVIE_550_DETAILS)));
+    // 2. TMDB must be reachable for the re-fetch that follows the eviction.
+    stubFor(WireMock.get(urlPathEqualTo("/movie/550")).willReturn(okJson(MOVIE_550_DETAILS)));
 
-        // 3. The request succeeds rather than 500ing, and returns real data.
-        mockMvc.perform(get("/movie/550"))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.id").value(550))
-            .andExpect(jsonPath("$.title").value("Fight Club"))
-            // Proof it is the re-fetched document, not the stale one.
-            .andExpect(jsonPath("$.overview").value("An insomniac..."));
+    // 3. The request succeeds rather than 500ing, and returns real data.
+    mockMvc
+        .perform(get("/movie/550"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id").value(550))
+        .andExpect(jsonPath("$.title").value("Fight Club"))
+        // Proof it is the re-fetched document, not the stale one.
+        .andExpect(jsonPath("$.overview").value("An insomniac..."));
 
-        // 4. The drifted document was replaced, not duplicated, and the movie is
-        //    now readable through the mapped repository — i.e. genuinely repaired.
-        assertThat(mongoTemplate.getCollection("movies").countDocuments()).isEqualTo(1);
-        assertThat(movieRepository.findByTmdbId(550L))
-            .as("document must now map cleanly to the current model")
-            .isPresent()
-            .get()
-            .satisfies(m -> assertThat(m.getOverview()).isEqualTo("An insomniac..."));
+    // 4. The drifted document was replaced, not duplicated, and the movie is
+    //    now readable through the mapped repository — i.e. genuinely repaired.
+    assertThat(mongoTemplate.getCollection("movies").countDocuments()).isEqualTo(1);
+    assertThat(movieRepository.findByTmdbId(550L))
+        .as("document must now map cleanly to the current model")
+        .isPresent()
+        .get()
+        .satisfies(m -> assertThat(m.getOverview()).isEqualTo("An insomniac..."));
 
-        // 5. Exactly one TMDB call — the heal, not a retry storm.
-        verify(1, getRequestedFor(urlPathEqualTo("/movie/550")));
-    }
+    // 5. Exactly one TMDB call — the heal, not a retry storm.
+    verify(1, getRequestedFor(urlPathEqualTo("/movie/550")));
+  }
 
-    /**
-     * The heal must be durable, not per-request: once repaired, subsequent
-     * reads are served from MongoDB with no further TMDB traffic. A fix that
-     * re-fetched every time would still "work" but would silently burn the
-     * TMDB rate limit, so this guards the save-through half of the contract.
-     */
-    @Test
-    @DisplayName("Once healed, repeat reads are served locally with no further TMDB calls (#46)")
-    void healedDocumentIsServedLocallyAfterwards() throws Exception {
-        mongoTemplate.getCollection("movies").insertOne(
+  /**
+   * The heal must be durable, not per-request: once repaired, subsequent reads are served from
+   * MongoDB with no further TMDB traffic. A fix that re-fetched every time would still "work" but
+   * would silently burn the TMDB rate limit, so this guards the save-through half of the contract.
+   */
+  @Test
+  @DisplayName("Once healed, repeat reads are served locally with no further TMDB calls (#46)")
+  void healedDocumentIsServedLocallyAfterwards() throws Exception {
+    mongoTemplate
+        .getCollection("movies")
+        .insertOne(
             new org.bson.Document()
                 .append("tmdbId", 550L)
                 .append("title", "Fight Club")
                 .append("spokenLanguages", java.util.List.of("English")));
 
-        stubFor(WireMock.get(urlPathEqualTo("/movie/550"))
-            .willReturn(okJson(MOVIE_550_DETAILS)));
+    stubFor(WireMock.get(urlPathEqualTo("/movie/550")).willReturn(okJson(MOVIE_550_DETAILS)));
 
-        // First read heals it...
-        mockMvc.perform(get("/movie/550")).andExpect(status().isOk());
-        // ...second and third are pure local reads.
-        mockMvc.perform(get("/movie/550")).andExpect(status().isOk());
-        mockMvc.perform(get("/movie/550")).andExpect(status().isOk());
+    // First read heals it...
+    mockMvc.perform(get("/movie/550")).andExpect(status().isOk());
+    // ...second and third are pure local reads.
+    mockMvc.perform(get("/movie/550")).andExpect(status().isOk());
+    mockMvc.perform(get("/movie/550")).andExpect(status().isOk());
 
-        verify(1, getRequestedFor(urlPathEqualTo("/movie/550")));
-    }
+    verify(1, getRequestedFor(urlPathEqualTo("/movie/550")));
+  }
 }

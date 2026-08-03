@@ -10,8 +10,8 @@ import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 /**
- * Redis configuration for API Gateway.
- * Provides ReactiveRedisTemplate for rate limiting and caching.
+ * Redis configuration for API Gateway. Provides ReactiveRedisTemplate for rate limiting and
+ * caching.
  *
  * @author Filmpire Development Team
  * @version 1.0.0
@@ -20,28 +20,27 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 @ConditionalOnBean(ReactiveRedisConnectionFactory.class)
 public class RedisConfig {
 
-    /**
-     * Creates a ReactiveRedisTemplate for global rate limiting.
-     * Uses String serializers for both keys and values.
-     *
-     * @param connectionFactory the reactive redis connection factory
-     * @return ReactiveRedisTemplate for String operations
-     */
-    @Bean
-    public ReactiveRedisTemplate<String, String> reactiveRedisTemplate(
-            @NonNull ReactiveRedisConnectionFactory connectionFactory) {
-        
-        StringRedisSerializer serializer = new StringRedisSerializer();
-        
-        RedisSerializationContext<String, String> serializationContext = RedisSerializationContext
-                .<String, String>newSerializationContext()
-                .key(serializer)
-                .value(serializer)
-                .hashKey(serializer)
-                .hashValue(serializer)
-                .build();
+  /**
+   * Creates a ReactiveRedisTemplate for global rate limiting. Uses String serializers for both keys
+   * and values.
+   *
+   * @param connectionFactory the reactive redis connection factory
+   * @return ReactiveRedisTemplate for String operations
+   */
+  @Bean
+  public ReactiveRedisTemplate<String, String> reactiveRedisTemplate(
+      @NonNull ReactiveRedisConnectionFactory connectionFactory) {
 
-        return new ReactiveRedisTemplate<>(connectionFactory, serializationContext);
-    }
+    StringRedisSerializer serializer = new StringRedisSerializer();
+
+    RedisSerializationContext<String, String> serializationContext =
+        RedisSerializationContext.<String, String>newSerializationContext()
+            .key(serializer)
+            .value(serializer)
+            .hashKey(serializer)
+            .hashValue(serializer)
+            .build();
+
+    return new ReactiveRedisTemplate<>(connectionFactory, serializationContext);
+  }
 }
-

@@ -5,5 +5,4 @@ package com.filmpire.ai.dto;
  *
  * @param text the recognized text, empty (not null) if nothing was understood
  */
-public record TranscriptionResponseDto(String text) {
-}
+public record TranscriptionResponseDto(String text) {}

@@ -5,9 +5,7 @@ import java.time.LocalDate;
 import java.util.List;
 import lombok.Builder;
 
-/**
- * Simplified DTO for movie lists (discover, search, popular, etc.).
- */
+/** Simplified DTO for movie lists (discover, search, popular, etc.). */
 @Builder
 public record MovieListDto(
     Long tmdbId,
@@ -20,5 +18,5 @@ public record MovieListDto(
     Integer voteCount,
     List<GenreDto> genres,
     Double popularity,
-    Boolean adult
-) implements Serializable {}
+    Boolean adult)
+    implements Serializable {}

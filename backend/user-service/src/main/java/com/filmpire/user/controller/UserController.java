@@ -1,5 +1,8 @@
 package com.filmpire.user.controller;
 
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
+
 import com.filmpire.shared.dto.ApiResponse;
 import com.filmpire.shared.dto.HalResource;
 import com.filmpire.user.dto.AuthDtos.ChangePasswordRequest;
@@ -10,6 +13,7 @@ import com.filmpire.user.service.UserAccountService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -23,22 +27,16 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
-
-import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
-import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
-
 /**
- * Profile, favorites and watchlist endpoints for the authenticated user
- * (issue #17). Every route requires a valid Bearer token; the acting user is
- * always the token's subject — no cross-user access exists.
+ * Profile, favorites and watchlist endpoints for the authenticated user (issue #17). Every route
+ * requires a valid Bearer token; the acting user is always the token's subject — no cross-user
+ * access exists.
  *
- * <p>The profile resource is HATEOAS-enriched (HAL {@code _links}), matching
- * the pattern established in movie-service and actor-service: it advertises
- * links to itself and its favorites/watchlist sub-resources so a client
- * discovers navigation instead of hard-coding URLs. Mutations (update
- * profile, password change, favorites/watchlist writes) stay plain — only
- * the single-resource GET is decorated.</p>
+ * <p>The profile resource is HATEOAS-enriched (HAL {@code _links}), matching the pattern
+ * established in movie-service and actor-service: it advertises links to itself and its
+ * favorites/watchlist sub-resources so a client discovers navigation instead of hard-coding URLs.
+ * Mutations (update profile, password change, favorites/watchlist writes) stay plain — only the
+ * single-resource GET is decorated.
  */
 @RestController
 @RequestMapping("/api/v1/users")
@@ -46,151 +44,165 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 @Tag(name = "Users", description = "Profile, favorites and watchlist of the authenticated user")
 public class UserController {
 
-    private final UserAccountService userAccountService;
+  private final UserAccountService userAccountService;
 
-    /**
-     * Returns the caller's profile.
-     *
-     * @param auth caller identity (JWT subject)
-     * @return 200 with the profile as a HATEOAS resource (self + favorites/watchlist links)
-     */
-    @GetMapping("/profile")
-    @Operation(summary = "Get the current user's profile")
-    public ResponseEntity<ApiResponse<HalResource<UserProfileResponse>>> getProfile(Authentication auth) {
-        UserProfileResponse profile = userAccountService.getProfile(auth.getName());
-        // HATEOAS: the profile advertises links to itself and the account's
-        // list sub-resources, so a client discovers favorites/watchlist
-        // instead of building URLs. Non-path args are irrelevant to the
-        // link's URI, so they're passed as null.
-        HalResource<UserProfileResponse> model = HalResource.of(profile)
-            .withLink("self", linkTo(methodOn(UserController.class).getProfile(null)).withSelfRel().getHref())
-            .withLink("favorites", linkTo(methodOn(UserController.class).getFavorites(null)).withRel("favorites").getHref())
-            .withLink("watchlist", linkTo(methodOn(UserController.class).getWatchlist(null)).withRel("watchlist").getHref());
-        return ok(model, "Profile retrieved");
-    }
+  /**
+   * Returns the caller's profile.
+   *
+   * @param auth caller identity (JWT subject)
+   * @return 200 with the profile as a HATEOAS resource (self + favorites/watchlist links)
+   */
+  @GetMapping("/profile")
+  @Operation(summary = "Get the current user's profile")
+  public ResponseEntity<ApiResponse<HalResource<UserProfileResponse>>> getProfile(
+      Authentication auth) {
+    UserProfileResponse profile = userAccountService.getProfile(auth.getName());
+    // HATEOAS: the profile advertises links to itself and the account's
+    // list sub-resources, so a client discovers favorites/watchlist
+    // instead of building URLs. Non-path args are irrelevant to the
+    // link's URI, so they're passed as null.
+    HalResource<UserProfileResponse> model =
+        HalResource.of(profile)
+            .withLink(
+                "self",
+                linkTo(methodOn(UserController.class).getProfile(null)).withSelfRel().getHref())
+            .withLink(
+                "favorites",
+                linkTo(methodOn(UserController.class).getFavorites(null))
+                    .withRel("favorites")
+                    .getHref())
+            .withLink(
+                "watchlist",
+                linkTo(methodOn(UserController.class).getWatchlist(null))
+                    .withRel("watchlist")
+                    .getHref());
+    return ok(model, "Profile retrieved");
+  }
 
-    /**
-     * Updates the caller's profile.
-     *
-     * @param auth    caller identity
-     * @param request new profile values
-     * @return 200 with the updated profile
-     */
-    @PutMapping("/profile")
-    @Operation(summary = "Update the current user's profile")
-    public ResponseEntity<ApiResponse<UserProfileResponse>> updateProfile(
-            Authentication auth, @Valid @RequestBody UpdateProfileRequest request) {
-        return ok(userAccountService.updateProfile(auth.getName(), request), "Profile updated");
-    }
+  /**
+   * Updates the caller's profile.
+   *
+   * @param auth caller identity
+   * @param request new profile values
+   * @return 200 with the updated profile
+   */
+  @PutMapping("/profile")
+  @Operation(summary = "Update the current user's profile")
+  public ResponseEntity<ApiResponse<UserProfileResponse>> updateProfile(
+      Authentication auth, @Valid @RequestBody UpdateProfileRequest request) {
+    return ok(userAccountService.updateProfile(auth.getName(), request), "Profile updated");
+  }
 
-    /**
-     * Changes the caller's password.
-     *
-     * @param auth    caller identity
-     * @param request current + new password
-     * @return 200 acknowledgement
-     */
-    @PutMapping("/password")
-    @Operation(summary = "Change the current user's password")
-    public ResponseEntity<ApiResponse<Void>> changePassword(
-            Authentication auth, @Valid @RequestBody ChangePasswordRequest request) {
-        userAccountService.changePassword(auth.getName(), request);
-        return ok(null, "Password changed");
-    }
+  /**
+   * Changes the caller's password.
+   *
+   * @param auth caller identity
+   * @param request current + new password
+   * @return 200 acknowledgement
+   */
+  @PutMapping("/password")
+  @Operation(summary = "Change the current user's password")
+  public ResponseEntity<ApiResponse<Void>> changePassword(
+      Authentication auth, @Valid @RequestBody ChangePasswordRequest request) {
+    userAccountService.changePassword(auth.getName(), request);
+    return ok(null, "Password changed");
+  }
 
-    /**
-     * Lists the caller's favorite movies (TMDB ids), newest first.
-     *
-     * @param auth caller identity
-     * @return 200 with the list
-     */
-    @GetMapping("/favorites")
-    @Operation(summary = "List favorite movies")
-    public ResponseEntity<ApiResponse<List<MovieListEntryResponse>>> getFavorites(Authentication auth) {
-        return ok(userAccountService.getFavorites(auth.getName()), "Favorites retrieved");
-    }
+  /**
+   * Lists the caller's favorite movies (TMDB ids), newest first.
+   *
+   * @param auth caller identity
+   * @return 200 with the list
+   */
+  @GetMapping("/favorites")
+  @Operation(summary = "List favorite movies")
+  public ResponseEntity<ApiResponse<List<MovieListEntryResponse>>> getFavorites(
+      Authentication auth) {
+    return ok(userAccountService.getFavorites(auth.getName()), "Favorites retrieved");
+  }
 
-    /**
-     * Adds a movie to favorites (idempotent — repeat adds succeed silently).
-     *
-     * @param auth    caller identity
-     * @param movieId TMDB movie id
-     * @return 200 acknowledgement
-     */
-    @PostMapping("/favorites/{movieId}")
-    @Operation(summary = "Add a movie to favorites (idempotent)")
-    public ResponseEntity<ApiResponse<Void>> addFavorite(
-            Authentication auth, @PathVariable Long movieId) {
-        userAccountService.addFavorite(auth.getName(), movieId);
-        return ok(null, "Added to favorites");
-    }
+  /**
+   * Adds a movie to favorites (idempotent — repeat adds succeed silently).
+   *
+   * @param auth caller identity
+   * @param movieId TMDB movie id
+   * @return 200 acknowledgement
+   */
+  @PostMapping("/favorites/{movieId}")
+  @Operation(summary = "Add a movie to favorites (idempotent)")
+  public ResponseEntity<ApiResponse<Void>> addFavorite(
+      Authentication auth, @PathVariable Long movieId) {
+    userAccountService.addFavorite(auth.getName(), movieId);
+    return ok(null, "Added to favorites");
+  }
 
-    /**
-     * Removes a movie from favorites (idempotent).
-     *
-     * @param auth    caller identity
-     * @param movieId TMDB movie id
-     * @return 200 acknowledgement
-     */
-    @DeleteMapping("/favorites/{movieId}")
-    @Operation(summary = "Remove a movie from favorites (idempotent)")
-    public ResponseEntity<ApiResponse<Void>> removeFavorite(
-            Authentication auth, @PathVariable Long movieId) {
-        userAccountService.removeFavorite(auth.getName(), movieId);
-        return ok(null, "Removed from favorites");
-    }
+  /**
+   * Removes a movie from favorites (idempotent).
+   *
+   * @param auth caller identity
+   * @param movieId TMDB movie id
+   * @return 200 acknowledgement
+   */
+  @DeleteMapping("/favorites/{movieId}")
+  @Operation(summary = "Remove a movie from favorites (idempotent)")
+  public ResponseEntity<ApiResponse<Void>> removeFavorite(
+      Authentication auth, @PathVariable Long movieId) {
+    userAccountService.removeFavorite(auth.getName(), movieId);
+    return ok(null, "Removed from favorites");
+  }
 
-    /**
-     * Lists the caller's watchlist (TMDB ids), newest first.
-     *
-     * @param auth caller identity
-     * @return 200 with the list
-     */
-    @GetMapping("/watchlist")
-    @Operation(summary = "List watchlist movies")
-    public ResponseEntity<ApiResponse<List<MovieListEntryResponse>>> getWatchlist(Authentication auth) {
-        return ok(userAccountService.getWatchlist(auth.getName()), "Watchlist retrieved");
-    }
+  /**
+   * Lists the caller's watchlist (TMDB ids), newest first.
+   *
+   * @param auth caller identity
+   * @return 200 with the list
+   */
+  @GetMapping("/watchlist")
+  @Operation(summary = "List watchlist movies")
+  public ResponseEntity<ApiResponse<List<MovieListEntryResponse>>> getWatchlist(
+      Authentication auth) {
+    return ok(userAccountService.getWatchlist(auth.getName()), "Watchlist retrieved");
+  }
 
-    /**
-     * Adds a movie to the watchlist (idempotent).
-     *
-     * @param auth    caller identity
-     * @param movieId TMDB movie id
-     * @return 200 acknowledgement
-     */
-    @PostMapping("/watchlist/{movieId}")
-    @Operation(summary = "Add a movie to the watchlist (idempotent)")
-    public ResponseEntity<ApiResponse<Void>> addToWatchlist(
-            Authentication auth, @PathVariable Long movieId) {
-        userAccountService.addToWatchlist(auth.getName(), movieId);
-        return ok(null, "Added to watchlist");
-    }
+  /**
+   * Adds a movie to the watchlist (idempotent).
+   *
+   * @param auth caller identity
+   * @param movieId TMDB movie id
+   * @return 200 acknowledgement
+   */
+  @PostMapping("/watchlist/{movieId}")
+  @Operation(summary = "Add a movie to the watchlist (idempotent)")
+  public ResponseEntity<ApiResponse<Void>> addToWatchlist(
+      Authentication auth, @PathVariable Long movieId) {
+    userAccountService.addToWatchlist(auth.getName(), movieId);
+    return ok(null, "Added to watchlist");
+  }
 
-    /**
-     * Removes a movie from the watchlist (idempotent).
-     *
-     * @param auth    caller identity
-     * @param movieId TMDB movie id
-     * @return 200 acknowledgement
-     */
-    @DeleteMapping("/watchlist/{movieId}")
-    @Operation(summary = "Remove a movie from the watchlist (idempotent)")
-    public ResponseEntity<ApiResponse<Void>> removeFromWatchlist(
-            Authentication auth, @PathVariable Long movieId) {
-        userAccountService.removeFromWatchlist(auth.getName(), movieId);
-        return ok(null, "Removed from watchlist");
-    }
+  /**
+   * Removes a movie from the watchlist (idempotent).
+   *
+   * @param auth caller identity
+   * @param movieId TMDB movie id
+   * @return 200 acknowledgement
+   */
+  @DeleteMapping("/watchlist/{movieId}")
+  @Operation(summary = "Remove a movie from the watchlist (idempotent)")
+  public ResponseEntity<ApiResponse<Void>> removeFromWatchlist(
+      Authentication auth, @PathVariable Long movieId) {
+    userAccountService.removeFromWatchlist(auth.getName(), movieId);
+    return ok(null, "Removed from watchlist");
+  }
 
-    /**
-     * Wraps a payload in the shared success envelope.
-     *
-     * @param data    payload (may be null for acknowledgements)
-     * @param message human-readable outcome
-     * @param <T>     payload type
-     * @return 200 response
-     */
-    private static <T> ResponseEntity<ApiResponse<T>> ok(T data, String message) {
-        return ResponseEntity.ok(ApiResponse.success(data, message, HttpStatus.OK.value()));
-    }
+  /**
+   * Wraps a payload in the shared success envelope.
+   *
+   * @param data payload (may be null for acknowledgements)
+   * @param message human-readable outcome
+   * @param <T> payload type
+   * @return 200 response
+   */
+  private static <T> ResponseEntity<ApiResponse<T>> ok(T data, String message) {
+    return ResponseEntity.ok(ApiResponse.success(data, message, HttpStatus.OK.value()));
+  }
 }

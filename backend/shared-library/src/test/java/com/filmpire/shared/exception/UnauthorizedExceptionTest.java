@@ -1,9 +1,9 @@
 package com.filmpire.shared.exception;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Unit tests for {@link UnauthorizedException}.
@@ -13,30 +13,30 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DisplayName("UnauthorizedException Tests")
 class UnauthorizedExceptionTest {
 
-    /**
-     * Verify that the message constructor correctly sets the exception message
-     * and leaves the cause as null.
-     */
-    @Test
-    @DisplayName("Message constructor sets the message")
-    void messageConstructor_shouldSetMessage() {
-        UnauthorizedException ex = new UnauthorizedException("token expired");
+  /**
+   * Verify that the message constructor correctly sets the exception message and leaves the cause
+   * as null.
+   */
+  @Test
+  @DisplayName("Message constructor sets the message")
+  void messageConstructor_shouldSetMessage() {
+    UnauthorizedException ex = new UnauthorizedException("token expired");
 
-        assertThat(ex.getMessage()).isEqualTo("token expired");
-        assertThat(ex.getCause()).isNull();
-     }
+    assertThat(ex.getMessage()).isEqualTo("token expired");
+    assertThat(ex.getCause()).isNull();
+  }
 
-    /**
-     * Verify that the message and cause constructor correctly sets the message
-     * and preserves the underlying cause.
-     */
-    @Test
-    @DisplayName("Message+cause constructor preserves the cause")
-    void messageAndCauseConstructor_shouldPreserveCause() {
-        Throwable cause = new IllegalStateException("root cause");
+  /**
+   * Verify that the message and cause constructor correctly sets the message and preserves the
+   * underlying cause.
+   */
+  @Test
+  @DisplayName("Message+cause constructor preserves the cause")
+  void messageAndCauseConstructor_shouldPreserveCause() {
+    Throwable cause = new IllegalStateException("root cause");
 
-        UnauthorizedException ex = new UnauthorizedException("token expired", cause);
+    UnauthorizedException ex = new UnauthorizedException("token expired", cause);
 
-        assertThat(ex.getCause()).isSameAs(cause);
-    }
+    assertThat(ex.getCause()).isSameAs(cause);
+  }
 }
