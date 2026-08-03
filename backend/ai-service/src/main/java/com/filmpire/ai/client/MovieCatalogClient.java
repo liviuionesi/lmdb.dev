@@ -2,7 +2,6 @@ package com.filmpire.ai.client;
 
 import com.filmpire.shared.dto.PageResponse;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;

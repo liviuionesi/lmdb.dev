@@ -36,7 +36,7 @@ management:
       application: ${spring.application.name}
     distribution:
       percentiles-histogram:
-        http.server.requests: true
+        "[http.server.requests]": true
   endpoint:
     health:
       probes:
