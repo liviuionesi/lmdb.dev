@@ -92,12 +92,12 @@ sonar {
         property 'sonar.issue.ignore.multicriteria.e3.ruleKey', 'java:S1192'
         property 'sonar.issue.ignore.multicriteria.e3.resourceKey', '**/src/test/**/*'
 
-        // e4: local-dev-only default credentials in application.yml
-        // (redis123 — same value docker-compose.yml uses for its local
-        // container). Real deployments must override via env vars
+        // e4: local-dev-only default Redis password in application.yml,
+        // matching the value docker-compose.yml uses for its local
+        // container. Real deployments must override via env var
         // (REDIS_PASSWORD is ${VAR:default}-overridable); not a production
-        // secret. The mongo default (admin123) that used to trigger this too
-        // was removed instead of suppressed — see #106.
+        // secret. The equivalent mongo default used to trigger this rule
+        // too but was removed instead of suppressed — see #106.
         property 'sonar.issue.ignore.multicriteria.e4.ruleKey', 'secrets:S6694'
         property 'sonar.issue.ignore.multicriteria.e4.resourceKey', '**/src/main/resources/application*.yml'
     }
