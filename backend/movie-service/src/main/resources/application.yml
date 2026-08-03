@@ -15,7 +15,7 @@ spring:
   # MongoDB Configuration
   mongodb:
     database: filmpire
-    uri: ${MONGODB_URI:mongodb://admin:admin123@localhost:27017/filmpire?authSource=admin}
+    uri: ${MONGODB_URI:mongodb://localhost:27017/filmpire}
 
   data:
     redis:
@@ -34,6 +34,22 @@ spring:
     type: redis
     redis:
       time-to-live: 300000  # 5 minutes (300,000 ms)
+
+  # Feign Client Configuration
+  cloud:
+    openfeign:
+      client:
+        config:
+          default:
+            connectTimeout: 5000
+            readTimeout: 10000
+            loggerLevel: BASIC
+      compression:
+        request:
+          enabled: true
+          mime-types: application/json
+        response:
+          enabled: true
 
 # TMDB API Configuration
 tmdb:
@@ -101,28 +117,6 @@ springdoc:
     path: /swagger-ui.html
     tags-sorter: alpha
     operations-sorter: alpha
-  info:
-    title: Movie Service API
-    description: API for movie discovery, search, and details
-    version: 1.0.0
-    contact:
-      name: Filmpire Team
-      email: support@filmpire.com
-
-# Feign Client Configuration
-feign:
-  client:
-    config:
-      default:
-        connectTimeout: 5000
-        readTimeout: 10000
-        loggerLevel: BASIC
-  compression:
-    request:
-      enabled: true
-      mime-types: application/json
-    response:
-      enabled: true
 
 # Application Info
 info:

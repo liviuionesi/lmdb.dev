@@ -93,10 +93,11 @@ sonar {
         property 'sonar.issue.ignore.multicriteria.e3.resourceKey', '**/src/test/**/*'
 
         // e4: local-dev-only default credentials in application.yml
-        // (admin123/redis123/minioadmin123 — same values docker-compose.yml
-        // uses for its local containers). Real deployments must override via
-        // env vars (MONGODB_URI/POSTGRES_PASSWORD/REDIS_PASSWORD/etc. are all
-        // ${VAR:default}-overridable); these are not production secrets.
+        // (redis123 — same value docker-compose.yml uses for its local
+        // container). Real deployments must override via env vars
+        // (REDIS_PASSWORD is ${VAR:default}-overridable); not a production
+        // secret. The mongo default (admin123) that used to trigger this too
+        // was removed instead of suppressed — see #106.
         property 'sonar.issue.ignore.multicriteria.e4.ruleKey', 'secrets:S6694'
         property 'sonar.issue.ignore.multicriteria.e4.resourceKey', '**/src/main/resources/application*.yml'
     }
