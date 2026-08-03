@@ -106,13 +106,11 @@ sonar {
 // OWASP Dependency-Check (#101) — scans every subproject's resolved
 // dependencies for known CVEs (NVD database). Optional NVD_API_KEY env var
 // raises the NVD download rate limit; without it the first run is slower
-// but still works. failBuildOnCVSS is set to Critical-only (9.0) for now —
-// this is a brand-new gate on dependencies that predate it, so it starts
-// conservative rather than immediately red; tightening the threshold is a
-// deliberate follow-up, not something to silently ratchet down here.
+// but still works. failBuildOnCVSS tightened from critical-only (9.0) to
+// high+ (7.0) once the pre-existing high-severity backlog was triaged (#105).
 // Run: ./gradlew dependencyCheckAggregate
 dependencyCheck {
-    failBuildOnCVSS = 9.0
+    failBuildOnCVSS = 7.0
     // HTML only — that's the one CI actually uploads as an artifact.
     formats = ['HTML']
     // Fixed, predictable path so CI can cache the NVD database across runs
@@ -133,6 +131,11 @@ dependencyCheck {
         // frontend/filmpire is scanned separately via `npm audit` in CI —
         // this plugin only needs to cover the Gradle/Java dependency graph.
     }
+    // The root `rewrite` configuration (OpenRewrite recipe artifacts, incl.
+    // an embedded Kotlin compiler) is build-tooling only — nothing in it
+    // ships in any deployed service artifact, so CVEs against it are noise
+    // for this gate rather than real findings (#105).
+    skipConfigurations.add('rewrite')
 }
 
 subprojects {
@@ -210,13 +213,35 @@ subprojects {
         }
     }
     
+    // Managed-dependency CVE fixes ahead of Spring Boot's next BOM refresh
+    // (#105) — resolved against the imported BOM's own version properties,
+    // the standard Spring Boot override mechanism.
+    ext['tomcat.version'] = '11.0.24'         // CVE-2026-53434/55276/59083/59084/53404
+    ext['netty.version'] = '4.2.16.Final'     // CVE-2026-56817/56820/55851/56745/44891/55831/55833/56816/56819
+    ext['jackson-2-bom.version'] = '2.21.5'   // CVE-2026-54515
+    ext['postgresql.version'] = '42.7.13'     // CVE-2026-54291
+    ext['log4j2.version'] = '2.25.5'          // CVE-2026-49844
+    ext['httpcore5.version'] = '5.4.3'        // CVE-2026-54399/54428
+
     dependencyManagement {
         imports {
             mavenBom "org.springframework.boot:spring-boot-dependencies:${springBootVersion}"
             mavenBom "org.testcontainers:testcontainers-bom:${testcontainersVersion}"
         }
     }
-    
+
+    // Not Spring-Boot-managed, so plain resolutionStrategy.force instead of
+    // an ext[] BOM property override (#105).
+    configurations.all {
+        resolutionStrategy {
+            // Pulled in by the Eureka client's netflix-infix across every
+            // service that registers with discovery.
+            force 'org.apache.httpcomponents:httpclient:4.5.14' // CVE-2020-13956
+            // Pulled in transitively by the MinIO client in media-service.
+            force 'org.apache.commons:commons-compress:1.28.0'  // CVE-2024-25710/26308
+        }
+    }
+
     // JaCoco configuration for test coverage
     jacoco {
         toolVersion = "${jacocoVersion}"

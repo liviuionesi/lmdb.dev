@@ -36,13 +36,8 @@ jobs:
       - name: Run linter
         run: npm run lint
 
-      - name: Dependency/security scan (#101)
-        # Critical-only for now — 30 pre-existing high/moderate/low findings
-        # are transitive react-scripts/webpack-dev-server dev-tooling
-        # vulnerabilities with no non-breaking fix available (see #101).
-        # Tightening this threshold is a deliberate follow-up, not a
-        # silent ratchet-down.
-        run: npm audit --audit-level=critical
+      - name: Dependency/security scan (#105)
+        run: npm audit --audit-level=high
 
       - name: Build application
         run: npm run build
