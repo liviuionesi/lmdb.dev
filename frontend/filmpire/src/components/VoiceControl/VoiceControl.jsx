@@ -46,6 +46,7 @@ const VoiceControl = () => {
       dispatch(clearUser());
       history.push('/');
     } else if (command === 'search') {
+      history.push('/');
       dispatch(searchMovie(query));
     }
   };
@@ -124,7 +125,7 @@ const VoiceControl = () => {
 
   return (
     <>
-      <Tooltip title={status === 'recording' ? 'Stop recording' : 'Voice control'}>
+      <Tooltip title={status === 'recording' ? 'Click to stop recording' : 'Voice control (Try: "Search Batman", "Popular", "Action", "Dark mode")'}>
         <Fab
           color={status === 'recording' ? 'secondary' : 'primary'}
           onClick={handleClick}

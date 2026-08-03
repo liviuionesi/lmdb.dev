@@ -31,7 +31,7 @@ const Sidebar = ({ setMobileOpen }) => {
 
   return (
     <>
-      <Link to="/" className={classes.imageLink}>
+      <Link to="/" className={classes.imageLink} onClick={() => dispatch(selectGenreOrCategory('popular'))}>
         <img
           className={classes.image}
           src={theme.palette.mode === 'light' ? redLogo : blueLogo}
@@ -41,16 +41,19 @@ const Sidebar = ({ setMobileOpen }) => {
       <Divider />
       <List>
         <ListSubheader>Categories</ListSubheader>
-        {categories.map(({ label, value }) => (
-          <Link key={value} className={classes.links} to="/">
-            <ListItem onClick={() => dispatch(selectGenreOrCategory(value))} button>
-              <ListItemIcon>
-                <img src={genreIcons[label.toLowerCase()]} className={classes.genreImage} height={30} />
-              </ListItemIcon>
-              <ListItemText primary={label} />
-            </ListItem>
-          </Link>
-        ))}
+        {categories.map(({ label, value }) => {
+          const isSelected = value === genreIdOrCategoryName || (value === 'popular' && !genreIdOrCategoryName);
+          return (
+            <Link key={value} className={classes.links} to="/">
+              <ListItem onClick={() => dispatch(selectGenreOrCategory(value))} button selected={isSelected}>
+                <ListItemIcon>
+                  <img src={genreIcons[label.toLowerCase()]} className={classes.genreImage} height={30} alt={label} />
+                </ListItemIcon>
+                <ListItemText primary={label} />
+              </ListItem>
+            </Link>
+          );
+        })}
       </List>
       <Divider />
       <List>
@@ -59,16 +62,19 @@ const Sidebar = ({ setMobileOpen }) => {
           <Box display="flex" justifyContent="center">
             <CircularProgress />
           </Box>
-        ) : data.genres.map(({ name, id }) => (
-          <Link key={name} className={classes.links} to="/">
-            <ListItem onClick={() => dispatch(selectGenreOrCategory(id))} button>
-              <ListItemIcon>
-                <img src={genreIcons[name.toLowerCase()]} className={classes.genreImage} height={30} />
-              </ListItemIcon>
-              <ListItemText primary={name} />
-            </ListItem>
-          </Link>
-        ))}
+        ) : data?.genres?.map(({ name, id }) => {
+          const isSelected = String(genreIdOrCategoryName) === String(id);
+          return (
+            <Link key={name} className={classes.links} to="/">
+              <ListItem onClick={() => dispatch(selectGenreOrCategory(id))} button selected={isSelected}>
+                <ListItemIcon>
+                  <img src={genreIcons[name.toLowerCase()]} className={classes.genreImage} height={30} alt={name} />
+                </ListItemIcon>
+                <ListItemText primary={name} />
+              </ListItem>
+            </Link>
+          );
+        })}
       </List>
     </>
   );

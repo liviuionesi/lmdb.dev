@@ -46,8 +46,16 @@ docker run -p 8084:8084 -p 9084:9084 filmpire/ai-service:local
 | `/recommendations` | POST | Ranked, explained recommendations from Filmpire's catalog |
 | `/chat` | POST | Continue (or start) a conversation with the assistant |
 | `/search/semantic` | GET | Nearest taste-profile neighbours to a free-text query |
+| `/speech-to-text` | POST | Transcribe WAV audio using self-hosted Vosk engine (#68) |
 
-All three are JWT-gated at the gateway (`SecurityConfig`) — every feature is scoped to a `userId`.
+All recommendations/chat/semantic search features are scoped to a `userId`. Voice control uses `/speech-to-text` (public endpoint at gateway).
+
+### 🎙️ Supported Voice Commands
+Users can speak into the microphone icon in the UI:
+- **Genre / Category**: `"Popular"`, `"Top rated"`, `"Upcoming"`, or any genre (`"Action"`, `"Comedy"`, `"Drama"`, etc.)
+- **Search**: `"Search [Movie Title]"` (e.g. `"Search Inception"`)
+- **Theme**: `"Dark mode"` / `"Light mode"`
+- **Auth**: `"Log out"` / `"Sign out"`
 
 ### gRPC — `ai_service.proto`
 - `GetRecommendations` — same logic as the REST endpoint
