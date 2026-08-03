@@ -32,10 +32,12 @@ services:
       start_period: 60s
     restart: unless-stopped
 
-  # One-shot: PUTs the ILM policy + index template, then exits (see
-  # elk/setup/setup.sh). Logstash/Kibana don't block on it — the pipeline
-  # works before it runs, just without the lifecycle policy on the very
-  # first index until this completes, which is seconds after ES is healthy.
+  # One-shot: PUTs the ILM policy + index template, then imports the
+  # checked-in Kibana dashboard (data view, visualizations, saved search),
+  # then exits (see elk/setup/setup.sh). Logstash/Filebeat don't block on
+  # it — the pipeline works before it runs, just without the lifecycle
+  # policy/dashboard until this completes, which is seconds after
+  # Elasticsearch and Kibana are both healthy.
   elk-setup:
     image: docker.io/curlimages/curl:8.10.1
     container_name: filmpire-elk-setup
@@ -44,10 +46,13 @@ services:
       - ./elk/setup/setup.sh:/setup/setup.sh:ro,z
       - ./elk/elasticsearch/ilm-policy.json:/setup/ilm-policy.json:ro,z
       - ./elk/elasticsearch/index-template.json:/setup/index-template.json:ro,z
+      - ./elk/kibana/filmpire-overview.ndjson:/setup/filmpire-overview.ndjson:ro,z
     networks:
       - filmpire-network
     depends_on:
       elasticsearch:
+        condition: service_healthy
+      kibana:
         condition: service_healthy
     restart: "no"
 
