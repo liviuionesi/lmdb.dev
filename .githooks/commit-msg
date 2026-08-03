@@ -1,0 +1,32 @@
+#!/bin/sh
+# Enforces CLAUDE.md's commit conventions: subject must reference a real
+# issue number, subject must be short, body must stay short (a one-line
+# reason at most, not a rewritten copy of the issue). Installed via
+# `git config core.hooksPath .githooks` (see README/CONTRIBUTING).
+set -eu
+
+MSG_FILE="$1"
+SUBJECT=$(sed -n '1p' "$MSG_FILE")
+SUBJECT_LEN=$(printf '%s' "$SUBJECT" | wc -c)
+
+# Body = all non-blank lines after the first blank line following the subject.
+BODY_LINES=$(awk 'NR==1{next} /^$/{seen_blank=1; next} seen_blank && NF{count++} END{print count+0}' "$MSG_FILE")
+
+FAIL=0
+
+if ! printf '%s' "$SUBJECT" | grep -qE '#[0-9]+'; then
+  echo "commit-msg: subject line must reference a real issue number, e.g. 'feat: Implement X (#17)'" >&2
+  FAIL=1
+fi
+
+if [ "$SUBJECT_LEN" -gt 73 ]; then
+  echo "commit-msg: subject line is $SUBJECT_LEN chars, keep it under ~72" >&2
+  FAIL=1
+fi
+
+if [ "$BODY_LINES" -gt 5 ]; then
+  echo "commit-msg: commit body has $BODY_LINES content lines — keep it to a short reason, not a rewritten issue. Long explanation belongs in the issue, not the commit." >&2
+  FAIL=1
+fi
+
+exit $FAIL

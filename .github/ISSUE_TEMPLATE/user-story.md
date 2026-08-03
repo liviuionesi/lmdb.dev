@@ -1,69 +1,40 @@
 ---
 name: User Story
-about: User story for feature development
+about: A vertical slice of user-facing value (the real requirements-writing unit)
 title: '[STORY] As a <role>, I want <goal> so that <benefit>'
 labels: user-story
-assignees: ''
 ---
 
 ## User Story
-**As a** [type of user]  
-**I want** [goal/desire]  
-**So that** [benefit/value]
+**As a** <role>
+**I want** <goal>
+**So that** <benefit>
 
-## Acceptance Criteria
-<!-- Specific, testable criteria -->
-- [ ] Given [context], when [action], then [expected outcome]
-- [ ] Given [context], when [action], then [expected outcome]
+<!-- INVEST check before this Story enters the backlog: Independent,
+     Negotiable, Valuable, Estimable, Small, Testable. If it fails Small or
+     Estimable, split it — don't force-fit a 6th acceptance criterion. -->
+
+## Acceptance Criteria (Given/When/Then)
+<!-- At most 5. Each one is real and independently testable — the
+     "Confirmation" that makes this Story done, not a fuzzy aspiration. -->
+- [ ] Given <context>, when <action>, then <outcome>
+- [ ] Given <context>, when <action>, then <outcome>
+
+## Definition of Ready
+- [ ] Meets [Definition of Ready](../../docs/process/DEFINITION_OF_READY.md)
+
+## Story Points
+**Estimate:** <Fibonacci: 1 / 2 / 3 / 5 / 8 / 13 / 21>
+
+## Sprint
+**Milestone:** <link>
 
 ## Technical Tasks
-<!-- Break down into implementation tasks -->
-- [ ] Task 1: Description
-- [ ] Task 2: Description
-- [ ] Task 3: Description
-
-## API Endpoints
-<!-- If applicable -->
-- `GET /api/v1/endpoint` - Description
-- `POST /api/v1/endpoint` - Description
-
-## Database Changes
-<!-- If applicable -->
-- [ ] Migration script: `VX__description.sql`
-- [ ] New tables/collections
-- [ ] Schema changes
-
-## Test Cases
-<!-- Required test scenarios -->
-- [ ] Unit tests for service layer
-- [ ] Integration tests for API endpoints
-- [ ] E2E test for user flow
-
-## Dependencies
-<!-- Other issues that must be completed first -->
-- Blocked by: #X
-- Related to: #Y
+<!-- Broken down as child Task issues, not inline — link them here as they're created. -->
+- [ ] #
 
 ## Definition of Done
-- [ ] Code implemented and follows style guide
-- [ ] Unit tests written (>90% coverage)
-- [ ] Integration tests written
-- [ ] API documentation updated (Swagger/OpenAPI)
-- [ ] Code reviewed and approved
-- [ ] CI/CD pipeline passing
-- [ ] Deployed to dev environment
-- [ ] Manual testing completed
-- [ ] Documentation updated
-
-## Design/Mockups
-<!-- Screenshots, wireframes, or design specs -->
+- [ ] Meets [Definition of Done](../../docs/process/DEFINITION_OF_DONE.md)
 
 ## Notes
-<!-- Any additional context or information -->
-
----
-**Story Points:** X  
-**Priority:** P0/P1/P2/P3  
-**Sprint:** Sprint X  
-**Service:** service-name
-
+<!-- Only if something genuinely needs flagging. Not a running log. -->
