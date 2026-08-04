@@ -1,5 +1,5 @@
 // Tests NavBar: theme toggle, login/logout affordances, admin link
-// visibility, and the session-restore-from-stored-JWT effects.
+// visibility, avatar displays, and session-restore effects.
 import React from 'react';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -10,6 +10,7 @@ import authReducer from '../../features/auth';
 import genreOrCategoryReducer from '../../features/currentGenreOrCategory';
 import { renderWithProviders } from '../../test-utils/render';
 import { useGetProfileQuery, useLoginMutation, useRegisterMutation } from '../../services/user';
+import { useGetMediaForEntityQuery, getMediaUrl } from '../../services/media';
 import { useGetGenresQuery } from '../../services/TMDB';
 import { clearAuthTokens } from '../../utils';
 import { ColorModeContext } from '../../utils/ToggleColorMode';
@@ -19,6 +20,11 @@ jest.mock('../../services/user', () => ({
   useGetProfileQuery: jest.fn(),
   useLoginMutation: jest.fn(),
   useRegisterMutation: jest.fn(),
+}));
+
+jest.mock('../../services/media', () => ({
+  useGetMediaForEntityQuery: jest.fn(),
+  getMediaUrl: jest.fn(),
 }));
 
 jest.mock('../../services/TMDB', () => ({
@@ -48,6 +54,8 @@ describe('NavBar', () => {
     jest.clearAllMocks();
     useGetGenresQuery.mockReturnValue({ data: undefined, isFetching: false });
     useGetProfileQuery.mockReturnValue({ data: undefined, error: undefined });
+    useGetMediaForEntityQuery.mockReturnValue({ data: [], isFetching: false });
+    getMediaUrl.mockImplementation((url) => url);
     useLoginMutation.mockReturnValue([jest.fn(), { isLoading: false, error: undefined }]);
     useRegisterMutation.mockReturnValue([jest.fn(), { isLoading: false, error: undefined }]);
   });
@@ -64,12 +72,24 @@ describe('NavBar', () => {
     expect(screen.getByText('Filmpire account')).toBeInTheDocument();
   });
 
-  it('shows the "My Movies" link and avatar initial when authenticated', () => {
+  it('shows the "My Movies" link and avatar initial when authenticated without custom avatar', () => {
     const store = buildStore({ user: { user: { id: 1, username: 'liviu' }, isAuthenticated: true } });
     renderNavBar({ store });
 
     expect(screen.getByText('L')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /login/i })).not.toBeInTheDocument();
+  });
+
+  it('displays uploaded custom avatar thumbnail image when present in media list', () => {
+    useGetMediaForEntityQuery.mockReturnValue({
+      data: [{ mediaType: 'AVATAR', thumbnails: { thumb: 'http://localhost:8085/navbar-thumb.jpg' } }],
+      isFetching: false,
+    });
+    const store = buildStore({ user: { user: { id: 1, username: 'liviu' }, isAuthenticated: true } });
+    renderNavBar({ store });
+
+    const avatar = screen.getByTestId('navbar-avatar');
+    expect(avatar).toHaveAttribute('data-src', 'http://localhost:8085/navbar-thumb.jpg');
   });
 
   it('shows an Admin link only for users with the ADMIN role', () => {

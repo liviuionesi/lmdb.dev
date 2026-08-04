@@ -9,6 +9,7 @@ import { ColorModeContext } from '../../utils/ToggleColorMode';
 import { setUser, userSelector } from '../../features/auth';
 import { Sidebar, Search } from '..';
 import { useGetProfileQuery } from '../../services/user';
+import { useGetMediaForEntityQuery, getMediaUrl } from '../../services/media';
 import { clearAuthTokens } from '../../utils';
 import LoginDialog from './LoginDialog';
 import useStyles from './styles';
@@ -32,6 +33,14 @@ const NavBar = () => {
   const { data: profile, error: profileError } = useGetProfileQuery(undefined, {
     skip: !hasStoredSession || isAuthenticated,
   });
+
+  const { data: mediaList } = useGetMediaForEntityQuery(
+    String(user?.id || ''),
+    { skip: !isAuthenticated || !user?.id },
+  );
+
+  const userAvatar = mediaList?.find((item) => item.mediaType === 'AVATAR') || mediaList?.[0];
+  const avatarUrl = getMediaUrl(userAvatar?.thumbnails?.thumb || userAvatar?.thumbnails?.original);
 
   useEffect(() => {
     if (profile) {
@@ -90,7 +99,13 @@ const NavBar = () => {
                   className={classes.linkButton}
                 >
                   {!isMobile && <>My Movies &nbsp;</>}
-                  <Avatar style={{ width: 30, height: 30 }} alt={user?.username}>
+                  <Avatar
+                    data-testid="navbar-avatar"
+                    data-src={avatarUrl || ''}
+                    style={{ width: 30, height: 30 }}
+                    alt={user?.username}
+                    src={avatarUrl}
+                  >
                     {user?.username?.[0]?.toUpperCase()}
                   </Avatar>
                 </Button>

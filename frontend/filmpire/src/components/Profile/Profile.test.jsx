@@ -1,7 +1,7 @@
-// Tests Profile: the empty state, rendering favorites/watchlist, and that
-// logging out clears auth state and redirects home.
+// Tests Profile: the empty state, rendering favorites/watchlist, logging out,
+// unauthenticated redirect, and custom avatar photo uploading & validation.
 import React from 'react';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { configureStore } from '@reduxjs/toolkit';
 
@@ -9,6 +9,7 @@ import Profile from './Profile';
 import authReducer from '../../features/auth';
 import { renderWithProviders } from '../../test-utils/render';
 import { useGetFavoritesQuery, useGetWatchlistQuery, useLogoutMutation } from '../../services/user';
+import { useGetMediaForEntityQuery, useUploadMediaMutation, getMediaUrl } from '../../services/media';
 import { useGetMovieQuery } from '../../services/TMDB';
 
 jest.mock('../../services/user', () => ({
@@ -17,8 +18,12 @@ jest.mock('../../services/user', () => ({
   useLogoutMutation: jest.fn(),
 }));
 
-// RatedCards -> Movie needs TMDB's getMovie hook; RatedCards imports it from
-// services/TMDB, not services/user, so mock that module too.
+jest.mock('../../services/media', () => ({
+  useGetMediaForEntityQuery: jest.fn(),
+  useUploadMediaMutation: jest.fn(),
+  getMediaUrl: jest.fn(),
+}));
+
 jest.mock('../../services/TMDB', () => ({
   useGetMovieQuery: jest.fn(),
 }));
@@ -31,12 +36,16 @@ const buildStore = (authenticated) => configureStore({
 describe('Profile', () => {
   beforeEach(() => {
     useLogoutMutation.mockReturnValue([jest.fn().mockResolvedValue({})]);
+    useGetFavoritesQuery.mockReturnValue({ data: [] });
+    useGetWatchlistQuery.mockReturnValue({ data: [] });
+    useGetMediaForEntityQuery.mockReturnValue({ data: [], refetch: jest.fn() });
+    useUploadMediaMutation.mockReturnValue([jest.fn().mockReturnValue({ unwrap: jest.fn().mockResolvedValue({}) }), { isLoading: false }]);
+    getMediaUrl.mockImplementation((url) => url);
     localStorage.clear();
+    jest.clearAllMocks();
   });
 
   it('shows a placeholder message when there are no favorites or watchlist entries', () => {
-    useGetFavoritesQuery.mockReturnValue({ data: [] });
-    useGetWatchlistQuery.mockReturnValue({ data: [] });
     renderWithProviders(<Profile />, { store: buildStore(true) });
 
     expect(screen.getByText(/Add favorites or watchlist some movies/)).toBeInTheDocument();
@@ -56,8 +65,6 @@ describe('Profile', () => {
     localStorage.setItem('access_token', 'jwt');
     const logout = jest.fn().mockResolvedValue({});
     useLogoutMutation.mockReturnValue([logout]);
-    useGetFavoritesQuery.mockReturnValue({ data: [] });
-    useGetWatchlistQuery.mockReturnValue({ data: [] });
 
     delete window.location;
     window.location = { href: '' };
@@ -71,10 +78,65 @@ describe('Profile', () => {
   });
 
   it('redirects an unauthenticated user to the home page (/)', () => {
-    useGetFavoritesQuery.mockReturnValue({ data: [] });
-    useGetWatchlistQuery.mockReturnValue({ data: [] });
     renderWithProviders(<Profile />, { store: buildStore(false), initialEntries: ['/profile/1'] });
 
     expect(screen.queryByText(/My Profile/i)).not.toBeInTheDocument();
+  });
+
+  it('displays validation error when uploading a non-image format file', async () => {
+    renderWithProviders(<Profile />, { store: buildStore(true) });
+
+    const input = screen.getByTestId('avatar-upload-input');
+    const invalidFile = new File(['text'], 'test.txt', { type: 'text/plain' });
+
+    fireEvent.change(input, { target: { files: [invalidFile] } });
+
+    expect(await screen.findByText('Only JPG and PNG images are supported for avatar upload.')).toBeInTheDocument();
+  });
+
+  it('displays validation error when uploading an image larger than 5MB', async () => {
+    renderWithProviders(<Profile />, { store: buildStore(true) });
+
+    const input = screen.getByTestId('avatar-upload-input');
+    const hugeFile = new File([''], 'huge.jpg', { type: 'image/jpeg' });
+    Object.defineProperty(hugeFile, 'size', { value: 6 * 1024 * 1024 });
+
+    fireEvent.change(input, { target: { files: [hugeFile] } });
+
+    expect(await screen.findByText('File size exceeds the 5MB maximum limit.')).toBeInTheDocument();
+  });
+
+  it('successfully uploads valid JPG avatar and shows success notification', async () => {
+    const mockUpload = jest.fn().mockReturnValue({ unwrap: jest.fn().mockResolvedValue({}) });
+    useUploadMediaMutation.mockReturnValue([mockUpload, { isLoading: false }]);
+
+    renderWithProviders(<Profile />, { store: buildStore(true) });
+
+    const input = screen.getByTestId('avatar-upload-input');
+    const validFile = new File(['image content'], 'avatar.jpg', { type: 'image/jpeg' });
+    Object.defineProperty(validFile, 'size', { value: 2 * 1024 * 1024 });
+
+    fireEvent.change(input, { target: { files: [validFile] } });
+
+    await waitFor(() => expect(mockUpload).toHaveBeenCalledWith(expect.objectContaining({
+      file: validFile,
+      entityType: 'USER',
+      mediaType: 'AVATAR',
+      uploadedBy: 'liviu',
+    })));
+
+    expect(await screen.findByText('Avatar updated successfully!')).toBeInTheDocument();
+  });
+
+  it('renders uploaded avatar thumbnail when media items are returned', () => {
+    useGetMediaForEntityQuery.mockReturnValue({
+      data: [{ mediaType: 'AVATAR', thumbnails: { medium: 'http://localhost:8085/thumb.jpg' } }],
+      refetch: jest.fn(),
+    });
+
+    renderWithProviders(<Profile />, { store: buildStore(true) });
+
+    const avatar = screen.getByTestId('user-avatar');
+    expect(avatar).toHaveAttribute('data-src', 'http://localhost:8085/thumb.jpg');
   });
 });
