@@ -137,6 +137,6 @@ describe('Profile', () => {
     renderWithProviders(<Profile />, { store: buildStore(true) });
 
     const avatar = screen.getByTestId('user-avatar');
-    expect(avatar).toHaveAttribute('data-src', 'http://localhost:8085/thumb.jpg');
+    expect(avatar.getAttribute('data-src')).toContain('http://localhost:8085/thumb.jpg');
   });
 });

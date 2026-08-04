@@ -25,6 +25,8 @@ import org.springframework.data.mongodb.core.mapping.Document;
  * @param metadata Nested technical specifications (dimensions, codecs, duration).
  * @param uploadedAt Precise server creation timestamp when ingestion finished.
  * @param uploadedBy Identifier of the user account responsible for creating the upload.
+ * @param description Optional user-supplied review comment or caption text associated with the
+ *     upload (e.g., movie review text paired with a screenshot attachment).
  */
 @Document(collection = "media")
 public record MediaFile(
@@ -39,7 +41,8 @@ public record MediaFile(
     Map<String, String> thumbnails,
     MediaMetadata metadata,
     Instant uploadedAt,
-    String uploadedBy) {
+    String uploadedBy,
+    String description) {
   /**
    * Compact record constructor enforcing domain validation rules.
    *

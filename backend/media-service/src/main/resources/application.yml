@@ -13,9 +13,9 @@ spring:
     uri: ${MONGODB_URI:mongodb://localhost:27017/filmpire}
 
 minio:
-  endpoint: http://localhost:9000
-  access-key: minioadmin
-  secret-key: minioadmin
+  endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+  access-key: ${MINIO_ACCESS_KEY:${MINIO_ROOT_USER:minioadmin}}
+  secret-key: ${MINIO_SECRET_KEY:${MINIO_ROOT_PASSWORD:minioadmin123}}
   bucket-name: filmpire-media
 
 eureka:

@@ -59,10 +59,17 @@ class MediaControllerTest {
             Map.of("thumb", "http://thumb"),
             new MediaMetadata(200, 200, null, null, null),
             Instant.now(),
-            "tester");
+            "tester",
+            null);
 
     when(mediaService.uploadMedia(
-            any(), eq("usr-1"), eq(EntityType.USER), eq(MediaType.AVATAR), any(), eq("tester")))
+            any(),
+            eq("usr-1"),
+            eq(EntityType.USER),
+            eq(MediaType.AVATAR),
+            any(),
+            eq("tester"),
+            any()))
         .thenReturn(resp);
 
     ResponseEntity<MediaFile> result =
@@ -76,7 +83,9 @@ class MediaControllerTest {
             null,
             null,
             null,
-            "tester");
+            "tester",
+            null,
+            null);
 
     Assertions.assertEquals(HttpStatus.CREATED, result.getStatusCode());
     Assertions.assertNotNull(result.getBody());
@@ -103,7 +112,8 @@ class MediaControllerTest {
             Map.of(),
             new MediaMetadata(600, 900, null, null, null),
             Instant.now(),
-            "admin");
+            "admin",
+            null);
 
     when(mediaService.getMediaFile(fileId)).thenReturn(Optional.of(found));
 
@@ -134,7 +144,8 @@ class MediaControllerTest {
             Map.of(),
             new MediaMetadata(600, 900, null, null, null),
             Instant.now(),
-            "admin");
+            "admin",
+            null);
 
     InputStream stream = new ByteArrayInputStream("fake stream".getBytes());
     when(mediaService.getMediaFile(fileId)).thenReturn(Optional.of(found));

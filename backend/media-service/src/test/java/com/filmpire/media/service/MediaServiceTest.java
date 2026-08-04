@@ -56,7 +56,7 @@ class MediaServiceTest {
     MediaMetadata metadata = new MediaMetadata(500, 500, null, "JPEG", null);
     MediaFile result =
         mediaService.uploadMedia(
-            mockFile, "user-789", EntityType.USER, MediaType.AVATAR, metadata, "test_user");
+            mockFile, "user-789", EntityType.USER, MediaType.AVATAR, metadata, "test_user", null);
 
     Assertions.assertNotNull(result.id());
     Assertions.assertEquals("user-789", result.entityId());
@@ -90,7 +90,8 @@ class MediaServiceTest {
             Map.of(),
             new MediaMetadata(null, null, null, null, null),
             Instant.now(),
-            "reviewer");
+            "reviewer",
+            null);
 
     when(mediaRepository.findById(testId)).thenReturn(Optional.of(mockFile));
 

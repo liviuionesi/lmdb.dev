@@ -35,6 +35,20 @@ spring:
     redis:
       time-to-live: 300000  # 5 minutes (300,000 ms)
 
+  # Kafka Event Bus Configuration
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      properties:
+        "[max.block.ms]": 2000
+    consumer:
+      group-id: movie-service-analytics
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+
   # Feign Client Configuration
   cloud:
     openfeign:

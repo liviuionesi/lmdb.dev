@@ -22,13 +22,16 @@ export const mediaApi = createApi({
   tagTypes: ['Media'],
   endpoints: (builder) => ({
     uploadMedia: builder.mutation({
-      query: ({ file, entityId = 'general', entityType = 'USER', mediaType = 'IMAGE', uploadedBy = 'anonymous' }) => {
+      query: ({ file, entityId = 'general', entityType = 'USER', mediaType = 'IMAGE', uploadedBy = 'anonymous', description }) => {
         const formData = new FormData();
         formData.append('file', file);
         formData.append('entityId', entityId);
         formData.append('entityType', entityType);
         formData.append('mediaType', mediaType);
         formData.append('uploadedBy', uploadedBy);
+        if (description) {
+          formData.append('description', description);
+        }
 
         return {
           url: '/media/upload',

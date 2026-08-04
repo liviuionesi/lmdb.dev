@@ -4,6 +4,7 @@ kind: Kustomization
 # All services, base's already-generous resource requests/limits as-is.
 resources:
   - ../../base
+  - kafka.yaml
 
 # secrets.env is gitignored — copy secrets.env.example to secrets.env first
 # (see that file). Kustomize's name-suffix-hash keeps this in sync: every

@@ -56,9 +56,22 @@ const ReviewMediaSection = ({ movieId }) => {
           entityType: 'MOVIE_REVIEW',
           mediaType,
           uploadedBy: user?.username || 'anonymous',
+          description: comment.trim() || undefined,
+        }).unwrap();
+      } else {
+        // Text-only review: upload a tiny placeholder so we can store the description
+        const blob = new Blob([comment.trim()], { type: 'text/plain' });
+        const placeholderFile = new File([blob], 'review.txt', { type: 'text/plain' });
+        await uploadMedia({
+          file: placeholderFile,
+          entityId: String(movieId),
+          entityType: 'MOVIE_REVIEW',
+          mediaType: 'ATTACHMENT',
+          uploadedBy: user?.username || 'anonymous',
+          description: comment.trim(),
         }).unwrap();
       }
-      setSuccessMessage('Review attachment submitted successfully!');
+      setSuccessMessage('Review submitted successfully!');
       setComment('');
       setSelectedFile(null);
       refetch();
@@ -160,55 +173,75 @@ const ReviewMediaSection = ({ movieId }) => {
         <Grid container spacing={2}>
           {mediaList.map((media) => {
             const isVideo = media.mediaType === 'VIDEO' || media.mimeType?.startsWith('video/');
+            const isTextOnly = media.mediaType === 'ATTACHMENT' && media.mimeType === 'text/plain';
             const displayUrl = getMediaUrl(media.thumbnails?.medium || media.thumbnails?.original);
             return (
-              <Grid item xs={6} sm={4} md={3} key={media.id || media.storagePath}>
+              <Grid item xs={12} sm={isTextOnly ? 12 : 6} md={isTextOnly ? 12 : 4} key={media.id || media.storagePath}>
                 <Card
                   sx={{
-                    cursor: 'pointer',
+                    cursor: isTextOnly ? 'default' : 'pointer',
                     transition: 'transform 0.2s',
-                    '&:hover': { transform: 'scale(1.03)' },
+                    '&:hover': { transform: isTextOnly ? 'none' : 'scale(1.03)' },
                     position: 'relative',
-                    height: 180,
-                    backgroundColor: 'grey.900',
+                    backgroundColor: 'background.paper',
+                    border: '1px solid',
+                    borderColor: 'divider',
                   }}
-                  onClick={() => setSelectedLightboxItem(media)}
+                  onClick={() => !isTextOnly && setSelectedLightboxItem(media)}
                   data-testid={`gallery-item-${media.id || 'default'}`}
                 >
-                  {!isVideo ? (
-                    <CardMedia
-                      component="img"
-                      height="180"
-                      image={displayUrl}
-                      alt={media.originalFilename || 'Review media'}
-                      sx={{ objectFit: 'cover' }}
-                    />
-                  ) : (
-                    <Box
-                      height="180"
-                      display="flex"
-                      flexDirection="column"
-                      justifyContent="center"
-                      alignItems="center"
-                      color="white"
-                    >
-                      <PlayCircleOutline sx={{ fontSize: 48, mb: 1 }} />
-                      <Typography variant="caption" noWrap sx={{ px: 1, maxWidth: '90%' }}>
-                        {media.originalFilename || 'Video Clip'}
+                  {isTextOnly ? (
+                    <Box p={2}>
+                      <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', mb: 1 }}>
+                        {media.description || media.originalFilename}
+                      </Typography>
+                      <Typography variant="caption" color="textSecondary">
+                        By @{media.uploadedBy || 'anonymous'}
                       </Typography>
                     </Box>
+                  ) : (
+                    <Box sx={{ height: 180 }}>
+                      {!isVideo ? (
+                        <CardMedia
+                          component="img"
+                          height="180"
+                          image={displayUrl}
+                          alt={media.originalFilename || 'Review media'}
+                          sx={{ objectFit: 'cover' }}
+                        />
+                      ) : (
+                        <Box
+                          height="180"
+                          display="flex"
+                          flexDirection="column"
+                          justifyContent="center"
+                          alignItems="center"
+                          color="white"
+                        >
+                          <PlayCircleOutline sx={{ fontSize: 48, mb: 1 }} />
+                          <Typography variant="caption" noWrap sx={{ px: 1, maxWidth: '90%' }}>
+                            {media.originalFilename || 'Video Clip'}
+                          </Typography>
+                        </Box>
+                      )}
+                      <Box
+                        position="absolute"
+                        bottom={0}
+                        width="100%"
+                        bgcolor="rgba(0, 0, 0, 0.6)"
+                        p={0.5}
+                      >
+                        {media.description && (
+                          <Typography variant="caption" sx={{ color: '#dddddd' }} display="block" noWrap align="center">
+                            {media.description}
+                          </Typography>
+                        )}
+                        <Typography variant="caption" sx={{ color: '#ffffff' }} display="block" noWrap align="center">
+                          By @{media.uploadedBy || 'anonymous'}
+                        </Typography>
+                      </Box>
+                    </Box>
                   )}
-                  <Box
-                    position="absolute"
-                    bottom={0}
-                    width="100%"
-                    bgcolor="rgba(0, 0, 0, 0.6)"
-                    p={0.5}
-                  >
-                    <Typography variant="caption" sx={{ color: '#ffffff' }} display="block" noWrap align="center">
-                      By @{media.uploadedBy || 'anonymous'}
-                    </Typography>
-                  </Box>
                 </Card>
               </Grid>
             );

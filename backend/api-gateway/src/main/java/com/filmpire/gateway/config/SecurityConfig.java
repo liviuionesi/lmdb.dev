@@ -29,6 +29,9 @@ public class SecurityConfig {
 
   private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
+  /** Media service API path pattern — used in three separate security rules. */
+  private static final String MEDIA_API_PATH = "/api/v1/media/**";
+
   /**
    * Configures security filter chain for the API Gateway
    *
@@ -67,6 +70,14 @@ public class SecurityConfig {
                     .permitAll()
                     .pathMatchers(HttpMethod.GET, "/api/v1/actors/**")
                     .permitAll()
+                    .pathMatchers(HttpMethod.GET, MEDIA_API_PATH)
+                    .permitAll()
+
+                    // Media service: upload and deletion require JWT authentication
+                    .pathMatchers(HttpMethod.POST, MEDIA_API_PATH)
+                    .authenticated()
+                    .pathMatchers(HttpMethod.DELETE, MEDIA_API_PATH)
+                    .authenticated()
 
                     // TMDB v3 facade (#33): bare TMDB catalog paths are public
                     // reads served by the movie/actor facade controllers.

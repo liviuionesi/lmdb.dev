@@ -86,7 +86,7 @@ describe('ReviewMediaSection', () => {
       uploadedBy: 'liviu',
     })));
 
-    expect(await screen.findByText('Review attachment submitted successfully!')).toBeInTheDocument();
+    expect(await screen.findByText('Review submitted successfully!')).toBeInTheDocument();
   });
 
   it('renders thumbnail gallery and opens interactive lightbox modal upon click', async () => {

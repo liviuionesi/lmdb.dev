@@ -6,6 +6,7 @@ import com.filmpire.movie.client.dto.TmdbGenresResponse;
 import com.filmpire.movie.client.dto.TmdbMovieListResponse;
 import com.filmpire.movie.client.dto.TmdbMovieResponse;
 import com.filmpire.movie.client.dto.TmdbVideosResponse;
+import com.filmpire.movie.event.TmdbEventProducer;
 import com.filmpire.movie.model.Cast;
 import com.filmpire.movie.model.Credits;
 import com.filmpire.movie.model.Crew;
@@ -55,7 +56,13 @@ public class TmdbFacadeController {
   private static final Set<String> MOVIE_CATEGORIES =
       Set.of("popular", "top_rated", "upcoming", "now_playing");
 
+  private static final String PAGE_SEPARATOR = ":page:";
+
+  @SuppressWarnings("java:S1075")
+  private static final String MOVIE_PATH_PREFIX = "/movie/";
+
   private final MovieService movieService;
+  private final TmdbEventProducer eventProducer;
 
   /**
    * {@code GET /genre/movie/list} — the genre catalog (React app sidebar).
@@ -64,7 +71,9 @@ public class TmdbFacadeController {
    */
   @GetMapping(value = "/genre/movie/list", produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<TmdbGenresResponse> genreList() {
-    return ResponseEntity.ok(movieService.getGenresRaw());
+    TmdbGenresResponse response = movieService.getGenresRaw();
+    eventProducer.publishDocumentSavedEvent("genre:list", "GENRE_LIST", "/genre/movie/list");
+    return ResponseEntity.ok(response);
   }
 
   /**
@@ -85,7 +94,12 @@ public class TmdbFacadeController {
 
     // 1. Fixed category name → volatile list endpoint.
     if (MOVIE_CATEGORIES.contains(idOrCategory)) {
-      return ResponseEntity.ok(movieService.getMovieCategoryRaw(idOrCategory, page));
+      TmdbMovieListResponse response = movieService.getMovieCategoryRaw(idOrCategory, page);
+      eventProducer.publishDocumentSavedEvent(
+          "category:" + idOrCategory + PAGE_SEPARATOR + page,
+          "MOVIE_CATEGORY",
+          MOVIE_PATH_PREFIX + idOrCategory);
+      return ResponseEntity.ok(response);
     }
 
     // 2. Numeric id → near-immutable movie details, read-through/save-through.
@@ -93,6 +107,8 @@ public class TmdbFacadeController {
       Long id = Long.parseLong(idOrCategory);
       Set<String> appends = parseAppendToResponse(appendToResponse);
       Movie movie = movieService.getMovieForFacade(id, appends);
+      eventProducer.publishDocumentSavedEvent(
+          "movie:" + idOrCategory, "MOVIE_DETAIL", MOVIE_PATH_PREFIX + idOrCategory);
       return ResponseEntity.ok(toTmdbMovieResponse(movie, appends));
     }
 
@@ -111,7 +127,12 @@ public class TmdbFacadeController {
   @GetMapping(value = "/movie/{id}/recommendations", produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<TmdbMovieListResponse> recommendations(
       @PathVariable Long id, @RequestParam(defaultValue = "1") int page) {
-    return ResponseEntity.ok(movieService.getRecommendedMoviesRaw(id, page));
+    TmdbMovieListResponse response = movieService.getRecommendedMoviesRaw(id, page);
+    eventProducer.publishDocumentSavedEvent(
+        "recommendations:" + id + PAGE_SEPARATOR + page,
+        "RECOMMENDATIONS",
+        MOVIE_PATH_PREFIX + id + "/recommendations");
+    return ResponseEntity.ok(response);
   }
 
   /**
@@ -125,7 +146,10 @@ public class TmdbFacadeController {
   @GetMapping(value = "/movie/{id}/similar", produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<TmdbMovieListResponse> similar(
       @PathVariable Long id, @RequestParam(defaultValue = "1") int page) {
-    return ResponseEntity.ok(movieService.getSimilarMoviesRaw(id, page));
+    TmdbMovieListResponse response = movieService.getSimilarMoviesRaw(id, page);
+    eventProducer.publishDocumentSavedEvent(
+        "similar:" + id + PAGE_SEPARATOR + page, "SIMILAR", MOVIE_PATH_PREFIX + id + "/similar");
+    return ResponseEntity.ok(response);
   }
 
   /**
@@ -146,8 +170,11 @@ public class TmdbFacadeController {
       @RequestParam(required = false) Integer year,
       @RequestParam(name = "vote_average.gte", required = false) Double minRating,
       @RequestParam(name = "with_cast", required = false) Long castId) {
-    return ResponseEntity.ok(
-        movieService.discoverMoviesRaw(page, genreId, year, minRating, castId));
+    TmdbMovieListResponse response =
+        movieService.discoverMoviesRaw(page, genreId, year, minRating, castId);
+    eventProducer.publishDocumentSavedEvent(
+        "discover" + PAGE_SEPARATOR + page, "DISCOVER", "/discover/movie");
+    return ResponseEntity.ok(response);
   }
 
   /**
@@ -160,7 +187,10 @@ public class TmdbFacadeController {
   @GetMapping(value = "/search/movie", produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<TmdbMovieListResponse> search(
       @RequestParam String query, @RequestParam(defaultValue = "1") int page) {
-    return ResponseEntity.ok(movieService.searchMoviesRaw(query, page));
+    TmdbMovieListResponse response = movieService.searchMoviesRaw(query, page);
+    eventProducer.publishDocumentSavedEvent(
+        "search:query:" + query + PAGE_SEPARATOR + page, "SEARCH", "/search/movie");
+    return ResponseEntity.ok(response);
   }
 
   /**

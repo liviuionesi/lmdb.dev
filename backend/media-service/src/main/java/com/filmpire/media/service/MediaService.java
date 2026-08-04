@@ -58,7 +58,8 @@ public class MediaService {
       EntityType entityType,
       MediaType mediaType,
       MediaMetadata metadata,
-      String uploadedBy)
+      String uploadedBy,
+      String description)
       throws IOException {
 
     EntityType safeEntityType = entityType != null ? entityType : EntityType.USER;
@@ -102,7 +103,8 @@ public class MediaService {
             thumbnails,
             metadata != null ? metadata : new MediaMetadata(null, null, null, null, null),
             Instant.now(),
-            uploadedBy != null ? uploadedBy : "anonymous");
+            uploadedBy != null ? uploadedBy : "anonymous",
+            description);
 
     MediaFile saved = mediaRepository.save(mediaFile);
     log.info("Successfully completed upload and metadata persistence for asset id: {}", saved.id());
