@@ -60,6 +60,12 @@ sonar {
         if (System.getenv('SONAR_TOKEN')) {
             property 'sonar.token', System.getenv('SONAR_TOKEN')
         }
+        // SonarCloud requires an organization key (self-hosted ignores it).
+        // CI sets this from a secret; local runs against self-hosted don't
+        // need it (#108).
+        if (System.getenv('SONAR_ORGANIZATION')) {
+            property 'sonar.organization', System.getenv('SONAR_ORGANIZATION')
+        }
 
         // Aggregate JaCoCo coverage across every module.
         property 'sonar.coverage.jacoco.xmlReportPaths',
@@ -254,11 +260,52 @@ subprojects {
             html.required = true
         }
     }
-    
+
     test {
         finalizedBy jacocoTestReport
     }
-    
+
+    // Coverage-verification exclusions (#108) — same rationale as
+    // sonar.coverage.exclusions above: bootstrap classes, @Configuration
+    // wiring, and DTOs have no branch logic worth gating on. An ext
+    // property, not a local var, so a module's own build.gradle can extend
+    // it (e.g. backend/ai-service/build.gradle adds protoc-generated
+    // classes) before this closure resolves classDirectories at task-
+    // execution time.
+    ext.jacocoCoverageExclusions = [
+            '**/*Application.class',
+            '**/config/**',
+            '**/dto/**',
+            '**/*Config.class',
+    ]
+
+    // media-service (#94) is an unstarted Story's placeholder — one
+    // Hello-World controller, no real feature code yet. Gating it on the
+    // coverage threshold now would force either throwaway tests for
+    // soon-to-be-replaced code or a premature implementation just to
+    // satisfy this task. Deliberately, narrowly excluded until #94 lands —
+    // every other backend module is enforced below.
+    if (project.name != 'media-service') {
+        jacocoTestCoverageVerification {
+            dependsOn test
+            classDirectories.setFrom(files {
+                sourceSets.main.output.classesDirs.collect { dir ->
+                    fileTree(dir: dir, excludes: project.jacocoCoverageExclusions)
+                }
+            })
+            violationRules {
+                rule {
+                    limit {
+                        // 80% minimum line coverage (#108) — the
+                        // enterprise-level target set in issue #108's
+                        // acceptance criteria.
+                        minimum = 0.80
+                    }
+                }
+            }
+        }
+    }
+
     // Common test dependencies
     dependencies {
         testImplementation 'org.springframework.boot:spring-boot-starter-test'

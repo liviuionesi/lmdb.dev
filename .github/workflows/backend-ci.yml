@@ -53,6 +53,30 @@ jobs:
         env:
           GRADLE_OPTS: "-Dorg.gradle.daemon=false"
 
+      - name: Verify coverage threshold (#108)
+        # 80% minimum line coverage per module (root build.gradle's shared
+        # jacocoTestCoverageVerification config) — media-service is exempt
+        # there until #94 replaces its placeholder controller with real code.
+        run: ./gradlew jacocoTestCoverageVerification
+        env:
+          GRADLE_OPTS: "-Dorg.gradle.daemon=false"
+
+      - name: SonarQube analysis (#108)
+        # Runs only once a SONAR_TOKEN secret is configured. This repo is
+        # public, so SonarCloud's free tier applies — no self-hosted server
+        # or paid plan needed, matching ADR-004's $0 budget. Until that
+        # secret is added, this step is skipped rather than failing the
+        # build on a missing credential, mirroring the NVD_API_KEY
+        # non-blocking pattern below: an unconfigured *optional* external
+        # integration shouldn't block CI.
+        if: ${{ secrets.SONAR_TOKEN != '' }}
+        run: ./gradlew sonar
+        env:
+          GRADLE_OPTS: "-Dorg.gradle.daemon=false"
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io
+          SONAR_ORGANIZATION: ${{ secrets.SONAR_ORGANIZATION }}
+
       - name: Compute cache week
         id: dc-week
         # %G/%V (ISO week-based year/week), not %Y/%V — late-December ISO

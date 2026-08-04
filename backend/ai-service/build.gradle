@@ -79,3 +79,19 @@ bootJar {
     archiveBaseName = 'ai-service'
     archiveVersion = project.version
 }
+
+// Excludes protoc/gRPC-generated sources (ai_service.proto — #36) from the
+// jacocoTestCoverageVerification gate (#108), the same way Sonar already
+// treats generated code as not worth measuring. These live in the same
+// com.filmpire.ai.grpc package as two hand-written classes (AiGrpcService,
+// GrpcServerLifecycle) — deliberately NOT listed here, so they stay held to
+// the coverage bar like everything else.
+jacocoCoverageExclusions += [
+        '**/AiServiceProto.class', '**/AiServiceProto$*.class',
+        '**/AIServiceGrpc.class', '**/AIServiceGrpc$*.class',
+        '**/ChatRequest.class', '**/ChatRequest$*.class', '**/ChatRequestOrBuilder.class',
+        '**/ChatResponse.class', '**/ChatResponse$*.class', '**/ChatResponseOrBuilder.class',
+        '**/RecommendationRequest.class', '**/RecommendationRequest$*.class', '**/RecommendationRequestOrBuilder.class',
+        '**/RecommendationResponse.class', '**/RecommendationResponse$*.class', '**/RecommendationResponseOrBuilder.class',
+        '**/MovieRecommendation.class', '**/MovieRecommendation$*.class', '**/MovieRecommendationOrBuilder.class',
+]
