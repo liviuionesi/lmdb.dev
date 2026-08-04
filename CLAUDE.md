@@ -144,6 +144,16 @@ back to reality — this section is that force.
   evidence (code, a test run, a live check against the running stack) — not
   the issue's existing text — and rewrite the body to match the templates
   in `.github/ISSUE_TEMPLATE/`.
+- **Cascading closure check & story focus (mandatory):** When closing a
+  **Task**, immediately check if its parent **Story** has any open child
+  Tasks remaining. **If there are other open Tasks remaining under that Story,
+  you must select and start those remaining Tasks next** (focusing on delivering
+  the active Story to completion). If all Tasks under that Story are completed
+  and verified against Definition of Done, check off its DoD box, close the
+  Story, and merge `develop` → `main`. When closing a **Story**, immediately
+  check if its parent **Epic** has any open Stories remaining; if none remain,
+  check its DoD box, close the Epic, and ensure `develop` is merged into
+  `main`. Never leave an exhausted Story or Epic sitting open.
 - Never close an issue with an unchecked acceptance-criteria box. Never
   verify "done" through a shortcut that skips the exact layer the issue is
   about (e.g. don't confirm a gateway-routing fix by calling the downstream

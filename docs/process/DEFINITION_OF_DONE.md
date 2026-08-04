@@ -27,8 +27,12 @@ zero bugs.
       catch it if the implementation were subtly wrong?
 - [ ] Issue body resynced to match real implementation state and closed
       with evidence, not on a technicality.
+- [ ] **Cascading closure & story focus verified**: when closing a Task,
+      checked if its parent Story has open Tasks remaining (if so, those Tasks
+      must be started next; if none remain, close the Story); when closing a
+      Story, verified if its parent Epic is now ready to close.
 - [ ] Committed with a message referencing this issue, pushed to
-      `develop` (and for a completed Story, merged `develop` → `main`).
+      `develop` (and for a completed Story or Epic, merged `develop` → `main`).
 
 Any Non-Functional Requirement that applies to this change (see
 [NON_FUNCTIONAL_REQUIREMENTS.md](NON_FUNCTIONAL_REQUIREMENTS.md)) is also
