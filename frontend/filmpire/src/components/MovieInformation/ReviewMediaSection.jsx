@@ -1,0 +1,268 @@
+import React, { useState } from 'react';
+import { Box, Typography, Button, TextField, Grid, Modal, Alert, CircularProgress, Card, CardMedia, IconButton } from '@mui/material';
+import { AttachFile, PlayCircleOutline, Send, Close } from '@mui/icons-material';
+import { useSelector } from 'react-redux';
+import { userSelector } from '../../features/auth';
+import { useGetMediaForEntityQuery, useUploadMediaMutation, getMediaUrl } from '../../services/media';
+
+const ReviewMediaSection = ({ movieId }) => {
+  const { isAuthenticated, user } = useSelector(userSelector);
+  const [comment, setComment] = useState('');
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [validationError, setValidationError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+  const [selectedLightboxItem, setSelectedLightboxItem] = useState(null);
+
+  const { data: mediaList, refetch, isFetching } = useGetMediaForEntityQuery(String(movieId));
+  const [uploadMedia, { isLoading: isUploading }] = useUploadMediaMutation();
+
+  const handleFileSelect = (e) => {
+    setValidationError('');
+    setSuccessMessage('');
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
+      setValidationError('Only image (JPG/PNG) and video (MP4/MOV/WEBM) formats are allowed for attachments.');
+      setSelectedFile(null);
+      return;
+    }
+
+    if (file.size > 20 * 1024 * 1024) {
+      setValidationError('Attachment file size exceeds the 20MB maximum allowance.');
+      setSelectedFile(null);
+      return;
+    }
+
+    setSelectedFile(file);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setValidationError('');
+    setSuccessMessage('');
+
+    if (!selectedFile && !comment.trim()) {
+      setValidationError('Please provide a review comment or attach a media proof file before submitting.');
+      return;
+    }
+
+    try {
+      if (selectedFile) {
+        const mediaType = selectedFile.type.startsWith('video/') ? 'VIDEO' : 'IMAGE';
+        await uploadMedia({
+          file: selectedFile,
+          entityId: String(movieId),
+          entityType: 'MOVIE_REVIEW',
+          mediaType,
+          uploadedBy: user?.username || 'anonymous',
+        }).unwrap();
+      }
+      setSuccessMessage('Review attachment submitted successfully!');
+      setComment('');
+      setSelectedFile(null);
+      refetch();
+    } catch (err) {
+      setValidationError('Failed to submit review attachment to media service. Please try again.');
+    }
+  };
+
+  return (
+    <Box marginTop="4rem" width="100%">
+      <Typography variant="h4" gutterBottom>
+        Fan Reviews & Proof Gallery
+      </Typography>
+      <Typography variant="subtitle1" color="textSecondary" paragraph>
+        Share screenshot reactions, easter eggs, or video review clips with the community.
+      </Typography>
+
+      {isAuthenticated ? (
+        <Box
+          component="form"
+          onSubmit={handleSubmit}
+          sx={{
+            p: 3,
+            mb: 4,
+            border: '1px solid',
+            borderColor: 'divider',
+            borderRadius: 2,
+            backgroundColor: 'background.paper',
+          }}
+        >
+          <TextField
+            fullWidth
+            multiline
+            rows={2}
+            label="Write your movie thoughts or attachment note..."
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            disabled={isUploading}
+            sx={{ mb: 2 }}
+          />
+          <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2}>
+            <Box display="flex" alignItems="center" gap={2}>
+              <Button
+                variant="outlined"
+                component="label"
+                size="small"
+                startIcon={<AttachFile />}
+                disabled={isUploading}
+              >
+                Attach Clip or Screenshot
+                <input
+                  type="file"
+                  hidden
+                  accept="image/*,video/*"
+                  onChange={handleFileSelect}
+                  data-testid="review-attachment-input"
+                />
+              </Button>
+              {selectedFile && (
+                <Typography variant="body2" color="primary">
+                  Attached: {selectedFile.name}
+                </Typography>
+              )}
+            </Box>
+            <Button
+              type="submit"
+              variant="contained"
+              color="primary"
+              endIcon={isUploading ? <CircularProgress size={18} color="inherit" /> : <Send />}
+              disabled={isUploading || (!comment.trim() && !selectedFile)}
+            >
+              Submit Review
+            </Button>
+          </Box>
+          {validationError && (
+            <Box mt={2}>
+              <Alert severity="error" onClose={() => setValidationError('')}>{validationError}</Alert>
+            </Box>
+          )}
+          {successMessage && (
+            <Box mt={2}>
+              <Alert severity="success" onClose={() => setSuccessMessage('')}>{successMessage}</Alert>
+            </Box>
+          )}
+        </Box>
+      ) : (
+        <Alert severity="info" sx={{ mb: 4 }}>
+          Please login to upload your own screenshot reactions or video review clips.
+        </Alert>
+      )}
+
+      {isFetching && (
+        <Box display="flex" justifyContent="center" my={3}>
+          <CircularProgress />
+        </Box>
+      )}
+
+      {mediaList && mediaList.length > 0 ? (
+        <Grid container spacing={2}>
+          {mediaList.map((media) => {
+            const isVideo = media.mediaType === 'VIDEO' || media.mimeType?.startsWith('video/');
+            const displayUrl = getMediaUrl(media.thumbnails?.medium || media.thumbnails?.original);
+            return (
+              <Grid item xs={6} sm={4} md={3} key={media.id || media.storagePath}>
+                <Card
+                  sx={{
+                    cursor: 'pointer',
+                    transition: 'transform 0.2s',
+                    '&:hover': { transform: 'scale(1.03)' },
+                    position: 'relative',
+                    height: 180,
+                    backgroundColor: 'grey.900',
+                  }}
+                  onClick={() => setSelectedLightboxItem(media)}
+                  data-testid={`gallery-item-${media.id || 'default'}`}
+                >
+                  {!isVideo ? (
+                    <CardMedia
+                      component="img"
+                      height="180"
+                      image={displayUrl}
+                      alt={media.originalFilename || 'Review media'}
+                      sx={{ objectFit: 'cover' }}
+                    />
+                  ) : (
+                    <Box
+                      height="180"
+                      display="flex"
+                      flexDirection="column"
+                      justifyContent="center"
+                      alignItems="center"
+                      color="white"
+                    >
+                      <PlayCircleOutline sx={{ fontSize: 48, mb: 1 }} />
+                      <Typography variant="caption" noWrap sx={{ px: 1, maxWidth: '90%' }}>
+                        {media.originalFilename || 'Video Clip'}
+                      </Typography>
+                    </Box>
+                  )}
+                  <Box
+                    position="absolute"
+                    bottom={0}
+                    width="100%"
+                    bgcolor="rgba(0, 0, 0, 0.6)"
+                    p={0.5}
+                  >
+                    <Typography variant="caption" sx={{ color: '#ffffff' }} display="block" noWrap align="center">
+                      By @{media.uploadedBy || 'anonymous'}
+                    </Typography>
+                  </Box>
+                </Card>
+              </Grid>
+            );
+          })}
+        </Grid>
+      ) : (
+        <Box textAlign="center" py={3} color="textSecondary">
+          <Typography variant="body1">No review attachments uploaded for this movie yet. Be the first!</Typography>
+        </Box>
+      )}
+
+      <Modal
+        open={!!selectedLightboxItem}
+        onClose={() => setSelectedLightboxItem(null)}
+        sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', p: 2 }}
+        data-testid="lightbox-modal"
+      >
+        <Box position="relative" bgcolor="background.paper" borderRadius={2} p={2} boxShadow={24} maxWidth="90vw" maxHeight="90vh">
+          <IconButton
+            onClick={() => setSelectedLightboxItem(null)}
+            sx={{ position: 'absolute', right: 8, top: 8, zIndex: 10, bgcolor: 'background.paper' }}
+            aria-label="close-lightbox"
+          >
+            <Close />
+          </IconButton>
+          {selectedLightboxItem && (
+            <Box display="flex" flexDirection="column" alignItems="center" pt={3}>
+              {selectedLightboxItem.mediaType === 'VIDEO' || selectedLightboxItem.mimeType?.startsWith('video/') ? (
+                <video
+                  controls
+                  autoPlay
+                  style={{ maxWidth: '85vw', maxHeight: '75vh', borderRadius: 8 }}
+                  src={getMediaUrl(selectedLightboxItem.thumbnails?.original)}
+                  data-testid="lightbox-video"
+                >
+                  <track kind="captions" />
+                </video>
+              ) : (
+                <img
+                  style={{ maxWidth: '85vw', maxHeight: '75vh', borderRadius: 8, objectFit: 'contain' }}
+                  src={getMediaUrl(selectedLightboxItem.thumbnails?.original)}
+                  alt="Full resolution preview"
+                  data-testid="lightbox-image"
+                />
+              )}
+              <Typography variant="subtitle2" sx={{ mt: 1 }}>
+                Uploaded by @{selectedLightboxItem.uploadedBy || 'anonymous'}
+              </Typography>
+            </Box>
+          )}
+        </Box>
+      </Modal>
+    </Box>
+  );
+};
+
+export default ReviewMediaSection;

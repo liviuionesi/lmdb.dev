@@ -18,6 +18,7 @@ import {
 import genreIcons from '../../assets/genres';
 import { MovieList } from '..';
 import { userSelector } from '../../features/auth';
+import ReviewMediaSection from './ReviewMediaSection';
 
 const MovieInformation = () => {
   const { isAuthenticated } = useSelector(userSelector);
@@ -160,6 +161,7 @@ const MovieInformation = () => {
           </div>
         </Grid>
       </Grid>
+      <ReviewMediaSection movieId={id} />
       <Box marginTop="5rem" width="100%">
         <Typography variant="h3" gutterBottom align="center">
           You might also like

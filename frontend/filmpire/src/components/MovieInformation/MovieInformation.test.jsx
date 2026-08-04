@@ -18,6 +18,7 @@ import {
   useAddToWatchlistMutation,
   useRemoveFromWatchlistMutation,
 } from '../../services/user';
+import { useGetMediaForEntityQuery, useUploadMediaMutation, getMediaUrl } from '../../services/media';
 
 jest.mock('../../services/TMDB', () => ({
   useGetMovieQuery: jest.fn(),
@@ -31,6 +32,12 @@ jest.mock('../../services/user', () => ({
   useRemoveFavoriteMutation: jest.fn(),
   useAddToWatchlistMutation: jest.fn(),
   useRemoveFromWatchlistMutation: jest.fn(),
+}));
+
+jest.mock('../../services/media', () => ({
+  useGetMediaForEntityQuery: jest.fn(),
+  useUploadMediaMutation: jest.fn(),
+  getMediaUrl: jest.fn(),
 }));
 
 const buildStore = (isAuthenticated = false) => configureStore({
@@ -64,6 +71,9 @@ describe('MovieInformation', () => {
     useGetFavoritesQuery.mockReturnValue({ data: undefined });
     useGetWatchlistQuery.mockReturnValue({ data: undefined });
     useGetRecommendationsQuery.mockReturnValue({ data: undefined });
+    useGetMediaForEntityQuery.mockReturnValue({ data: [], refetch: jest.fn(), isFetching: false });
+    useUploadMediaMutation.mockReturnValue([jest.fn().mockReturnValue({ unwrap: jest.fn().mockResolvedValue({}) }), { isLoading: false }]);
+    getMediaUrl.mockImplementation((url) => url);
   });
 
   it('shows a spinner while fetching', () => {
