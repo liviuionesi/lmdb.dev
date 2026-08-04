@@ -7,6 +7,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
@@ -16,11 +17,15 @@ import org.springframework.test.context.DynamicPropertySource;
  * <p>Boots the full Spring context against the module's shared MongoDB Testcontainer ({@link
  * AbstractMongoIntegrationTest}); caching, Eureka registration and Spring Cloud Config are disabled
  * via {@link DynamicPropertySource} so no infrastructure beyond a Docker daemon is required.
+ * {@code @ActiveProfiles("test")} (matching every sibling integration test in this module) supplies
+ * the Redis test values application-test.yml defines — without it, {@code REDIS_HOST}/{@code
+ * REDIS_PORT} have no value to bind at all now that their production fallbacks were removed (#114).
  *
  * <p>Maintainer note: the {@link ApplicationContext} is injected through the constructor, which
  * relies on the Jupiter/Spring extension activated by {@code @SpringBootTest}.
  */
 @SpringBootTest
+@ActiveProfiles("test")
 @DisplayName("MovieServiceApplication Tests")
 class MovieServiceApplicationTest extends AbstractMongoIntegrationTest {
 

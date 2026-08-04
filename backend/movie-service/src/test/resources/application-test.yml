@@ -15,6 +15,29 @@ spring:
       - org.springframework.cloud.client.discovery.simple.SimpleDiscoveryClientAutoConfiguration
   cache:
     type: none
+  data:
+    # application.yml's REDIS_HOST/REDIS_PORT fallbacks were stripped (#114);
+    # no test actually needs a reachable Redis (cache is "none" above and the
+    # exclude list above is meant to skip redis autoconfiguration entirely —
+    # though it names pre-4.1 class paths that no longer match
+    # spring-boot-data-redis's org.springframework.boot.data.redis.autoconfigure
+    # package, so it's currently a no-op and these values are load-bearing:
+    # without them, property *binding* itself fails since PORT can't convert
+    # an empty string to int, which aborts context startup before any test
+    # runs).
+    redis:
+      host: localhost
+      port: 6379
+  mongodb:
+    # application.yml's MONGODB_URI fallback was also stripped (#114).
+    # TmdbClientIntegrationTest doesn't extend AbstractMongoIntegrationTest
+    # (it never touches Mongo — it's testing TMDB client/rate-limiting
+    # behavior) but the full context still constructs movieRepository, so
+    # binding needs a syntactically valid URI even though nothing here ever
+    # connects to it. Every other integration test overrides this with a
+    # real Testcontainers URI via @DynamicPropertySource, which wins over
+    # this default.
+    uri: mongodb://localhost:27017/test
 
 eureka:
   client:

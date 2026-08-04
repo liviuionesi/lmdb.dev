@@ -157,3 +157,9 @@ resilience4j:
 tmdb:
   api:
     key: server-side-key
+
+# application.yml's JWT_SECRET fallback was stripped to empty (#114), so
+# JwtUtil now needs a real value here — without it, boot fails with
+# WeakKeyException before any route or filter test can even run.
+jwt:
+  secret: test-secret-key-for-jwt-token-validation-must-be-long-enough-for-tests

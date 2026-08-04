@@ -82,10 +82,12 @@ import org.testcontainers.utility.DockerImageName;
 class GatewayIntegrationTest {
 
   /**
-   * Shared HS256 secret — MUST match the gateway's {@code jwt.secret} default so tokens minted here
-   * validate in the gateway's JwtUtil.
+   * Shared HS256 secret — MUST match {@code jwt.secret} in {@code application-gateway-it.yml} so
+   * tokens minted here validate in the gateway's JwtUtil. There's no production default to fall
+   * back to anymore (#114); this is test-only.
    */
-  private static final String JWT_SECRET = "filmpire-secret-key-change-in-production";
+  private static final String JWT_SECRET =
+      "test-secret-key-for-jwt-token-validation-must-be-long-enough-for-tests";
 
   /**
    * Port the actor-service stand-in listens on; matches the {@code actor-service} and {@code
