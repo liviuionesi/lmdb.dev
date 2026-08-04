@@ -60,10 +60,16 @@ public class MediaService {
       MediaMetadata metadata,
       String uploadedBy) throws IOException {
 
+    EntityType safeEntityType = entityType != null ? entityType : EntityType.USER;
+    MediaType safeMediaType = mediaType != null ? mediaType : MediaType.IMAGE;
+    String rawFilename = file.getOriginalFilename();
+    String originalFilename = rawFilename != null ? rawFilename : "upload.dat";
+    String rawContentType = file.getContentType();
+    String contentType = rawContentType != null ? rawContentType : "application/octet-stream";
+
     String fileId = UUID.randomUUID().toString();
-    String originalFilename = file.getOriginalFilename() != null ? file.getOriginalFilename() : "upload.dat";
     String storagePath = String.format("%s/%s/%s-%s",
-        entityType.name().toLowerCase(),
+        safeEntityType.name().toLowerCase(),
         entityId,
         fileId,
         originalFilename.replaceAll("[^a-zA-Z0-9.-]", "_"));
@@ -72,7 +78,7 @@ public class MediaService {
         originalFilename, file.getSize(), storagePath);
 
     // Persist raw bytes into MinIO S3 object bucket
-    storageService.putObject(storagePath, file.getInputStream(), file.getSize(), file.getContentType());
+    storageService.putObject(storagePath, file.getInputStream(), file.getSize(), contentType);
 
     // Generate responsive thumbnail URL references
     Map<String, String> thumbnails = storageService.generateThumbnails(fileId, originalFilename);
@@ -80,12 +86,12 @@ public class MediaService {
     MediaFile mediaFile = new MediaFile(
         fileId,
         entityId,
-        entityType != null ? entityType : EntityType.USER,
-        mediaType != null ? mediaType : MediaType.IMAGE,
+        safeEntityType,
+        safeMediaType,
         originalFilename,
         storagePath,
         file.getSize(),
-        file.getContentType() != null ? file.getContentType() : "application/octet-stream",
+        contentType,
         thumbnails,
         metadata != null ? metadata : new MediaMetadata(null, null, null, null, null),
         Instant.now(),
