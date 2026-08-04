@@ -90,6 +90,11 @@ stack_up() {
   # shellcheck disable=SC2086
   TMDB_API_KEY="$TMDB_API_KEY" $COMPOSE -f "$COMPOSE_FILE" up -d --build
 
+  # ~2.3GB combined; budgeted against e2e-smoke.yml's 30-minute job timeout
+  # alongside the image builds and HEALTH_TIMEOUT below — on a GitHub-hosted
+  # runner this normally finishes in well under a minute. `|| true` so a slow
+  # or failed pull degrades ai-service's health check rather than aborting the
+  # whole run before movie/user/actor-service ever get exercised.
   log "Ensuring Ollama models (llama3.2, nomic-embed-text) are present…"
   # shellcheck disable=SC2086
   $COMPOSE -f "$COMPOSE_FILE" exec -T ollama ollama pull llama3.2 || true

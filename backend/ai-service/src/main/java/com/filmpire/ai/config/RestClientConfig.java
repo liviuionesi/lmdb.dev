@@ -1,46 +1,43 @@
 package com.filmpire.ai.config;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.cloud.client.loadbalancer.LoadBalanced;
+import org.springframework.cloud.client.loadbalancer.LoadBalancerInterceptor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.client.RestClient;
 
 /**
- * Configures a dedicated {@code @LoadBalanced} {@link RestClient} for {@link
+ * Configures a dedicated load-balanced {@link RestClient} for {@link
  * com.filmpire.ai.client.MovieCatalogClient} so calls to {@code lb://movie-service} resolve via
- * Eureka, while keeping the application-wide {@code RestClient.Builder} clean for Eureka's internal
- * registration client.
+ * Eureka.
  *
- * <p>Spring Cloud LoadBalancer only post-processes {@link RestClient.Builder} beans qualified
- * {@code @LoadBalanced} — it never inspects an already-{@code build()}-ed {@link RestClient}. The
- * qualifier therefore has to sit on the builder bean below, not on the {@code RestClient} bean that
- * consumes it.
+ * <p>This deliberately does NOT declare a {@code @LoadBalanced RestClient.Builder} bean: Spring
+ * Boot applies every {@code RestClientCustomizer} (which is how Spring Cloud LoadBalancer wires
+ * {@code @LoadBalanced} support) to the shared, application-wide {@link RestClient.Builder} —
+ * scoping load balancing to one qualified bean doesn't stop it there, it makes every other {@code
+ * RestClient.Builder} in the app load-balanced too, including Eureka's own registration client and
+ * Spring AI's Ollama client, both of which call plain hostnames, not service ids. Instead, {@link
+ * LoadBalancerInterceptor} (unconditionally auto-configured whenever Spring Cloud LoadBalancer is
+ * on the classpath) is attached by hand to a fresh, private {@link RestClient.Builder} that only
+ * {@link com.filmpire.ai.client.MovieCatalogClient} ever sees.
  */
 @Configuration
 public class RestClientConfig {
 
   /**
-   * @return a {@link RestClient.Builder} that Spring Cloud LoadBalancer wires with its
-   *     load-balancing request interceptor, resolving {@code lb://} URIs via Eureka
-   */
-  @Bean
-  @LoadBalanced
-  public RestClient.Builder loadBalancedRestClientBuilder() {
-    return RestClient.builder();
-  }
-
-  /**
-   * @param builder the load-balanced builder above, injected by its {@code @LoadBalanced}
-   *     qualifier
+   * @param loadBalancerInterceptor resolves {@code lb://} URIs to a real movie-service instance via
+   *     Eureka
    * @param movieServiceBaseUrl movie-service's base URL, {@code lb://movie-service} by default
    * @return the {@link RestClient} {@link com.filmpire.ai.client.MovieCatalogClient} calls
-   *     movie-service through
+   *     movie-service through — load-balanced on its own, not via the shared builder
    */
   @Bean
   public RestClient movieServiceRestClient(
-      @LoadBalanced RestClient.Builder builder,
+      LoadBalancerInterceptor loadBalancerInterceptor,
       @Value("${movie-service.base-url:lb://movie-service}") String movieServiceBaseUrl) {
-    return builder.baseUrl(movieServiceBaseUrl).build();
+    return RestClient.builder()
+        .baseUrl(movieServiceBaseUrl)
+        .requestInterceptor(loadBalancerInterceptor)
+        .build();
   }
 }

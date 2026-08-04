@@ -12,10 +12,11 @@ import org.springframework.context.annotation.Primary;
 /**
  * Test-only Mockito mocks for the model-backed collaborators ({@link ChatModel}, {@link
  * EmbeddingModel}, {@link SpeechToTextService}) that no CI environment can reach for real (no
- * Ollama, no Vosk model). Split out from {@link AiTestConfig} so tests that need these mocks but
- * want the real {@code @LoadBalanced} {@link org.springframework.web.client.RestClient.Builder}
- * from {@link RestClientConfig} — e.g. a load-balancer resolution regression test — can import
- * just this class instead of {@link AiTestConfig}'s bundle, which also overrides the builder.
+ * Ollama, no Vosk model). {@link com.filmpire.ai.client.MovieCatalogClient}'s load-balanced {@link
+ * org.springframework.web.client.RestClient} from {@link RestClientConfig} is left untouched —
+ * tests point it at WireMock by registering movie-service with Spring Cloud's {@code
+ * SimpleDiscoveryClient} instead of overriding any bean (see {@link
+ * com.filmpire.ai.integration.AiServiceIntegrationTest}).
  */
 @TestConfiguration
 public class AiModelTestConfig {

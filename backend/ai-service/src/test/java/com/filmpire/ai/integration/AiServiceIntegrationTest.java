@@ -14,7 +14,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.filmpire.ai.config.AiTestConfig;
+import com.filmpire.ai.config.AiModelTestConfig;
 import com.filmpire.ai.repository.ConversationRepository;
 import com.filmpire.ai.service.SpeechToTextService;
 import com.github.tomakehurst.wiremock.client.WireMock;
@@ -40,8 +40,6 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 import org.testcontainers.junit.jupiter.Container;
@@ -52,16 +50,26 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
  * Integration tests for ai-service: full controller → service → PostgreSQL (pgvector) →
  * (WireMock-simulated) movie-service stack.
  *
- * <p>{@link ChatModel} and {@link EmbeddingModel} are Mockito mocks ({@link AiTestConfig}) standing
- * in for Ollama, which isn't reachable in CI — everything else (Flyway migration, JPA mapping, the
- * ANN query, the REST contract) runs against real infrastructure via Testcontainers (a {@code
- * pgvector/pgvector} PostgreSQL container) and WireMock stands in for movie-service.
+ * <p>{@link ChatModel} and {@link EmbeddingModel} are Mockito mocks ({@link AiModelTestConfig})
+ * standing in for Ollama, which isn't reachable in CI — everything else (Flyway migration, JPA
+ * mapping, the ANN query, the REST contract) runs against real infrastructure via Testcontainers (a
+ * {@code pgvector/pgvector} PostgreSQL container) and WireMock stands in for movie-service. {@link
+ * com.filmpire.ai.client.MovieCatalogClient} keeps the real {@code @LoadBalanced} {@link
+ * org.springframework.web.client.RestClient.Builder} from {@link
+ * com.filmpire.ai.config.RestClientConfig} — {@code movie-service.base-url} stays at its default
+ * {@code lb://movie-service}, and Spring Cloud's {@code SimpleDiscoveryClient} (registered below)
+ * resolves it to WireMock, so these tests exercise the same {@code lb://} resolution path
+ * production goes through, not a plain-HTTP bypass.
  */
-@SpringBootTest
+@SpringBootTest(
+    properties = {
+      "spring.cloud.discovery.enabled=true",
+      "spring.cloud.discovery.client.simple.instances.movie-service[0].uri=http://localhost:9992"
+    })
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Testcontainers
-@Import(AiTestConfig.class)
+@Import(AiModelTestConfig.class)
 @WireMockTest(httpPort = 9992)
 @Transactional // MockMvc runs in-thread, so this also lets tests read the LAZY messages
 // collection after a request completes, and doubles as per-test DB rollback.
@@ -86,12 +94,6 @@ class AiServiceIntegrationTest {
   @Autowired private EmbeddingModel embeddingModel;
 
   @Autowired private SpeechToTextService speechToTextService;
-
-  /** Points MovieCatalogClient at WireMock instead of {@code lb://movie-service}. */
-  @DynamicPropertySource
-  static void movieServiceProperties(DynamicPropertyRegistry registry) {
-    registry.add("movie-service.base-url", () -> "http://localhost:9992");
-  }
 
   /**
    * No leftover mock stubbing between tests. DB isolation comes from the class-level
