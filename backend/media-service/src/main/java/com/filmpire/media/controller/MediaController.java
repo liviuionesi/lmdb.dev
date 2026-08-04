@@ -14,6 +14,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import java.io.InputStream;
 import java.util.List;
 import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -37,6 +39,7 @@ import org.springframework.web.multipart.MultipartFile;
 @Tag(name = "Media Asset Lifecycle API", description = "Endpoints handling custom user-uploaded binary media storage, thumbnails, and retrieval")
 public class MediaController {
 
+  private static final Logger log = LoggerFactory.getLogger(MediaController.class);
   private final MediaService mediaService;
 
   /**
@@ -83,6 +86,7 @@ public class MediaController {
           file, entityId, entityType, mediaType, metadata, uploadedBy);
       return ResponseEntity.status(HttpStatus.CREATED).body(mediaFile);
     } catch (Exception e) {
+      log.error("Media asset upload encountered an error: {}", e.getMessage(), e);
       return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
     }
   }
@@ -128,6 +132,7 @@ public class MediaController {
           .contentType(org.springframework.http.MediaType.parseMediaType(mediaFile.mimeType()))
           .body(resource);
     } catch (Exception e) {
+      log.error("Media binary stream download encountered an error: {}", e.getMessage(), e);
       return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
     }
   }
