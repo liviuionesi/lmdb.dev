@@ -3,21 +3,20 @@ const { test, expect } = require('@playwright/test');
 /**
  * Authentication and token exchange user journey test scenario.
  *
- * NOTE: Live TMDB OAuth authentication redirects and interactive third-party login
- * prompts cannot reliably execute in automated headless browser environments without
- * exposing actual user credentials or hitting anti-bot challenge screens.
- *
  * As documented in ARCHITECTURE.md §10.4 and issue #38 scoping, live token exchange
  * and session state management are comprehensively verified at the API level by #33
- * (closed). Here at the DOM layer, we explicitly skip live external redirection
- * and mock the locally authenticated session state.
+ * (closed). Here at the DOM layer, we verify session persistence and unauthorized redirect routes.
  */
 
-test.describe('Authentication & Session Flow (Mocked)', () => {
-  test.skip('Given an unauthenticated user clicking login, when external TMDB OAuth redirection occurs, then session token is exchanged (Verified via API tests in #33)', async ({ page }) => {
-    // Intentionally skipped to avoid unmanaged third-party browser OAuth redirection.
-    // See backend integration test coverage implemented under issue #33.
-    expect(page).not.toBeNull();
+test.describe('Authentication & Session Flow (Mocked & Redirect)', () => {
+  test('Given an unauthenticated user, when navigating to the profile page, then browser redirects directly to the home page (/)', async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.clear();
+    });
+
+    await page.goto('/profile/123');
+    // Expect unauthenticated user to be redirected back to root home view '/'
+    await expect(page).toHaveURL(/.*(\/)$/);
   });
 
   test('Given an already authenticated local browser storage state, when navigating to the profile page, then user details and rated movies render cleanly', async ({ page }) => {

@@ -69,4 +69,12 @@ describe('Profile', () => {
     expect(logout).toHaveBeenCalled();
     await waitFor(() => expect(localStorage.getItem('access_token')).toBeNull());
   });
+
+  it('redirects an unauthenticated user to the home page (/)', () => {
+    useGetFavoritesQuery.mockReturnValue({ data: [] });
+    useGetWatchlistQuery.mockReturnValue({ data: [] });
+    renderWithProviders(<Profile />, { store: buildStore(false), initialEntries: ['/profile/1'] });
+
+    expect(screen.queryByText(/My Profile/i)).not.toBeInTheDocument();
+  });
 });

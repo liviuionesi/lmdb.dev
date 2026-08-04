@@ -2,6 +2,7 @@ import React from 'react';
 import { Typography, Button, Box } from '@mui/material';
 import { useDispatch, useSelector } from 'react-redux';
 import { ExitToApp } from '@mui/icons-material';
+import { Redirect } from 'react-router-dom';
 
 import { useGetFavoritesQuery, useGetWatchlistQuery, useLogoutMutation } from '../../services/user';
 import { clearUser, userSelector } from '../../features/auth';
@@ -15,6 +16,10 @@ const Profile = () => {
 
   const { data: favorites } = useGetFavoritesQuery(undefined, { skip: !isAuthenticated });
   const { data: watchlist } = useGetWatchlistQuery(undefined, { skip: !isAuthenticated });
+
+  if (!isAuthenticated) {
+    return <Redirect to="/" />;
+  }
 
   const favoriteIds = favorites?.map((entry) => entry.movieId) ?? [];
   const watchlistIds = watchlist?.map((entry) => entry.movieId) ?? [];
