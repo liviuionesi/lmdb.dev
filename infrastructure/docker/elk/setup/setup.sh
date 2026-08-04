@@ -48,6 +48,23 @@ curl -sf -X POST "$KIBANA_URL/api/saved_objects/_import?overwrite=true" \
   -F 'file=@/setup/filmpire-lens-suite.ndjson;type=application/ndjson'
 echo
 
+echo "Importing Kibana homepage: links to the 3 Lens dashboards (#112)"
+curl -sf -X POST "$KIBANA_URL/api/saved_objects/_import?overwrite=true" \
+  -H 'kbn-xsrf: true' \
+  -F 'file=@/setup/filmpire-homepage.ndjson;type=application/ndjson'
+echo
+
+# Makes the homepage the actual landing page instead of just another entry
+# in the dashboard list (#112) — an advanced setting, not a saved object, so
+# it's set directly via the settings API rather than through the ndjson
+# import above.
+echo "Setting Kibana default route to the Filmpire homepage dashboard"
+curl -sf -X POST "$KIBANA_URL/api/kibana/settings" \
+  -H 'kbn-xsrf: true' \
+  -H 'Content-Type: application/json' \
+  --data '{"changes": {"defaultRoute": "/app/dashboards#/view/filmpire-homepage"}}'
+echo
+
 # Kibana always exports alerting rules disabled (a safety default so importing
 # into a new environment doesn't silently start firing them) - explicitly
 # re-enable them after every import so `docker-compose up` leaves the rules

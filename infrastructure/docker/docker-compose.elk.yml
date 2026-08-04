@@ -49,6 +49,7 @@ services:
       - ./elk/kibana/filmpire-overview.ndjson:/setup/filmpire-overview.ndjson:ro,z
       - ./elk/kibana/filmpire-lens-suite.ndjson:/setup/filmpire-lens-suite.ndjson:ro,z
       - ./elk/kibana/filmpire-alerting.ndjson:/setup/filmpire-alerting.ndjson:ro,z
+      - ./elk/kibana/filmpire-homepage.ndjson:/setup/filmpire-homepage.ndjson:ro,z
     networks:
       - filmpire-network
     depends_on:
