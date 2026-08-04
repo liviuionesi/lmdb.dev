@@ -1,8 +1,10 @@
-# Test profile: no discovery infra, no Redis (cache no-op); the PostgreSQL
+# Test profile: no discovery infra by default (individual tests can opt back
+# in via @SpringBootTest properties, e.g. AiServiceIntegrationTest's
+# SimpleDiscoveryClient registration), no Redis (cache no-op); the PostgreSQL
 # (pgvector) datasource comes from Testcontainers via @ServiceConnection.
 # ChatModel/EmbeddingModel are replaced by @Primary Mockito mocks
-# (AiTestConfig) rather than excluding Spring AI's autoconfiguration — no
-# real Ollama server is reachable in CI.
+# (AiModelTestConfig) rather than excluding Spring AI's autoconfiguration —
+# no real Ollama server is reachable in CI.
 spring:
   cloud:
     discovery:

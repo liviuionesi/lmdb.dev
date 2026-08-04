@@ -54,12 +54,11 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
  * standing in for Ollama, which isn't reachable in CI — everything else (Flyway migration, JPA
  * mapping, the ANN query, the REST contract) runs against real infrastructure via Testcontainers (a
  * {@code pgvector/pgvector} PostgreSQL container) and WireMock stands in for movie-service. {@link
- * com.filmpire.ai.client.MovieCatalogClient} keeps the real {@code @LoadBalanced} {@link
- * org.springframework.web.client.RestClient.Builder} from {@link
- * com.filmpire.ai.config.RestClientConfig} — {@code movie-service.base-url} stays at its default
- * {@code lb://movie-service}, and Spring Cloud's {@code SimpleDiscoveryClient} (registered below)
- * resolves it to WireMock, so these tests exercise the same {@code lb://} resolution path
- * production goes through, not a plain-HTTP bypass.
+ * com.filmpire.ai.client.MovieCatalogClient} keeps the real load-balanced {@link
+ * org.springframework.web.client.RestClient} from {@link com.filmpire.ai.config.RestClientConfig} —
+ * {@code movie-service.base-url} stays at its default {@code lb://movie-service}, and Spring
+ * Cloud's {@code SimpleDiscoveryClient} (registered below) resolves it to WireMock, so these tests
+ * exercise the same {@code lb://} resolution path production goes through, not a plain-HTTP bypass.
  */
 @SpringBootTest(
     properties = {
@@ -359,8 +358,8 @@ class AiServiceIntegrationTest {
   /**
    * Given an audio upload, when the transcription succeeds, then the endpoint returns the
    * recognized text — verifies the multipart request contract and response shape. {@link
-   * SpeechToTextService} itself is a Mockito mock ({@link com.filmpire.ai.config.AiTestConfig})
-   * since no Vosk model is downloaded in CI; real audio-handling behaviour is covered by {@link
+   * SpeechToTextService} itself is a Mockito mock ({@link AiModelTestConfig}) since no Vosk model
+   * is downloaded in CI; real audio-handling behaviour is covered by {@link
    * com.filmpire.ai.service.SpeechToTextServiceTest}.
    */
   @Test

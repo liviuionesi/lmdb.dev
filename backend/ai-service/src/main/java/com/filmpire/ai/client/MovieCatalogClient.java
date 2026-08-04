@@ -19,9 +19,9 @@ public class MovieCatalogClient {
   private final RestClient restClient;
 
   /**
-   * @param restClientBuilder a {@code @LoadBalanced} builder (see {@link
-   *     com.filmpire.ai.config.RestClientConfig}) so {@code lb://movie-service} resolves via Eureka
-   * @param movieServiceBaseUrl movie-service's base URL, {@code lb://movie-service} by default
+   * @param movieServiceRestClient the load-balanced client from {@link
+   *     com.filmpire.ai.config.RestClientConfig}, already resolving {@code lb://movie-service} via
+   *     Eureka
    */
   public MovieCatalogClient(RestClient movieServiceRestClient) {
     this.restClient = movieServiceRestClient;
