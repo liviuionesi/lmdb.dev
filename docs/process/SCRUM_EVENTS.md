@@ -24,7 +24,7 @@ without waiting for a fixed daily slot, which is a legitimate, not lesser,
 adaptation of the same inspect-and-adapt intent.
 
 ## Sprint Review
-At the Sprint boundary (with completed Stories already promoted to main upon closure):
+At the Sprint boundary (with completed Epics already promoted to main upon closure):
 1. Actually run the software and confirm the Increment works — not just
    "tests pass," a real check that what shipped this Sprint functions.
 2. Post a **Sprint Report**: Story Points committed vs. actually closed,

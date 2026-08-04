@@ -109,12 +109,12 @@ Scrum specifically, and how this would change if it didn't)
 8. Commit (see "Commit conventions") and push to `develop`.
 9. Move to the next issue. Repeat until the Sprint's issues are done.
 
-## Merging to `main` — Story Closure & Sprint Review
+## Merging to `main` — Epic Closure & Sprint Review
 
 - `develop` is where all task work happens and gets pushed.
-- `main` only ever receives fully-verified work: when a **Story** closes (once
-  every child Task is completed and the Story genuinely meets Definition of
-  Done), immediately merge `develop` → `main` to promote the working increment.
+- `main` only ever receives fully-verified work: when an **Epic** closes (once
+  every child Story is completed and genuinely meets Definition of Done),
+  merge `develop` → `main` to promote the working increment.
 - At the end of a Sprint, perform the Sprint Review + Sprint Retrospective
   events (see `docs/process/SCRUM_EVENTS.md`), which are mandatory Scrum
   ceremonies, not optional polish:
@@ -150,10 +150,11 @@ back to reality — this section is that force.
   you must select and start those remaining Tasks next** (focusing on delivering
   the active Story to completion). If all Tasks under that Story are completed
   and verified against Definition of Done, check off its DoD box, close the
-  Story, and merge `develop` → `main`. When closing a **Story**, immediately
+  Story, and mark it as checked `[x]` in its parent Epic (no need to merge
+  `develop` → `main` after closing a Story). When closing a **Story**, immediately
   check if its parent **Epic** has any open Stories remaining; if none remain,
-  check its DoD box, close the Epic, and ensure `develop` is merged into
-  `main`. Never leave an exhausted Story or Epic sitting open.
+  check its DoD box, close the Epic, and merge `develop` into `main`. Never
+  leave an exDoDhausted Story or Epic sitting open.
 - Never close an issue with an unchecked acceptance-criteria box. Never
   verify "done" through a shortcut that skips the exact layer the issue is
   about (e.g. don't confirm a gateway-routing fix by calling the downstream
