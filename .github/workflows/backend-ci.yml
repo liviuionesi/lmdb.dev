@@ -75,7 +75,16 @@ jobs:
         # build on a missing credential, mirroring the NVD_API_KEY
         # non-blocking pattern below: an unconfigured *optional* external
         # integration shouldn't block CI.
-        if: ${{ env.HAS_SONAR_TOKEN == 'true' }}
+        #
+        # Also restricted to pushes on `main`: verified against the live
+        # SonarCloud API (#108) that the free/Community org plan only
+        # stores analysis for the default branch — a `develop` push still
+        # reports BUILD SUCCESSFUL locally, but SonarCloud silently
+        # discards it server-side (no `develop` branch component is ever
+        # created). Running it there would burn CI time for a result that
+        # never lands anywhere. `main` only moves at Sprint-end merges, so
+        # this still analyzes every real Increment.
+        if: ${{ env.HAS_SONAR_TOKEN == 'true' && github.ref == 'refs/heads/main' }}
         run: ./gradlew sonar
         env:
           GRADLE_OPTS: "-Dorg.gradle.daemon=false"
