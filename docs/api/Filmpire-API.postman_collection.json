@@ -756,7 +756,10 @@
                                     "    pm.expect(jsonData.data.refreshToken).to.exist;",
                                     "});",
                                     "pm.collectionVariables.set('access_token', jsonData.data.accessToken);",
-                                    "pm.collectionVariables.set('refresh_token', jsonData.data.refreshToken);"
+                                    "pm.collectionVariables.set('refresh_token', jsonData.data.refreshToken);",
+                                    "if (jsonData.data && jsonData.data.user && jsonData.data.user.id) {",
+                                    "    pm.collectionVariables.set('user_id', jsonData.data.user.id);",
+                                    "}"
                                 ],
                                 "type": "text/javascript"
                             }
@@ -810,7 +813,10 @@
                                     "    pm.expect(jsonData.data.refreshToken).to.exist;",
                                     "});",
                                     "pm.collectionVariables.set('access_token', jsonData.data.accessToken);",
-                                    "pm.collectionVariables.set('refresh_token', jsonData.data.refreshToken);"
+                                    "pm.collectionVariables.set('refresh_token', jsonData.data.refreshToken);",
+                                    "if (jsonData.data && jsonData.data.user && jsonData.data.user.id) {",
+                                    "    pm.collectionVariables.set('user_id', jsonData.data.user.id);",
+                                    "}"
                                 ],
                                 "type": "text/javascript"
                             }
@@ -1332,7 +1338,7 @@
         },
         {
             "name": "12. Schema-Drift Self-Healing (#46)",
-            "description": "Verifies ADR-011: a MongoDB document written by an OLDER version of the Movie model must be treated as a cache miss (evicted + re-fetched from TMDB), not surfaced as a 500.\n\nBefore ADR-011 this was a permanent failure: the read threw, so save-through never ran, so the bad document was never rewritten — every subsequent request failed identically until someone deleted it by hand.\n\nSETUP (run once, outside Postman — Postman cannot write a shape the app refuses to write):\n\n  podman exec filmpire-mongo mongosh -u admin -p admin123 \\\n    --authenticationDatabase admin filmpire --quiet --eval '\n      db.movies.deleteOne({tmdbId: 550});\n      db.movies.insertOne({tmdbId: 550, title: \"Fight Club\",\n        overview: \"STALE - pre-ADR-010 document\",\n        spokenLanguages: [\"English\", \"German\"]});'\n\n`spokenLanguages` as an array of strings is the pre-ADR-010 shape; the current model expects embedded SpokenLanguage objects.\n\nThen run this folder. The first request heals the document; the second proves the heal persisted and is served locally.",
+            "description": "Verifies ADR-011: a MongoDB document written by an OLDER version of the Movie model must be treated as a cache miss (evicted + re-fetched from TMDB), not surfaced as a 500.\n\nBefore ADR-011 this was a permanent failure: the read threw, so save-through never ran, so the bad document was never rewritten — every subsequent request failed identically until someone deleted it by hand.\n\nSETUP (run once, outside Postman — Postman cannot write a shape the app refuses to write):\n\n  podman exec filmpire-mongo mongosh -u admin -p \"${MONGO_ROOT_PASSWORD}\" \\\n    --authenticationDatabase admin filmpire --quiet --eval '\n      db.movies.deleteOne({tmdbId: 550});\n      db.movies.insertOne({tmdbId: 550, title: \"Fight Club\",\n        overview: \"STALE - pre-ADR-010 document\",\n        spokenLanguages: [\"English\", \"German\"]});'\n\n`spokenLanguages` as an array of strings is the pre-ADR-010 shape; the current model expects embedded SpokenLanguage objects.\n\nThen run this folder. The first request heals the document; the second proves the heal persisted and is served locally.",
             "item": [
                 {
                     "name": "Drifted document heals on read (expect 200, not 500)",
@@ -2741,6 +2747,183 @@
                     ]
                 }
             ]
+        },
+        {
+            "name": "15. AI Service (#48)",
+            "item": [
+                {
+                    "name": "Get Movie Recommendations",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{gateway_url}}/api/v1/ai/recommendations",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "ai",
+                                "recommendations"
+                            ]
+                        },
+                        "description": "Catalog-grounded movie recommendations for a user based on recently watched titles.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"userId\": \"{{user_id}}\",\n    \"recentMovies\": [\"Inception\", \"Interstellar\"],\n    \"count\": 5\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "pm.test(\"Returns recommendations array\", function () {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.expect(jsonData).to.have.property(\"recommendations\");",
+                                    "    pm.expect(Array.isArray(jsonData.recommendations)).to.be.true;",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Chat Assistant",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{gateway_url}}/api/v1/ai/chat",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "ai",
+                                "chat"
+                            ]
+                        },
+                        "description": "Conversational chat assistant backed by Ollama (llama3.2).",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"userId\": \"{{user_id}}\",\n    \"message\": \"Recommend a good sci-fi movie.\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "pm.test(\"Returns reply and conversationId\", function () {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.expect(jsonData).to.have.property(\"conversationId\");",
+                                    "    pm.expect(jsonData).to.have.property(\"reply\");",
+                                    "    pm.expect(jsonData.reply).to.be.a(\"string\");",
+                                    "    pm.expect(jsonData.reply.length).to.be.above(0);",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Semantic Search",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{gateway_url}}/api/v1/ai/search/semantic?query=space%20exploration&userId={{user_id}}&k=5",
+                            "host": [
+                                "{{gateway_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "ai",
+                                "search",
+                                "semantic"
+                            ],
+                            "query": [
+                                {
+                                    "key": "query",
+                                    "value": "space exploration"
+                                },
+                                {
+                                    "key": "userId",
+                                    "value": "{{user_id}}"
+                                },
+                                {
+                                    "key": "k",
+                                    "value": "5"
+                                }
+                            ]
+                        },
+                        "description": "ANN semantic search over user taste embeddings in pgvector."
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "pm.test(\"Returns similar users array\", function () {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.expect(Array.isArray(jsonData)).to.be.true;",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ]
+                }
+            ],
+            "description": "Ollama-backed AI features: catalog recommendations, chat assistant, and semantic taste search (issue #48)"
         }
     ],
     "variable": [
@@ -2813,6 +2996,16 @@
         {
             "key": "tmdb_password",
             "value": ""
+        },
+        {
+            "key": "user_id",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "ai_service_url",
+            "value": "http://localhost:8084",
+            "type": "string"
         }
     ]
 }

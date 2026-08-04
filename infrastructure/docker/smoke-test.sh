@@ -50,6 +50,7 @@ HEALTH_TARGETS=(
   "movie-service:8081"
   "user-service:8082"
   "actor-service:8083"
+  "ai-service:8084"
 )
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; NC='\033[0m'
@@ -88,6 +89,12 @@ stack_up() {
   log "Bringing the stack up (this builds images on first run)…"
   # shellcheck disable=SC2086
   TMDB_API_KEY="$TMDB_API_KEY" $COMPOSE -f "$COMPOSE_FILE" up -d --build
+
+  log "Ensuring Ollama models (llama3.2, nomic-embed-text) are present…"
+  # shellcheck disable=SC2086
+  $COMPOSE -f "$COMPOSE_FILE" exec -T ollama ollama pull llama3.2 || true
+  # shellcheck disable=SC2086
+  $COMPOSE -f "$COMPOSE_FILE" exec -T ollama ollama pull nomic-embed-text || true
 }
 
 # Tear down and, on a failed run, dump logs first so CI has something to read.

@@ -4,9 +4,8 @@ import com.filmpire.shared.dto.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -26,8 +25,15 @@ public class FallbackController {
    *
    * @return fallback response
    */
-  @GetMapping("/movies")
-  @PostMapping("/movies")
+  @RequestMapping(
+      path = "/movies",
+      method = {
+        RequestMethod.GET,
+        RequestMethod.POST,
+        RequestMethod.PUT,
+        RequestMethod.DELETE,
+        RequestMethod.PATCH
+      })
   public ResponseEntity<ApiResponse<Void>> movieServiceFallback() {
     log.warn("Movie Service is currently unavailable - Circuit breaker activated");
     return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
@@ -42,8 +48,15 @@ public class FallbackController {
    *
    * @return fallback response
    */
-  @GetMapping("/users")
-  @PostMapping("/users")
+  @RequestMapping(
+      path = "/users",
+      method = {
+        RequestMethod.GET,
+        RequestMethod.POST,
+        RequestMethod.PUT,
+        RequestMethod.DELETE,
+        RequestMethod.PATCH
+      })
   public ResponseEntity<ApiResponse<Void>> userServiceFallback() {
     log.warn("User Service is currently unavailable - Circuit breaker activated");
     return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
@@ -58,8 +71,15 @@ public class FallbackController {
    *
    * @return fallback response
    */
-  @GetMapping("/auth")
-  @PostMapping("/auth")
+  @RequestMapping(
+      path = "/auth",
+      method = {
+        RequestMethod.GET,
+        RequestMethod.POST,
+        RequestMethod.PUT,
+        RequestMethod.DELETE,
+        RequestMethod.PATCH
+      })
   public ResponseEntity<ApiResponse<Void>> authServiceFallback() {
     log.warn("Authentication Service is currently unavailable - Circuit breaker activated");
     return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
@@ -74,8 +94,15 @@ public class FallbackController {
    *
    * @return fallback response
    */
-  @GetMapping("/actors")
-  @PostMapping("/actors")
+  @RequestMapping(
+      path = "/actors",
+      method = {
+        RequestMethod.GET,
+        RequestMethod.POST,
+        RequestMethod.PUT,
+        RequestMethod.DELETE,
+        RequestMethod.PATCH
+      })
   public ResponseEntity<ApiResponse<Void>> actorServiceFallback() {
     log.warn("Actor Service is currently unavailable - Circuit breaker activated");
     return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
@@ -90,8 +117,15 @@ public class FallbackController {
    *
    * @return fallback response
    */
-  @GetMapping("/ai")
-  @PostMapping("/ai")
+  @RequestMapping(
+      path = "/ai",
+      method = {
+        RequestMethod.GET,
+        RequestMethod.POST,
+        RequestMethod.PUT,
+        RequestMethod.DELETE,
+        RequestMethod.PATCH
+      })
   public ResponseEntity<ApiResponse<Void>> aiServiceFallback() {
     log.warn("AI Service is currently unavailable - Circuit breaker activated");
     return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
@@ -106,8 +140,15 @@ public class FallbackController {
    *
    * @return fallback response
    */
-  @GetMapping("/media")
-  @PostMapping("/media")
+  @RequestMapping(
+      path = "/media",
+      method = {
+        RequestMethod.GET,
+        RequestMethod.POST,
+        RequestMethod.PUT,
+        RequestMethod.DELETE,
+        RequestMethod.PATCH
+      })
   public ResponseEntity<ApiResponse<Void>> mediaServiceFallback() {
     log.warn("Media Service is currently unavailable - Circuit breaker activated");
     return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)

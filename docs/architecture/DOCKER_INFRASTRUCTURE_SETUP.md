@@ -98,23 +98,23 @@ cp .env.example .env
 - Host: `localhost:5432`
 - Database: `filmpire`
 - Username: `admin`
-- Password: `admin123`
+- Password: `${POSTGRES_PASSWORD}` (defined in `.env`)
 
 **MongoDB:**
 - Host: `localhost:27017`
 - Database: `filmpire`
 - Username: `admin`
-- Password: `admin123`
+- Password: `${MONGO_ROOT_PASSWORD}` (defined in `.env`)
 
 **Redis:**
 - Host: `localhost:6379`
-- Password: `redis123`
+- Password: `${REDIS_PASSWORD}` (defined in `.env`)
 
 **MinIO:**
 - API: `localhost:9000`
 - Console: `localhost:9001`
 - Username: `minioadmin`
-- Password: `minioadmin123`
+- Password: `${MINIO_ROOT_PASSWORD}` (defined in `.env`)
 
 ## Service Connection Strings
 
@@ -126,7 +126,7 @@ spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/filmpire
     username: admin
-    password: admin123
+    password: ${POSTGRES_PASSWORD}
     driver-class-name: org.postgresql.Driver
 ```
 
@@ -135,7 +135,7 @@ spring:
 spring:
   data:
     mongodb:
-      uri: mongodb://admin:admin123@localhost:27017/filmpire?authSource=admin
+      uri: mongodb://admin:${MONGO_ROOT_PASSWORD}@localhost:27017/filmpire?authSource=admin
 ```
 
 **Redis (application.yml):**
@@ -145,7 +145,7 @@ spring:
     redis:
       host: localhost
       port: 6379
-      password: redis123
+      password: ${REDIS_PASSWORD}
 ```
 
 **MinIO (application.yml):**
@@ -153,7 +153,7 @@ spring:
 minio:
   url: http://localhost:9000
   access-key: minioadmin
-  secret-key: minioadmin123
+  secret-key: ${MINIO_ROOT_PASSWORD}
   bucket-name: filmpire-media
 ```
 
@@ -164,7 +164,7 @@ minio:
 - **System:** PostgreSQL
 - **Server:** postgres
 - **Username:** admin
-- **Password:** admin123
+- **Password:** `${POSTGRES_PASSWORD}`
 - **Database:** filmpire
 
 ### Mongo Express (MongoDB)
@@ -178,7 +178,7 @@ minio:
 ### MinIO Console
 - **URL:** http://localhost:9001
 - **Username:** minioadmin
-- **Password:** minioadmin123
+- **Password:** `${MINIO_ROOT_PASSWORD}`
 
 ## Volume Persistence
 
@@ -323,17 +323,16 @@ Features:
 ### 2. Test PostgreSQL
 ```bash
 psql -h localhost -U admin -d filmpire
-# Password: admin123
 ```
 
 ### 3. Test MongoDB
 ```bash
-mongosh mongodb://admin:admin123@localhost:27017/filmpire?authSource=admin
+mongosh mongodb://admin:${MONGO_ROOT_PASSWORD}@localhost:27017/filmpire?authSource=admin
 ```
 
 ### 4. Test Redis
 ```bash
-redis-cli -h localhost -p 6379 -a redis123 ping
+redis-cli -h localhost -p 6379 -a "${REDIS_PASSWORD}" ping
 ```
 
 ### 5. Test MinIO

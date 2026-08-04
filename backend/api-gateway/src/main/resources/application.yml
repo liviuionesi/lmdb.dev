@@ -30,7 +30,7 @@ spring:
               max-idle-time: 30s     # Close idle connections after 30 seconds
               max-life-time: 60s     # Close connections after 60 seconds
             connect-timeout: 5000    # 5 second connection timeout
-            response-timeout: 10s    # 10 second response timeout
+            response-timeout: 60s    # 60 second response timeout (for AI service model inferences)
           # Global CORS configuration
           globalcors:
             cors-configurations:
@@ -235,7 +235,7 @@ spring:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD:redis123}
+      password: ${REDIS_PASSWORD:}
       timeout: 2000ms
       lettuce:
         pool:
@@ -278,17 +278,23 @@ resilience4j:
         base-config: default
       aiServiceCircuitBreaker:
         base-config: default
+        slow-call-duration-threshold: 60s
+        slow-call-rate-threshold: 100
       mediaServiceCircuitBreaker:
         base-config: default
   
   timelimiter:
     configs:
       default:
-        timeout-duration: 5s
+        timeout-duration: 30s
+    instances:
+      aiServiceCircuitBreaker:
+        base-config: default
+        timeout-duration: 30s
 
 # JWT Configuration
 jwt:
-  secret: ${JWT_SECRET:filmpire-secret-key-change-in-production}
+  secret: ${JWT_SECRET:}
   expiration: 86400000 # 24 hours in milliseconds
   refresh-expiration: 604800000 # 7 days in milliseconds
 
@@ -499,4 +505,16 @@ eureka:
     enabled: false
     register-with-eureka: false
     fetch-registry: false
+
+resilience4j:
+  timelimiter:
+    instances:
+      aiServiceCircuitBreaker:
+        timeout-duration: 60s
+  circuitbreaker:
+    instances:
+      aiServiceCircuitBreaker:
+        slow-call-duration-threshold: 60s
+        slow-call-rate-threshold: 100
+
 

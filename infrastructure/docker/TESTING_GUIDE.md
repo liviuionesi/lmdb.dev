@@ -328,7 +328,7 @@ Open: http://localhost:8761
 
 ```bash
 # Connect to Redis container
-docker compose exec redis redis-cli -a redis123
+docker compose exec redis redis-cli -a "${REDIS_PASSWORD}"
 
 # Check rate limit keys
 KEYS global-rate-limit:*
@@ -379,7 +379,7 @@ docker compose restart api-gateway
 
 ```bash
 # Check Redis connection
-docker compose exec redis redis-cli -a redis123 PING
+docker compose exec redis redis-cli -a "${REDIS_PASSWORD}" PING
 # Should return: PONG
 
 # Check Redis in gateway logs

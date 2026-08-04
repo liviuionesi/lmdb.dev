@@ -51,15 +51,24 @@ cd infrastructure/scripts
 ./start-infrastructure.sh
 ```
 
-This brings up the full stack via Docker/Podman Compose in one shot: Postgres, MongoDB, Redis, MinIO, Elasticsearch/Kibana, Eureka, Config Service, and all implemented application services (`api-gateway` on `:8080`, `movie-service` on `:8081`, `user-service` on `:8082`, `actor-service` on `:8083`). Smoke-test it:
+This brings up the full stack via Docker/Podman Compose in one shot: Postgres, MongoDB, Redis, MinIO, Elasticsearch/Kibana, Eureka, Config Service, and all implemented application services (`api-gateway` on `:8080`, `movie-service` on `:8081`, `user-service` on `:8082`, `actor-service` on `:8083`, `ai-service` on `:8084`). Smoke-test it:
 
 ```bash
 curl http://localhost:8080/genre/movie/list
 ```
 
+### 3. Pull AI models (for ai-service)
+
+To enable `ai-service` features (recommendations, chat assistant, semantic search), pull the local Ollama models:
+
+```bash
+docker exec -it filmpire-ollama ollama pull llama3.2
+docker exec -it filmpire-ollama ollama pull nomic-embed-text
+```
+
 For iterating on a single service instead (hot-reload via `bootRun`), source `infrastructure/docker/.env` first so the required env vars (`TMDB_API_KEY`, `REDIS_PASSWORD`, DB creds) are present, then `cd backend/<service> && ../../gradlew bootRun`.
 
-### 3. Start the frontend
+### 4. Start the frontend
 
 ```bash
 cd frontend/filmpire

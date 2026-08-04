@@ -9,9 +9,9 @@ spring:
   application:
     name: user-service
   datasource:
-    url: ${POSTGRES_URL:jdbc:postgresql://localhost:5432/filmpire}
-    username: ${POSTGRES_USERNAME:admin}
-    password: ${POSTGRES_PASSWORD:admin123}
+    url: ${POSTGRES_URL}
+    username: ${POSTGRES_USERNAME}
+    password: ${POSTGRES_PASSWORD}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
@@ -42,7 +42,7 @@ eureka:
 # The default below matches the gateway's default for local development;
 # production MUST override via JWT_SECRET.
 jwt:
-  secret: ${JWT_SECRET:filmpire-secret-key-change-in-production}
+  secret: ${JWT_SECRET:}
   expiration: ${JWT_EXPIRATION:3600000}          # access token: 1 hour
   refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000}  # refresh: 7 days
 

@@ -22,4 +22,4 @@ if [ -z "$TMDB_API_KEY" ] || [ "$TMDB_API_KEY" = "your_tmdb_api_key_here" ]; the
 fi
 
 export TMDB_API_KEY
-export REDIS_PASSWORD="${REDIS_PASSWORD:-redis123}"
+export REDIS_PASSWORD="${REDIS_PASSWORD}"

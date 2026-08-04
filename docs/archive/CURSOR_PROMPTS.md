@@ -1899,7 +1899,7 @@ services:
     environment:
       POSTGRES_DB: filmpire
       POSTGRES_USER: admin
-      POSTGRES_PASSWORD: admin123
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
@@ -1917,7 +1917,7 @@ services:
     container_name: filmpire-mongo
     environment:
       MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: admin123
+      MONGO_INITDB_ROOT_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
       - "27017:27017"
     volumes:
@@ -1990,7 +1990,7 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
-      SPRING_DATA_MONGODB_URI: mongodb://admin:admin123@mongodb:27017/filmpire?authSource=admin
+      SPRING_DATA_MONGODB_URI: mongodb://admin:${POSTGRES_PASSWORD}@mongodb:27017/filmpire?authSource=admin
     depends_on:
       - eureka-server
       - mongodb
@@ -2007,7 +2007,7 @@ services:
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/filmpire
       SPRING_DATASOURCE_USERNAME: admin
-      SPRING_DATASOURCE_PASSWORD: admin123
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
     depends_on:
       postgres:
         condition: service_healthy
@@ -2026,7 +2026,7 @@ services:
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/filmpire
       SPRING_DATASOURCE_USERNAME: admin
-      SPRING_DATASOURCE_PASSWORD: admin123
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
     depends_on:
       - postgres
       - eureka-server
@@ -2041,7 +2041,7 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
-      SPRING_DATA_MONGODB_URI: mongodb://admin:admin123@mongodb:27017/filmpire?authSource=admin
+      SPRING_DATA_MONGODB_URI: mongodb://admin:${POSTGRES_PASSWORD}@mongodb:27017/filmpire?authSource=admin
       SPRING_AI_OPENAI_API_KEY: ${OPENAI_API_KEY}
     depends_on:
       - eureka-server
@@ -2057,7 +2057,7 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
-      SPRING_DATA_MONGODB_URI: mongodb://admin:admin123@mongodb:27017/filmpire?authSource=admin
+      SPRING_DATA_MONGODB_URI: mongodb://admin:${POSTGRES_PASSWORD}@mongodb:27017/filmpire?authSource=admin
     depends_on:
       - eureka-server
       - mongodb

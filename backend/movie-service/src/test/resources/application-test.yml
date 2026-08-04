@@ -28,4 +28,4 @@ server:
 logging:
   level:
     root: INFO
-    com.filmpire.movie: DEBUG
+    "[com.filmpire.movie]": DEBUG
