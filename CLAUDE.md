@@ -109,30 +109,30 @@ Scrum specifically, and how this would change if it didn't)
 8. Commit (see "Commit conventions") and push to `develop`.
 9. Move to the next issue. Repeat until the Sprint's issues are done.
 
-## Merging to `main` — Sprint Review + Retrospective
+## Merging to `main` — Story Closure & Sprint Review
 
 - `develop` is where all task work happens and gets pushed.
-- `main` only ever receives fully-verified work: merge `develop` → `main`
-  at the end of a Sprint, once every Story closed that Sprint is genuinely
-  done (Definition of Done met for each). This is the Sprint Review +
-  Sprint Retrospective events (see `docs/process/SCRUM_EVENTS.md`), not
-  optional ceremony:
-  1. **Sprint Review**: actually run the software, confirm the Increment
-     genuinely works. Post a Sprint Report (points committed vs. closed,
-     what slipped and why) on the Sprint milestone.
+- `main` only ever receives fully-verified work: when a **Story** closes (once
+  every child Task is completed and the Story genuinely meets Definition of
+  Done), immediately merge `develop` → `main` to promote the working increment.
+- At the end of a Sprint, perform the Sprint Review + Sprint Retrospective
+  events (see `docs/process/SCRUM_EVENTS.md`), which are mandatory Scrum
+  ceremonies, not optional polish:
+  1. **Sprint Review**: actually run the software, confirm the cumulative
+     Increment genuinely works. Post a Sprint Report (points committed vs.
+     closed, what slipped and why) on the Sprint milestone.
   2. **Sprint Retrospective**: one honest note — what went well, what
      didn't, one concrete process change for next Sprint. If it implies a
      real change, apply it to this file or `docs/process/` directly, not
      just write it down.
-  3. Only then merge `develop` → `main`.
-- Opening a Pull Request for this merge is optional, not required — one
-  collaborator means there's no second approver needed, and GitHub allows
-  a repo owner to merge their own PR unless branch protection says
-  otherwise. A PR is still fine to open purely as a readable changelog.
-- Never merge a Sprint with unfinished/un-verified Stories still in it —
-  leave them in the next Sprint instead of forcing the merge.
+- Opening a Pull Request for `develop` → `main` merges is optional, not
+  required — one collaborator means there's no second approver needed, and
+  GitHub allows a repo owner to merge their own PR. A PR is still fine to open
+  purely as a readable changelog.
+- Never merge un-verified Stories into `main`.
 - Next Sprint's **Sprint Planning** (pull Stories into the new Milestone,
-  set its Sprint Goal) happens right after, before new Task work starts.
+  set its Sprint Goal) happens right after Retrospective, before new Task
+  work starts.
 
 ## Issue hygiene (mandatory)
 

@@ -28,7 +28,7 @@ zero bugs.
 - [ ] Issue body resynced to match real implementation state and closed
       with evidence, not on a technicality.
 - [ ] Committed with a message referencing this issue, pushed to
-      `develop`.
+      `develop` (and for a completed Story, merged `develop` → `main`).
 
 Any Non-Functional Requirement that applies to this change (see
 [NON_FUNCTIONAL_REQUIREMENTS.md](NON_FUNCTIONAL_REQUIREMENTS.md)) is also
