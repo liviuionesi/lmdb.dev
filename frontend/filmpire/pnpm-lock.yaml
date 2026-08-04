@@ -8,9 +8,6 @@ importers:
 
   .:
     dependencies:
-      '@alan-ai/alan-sdk-web':
-        specifier: ^1.8.141
-        version: 1.8.141
       '@emotion/react':
         specifier: ^11.4.1
         version: 11.13.5(@types/react@18.3.12)(react@17.0.2)
@@ -36,8 +33,8 @@ importers:
         specifier: ^11.1.0
         version: 11.2.7(react-dom@17.0.2(react@17.0.2))(react@17.0.2)
       '@testing-library/user-event':
-        specifier: ^12.1.10
-        version: 12.8.3(@testing-library/dom@7.31.2)
+        specifier: ^14.6.1
+        version: 14.6.1(@testing-library/dom@7.31.2)
       axios:
         specifier: ^1.6.8
         version: 1.7.7
@@ -88,21 +85,13 @@ importers:
         specifier: ^4.2.0
         version: 4.6.2(eslint@7.32.0)
       npm-check-updates:
-<<<<<<< HEAD
         specifier: ^23.0.0
         version: 23.0.0
-=======
-        specifier: ^22.2.9
-        version: 22.2.9
->>>>>>> ff8d418 (chore(deps)(deps): bump @alan-ai/alan-sdk-web in /frontend/filmpire)
 
 packages:
 
   '@adobe/css-tools@4.4.1':
     resolution: {integrity: sha512-12WGKBQzjUAI4ayyF4IAtfw2QR/IDoqk6jTddXDhtYTJF9ASmoE1zst7cVtP0aL/F1jUJL5r+JxKXKEgHNbEUQ==}
-
-  '@alan-ai/alan-sdk-web@1.8.141':
-    resolution: {integrity: sha512-Op2gYIU32OTdjdo0a+3I+MuZAEIISWpwfnDhhpkPhFJDQeEyTPJnN5wypANN5u6Y6PEJn3+aJKtwEHt9SoyoBg==}
 
   '@alloc/quick-lru@5.2.0':
     resolution: {integrity: sha512-UrcABB+4bUrFABwbluTIBErXwvbsU/V7TZWfmbgJfbkwiBuziS9gxdODUyuiecfdGQ85jglMW6juS3+z5TsKLw==}
@@ -1511,9 +1500,9 @@ packages:
       react: '*'
       react-dom: '*'
 
-  '@testing-library/user-event@12.8.3':
-    resolution: {integrity: sha512-IR0iWbFkgd56Bu5ZI/ej8yQwrkCv8Qydx6RzwbKz9faXazR/+5tvYKsZQgyXJiwgpcva127YO6JcWy7YlCfofQ==}
-    engines: {node: '>=10', npm: '>=6'}
+  '@testing-library/user-event@14.6.1':
+    resolution: {integrity: sha512-vq7fv0rnt+QTXgPxr5Hjc210p6YKq2kmdziLgnsZGgLJ9e6VAShx1pACLuRjd/AS/sr7phAR58OIIpf0LlmQNw==}
+    engines: {node: '>=12', npm: '>=6'}
     peerDependencies:
       '@testing-library/dom': '>=7.21.4'
 
@@ -4392,15 +4381,9 @@ packages:
     resolution: {integrity: sha512-DlL+XwOy3NxAQ8xuC0okPgK46iuVNAK01YN7RueYBqqFeGsBjV9XmCAzAdgt+667bCl5kPh9EqKKDwnaPG1I7A==}
     engines: {node: '>=10'}
 
-<<<<<<< HEAD
   npm-check-updates@23.0.0:
     resolution: {integrity: sha512-B7dvnnS4Tm/4YQghXjBgGBDuHsk88hqCmr4ZuCr0nscsPzf/QVMls5mT8ZUcHrcrFRBP1afB2KNuJo8Px55DrA==}
     engines: {node: ^22.22.2 || ^24.15.0 || >=26.0.0, npm: '>=10.0.0'}
-=======
-  npm-check-updates@22.2.9:
-    resolution: {integrity: sha512-DVeZ0KirHfliSsHuR2o7cHE+tW439sVHfJjF6cGWeDiY0Wyl3BI/jS4zV0eixtcMOquFbcF1Su/FsxOvk5MoYA==}
-    engines: {node: ^20.19.0 || ^22.12.0 || >=24.0.0, npm: '>=10.0.0'}
->>>>>>> ff8d418 (chore(deps)(deps): bump @alan-ai/alan-sdk-web in /frontend/filmpire)
     hasBin: true
 
   npm-run-path@4.0.1:
@@ -6291,8 +6274,6 @@ packages:
 snapshots:
 
   '@adobe/css-tools@4.4.1': {}
-
-  '@alan-ai/alan-sdk-web@1.8.141': {}
 
   '@alloc/quick-lru@5.2.0': {}
 
@@ -8802,9 +8783,8 @@ snapshots:
       react: 17.0.2
       react-dom: 17.0.2(react@17.0.2)
 
-  '@testing-library/user-event@12.8.3(@testing-library/dom@7.31.2)':
+  '@testing-library/user-event@14.6.1(@testing-library/dom@7.31.2)':
     dependencies:
-      '@babel/runtime': 7.26.0
       '@testing-library/dom': 7.31.2
 
   '@tootallnate/once@1.1.2': {}
@@ -12297,11 +12277,7 @@ snapshots:
 
   normalize-url@6.1.0: {}
 
-<<<<<<< HEAD
   npm-check-updates@23.0.0: {}
-=======
-  npm-check-updates@22.2.9: {}
->>>>>>> ff8d418 (chore(deps)(deps): bump @alan-ai/alan-sdk-web in /frontend/filmpire)
 
   npm-run-path@4.0.1:
     dependencies:
