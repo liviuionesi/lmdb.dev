@@ -100,7 +100,7 @@ public class MovieService {
    * @param tmdbId TMDB movie ID
    * @return Movie DTO
    */
-  @Cacheable(value = "movies", key = "#tmdbId")
+  @Cacheable(value = "movies", key = "#tmdbId", sync = true)
   public MovieDto getMovieById(Long tmdbId) {
     return movieMapper.toDto(getOrFetchMovieEntity(tmdbId));
   }
@@ -267,7 +267,8 @@ public class MovieService {
    */
   @Cacheable(
       value = "movieLists",
-      key = "'discover-' + #page + '-' + #size + '-' + #genreId + '-' + #year + '-' + #minRating")
+      key = "'discover-' + #page + '-' + #size + '-' + #genreId + '-' + #year + '-' + #minRating",
+      sync = true)
   public PageResponse<MovieListDto> discoverMovies(
       int page, int size, Long genreId, Integer year, Double minRating) {
     TmdbMovieListResponse response = self().discoverMoviesRaw(page, genreId, year, minRating, null);
@@ -289,7 +290,8 @@ public class MovieService {
   @Cacheable(
       value = "movieLists",
       key =
-          "'discover-raw-' + #page + '-' + #genreId + '-' + #year + '-' + #minRating + '-' + #castId")
+          "'discover-raw-' + #page + '-' + #genreId + '-' + #year + '-' + #minRating + '-' + #castId",
+      sync = true)
   public TmdbMovieListResponse discoverMoviesRaw(
       int page, Long genreId, Integer year, Double minRating, Long castId) {
     log.info(
@@ -314,7 +316,7 @@ public class MovieService {
    * @param size Page size
    * @return Page of movies
    */
-  @Cacheable(value = "movieLists", key = "'search-' + #query + '-' + #page")
+  @Cacheable(value = "movieLists", key = "'search-' + #query + '-' + #page", sync = true)
   public PageResponse<MovieListDto> searchMovies(String query, int page, int size) {
     TmdbMovieListResponse response = self().searchMoviesRaw(query, page);
     return toPageResponse(response, page, size);
@@ -327,7 +329,7 @@ public class MovieService {
    * @param page page number
    * @return raw TMDB movie-list response
    */
-  @Cacheable(value = "movieLists", key = "'search-raw-' + #query + '-' + #page")
+  @Cacheable(value = "movieLists", key = "'search-raw-' + #query + '-' + #page", sync = true)
   public TmdbMovieListResponse searchMoviesRaw(String query, int page) {
     log.info("Searching movies: query={}, page={}", query, page);
     TmdbMovieListResponse response = tmdbClient.searchMovies(tmdbApiKey, query, page);
@@ -343,7 +345,7 @@ public class MovieService {
    * @param size Page size
    * @return Page of movies
    */
-  @Cacheable(value = "movieLists", key = "'trending-' + #timeWindow + '-' + #page")
+  @Cacheable(value = "movieLists", key = "'trending-' + #timeWindow + '-' + #page", sync = true)
   public PageResponse<MovieListDto> getTrendingMovies(String timeWindow, int page, int size) {
     log.info("Fetching trending movies: timeWindow={}, page={}", timeWindow, page);
     TmdbMovieListResponse response = tmdbClient.getTrendingMovies(timeWindow, tmdbApiKey, page);
@@ -358,7 +360,7 @@ public class MovieService {
    * @param size Page size
    * @return Page of movies
    */
-  @Cacheable(value = "movieLists", key = "'popular-' + #page")
+  @Cacheable(value = "movieLists", key = "'popular-' + #page", sync = true)
   public PageResponse<MovieListDto> getPopularMovies(int page, int size) {
     return toPageResponse(self().getMovieCategoryRaw("popular", page), page, size);
   }
@@ -370,7 +372,7 @@ public class MovieService {
    * @param size Page size
    * @return Page of movies
    */
-  @Cacheable(value = "movieLists", key = "'toprated-' + #page")
+  @Cacheable(value = "movieLists", key = "'toprated-' + #page", sync = true)
   public PageResponse<MovieListDto> getTopRatedMovies(int page, int size) {
     return toPageResponse(self().getMovieCategoryRaw("top_rated", page), page, size);
   }
@@ -383,7 +385,7 @@ public class MovieService {
    * @param page page number
    * @return raw TMDB movie-list response
    */
-  @Cacheable(value = "movieLists", key = "'category-raw-' + #category + '-' + #page")
+  @Cacheable(value = "movieLists", key = "'category-raw-' + #category + '-' + #page", sync = true)
   public TmdbMovieListResponse getMovieCategoryRaw(String category, int page) {
     log.info("Fetching '{}' movies: page={}", category, page);
     TmdbMovieListResponse response =
@@ -405,7 +407,7 @@ public class MovieService {
    * @param tmdbId TMDB movie ID
    * @return List of videos
    */
-  @Cacheable(value = "movieVideos", key = "#tmdbId")
+  @Cacheable(value = "movieVideos", key = "#tmdbId", sync = true)
   public List<VideoDto> getMovieVideos(Long tmdbId) {
     return fetchAndSaveVideos(tmdbId).stream().map(movieMapper::toDto).toList();
   }
@@ -417,7 +419,7 @@ public class MovieService {
    * @param tmdbId TMDB movie ID
    * @return Credits DTO
    */
-  @Cacheable(value = "movieCredits", key = "#tmdbId")
+  @Cacheable(value = "movieCredits", key = "#tmdbId", sync = true)
   public CreditsDto getMovieCredits(Long tmdbId) {
     return movieMapper.toDto(fetchAndSaveCredits(tmdbId));
   }
@@ -430,7 +432,7 @@ public class MovieService {
    * @param size Page size
    * @return Page of movies
    */
-  @Cacheable(value = "movieLists", key = "'similar-' + #tmdbId + '-' + #page")
+  @Cacheable(value = "movieLists", key = "'similar-' + #tmdbId + '-' + #page", sync = true)
   public PageResponse<MovieListDto> getSimilarMovies(Long tmdbId, int page, int size) {
     return toPageResponse(self().getSimilarMoviesRaw(tmdbId, page), page, size);
   }
@@ -442,7 +444,7 @@ public class MovieService {
    * @param page page number
    * @return raw TMDB movie-list response
    */
-  @Cacheable(value = "movieLists", key = "'similar-raw-' + #tmdbId + '-' + #page")
+  @Cacheable(value = "movieLists", key = "'similar-raw-' + #tmdbId + '-' + #page", sync = true)
   public TmdbMovieListResponse getSimilarMoviesRaw(Long tmdbId, int page) {
     log.info("Fetching similar movies for: {}, page={}", tmdbId, page);
     TmdbMovieListResponse response = tmdbClient.getSimilarMovies(tmdbId, tmdbApiKey, page);
@@ -458,7 +460,7 @@ public class MovieService {
    * @param size Page size
    * @return Page of movies
    */
-  @Cacheable(value = "movieLists", key = "'recommendations-' + #tmdbId + '-' + #page")
+  @Cacheable(value = "movieLists", key = "'recommendations-' + #tmdbId + '-' + #page", sync = true)
   public PageResponse<MovieListDto> getRecommendedMovies(Long tmdbId, int page, int size) {
     return toPageResponse(self().getRecommendedMoviesRaw(tmdbId, page), page, size);
   }
@@ -470,7 +472,10 @@ public class MovieService {
    * @param page page number
    * @return raw TMDB movie-list response
    */
-  @Cacheable(value = "movieLists", key = "'recommendations-raw-' + #tmdbId + '-' + #page")
+  @Cacheable(
+      value = "movieLists",
+      key = "'recommendations-raw-' + #tmdbId + '-' + #page",
+      sync = true)
   public TmdbMovieListResponse getRecommendedMoviesRaw(Long tmdbId, int page) {
     log.info("Fetching recommendations for: {}, page={}", tmdbId, page);
     TmdbMovieListResponse response = tmdbClient.getRecommendedMovies(tmdbId, tmdbApiKey, page);
@@ -485,7 +490,7 @@ public class MovieService {
    *
    * @return List of genres
    */
-  @Cacheable(value = "genres", key = "'all'")
+  @Cacheable(value = "genres", key = "'all'", sync = true)
   public List<GenreDto> getAllGenres() {
     return self().getGenresRaw().genres().stream().map(movieMapper::toDto).toList();
   }
@@ -495,10 +500,32 @@ public class MovieService {
    *
    * @return raw TMDB genre list response
    */
-  @Cacheable(value = "genres", key = "'raw'")
+  @Cacheable(value = "genres", key = "'raw'", sync = true)
   public TmdbGenresResponse getGenresRaw() {
     log.info("Fetching all genres");
     return tmdbClient.getGenres(tmdbApiKey);
+  }
+
+  /**
+   * Catalog retention policy: removes list-sourced movie stubs (documents where {@code runtime} is
+   * null, meaning detail fields were never fetched) that have not been updated within the specified
+   * retention period. Full detail documents (where {@code runtime} is non-null) are preserved
+   * indefinitely.
+   *
+   * @param maxAgeDays maximum age in days for list-sourced stubs before cleanup
+   * @return count of evicted stub documents
+   */
+  public long cleanupListSourcedStubs(int maxAgeDays) {
+    LocalDateTime cutoff = LocalDateTime.now(ZoneOffset.UTC).minusDays(maxAgeDays);
+    Query query =
+        Query.query(
+            Criteria.where(Movie.Fields.runtime).isNull().and(Movie.Fields.updatedAt).lt(cutoff));
+    long removed = mongoTemplate.remove(query, Movie.class).getDeletedCount();
+    log.info(
+        "Catalog retention cleanup: evicted {} list-sourced movie stubs updated before {}",
+        removed,
+        cutoff);
+    return removed;
   }
 
   // Helper methods

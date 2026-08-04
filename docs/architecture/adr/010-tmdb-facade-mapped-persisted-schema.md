@@ -78,3 +78,13 @@ superseded, not kept as a parallel path.
   with (purpose-built domain models per ARCHITECTURE.md) — this ADR does not
   change their design, only confirms the same "own the data" principle
   applies uniformly across all five services.
+- **Single-flight concurrency control (#44)**: `@Cacheable(sync = true)` is
+  applied across facade list, search, and category endpoints in `MovieService`,
+  and `ReentrantLock` guards detail fetches. Concurrent misses for the same key
+  execute exactly 1 upstream TMDB call while other threads wait for the cache.
+- **Catalog growth & retention policy (#44)**: `MovieCatalogRetentionService`
+  executes a scheduled retention cleanup (`movie.catalog.retention-days`, default
+  7 days) to purge list-sourced movie stubs (`runtime == null`) that have not been
+  updated within the retention window, preventing unbounded MongoDB catalog growth
+  while preserving full detail documents permanently.
+
