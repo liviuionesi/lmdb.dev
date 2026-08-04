@@ -47,6 +47,8 @@ services:
       - ./elk/elasticsearch/ilm-policy.json:/setup/ilm-policy.json:ro,z
       - ./elk/elasticsearch/index-template.json:/setup/index-template.json:ro,z
       - ./elk/kibana/filmpire-overview.ndjson:/setup/filmpire-overview.ndjson:ro,z
+      - ./elk/kibana/filmpire-lens-suite.ndjson:/setup/filmpire-lens-suite.ndjson:ro,z
+      - ./elk/kibana/filmpire-alerting.ndjson:/setup/filmpire-alerting.ndjson:ro,z
     networks:
       - filmpire-network
     depends_on:
@@ -86,6 +88,11 @@ services:
     container_name: filmpire-kibana
     environment:
       ELASTICSEARCH_HOSTS: '["http://elasticsearch:9200"]'
+      # At-rest encryption key for Kibana's own actions/alerting saved objects
+      # (connector configs, rule state) — not an external credential, and this
+      # profile has xpack.security disabled like the rest of this file. Local
+      # dev only; a real deployment would inject this via a secret store.
+      XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY: "${KIBANA_ENCRYPTION_KEY:-a-local-dev-only-encryption-key-32chars}"
     ports:
       - "${KIBANA_PORT:-5601}:5601"
     networks:

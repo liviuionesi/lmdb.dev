@@ -38,4 +38,29 @@ curl -sf -X POST "$KIBANA_URL/api/saved_objects/_import?overwrite=true" \
   -F 'file=@/setup/filmpire-overview.ndjson;type=application/ndjson'
 echo
 
+# Imported after filmpire-overview.ndjson: re-asserts the same data view, now
+# with level field-formatting, and adds the 3 Lens dashboards. The Error
+# Triage dashboard's "Recent Errors" panel references the saved search from
+# filmpire-overview.ndjson by id, so that file must import first.
+echo "Importing Kibana Lens dashboards: Service Health, Error Triage, Per-Service Deep-Dive"
+curl -sf -X POST "$KIBANA_URL/api/saved_objects/_import?overwrite=true" \
+  -H 'kbn-xsrf: true' \
+  -F 'file=@/setup/filmpire-lens-suite.ndjson;type=application/ndjson'
+echo
+
+# Kibana always exports alerting rules disabled (a safety default so importing
+# into a new environment doesn't silently start firing them) - explicitly
+# re-enable them after every import so `docker-compose up` leaves the rules
+# actually running, matching the rest of this script's checked-in-state-wins
+# idempotency.
+echo "Importing Kibana alerting: Server Log connector, 2 rules"
+curl -sf -X POST "$KIBANA_URL/api/saved_objects/_import?overwrite=true" \
+  -H 'kbn-xsrf: true' \
+  -F 'file=@/setup/filmpire-alerting.ndjson;type=application/ndjson'
+echo
+for rule_id in 27446a28-74e4-429c-b0bf-0782a5aff15a e49c2876-79d4-4666-9d89-6dc8e704828e; do
+  curl -sf -X POST "$KIBANA_URL/api/alerting/rule/$rule_id/_enable" -H 'kbn-xsrf: true'
+done
+echo "Alerting rules enabled."
+
 echo "ELK setup complete."
