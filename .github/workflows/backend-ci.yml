@@ -60,45 +60,84 @@ jobs:
         # otherwise mislabel the cache key right at the year boundary.
         run: echo "week=$(date -u +%G-W%V)" >> "$GITHUB_OUTPUT"
 
-      - name: Cache OWASP Dependency-Check NVD database
-        uses: actions/cache@v4
+      - name: Restore OWASP Dependency-Check NVD database cache
+        id: dc-cache
+        uses: actions/cache/restore@v4
         with:
           path: .dependency-check-data
-          # The NVD feed changes daily; a weekly key keeps CI fast on
-          # repeat runs without the cache going stale for too long.
-          key: dependency-check-nvd-${{ steps.dc-week.outputs.week }}
-          restore-keys: dependency-check-nvd-
+          # v2 (#109): bumped from the old unversioned key to bust a
+          # corrupted cache entry. The previous combined actions/cache@v4
+          # step saved unconditionally at job end, including when this
+          # step below had just been SIGKILL'd mid-write by the `timeout`
+          # call — that persisted a half-written, corrupt H2 database into
+          # the cache, and every later run restored + instantly crashed on
+          # it (MVStoreException/ClosedChannelException), a *second*
+          # permanent failure loop distinct from the original timeout one.
+          # Save is now gated on success below, so this shouldn't recur —
+          # the v2 bump only clears the one bad entry already saved.
+          key: dependency-check-nvd-v2-${{ steps.dc-week.outputs.week }}
+          restore-keys: dependency-check-nvd-v2-
 
       - name: Dependency/security scan (#101)
         # No NVD_API_KEY secret is configured yet — without one, a
         # cache-miss NVD sync routinely exceeds 20 minutes (confirmed on
         # develop: 5 straight CI runs timed out here, and since the step
-        # never finishes, its cache never saves either, so every run pays
+        # never finished, its cache never saved either, so every run paid
         # the same cold-sync cost — a permanent failure loop, #109).
         #
-        # Only a *timeout with no key configured* is treated as
-        # non-blocking — a known, already-documented limitation, not a
-        # real finding. dependencyCheckAggregate's own exit code (driven by
-        # build.gradle's failBuildOnCVSS) still fails this step on a real
-        # CVE finding regardless of the key, so this can't mask a genuine
-        # security failure. Once a real NVD_API_KEY secret is added (free,
-        # from https://nvd.nist.gov/developers/request-an-api-key), the
-        # sync is fast enough that this timeout path shouldn't trigger at
-        # all, and any failure — timeout or finding — fails the job again.
-        timeout-minutes: 22
+        # A *timeout with no key configured* is treated as non-blocking —
+        # a known, already-documented limitation, not a real finding — but
+        # the forced kill can leave a partially-written NVD cache behind,
+        # so that branch always wipes .dependency-check-data before
+        # exiting rather than let a corrupt directory reach the save step.
+        #
+        # A crash matching dependency-check's own DB-corruption signature
+        # (distinct from a real CVE finding, which fails via
+        # build.gradle's failBuildOnCVSS through a normal Gradle
+        # BUILD FAILED, not these low-level H2/NIO exceptions) is treated
+        # as a corrupted-cache problem: wipe and retry once. A second
+        # failure of any kind still fails the step for real — this can't
+        # mask a genuine security failure, only recover from a bad cache.
+        timeout-minutes: 45
         run: |
           set +e
-          timeout --kill-after=10s 1200 ./gradlew dependencyCheckAggregate
-          status=$?
+          attempt=1
+          max_attempts=2
+          while [ "$attempt" -le "$max_attempts" ]; do
+            timeout --kill-after=10s 1200 ./gradlew dependencyCheckAggregate 2>&1 | tee dependency-check.log
+            status=${PIPESTATUS[0]}
+
+            if [ "$status" -eq 124 ] && [ -z "$NVD_API_KEY" ]; then
+              echo "::warning::dependency-check timed out after 20m with no NVD_API_KEY configured (#109) — known limitation, treated as non-blocking. A real CVE finding, or a timeout once the key is set, still fails this step."
+              rm -rf .dependency-check-data
+              status=0
+              break
+            fi
+
+            if [ "$status" -ne 0 ] && [ "$attempt" -lt "$max_attempts" ] && grep -qE "MVStoreException|ClosedChannelException" dependency-check.log; then
+              echo "::warning::dependency-check crashed reading a corrupted local NVD cache (#109) — wiping the cache and retrying once."
+              rm -rf .dependency-check-data
+              attempt=$((attempt + 1))
+              continue
+            fi
+
+            break
+          done
           set -e
-          if [ "$status" -eq 124 ] && [ -z "$NVD_API_KEY" ]; then
-            echo "::warning::dependency-check timed out after 20m with no NVD_API_KEY configured (#109) — known limitation, treated as non-blocking. A real CVE finding, or a timeout once the key is set, still fails this step."
-            exit 0
-          fi
           exit "$status"
         env:
           GRADLE_OPTS: "-Dorg.gradle.daemon=false"
           NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+
+      - name: Save OWASP Dependency-Check NVD database cache
+        # Only cache a scan that actually completed cleanly — never a
+        # killed/wiped or corrupted run (#109). If the scan above wiped
+        # .dependency-check-data, this step just finds nothing to save.
+        if: success()
+        uses: actions/cache/save@v4
+        with:
+          path: .dependency-check-data
+          key: ${{ steps.dc-cache.outputs.cache-primary-key }}
 
       - name: Upload dependency-check report
         if: always()
@@ -106,6 +145,16 @@ jobs:
         with:
           name: dependency-check-report
           path: build/reports/dependency-check-report.html
+
+      - name: Upload dependency-check raw log
+        # Only exists on failure paths above — helps diagnose a future
+        # corruption-retry or a real CVE failure without re-running CI.
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: dependency-check-log
+          path: dependency-check.log
+          if-no-files-found: ignore
 
       - name: Upload test results
         if: always()
