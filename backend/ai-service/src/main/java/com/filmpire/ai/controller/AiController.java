@@ -99,8 +99,7 @@ public class AiController {
   }
 
   /**
-   * Transcribes an uploaded voice-command audio clip, replacing the Alan AI SDK (#68) — runs
-   * entirely against a local Vosk model, no audio leaves this service.
+   * Transcribes an uploaded voice-command audio clip via Vosk (#68).
    *
    * @param audio a WAV (PCM) recording of the spoken command
    * @return the recognized text

@@ -15,7 +15,7 @@ This document outlines the complete architecture for Filmpire, a production-read
 **Filmpire React application** (`frontend/filmpire` — merged into this repo
 as a monorepo on 2026-07-30, full original commit history preserved; was
 previously the separate `~/Desktop/filmpire` project. CRA + Redux Toolkit
-Query + MUI + Alan AI) can consume this backend as a **drop-in replacement**
+Query + MUI + Vosk voice control) can consume this backend as a **drop-in replacement**
 for `https://api.themoviedb.org/3` — the React app changes only its base URL.
 Requests are served read-through: **Redis cache → MongoDB → real TMDB API
 (fallback)**; anything fetched from the real TMDB is saved to MongoDB and
@@ -103,7 +103,7 @@ backend without frontend logic changes beyond configuration — see
 | axios | 1.6.8 | Auth calls in `src/utils/index.js` |
 | Material UI | 5.15.18 | `@mui/material` & `@mui/styles` 5.15.18, `@mui/icons-material` 5.0.3 |
 | Emotion | 11.4.1 / 11.3.0 | `@emotion/react` 11.4.1, `@emotion/styled` 11.3.0 |
-| Alan AI SDK | 1.8.28 | `@alan-ai/alan-sdk-web` 1.8.28 — Voice control (calls TMDB via same services) |
+| Vosk Speech-to-Text | Latest | Offline voice control via `ai-service` SpeechToTextService |
 | React Router DOM | 5.3.0 | Client-side routing |
 | TMDB API contract | v3 | Base URL `https://api.themoviedb.org/3` → becomes this backend's gateway via `REACT_APP_API_URL` |
 
@@ -136,7 +136,7 @@ backend without frontend logic changes beyond configuration — see
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │              Filmpire React App (existing, CRA)             │
-│     RTK Query + axios, TMDB v3 contract, Alan AI voice      │
+│     RTK Query + axios, TMDB v3 contract, Vosk AI voice      │
 │     baseURL: http://localhost:8080  (was api.themoviedb.org)│
 └──────────────────────────────┬──────────────────────────────┘
                                │  TMDB v3-shaped requests

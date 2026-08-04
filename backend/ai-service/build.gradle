@@ -35,8 +35,7 @@ dependencies {
     // paid model provider; ai-service runs entirely against a local model.
     implementation 'org.springframework.ai:spring-ai-starter-model-ollama'
 
-    // Offline speech-to-text (#68, replaces Alan AI) — Vosk runs entirely
-    // in-process against a local model directory, no cloud STT provider.
+    // Offline speech-to-text (#68). No paid STT provider.  
     implementation "com.alphacephei:vosk:${voskVersion}"
 
     implementation "io.grpc:grpc-netty-shaded:${grpcVersion}"

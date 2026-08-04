@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Downloads the offline Vosk speech-to-text model ai-service needs for
-# voice control (#68, replaces Alan AI). Not committed to git — same
+# voice control (#68). Not committed to git — same
 # reasoning as Ollama's model weights (infrastructure/docker/docker-compose.yml):
 # a binary blob that's trivial to re-fetch doesn't belong in version control.
 #

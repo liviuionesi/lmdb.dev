@@ -21,8 +21,7 @@ import org.vosk.Model;
 import org.vosk.Recognizer;
 
 /**
- * Offline speech-to-text, replacing the third-party Alan AI voice SDK (#68) whose hosted project
- * stopped accepting connections. Runs entirely against a local <a
+ * Offline speech-to-text (#68). Runs entirely against a local <a
  * href="https://alphacephei.com/vosk/">Vosk</a> model — no audio ever leaves this service, and
  * there is no cloud STT provider or API key (ADR-004's $0 budget).
  *

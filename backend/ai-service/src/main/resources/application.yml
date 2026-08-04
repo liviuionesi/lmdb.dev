@@ -65,7 +65,7 @@ spring:
 movie-service:
   base-url: ${MOVIE_SERVICE_BASE_URL:lb://movie-service}
 
-# Offline speech-to-text (#68, replaces Alan AI). Model is downloaded
+# Offline speech-to-text (#68). Model is downloaded
 # separately (scripts/download-vosk-model.sh) — not committed to git, like
 # Ollama's own model weights. SpeechToTextService loads it lazily, so a
 # missing model doesn't block ai-service's other features from starting.

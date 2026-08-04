@@ -91,7 +91,7 @@ public class SecurityConfig {
 
                     // Voice control (#68): unlike the rest of ai-service, speech-to-text
                     // isn't scoped to a user (no conversation/taste-profile data touched)
-                    // — it replaces Alan AI's voice button, which worked for anonymous
+                    // — voice button works for anonymous
                     // visitors too (theme toggle, genre browsing). Must be listed before
                     // the /api/v1/ai/** rule below, which requires auth for everything else.
                     .pathMatchers(HttpMethod.POST, "/api/v1/ai/speech-to-text")

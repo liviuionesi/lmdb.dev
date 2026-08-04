@@ -15,11 +15,11 @@ import { useGetGenresQuery } from '../../services/TMDB';
 const aiServiceUrl = process.env.REACT_APP_API_URL || 'http://localhost:8080';
 
 /**
- * Click-to-talk voice control (#68), replacing the Alan AI SDK: records a
+ * Click-to-talk voice control (#68): records a
  * short clip via the browser's own mic APIs, sends it to ai-service's
- * self-hosted speech-to-text endpoint, and runs the same handful of
- * commands Alan used to (browse a genre/category, toggle dark/light mode,
- * log out, search) against the transcribed text.
+ * self-hosted speech-to-text endpoint, and runs voice commands
+ * (browse a genre/category, toggle dark/light mode, log out, search)
+ * against the transcribed text.
  */
 const VoiceControl = () => {
   const { setMode } = useContext(ColorModeContext);

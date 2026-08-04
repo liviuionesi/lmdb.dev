@@ -4,7 +4,7 @@ This is the runbook for issue #34: pointing the existing Filmpire React app
 (`frontend/filmpire` in this repo — merged in as a monorepo per
 [ADR-013](../architecture/adr/013-frontend-merged-into-monorepo.md); was
 previously the separate `~/Desktop/filmpire` project. CRA + RTK Query +
-Alan AI) at this repo's TMDB v3 facade instead of the real
+Vosk voice control) at this repo's TMDB v3 facade instead of the real
 `api.themoviedb.org`, with the smallest possible diff to the app. See
 ARCHITECTURE.md §5.1 for the facade contract and
 `docs/architecture/adr/010-tmdb-facade-mapped-persisted-schema.md` for why
@@ -99,7 +99,7 @@ human with a real browser, mouse, and a TMDB account:
       TMDB request token — but the interactive approve-in-browser step and
       the resulting session/account calls need a live pass)
 - [ ] Favorite / watchlist toggle on a movie detail page after logging in
-- [ ] Alan AI voice command (e.g. "show me action movies") — needs a
+- [ ] Vosk voice command (e.g. "show me action movies") — needs a
       microphone and can't be driven headlessly
 
 Watch `podman logs -f filmpire-movie-service` (and `filmpire-actor-service`)

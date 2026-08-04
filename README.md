@@ -5,7 +5,7 @@ A portfolio project: a Spring Boot backend that clones the [TMDB v3 API](https:/
 ## 🏗️ Architecture
 
 - **8 backend microservices** (Spring Boot 4.1.0, Java 25, Gradle Groovy DSL) — `api-gateway`, `discovery-service` (Eureka), `config-service`, `movie-service`, `user-service`, `actor-service`, `ai-service` are implemented and tested; `media-service` is still scaffolded (`HelloController` stub), design written up in ARCHITECTURE.md §3.8, not yet built (tracked as open issue #37)
-- **1 frontend application** (`frontend/filmpire` — the existing Filmpire React app, CRA + Redux Toolkit Query + MUI + Alan AI voice, merged into this repo as a monorepo with full history preserved — see [ADR-013](docs/architecture/adr/013-frontend-merged-into-monorepo.md))
+- **1 frontend application** (`frontend/filmpire` — the existing Filmpire React app, CRA + Redux Toolkit Query + MUI + Vosk voice control, merged into this repo as a monorepo with full history preserved — see [ADR-013](docs/architecture/adr/013-frontend-merged-into-monorepo.md))
 - **Hybrid database strategy** — PostgreSQL for user-owned, non-re-derivable data (accounts, favorites); MongoDB for the TMDB-derived movie/actor catalog, which can self-heal from a schema-drifted document by re-fetching (see [ADR-002](docs/architecture/adr/002-database-per-service.md), [ADR-011](docs/architecture/adr/011-self-healing-read-through-on-schema-drift.md))
 - **Spring Cloud infrastructure** — Eureka discovery, Config Server, Spring Cloud Gateway (JWT auth, Redis-backed rate limiting, Resilience4j circuit breakers, CORS)
 - **Observability** — every service instrumented with Actuator + Micrometer/Prometheus + JSON structured logging; full local stack (kube-prometheus-stack + Grafana + Alertmanager, ELK) verified live on minikube
@@ -124,7 +124,7 @@ filmpire-microservices/
 - **Redux Toolkit Query** 1.6.x
 - **Material UI** 5.x
 - **axios** 1.6.x
-- **Alan AI SDK** 1.8.x (voice control)
+- **Vosk Speech-to-Text** (offline voice control via `ai-service`)
 
 ## 📚 Documentation
 

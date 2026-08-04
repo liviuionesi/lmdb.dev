@@ -9,37 +9,23 @@ A modern movie application built with React that allows users to browse, search,
 - **State Management**: Redux Toolkit
 - **Routing**: React Router DOM
 - **API Calls**: Axios
-- **Voice Integration**: Alan AI SDK
+- **Voice Integration**: Vosk Speech-to-Text (via `ai-service`)
 - **Testing**: Jest and React Testing Library
 - **Code Quality**: ESLint with Airbnb config
 
-## Alan AI Voice Assistant Setup
+## Voice Assistant Setup (Vosk Speech-to-Text)
 
-To enable voice commands in the application:
+To enable click-to-talk voice commands in the application:
 
-1. **Sign up for Alan AI**:
-   - Go to [Alan AI's website](https://alan.app/)
-   - Create an account and a new project in Alan Studio
+1. **Start the Microservices Backend**:
+   Ensure `ai-service` is running on port 8084 (or via API Gateway on port 8080).
+   Run `infrastructure/scripts/download-vosk-model.sh` to download the offline English Vosk model (`~40MB`).
 
-2. **Configure Environment Variables**:
-   Add your Alan AI API key to the `.env` file:
-   ```
-   REACT_APP_ALAN_KEY=your_alan_api_key_here
-   ```
-
-3. **Voice Commands**:
-   The application supports the following voice commands:
-   - `chooseGenre`: Select a movie genre
-   - `changeMode`: Toggle between light and dark themes
-   - `login`: Initiate login process
-   - `logout`: Log out the user
-   - `search`: Search for movies
-
-4. **Testing Voice Commands**:
-   - Run the application
-   - The Alan button appears in the bottom-right corner
-   - Click it or say "Alan" to activate voice commands
-   - Test each command to ensure they work as expected
+2. **Voice Commands**:
+   Click the microphone button to record a voice clip. Spoken audio is transcribed locally by `ai-service` and executed:
+   - Browse genres (e.g., *"show me action movies"*)
+   - Toggle theme (e.g., *"change to dark mode"*)
+   - Search movies (e.g., *"search Inception"*)
 
 ## Project Structure
 

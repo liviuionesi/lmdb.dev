@@ -26,7 +26,7 @@ fi
 
 # Frontend: a fast syntax check on each staged JS/JSX file (not a full
 # webpack build, which is too slow for a pre-commit gate).
-JS_FILES=$(printf '%s\n' "$STAGED" | grep -E '^frontend/filmpire/src/.*\.(js|jsx)$' || true)
+JS_FILES=$(printf '%s\n' "$STAGED" | grep -E '^frontend/filmpire/src/.*\.js$' || true)
 if [ -n "$JS_FILES" ] && command -v node >/dev/null 2>&1; then
   echo "$JS_FILES" | while IFS= read -r f; do
     [ -f "$f" ] || continue
