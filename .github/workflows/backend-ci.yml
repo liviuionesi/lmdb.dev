@@ -21,7 +21,13 @@ jobs:
   build:
     name: Build & Test
     runs-on: ubuntu-latest
-    
+    # secrets.* can't be referenced directly in a step `if:` (GitHub Actions
+    # rejects it — "Unrecognized named-value: 'secrets'"). Job-level `env:`
+    # *can* read secrets, so resolve the presence check here once and have
+    # the SonarQube step's `if:` read the env var instead (#108).
+    env:
+      HAS_SONAR_TOKEN: ${{ secrets.SONAR_TOKEN != '' }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -69,7 +75,7 @@ jobs:
         # build on a missing credential, mirroring the NVD_API_KEY
         # non-blocking pattern below: an unconfigured *optional* external
         # integration shouldn't block CI.
-        if: ${{ secrets.SONAR_TOKEN != '' }}
+        if: ${{ env.HAS_SONAR_TOKEN == 'true' }}
         run: ./gradlew sonar
         env:
           GRADLE_OPTS: "-Dorg.gradle.daemon=false"
