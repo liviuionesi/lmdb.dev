@@ -1,0 +1,47 @@
+name: Playwright E2E Nightly & Manual Tests
+
+on:
+  schedule:
+    # Run nightly at 02:00 UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      debug_trace:
+        description: 'Record Playwright debugging trace'
+        required: false
+        default: 'false'
+
+jobs:
+  e2e-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 25 for Backend Stack
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+
+      - name: Set up Node.js for Frontend & Playwright
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Frontend Dependencies
+        working-directory: frontend/filmpire
+        run: npm ci
+
+      - name: Install Playwright & Browser Dependencies
+        working-directory: e2e
+        run: |
+          npm install
+          npx playwright install --with-deps chromium
+
+      - name: Execute Playwright E2E Test Suite
+        working-directory: e2e
+        env:
+          FRONTEND_URL: http://localhost:3000
+          BACKEND_API_URL: http://localhost:8080
+        run: npm test
