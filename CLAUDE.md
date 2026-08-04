@@ -6,13 +6,28 @@ ignore this file, but should still respect the conventions below.
 
 ## Before starting any work
 
-1. If `.claude/.autonomous-halt` exists, stop immediately — do nothing else.
-   The user paused the system on purpose.
-2. If `.claude/.autonomous-lock` exists and is younger than 40 minutes,
-   another run is still in flight on this checkout — exit immediately
-   rather than racing it.
+Every run starts from a fresh checkout, so a lock/halt file that only ever
+lived on local disk is invisible to every other run's container — the check
+below must be against the pushed state of `develop`, not local disk.
+
+1. Run `git fetch origin develop`. If `git show
+   origin/develop:.claude/.autonomous-halt` succeeds (file exists on
+   `develop`), stop immediately — do nothing else. The user paused the
+   system on purpose.
+2. If `git show origin/develop:.claude/.autonomous-lock` succeeds, read its
+   timestamp. If it's younger than 40 minutes, another run is still in
+   flight — exit immediately rather than racing it. If it's older, treat it
+   as abandoned (a prior run crashed without releasing it) and proceed to
+   step 3 to take over.
 3. Otherwise, create `.claude/.autonomous-lock` (plain text, a timestamp is
-   enough) before doing anything else, and delete it when this run ends —
+   enough) and immediately commit + `git push origin develop` it — before
+   doing anything else — referencing #75 (`chore: acquire autonomous run
+   lock (#75)`), so concurrent fresh checkouts can see it. If the push is
+   rejected (another run's lock commit landed first), you lost the race —
+   fetch, confirm it's a lock-acquire from someone else, and exit
+   immediately rather than force-pushing over it.
+4. Delete the lock file and commit + push that removal
+   (`chore: release autonomous run lock (#75)`) when this run ends —
    including on a `WIP:` handoff. Never leave it behind.
 
 ## Backlog structure (Scrum — see `docs/process/METHODOLOGY.md` for why
