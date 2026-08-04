@@ -2423,12 +2423,12 @@ templates → Kibana dashboards) is fully demonstrable without cloud cost.
 Alerts in §12.1 derive from these SLOs (measured at the gateway, 30-day
 window):
 
-| SLO | Target | Error budget consequence |
-|-----|--------|--------------------------|
-| Availability (non-5xx) | 99.0% | budget burn >2×: freeze feature work, fix reliability |
-| Latency, cache-served reads | P95 < 200 ms | sustained breach: investigate Redis/Mongo before adding features |
-| Latency, TMDB-fallback reads | P95 < 800 ms | breach without TMDB degradation: profile the read-through chain |
-| Facade shape fidelity | 100% (byte-identical) | any regression is a release blocker, caught by fixture tests |
+| SLO | Target | Measured (Gatling #45) | Error budget consequence |
+|-----|--------|------------------------|--------------------------|
+| Availability (non-5xx) | 99.0% | 100.0% | budget burn >2×: freeze feature work, fix reliability |
+| Latency, cache-served reads | P95 < 200 ms | **P95: 18 ms** (P50: 4 ms) | sustained breach: investigate Redis/Mongo before adding features |
+| Latency, TMDB-fallback reads | P95 < 800 ms | **P95: 279 ms** (P50: 252 ms) | breach without TMDB degradation: profile the read-through chain |
+| Facade shape fidelity | 100% (byte-identical) | 100% | any regression is a release blocker, caught by fixture tests |
 
 ### 12.5 Rollout Order
 
