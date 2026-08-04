@@ -31,14 +31,11 @@ import org.springframework.mock.web.MockMultipartFile;
 @ExtendWith(MockitoExtension.class)
 class MediaServiceTest {
 
-  @Mock
-  private MediaRepository mediaRepository;
+  @Mock private MediaRepository mediaRepository;
 
-  @Mock
-  private StorageService storageService;
+  @Mock private StorageService storageService;
 
-  @InjectMocks
-  private MediaService mediaService;
+  @InjectMocks private MediaService mediaService;
 
   /**
    * Asserts that ingesting a valid multipart upload correctly triggers binary stream persistence,
@@ -46,23 +43,20 @@ class MediaServiceTest {
    */
   @Test
   void givenMultipartUpload_whenUploadMedia_thenSavesToStorageAndRepository() throws IOException {
-    MockMultipartFile mockFile = new MockMultipartFile(
-        "file", "avatar.jpg", "image/jpeg", "test image binary bytes".getBytes());
+    MockMultipartFile mockFile =
+        new MockMultipartFile(
+            "file", "avatar.jpg", "image/jpeg", "test image binary bytes".getBytes());
 
     when(storageService.generateThumbnails(any(), eq("avatar.jpg")))
         .thenReturn(Map.of("thumb", "http://thumb-url"));
 
-    when(mediaRepository.save(any(MediaFile.class))).thenAnswer(invocation -> invocation.getArgument(0));
+    when(mediaRepository.save(any(MediaFile.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
 
     MediaMetadata metadata = new MediaMetadata(500, 500, null, "JPEG", null);
-    MediaFile result = mediaService.uploadMedia(
-        mockFile,
-        "user-789",
-        EntityType.USER,
-        MediaType.AVATAR,
-        metadata,
-        "test_user"
-    );
+    MediaFile result =
+        mediaService.uploadMedia(
+            mockFile, "user-789", EntityType.USER, MediaType.AVATAR, metadata, "test_user");
 
     Assertions.assertNotNull(result.id());
     Assertions.assertEquals("user-789", result.entityId());
@@ -71,20 +65,32 @@ class MediaServiceTest {
     Assertions.assertEquals(MediaType.AVATAR, result.mediaType());
     Assertions.assertEquals("http://thumb-url", result.thumbnails().get("thumb"));
 
-    verify(storageService).putObject(any(), any(InputStream.class), eq(mockFile.getSize()), eq("image/jpeg"));
+    verify(storageService)
+        .putObject(any(), any(InputStream.class), eq(mockFile.getSize()), eq("image/jpeg"));
     verify(mediaRepository).save(any(MediaFile.class));
   }
 
   /**
-   * Asserts that deleting an existing media asset cleanly removes both MinIO bucket storage objects and database entries.
+   * Asserts that deleting an existing media asset cleanly removes both MinIO bucket storage objects
+   * and database entries.
    */
   @Test
   void givenExistingId_whenDeleteMediaFile_thenRemovesObjectAndDeletesRecord() {
     String testId = "del-uuid-111";
-    MediaFile mockFile = new MediaFile(
-        testId, "entity-id", EntityType.MOVIE_REVIEW, MediaType.ATTACHMENT,
-        "doc.pdf", "movie_review/entity-id/doc.pdf", 1024, "application/pdf",
-        Map.of(), new MediaMetadata(null, null, null, null, null), Instant.now(), "reviewer");
+    MediaFile mockFile =
+        new MediaFile(
+            testId,
+            "entity-id",
+            EntityType.MOVIE_REVIEW,
+            MediaType.ATTACHMENT,
+            "doc.pdf",
+            "movie_review/entity-id/doc.pdf",
+            1024,
+            "application/pdf",
+            Map.of(),
+            new MediaMetadata(null, null, null, null, null),
+            Instant.now(),
+            "reviewer");
 
     when(mediaRepository.findById(testId)).thenReturn(Optional.of(mockFile));
 
@@ -96,7 +102,8 @@ class MediaServiceTest {
   }
 
   /**
-   * Asserts that listing assets by target entity identifier queries the repository with accurate criteria.
+   * Asserts that listing assets by target entity identifier queries the repository with accurate
+   * criteria.
    */
   @Test
   void whenGetMediaForEntity_thenCallsRepositoryAndReturnsList() {

@@ -6,12 +6,12 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 /**
- * Immutable Java 25 domain record representing user-uploaded media asset metadata
- * stored within MongoDB collection 'media'.
+ * Immutable Java 25 domain record representing user-uploaded media asset metadata stored within
+ * MongoDB collection 'media'.
  *
- * <p>Physical file bytes are persisted externally in an S3-compatible MinIO object store
- * referenced via {@link #storagePath()}. This model strictly handles user uploads
- * and never stores TMDB poster or backdrop byte data (ARCHITECTURE.md §3.8).
+ * <p>Physical file bytes are persisted externally in an S3-compatible MinIO object store referenced
+ * via {@link #storagePath()}. This model strictly handles user uploads and never stores TMDB poster
+ * or backdrop byte data (ARCHITECTURE.md §3.8).
  *
  * @param id Unique persistent document identifier (UUID string).
  * @param entityId Target entity identifier (e.g., user account UUID, movie ID, review ID).
@@ -39,8 +39,7 @@ public record MediaFile(
     Map<String, String> thumbnails,
     MediaMetadata metadata,
     Instant uploadedAt,
-    String uploadedBy
-) {
+    String uploadedBy) {
   /**
    * Compact record constructor enforcing domain validation rules.
    *

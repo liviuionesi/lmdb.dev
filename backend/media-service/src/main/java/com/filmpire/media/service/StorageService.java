@@ -14,8 +14,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 /**
- * Low-level binary storage infrastructure service managing S3-compatible bucket persistence via MinIO.
- * Handles file ingestion streams, removal operations, retrieval downloads, and thumbnail mapping.
+ * Low-level binary storage infrastructure service managing S3-compatible bucket persistence via
+ * MinIO. Handles file ingestion streams, removal operations, retrieval downloads, and thumbnail
+ * mapping.
  */
 @Service
 public class StorageService {
@@ -32,24 +33,25 @@ public class StorageService {
    * @param bucketName Target storage bucket identifier from configuration properties.
    */
   public StorageService(
-      MinioClient minioClient,
-      @Value("${minio.bucket-name:filmpire-media}") String bucketName) {
+      MinioClient minioClient, @Value("${minio.bucket-name:filmpire-media}") String bucketName) {
     this.minioClient = minioClient;
     this.bucketName = bucketName;
   }
 
-  /**
-   * Verifies target storage bucket existence in MinIO and initializes a new bucket if absent.
-   */
+  /** Verifies target storage bucket existence in MinIO and initializes a new bucket if absent. */
   public void ensureBucketExists() {
     try {
-      boolean found = minioClient.bucketExists(BucketExistsArgs.builder().bucket(bucketName).build());
+      boolean found =
+          minioClient.bucketExists(BucketExistsArgs.builder().bucket(bucketName).build());
       if (!found) {
         minioClient.makeBucket(MakeBucketArgs.builder().bucket(bucketName).build());
         log.info("Initialized new MinIO storage bucket: {}", bucketName);
       }
     } catch (Exception e) {
-      log.error("Failed executing storage bucket initialization check for '{}': {}", bucketName, e.getMessage());
+      log.error(
+          "Failed executing storage bucket initialization check for '{}': {}",
+          bucketName,
+          e.getMessage());
       throw new RuntimeException("MinIO storage bucket verification failed", e);
     }
   }
@@ -66,10 +68,7 @@ public class StorageService {
     ensureBucketExists();
     try {
       minioClient.putObject(
-          PutObjectArgs.builder()
-              .bucket(bucketName)
-              .object(objectKey)
-              .stream(stream, size, -1)
+          PutObjectArgs.builder().bucket(bucketName).object(objectKey).stream(stream, size, -1)
               .contentType(contentType != null ? contentType : "application/octet-stream")
               .build());
       log.debug("Successfully persisted object '{}' to bucket '{}'", objectKey, bucketName);
@@ -88,10 +87,7 @@ public class StorageService {
   public InputStream getObject(String objectKey) {
     try {
       return minioClient.getObject(
-          GetObjectArgs.builder()
-              .bucket(bucketName)
-              .object(objectKey)
-              .build());
+          GetObjectArgs.builder().bucket(bucketName).object(objectKey).build());
     } catch (Exception e) {
       log.error("Failed reading stream for object '{}' from MinIO: {}", objectKey, e.getMessage());
       throw new RuntimeException("Storage getObject failed for key: " + objectKey, e);
@@ -106,13 +102,13 @@ public class StorageService {
   public void removeObject(String objectKey) {
     try {
       minioClient.removeObject(
-          RemoveObjectArgs.builder()
-              .bucket(bucketName)
-              .object(objectKey)
-              .build());
+          RemoveObjectArgs.builder().bucket(bucketName).object(objectKey).build());
       log.debug("Evicted object '{}' from bucket '{}'", objectKey, bucketName);
     } catch (Exception e) {
-      log.warn("Failed removing object '{}' from MinIO (may already be deleted): {}", objectKey, e.getMessage());
+      log.warn(
+          "Failed removing object '{}' from MinIO (may already be deleted): {}",
+          objectKey,
+          e.getMessage());
     }
   }
 
@@ -129,7 +125,6 @@ public class StorageService {
     return Map.of(
         "thumb", baseUrl + "small",
         "medium", baseUrl + "medium",
-        "original", "/api/v1/media/" + fileId + "/download"
-    );
+        "original", "/api/v1/media/" + fileId + "/download");
   }
 }

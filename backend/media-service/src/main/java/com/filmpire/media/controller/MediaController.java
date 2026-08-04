@@ -31,12 +31,15 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
- * REST controller managing end-to-end user uploaded media asset operations.
- * Provides endpoints for asset upload ingestion, metadata retrieval, binary streaming, and deletion.
+ * REST controller managing end-to-end user uploaded media asset operations. Provides endpoints for
+ * asset upload ingestion, metadata retrieval, binary streaming, and deletion.
  */
 @RestController
 @RequestMapping("/api/v1/media")
-@Tag(name = "Media Asset Lifecycle API", description = "Endpoints handling custom user-uploaded binary media storage, thumbnails, and retrieval")
+@Tag(
+    name = "Media Asset Lifecycle API",
+    description =
+        "Endpoints handling custom user-uploaded binary media storage, thumbnails, and retrieval")
 public class MediaController {
 
   private static final Logger log = LoggerFactory.getLogger(MediaController.class);
@@ -64,11 +67,20 @@ public class MediaController {
    * @param codec Codec identifier metadata string (optional).
    * @param bitrate Data stream bit rate metadata (optional).
    * @param uploadedBy User account identifier responsible for submission (optional).
-   * @return ResponseEntity holding persisted {@link MediaFile} record metadata with HTTP 201 status.
+   * @return ResponseEntity holding persisted {@link MediaFile} record metadata with HTTP 201
+   *     status.
    */
-  @PostMapping(value = "/upload", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
-  @Operation(summary = "Upload User Media Asset", description = "Ingests file upload, persists binary bytes to MinIO storage, generates thumbnail URLs, and saves metadata to MongoDB.")
-  @ApiResponse(responseCode = "201", description = "File asset successfully persisted and registered", content = @Content(schema = @Schema(implementation = MediaFile.class)))
+  @PostMapping(
+      value = "/upload",
+      consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
+  @Operation(
+      summary = "Upload User Media Asset",
+      description =
+          "Ingests file upload, persists binary bytes to MinIO storage, generates thumbnail URLs, and saves metadata to MongoDB.")
+  @ApiResponse(
+      responseCode = "201",
+      description = "File asset successfully persisted and registered",
+      content = @Content(schema = @Schema(implementation = MediaFile.class)))
   public ResponseEntity<MediaFile> uploadMedia(
       @RequestParam("file") MultipartFile file,
       @RequestParam(value = "entityId", defaultValue = "general") String entityId,
@@ -82,8 +94,8 @@ public class MediaController {
       @RequestParam(value = "uploadedBy", defaultValue = "anonymous") String uploadedBy) {
     try {
       MediaMetadata metadata = new MediaMetadata(width, height, duration, codec, bitrate);
-      MediaFile mediaFile = mediaService.uploadMedia(
-          file, entityId, entityType, mediaType, metadata, uploadedBy);
+      MediaFile mediaFile =
+          mediaService.uploadMedia(file, entityId, entityType, mediaType, metadata, uploadedBy);
       return ResponseEntity.status(HttpStatus.CREATED).body(mediaFile);
     } catch (Exception e) {
       log.error("Media asset upload encountered an error: {}", e.getMessage(), e);
@@ -98,12 +110,14 @@ public class MediaController {
    * @return ResponseEntity holding matching {@link MediaFile} or 404 Not Found if missing.
    */
   @GetMapping("/{id}")
-  @Operation(summary = "Get Asset Metadata", description = "Retrieves stored MongoDB metadata document including thumbnail URL references for given asset ID.")
+  @Operation(
+      summary = "Get Asset Metadata",
+      description =
+          "Retrieves stored MongoDB metadata document including thumbnail URL references for given asset ID.")
   public ResponseEntity<MediaFile> getMediaFile(
       @Parameter(description = "UUID identifier of the media asset") @PathVariable String id) {
     Optional<MediaFile> mediaFile = mediaService.getMediaFile(id);
-    return mediaFile.map(ResponseEntity::ok)
-        .orElseGet(() -> ResponseEntity.notFound().build());
+    return mediaFile.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
   }
 
   /**
@@ -114,7 +128,10 @@ public class MediaController {
    * @return Streaming resource payload with correct MIME headers.
    */
   @GetMapping("/{id}/download")
-  @Operation(summary = "Download Asset Binary Stream", description = "Streams stored binary content from S3 MinIO storage with appropriate HTTP content type headers.")
+  @Operation(
+      summary = "Download Asset Binary Stream",
+      description =
+          "Streams stored binary content from S3 MinIO storage with appropriate HTTP content type headers.")
   public ResponseEntity<Resource> downloadMedia(
       @Parameter(description = "UUID identifier of the media asset") @PathVariable String id,
       @RequestParam(value = "size", defaultValue = "original") String size) {
@@ -127,7 +144,9 @@ public class MediaController {
       InputStream stream = mediaService.getMediaStream(id);
       InputStreamResource resource = new InputStreamResource(stream);
       return ResponseEntity.ok()
-          .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + mediaFile.originalFilename() + "\"")
+          .header(
+              HttpHeaders.CONTENT_DISPOSITION,
+              "inline; filename=\"" + mediaFile.originalFilename() + "\"")
           .header(HttpHeaders.CONTENT_LENGTH, String.valueOf(mediaFile.fileSize()))
           .contentType(org.springframework.http.MediaType.parseMediaType(mediaFile.mimeType()))
           .body(resource);
@@ -144,9 +163,13 @@ public class MediaController {
    * @return HTTP 204 No Content upon success, or 404 Not Found if asset did not exist.
    */
   @DeleteMapping("/{id}")
-  @Operation(summary = "Delete Media Asset", description = "Removes stored binary object from MinIO and evicts corresponding metadata document from MongoDB.")
+  @Operation(
+      summary = "Delete Media Asset",
+      description =
+          "Removes stored binary object from MinIO and evicts corresponding metadata document from MongoDB.")
   public ResponseEntity<Void> deleteMediaFile(
-      @Parameter(description = "UUID identifier of the media asset to delete") @PathVariable String id) {
+      @Parameter(description = "UUID identifier of the media asset to delete") @PathVariable
+          String id) {
     boolean deleted = mediaService.deleteMediaFile(id);
     return deleted ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
   }
@@ -158,7 +181,10 @@ public class MediaController {
    * @return List of matching {@link MediaFile} record documents.
    */
   @GetMapping("/entity/{entityId}")
-  @Operation(summary = "List Entity Assets", description = "Queries MongoDB for all media uploads associated with a target entity ID (such as a user account or movie review).")
+  @Operation(
+      summary = "List Entity Assets",
+      description =
+          "Queries MongoDB for all media uploads associated with a target entity ID (such as a user account or movie review).")
   public ResponseEntity<List<MediaFile>> getMediaForEntity(
       @Parameter(description = "Entity identifier string") @PathVariable String entityId) {
     List<MediaFile> list = mediaService.getMediaForEntity(entityId);

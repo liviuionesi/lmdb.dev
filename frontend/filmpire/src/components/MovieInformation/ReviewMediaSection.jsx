@@ -63,7 +63,7 @@ const ReviewMediaSection = ({ movieId }) => {
       setSelectedFile(null);
       refetch();
     } catch (err) {
-      setValidationError('Failed to submit review attachment to media service. Please try again.');
+      setValidationError(err?.data?.message || 'Failed to submit review attachment to media service. Please try again.');
     }
   };
 
@@ -108,7 +108,7 @@ const ReviewMediaSection = ({ movieId }) => {
                 startIcon={<AttachFile />}
                 disabled={isUploading}
               >
-                Attach Clip or Screenshot
+                <span>Attach Clip or Screenshot</span>
                 <input
                   type="file"
                   hidden

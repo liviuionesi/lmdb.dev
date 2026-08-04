@@ -27,38 +27,56 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockMultipartFile;
 
 /**
- * Unit test suite verifying HTTP response wrapping, service delegation, parameter handling,
- * and error code translation for {@link MediaController}.
+ * Unit test suite verifying HTTP response wrapping, service delegation, parameter handling, and
+ * error code translation for {@link MediaController}.
  */
 @ExtendWith(MockitoExtension.class)
 class MediaControllerTest {
 
-  @Mock
-  private MediaService mediaService;
+  @Mock private MediaService mediaService;
 
-  @InjectMocks
-  private MediaController mediaController;
+  @InjectMocks private MediaController mediaController;
 
   /**
-   * Asserts that submitting a valid multipart upload file cleanly delegates to the service
-   * and wraps the returned asset document within an HTTP 201 Created response.
+   * Asserts that submitting a valid multipart upload file cleanly delegates to the service and
+   * wraps the returned asset document within an HTTP 201 Created response.
    */
   @Test
   void whenUploadEndpointInvoked_thenReturns201Created() throws Exception {
-    MockMultipartFile mockFile = new MockMultipartFile(
-        "file", "photo.png", "image/png", "fake png data".getBytes());
+    MockMultipartFile mockFile =
+        new MockMultipartFile("file", "photo.png", "image/png", "fake png data".getBytes());
 
-    MediaFile resp = new MediaFile(
-        "uuid-1234", "usr-1", EntityType.USER, MediaType.AVATAR,
-        "photo.png", "user/usr-1/photo.png", 13, "image/png",
-        Map.of("thumb", "http://thumb"), new MediaMetadata(200, 200, null, null, null),
-        Instant.now(), "tester");
+    MediaFile resp =
+        new MediaFile(
+            "uuid-1234",
+            "usr-1",
+            EntityType.USER,
+            MediaType.AVATAR,
+            "photo.png",
+            "user/usr-1/photo.png",
+            13,
+            "image/png",
+            Map.of("thumb", "http://thumb"),
+            new MediaMetadata(200, 200, null, null, null),
+            Instant.now(),
+            "tester");
 
-    when(mediaService.uploadMedia(any(), eq("usr-1"), eq(EntityType.USER), eq(MediaType.AVATAR),
-        any(), eq("tester"))).thenReturn(resp);
+    when(mediaService.uploadMedia(
+            any(), eq("usr-1"), eq(EntityType.USER), eq(MediaType.AVATAR), any(), eq("tester")))
+        .thenReturn(resp);
 
-    ResponseEntity<MediaFile> result = mediaController.uploadMedia(
-        mockFile, "usr-1", EntityType.USER, MediaType.AVATAR, null, null, null, null, null, "tester");
+    ResponseEntity<MediaFile> result =
+        mediaController.uploadMedia(
+            mockFile,
+            "usr-1",
+            EntityType.USER,
+            MediaType.AVATAR,
+            null,
+            null,
+            null,
+            null,
+            null,
+            "tester");
 
     Assertions.assertEquals(HttpStatus.CREATED, result.getStatusCode());
     Assertions.assertNotNull(result.getBody());
@@ -72,10 +90,20 @@ class MediaControllerTest {
   @Test
   void givenExistingId_whenGetMetadata_thenReturns200Ok() {
     String fileId = "uuid-8888";
-    MediaFile found = new MediaFile(
-        fileId, "movie-99", EntityType.MOVIE, MediaType.IMAGE,
-        "poster.jpg", "movie/movie-99/poster.jpg", 5000, "image/jpeg",
-        Map.of(), new MediaMetadata(600, 900, null, null, null), Instant.now(), "admin");
+    MediaFile found =
+        new MediaFile(
+            fileId,
+            "movie-99",
+            EntityType.MOVIE,
+            MediaType.IMAGE,
+            "poster.jpg",
+            "movie/movie-99/poster.jpg",
+            5000,
+            "image/jpeg",
+            Map.of(),
+            new MediaMetadata(600, 900, null, null, null),
+            Instant.now(),
+            "admin");
 
     when(mediaService.getMediaFile(fileId)).thenReturn(Optional.of(found));
 
@@ -87,15 +115,26 @@ class MediaControllerTest {
   }
 
   /**
-   * Asserts that downloading binary content streams accurately populates headers and returns HTTP 200 OK.
+   * Asserts that downloading binary content streams accurately populates headers and returns HTTP
+   * 200 OK.
    */
   @Test
   void givenExistingId_whenDownloadMedia_thenReturnsStreamResourceWith200Ok() {
     String fileId = "uuid-8888";
-    MediaFile found = new MediaFile(
-        fileId, "movie-99", EntityType.MOVIE, MediaType.IMAGE,
-        "poster.jpg", "movie/movie-99/poster.jpg", 5000, "image/jpeg",
-        Map.of(), new MediaMetadata(600, 900, null, null, null), Instant.now(), "admin");
+    MediaFile found =
+        new MediaFile(
+            fileId,
+            "movie-99",
+            EntityType.MOVIE,
+            MediaType.IMAGE,
+            "poster.jpg",
+            "movie/movie-99/poster.jpg",
+            5000,
+            "image/jpeg",
+            Map.of(),
+            new MediaMetadata(600, 900, null, null, null),
+            Instant.now(),
+            "admin");
 
     InputStream stream = new ByteArrayInputStream("fake stream".getBytes());
     when(mediaService.getMediaFile(fileId)).thenReturn(Optional.of(found));
@@ -120,9 +159,7 @@ class MediaControllerTest {
     Assertions.assertEquals(HttpStatus.NO_CONTENT, result.getStatusCode());
   }
 
-  /**
-   * Asserts that querying media uploads by entity ID returns HTTP 200 with list of results.
-   */
+  /** Asserts that querying media uploads by entity ID returns HTTP 200 with list of results. */
   @Test
   void whenQueryByEntityId_thenReturns200OkWithArray() {
     when(mediaService.getMediaForEntity("usr-profile-1")).thenReturn(List.of());

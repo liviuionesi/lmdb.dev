@@ -63,7 +63,7 @@ const Profile = () => {
       setUploadSuccess(true);
       refetchMedia();
     } catch (err) {
-      setValidationError('Failed to upload photo to server. Please try again.');
+      setValidationError(err?.data?.message || 'Failed to upload photo to server. Please try again.');
     }
   };
 
@@ -111,7 +111,7 @@ const Profile = () => {
               startIcon={<PhotoCamera />}
               disabled={isUploading}
             >
-              Upload Avatar
+              <span>Upload Avatar</span>
               <input
                 type="file"
                 hidden

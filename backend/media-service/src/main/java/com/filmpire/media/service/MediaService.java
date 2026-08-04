@@ -18,8 +18,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
- * Core business orchestration service responsible for handling user-uploaded media asset
- * lifecycle operations across MinIO object storage and MongoDB metadata collections.
+ * Core business orchestration service responsible for handling user-uploaded media asset lifecycle
+ * operations across MinIO object storage and MongoDB metadata collections.
  */
 @Service
 public class MediaService {
@@ -58,7 +58,8 @@ public class MediaService {
       EntityType entityType,
       MediaType mediaType,
       MediaMetadata metadata,
-      String uploadedBy) throws IOException {
+      String uploadedBy)
+      throws IOException {
 
     EntityType safeEntityType = entityType != null ? entityType : EntityType.USER;
     MediaType safeMediaType = mediaType != null ? mediaType : MediaType.IMAGE;
@@ -68,14 +69,19 @@ public class MediaService {
     String contentType = rawContentType != null ? rawContentType : "application/octet-stream";
 
     String fileId = UUID.randomUUID().toString();
-    String storagePath = String.format("%s/%s/%s-%s",
-        safeEntityType.name().toLowerCase(),
-        entityId,
-        fileId,
-        originalFilename.replaceAll("[^a-zA-Z0-9.-]", "_"));
+    String storagePath =
+        String.format(
+            "%s/%s/%s-%s",
+            safeEntityType.name().toLowerCase(),
+            entityId,
+            fileId,
+            originalFilename.replaceAll("[^a-zA-Z0-9.-]", "_"));
 
-    log.info("Starting ingestion for file '{}' (size {} bytes) targeting storage path: {}",
-        originalFilename, file.getSize(), storagePath);
+    log.info(
+        "Starting ingestion for file '{}' (size {} bytes) targeting storage path: {}",
+        originalFilename,
+        file.getSize(),
+        storagePath);
 
     // Persist raw bytes into MinIO S3 object bucket
     storageService.putObject(storagePath, file.getInputStream(), file.getSize(), contentType);
@@ -83,20 +89,20 @@ public class MediaService {
     // Generate responsive thumbnail URL references
     Map<String, String> thumbnails = storageService.generateThumbnails(fileId, originalFilename);
 
-    MediaFile mediaFile = new MediaFile(
-        fileId,
-        entityId,
-        safeEntityType,
-        safeMediaType,
-        originalFilename,
-        storagePath,
-        file.getSize(),
-        contentType,
-        thumbnails,
-        metadata != null ? metadata : new MediaMetadata(null, null, null, null, null),
-        Instant.now(),
-        uploadedBy != null ? uploadedBy : "anonymous"
-    );
+    MediaFile mediaFile =
+        new MediaFile(
+            fileId,
+            entityId,
+            safeEntityType,
+            safeMediaType,
+            originalFilename,
+            storagePath,
+            file.getSize(),
+            contentType,
+            thumbnails,
+            metadata != null ? metadata : new MediaMetadata(null, null, null, null, null),
+            Instant.now(),
+            uploadedBy != null ? uploadedBy : "anonymous");
 
     MediaFile saved = mediaRepository.save(mediaFile);
     log.info("Successfully completed upload and metadata persistence for asset id: {}", saved.id());
@@ -121,8 +127,10 @@ public class MediaService {
    * @throws RuntimeException If target file ID does not match any existing metadata record.
    */
   public InputStream getMediaStream(String id) {
-    MediaFile mediaFile = mediaRepository.findById(id)
-        .orElseThrow(() -> new RuntimeException("Media file not found for ID: " + id));
+    MediaFile mediaFile =
+        mediaRepository
+            .findById(id)
+            .orElseThrow(() -> new RuntimeException("Media file not found for ID: " + id));
     return storageService.getObject(mediaFile.storagePath());
   }
 
