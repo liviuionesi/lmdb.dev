@@ -126,16 +126,18 @@ const VoiceControl = () => {
   return (
     <>
       <Tooltip title={status === 'recording' ? 'Click to stop recording' : 'Voice control (Try: "Search Batman", "Popular", "Action", "Dark mode")'}>
-        <Fab
-          color={status === 'recording' ? 'secondary' : 'primary'}
-          onClick={handleClick}
-          disabled={status === 'transcribing'}
-          style={{ position: 'fixed', right: 20, bottom: 40, zIndex: 1201 }}
-        >
-          {status === 'transcribing' ? <CircularProgress size={24} color="inherit" /> : null}
-          {status === 'recording' && <Stop />}
-          {status === 'idle' && <Mic />}
-        </Fab>
+        <span style={{ position: 'fixed', right: 20, bottom: 40, zIndex: 1201 }}>
+          <Fab
+            color={status === 'recording' ? 'secondary' : 'primary'}
+            onClick={handleClick}
+            disabled={status === 'transcribing'}
+            aria-label={status === 'recording' ? 'Click to stop recording' : 'Voice control'}
+          >
+            {status === 'transcribing' ? <CircularProgress size={24} color="inherit" /> : null}
+            {status === 'recording' && <Stop />}
+            {status === 'idle' && <Mic />}
+          </Fab>
+        </span>
       </Tooltip>
       <Snackbar
         open={!!feedback}
