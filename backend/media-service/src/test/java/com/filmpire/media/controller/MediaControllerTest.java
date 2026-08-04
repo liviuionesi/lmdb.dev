@@ -16,9 +16,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.io.Resource;
@@ -31,24 +31,20 @@ import org.springframework.mock.web.MockMultipartFile;
  * and error code translation for {@link MediaController}.
  */
 @ExtendWith(MockitoExtension.class)
-public class MediaControllerTest {
+class MediaControllerTest {
 
   @Mock
   private MediaService mediaService;
 
+  @InjectMocks
   private MediaController mediaController;
-
-  @BeforeEach
-  public void setUp() {
-    mediaController = new MediaController(mediaService);
-  }
 
   /**
    * Asserts that submitting a valid multipart upload file cleanly delegates to the service
    * and wraps the returned asset document within an HTTP 201 Created response.
    */
   @Test
-  public void whenUploadEndpointInvoked_thenReturns201Created() throws Exception {
+  void whenUploadEndpointInvoked_thenReturns201Created() throws Exception {
     MockMultipartFile mockFile = new MockMultipartFile(
         "file", "photo.png", "image/png", "fake png data".getBytes());
 
@@ -59,7 +55,7 @@ public class MediaControllerTest {
         Instant.now(), "tester");
 
     when(mediaService.uploadMedia(any(), eq("usr-1"), eq(EntityType.USER), eq(MediaType.AVATAR),
-        any(), any(), any(), any(), any(), eq("tester"))).thenReturn(resp);
+        any(), eq("tester"))).thenReturn(resp);
 
     ResponseEntity<MediaFile> result = mediaController.uploadMedia(
         mockFile, "usr-1", EntityType.USER, MediaType.AVATAR, null, null, null, null, null, "tester");
@@ -74,7 +70,7 @@ public class MediaControllerTest {
    * Asserts that requesting existing asset metadata returns HTTP 200 OK and matching record body.
    */
   @Test
-  public void givenExistingId_whenGetMetadata_thenReturns200Ok() {
+  void givenExistingId_whenGetMetadata_thenReturns200Ok() {
     String fileId = "uuid-8888";
     MediaFile found = new MediaFile(
         fileId, "movie-99", EntityType.MOVIE, MediaType.IMAGE,
@@ -94,7 +90,7 @@ public class MediaControllerTest {
    * Asserts that downloading binary content streams accurately populates headers and returns HTTP 200 OK.
    */
   @Test
-  public void givenExistingId_whenDownloadMedia_thenReturnsStreamResourceWith200Ok() {
+  void givenExistingId_whenDownloadMedia_thenReturnsStreamResourceWith200Ok() {
     String fileId = "uuid-8888";
     MediaFile found = new MediaFile(
         fileId, "movie-99", EntityType.MOVIE, MediaType.IMAGE,
@@ -116,7 +112,7 @@ public class MediaControllerTest {
    * Asserts that invoking DELETE /api/v1/media/{id} responds with HTTP 204 No Content upon removal.
    */
   @Test
-  public void givenExistingId_whenDeleteEndpointInvoked_thenReturns204NoContent() {
+  void givenExistingId_whenDeleteEndpointInvoked_thenReturns204NoContent() {
     when(mediaService.deleteMediaFile("del-target-99")).thenReturn(true);
 
     ResponseEntity<Void> result = mediaController.deleteMediaFile("del-target-99");
@@ -128,7 +124,7 @@ public class MediaControllerTest {
    * Asserts that querying media uploads by entity ID returns HTTP 200 with list of results.
    */
   @Test
-  public void whenQueryByEntityId_thenReturns200OkWithArray() {
+  void whenQueryByEntityId_thenReturns200OkWithArray() {
     when(mediaService.getMediaForEntity("usr-profile-1")).thenReturn(List.of());
 
     ResponseEntity<List<MediaFile>> result = mediaController.getMediaForEntity("usr-profile-1");

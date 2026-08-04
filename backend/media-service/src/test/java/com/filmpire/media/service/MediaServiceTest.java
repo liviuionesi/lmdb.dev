@@ -1,7 +1,6 @@
 package com.filmpire.media.service;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -11,7 +10,6 @@ import com.filmpire.media.model.MediaFile;
 import com.filmpire.media.model.MediaMetadata;
 import com.filmpire.media.model.MediaType;
 import com.filmpire.media.repository.MediaRepository;
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.Instant;
@@ -19,9 +17,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
@@ -31,7 +29,7 @@ import org.springframework.mock.web.MockMultipartFile;
  * and MongoDB document repository persistence using Mockito doubles.
  */
 @ExtendWith(MockitoExtension.class)
-public class MediaServiceTest {
+class MediaServiceTest {
 
   @Mock
   private MediaRepository mediaRepository;
@@ -39,19 +37,15 @@ public class MediaServiceTest {
   @Mock
   private StorageService storageService;
 
+  @InjectMocks
   private MediaService mediaService;
-
-  @BeforeEach
-  public void setUp() {
-    mediaService = new MediaService(mediaRepository, storageService);
-  }
 
   /**
    * Asserts that ingesting a valid multipart upload correctly triggers binary stream persistence,
    * generates thumbnail reference links, and registers metadata in MongoDB.
    */
   @Test
-  public void givenMultipartUpload_whenUploadMedia_thenSavesToStorageAndRepository() throws IOException {
+  void givenMultipartUpload_whenUploadMedia_thenSavesToStorageAndRepository() throws IOException {
     MockMultipartFile mockFile = new MockMultipartFile(
         "file", "avatar.jpg", "image/jpeg", "test image binary bytes".getBytes());
 
@@ -60,16 +54,13 @@ public class MediaServiceTest {
 
     when(mediaRepository.save(any(MediaFile.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
+    MediaMetadata metadata = new MediaMetadata(500, 500, null, "JPEG", null);
     MediaFile result = mediaService.uploadMedia(
         mockFile,
         "user-789",
         EntityType.USER,
         MediaType.AVATAR,
-        500,
-        500,
-        null,
-        "JPEG",
-        null,
+        metadata,
         "test_user"
     );
 
@@ -88,7 +79,7 @@ public class MediaServiceTest {
    * Asserts that deleting an existing media asset cleanly removes both MinIO bucket storage objects and database entries.
    */
   @Test
-  public void givenExistingId_whenDeleteMediaFile_thenRemovesObjectAndDeletesRecord() {
+  void givenExistingId_whenDeleteMediaFile_thenRemovesObjectAndDeletesRecord() {
     String testId = "del-uuid-111";
     MediaFile mockFile = new MediaFile(
         testId, "entity-id", EntityType.MOVIE_REVIEW, MediaType.ATTACHMENT,
@@ -108,7 +99,7 @@ public class MediaServiceTest {
    * Asserts that listing assets by target entity identifier queries the repository with accurate criteria.
    */
   @Test
-  public void whenGetMediaForEntity_thenCallsRepositoryAndReturnsList() {
+  void whenGetMediaForEntity_thenCallsRepositoryAndReturnsList() {
     String entityId = "movie-review-555";
     when(mediaRepository.findByEntityId(entityId)).thenReturn(List.of());
 

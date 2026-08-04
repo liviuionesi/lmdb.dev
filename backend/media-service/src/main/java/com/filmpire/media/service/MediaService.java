@@ -47,11 +47,7 @@ public class MediaService {
    * @param entityId Target associated entity identifier (e.g. user UUID or review ID).
    * @param entityType Classification of target domain entity.
    * @param mediaType Classification of media content type.
-   * @param width Display resolution width (optional).
-   * @param height Display resolution height (optional).
-   * @param duration Playback duration in seconds (optional).
-   * @param codec Codec identification string (optional).
-   * @param bitrate Bit consumption rate (optional).
+   * @param metadata Technical specifications and dimensions record (optional).
    * @param uploadedBy User account identifier responsible for upload.
    * @return Persisted immutable {@link MediaFile} record document.
    * @throws IOException If accessing the file stream encounters an I/O failure.
@@ -61,11 +57,7 @@ public class MediaService {
       String entityId,
       EntityType entityType,
       MediaType mediaType,
-      Integer width,
-      Integer height,
-      Integer duration,
-      String codec,
-      Long bitrate,
+      MediaMetadata metadata,
       String uploadedBy) throws IOException {
 
     String fileId = UUID.randomUUID().toString();
@@ -85,8 +77,6 @@ public class MediaService {
     // Generate responsive thumbnail URL references
     Map<String, String> thumbnails = storageService.generateThumbnails(fileId, originalFilename);
 
-    MediaMetadata metadata = new MediaMetadata(width, height, duration, codec, bitrate);
-
     MediaFile mediaFile = new MediaFile(
         fileId,
         entityId,
@@ -97,7 +87,7 @@ public class MediaService {
         file.getSize(),
         file.getContentType() != null ? file.getContentType() : "application/octet-stream",
         thumbnails,
-        metadata,
+        metadata != null ? metadata : new MediaMetadata(null, null, null, null, null),
         Instant.now(),
         uploadedBy != null ? uploadedBy : "anonymous"
     );

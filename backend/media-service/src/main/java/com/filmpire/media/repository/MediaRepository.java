@@ -4,13 +4,11 @@ import com.filmpire.media.model.EntityType;
 import com.filmpire.media.model.MediaFile;
 import java.util.List;
 import org.springframework.data.mongodb.repository.MongoRepository;
-import org.springframework.stereotype.Repository;
 
 /**
  * Spring Data MongoDB repository interface for managing {@link MediaFile} metadata documents.
  * Provides custom queries for indexing and filtering uploads by entity association.
  */
-@Repository
 public interface MediaRepository extends MongoRepository<MediaFile, String> {
 
   /**

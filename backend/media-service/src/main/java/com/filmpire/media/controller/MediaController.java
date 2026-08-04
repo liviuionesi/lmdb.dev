@@ -2,6 +2,7 @@ package com.filmpire.media.controller;
 
 import com.filmpire.media.model.EntityType;
 import com.filmpire.media.model.MediaFile;
+import com.filmpire.media.model.MediaMetadata;
 import com.filmpire.media.model.MediaType;
 import com.filmpire.media.service.MediaService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -77,8 +78,9 @@ public class MediaController {
       @RequestParam(value = "bitrate", required = false) Long bitrate,
       @RequestParam(value = "uploadedBy", defaultValue = "anonymous") String uploadedBy) {
     try {
+      MediaMetadata metadata = new MediaMetadata(width, height, duration, codec, bitrate);
       MediaFile mediaFile = mediaService.uploadMedia(
-          file, entityId, entityType, mediaType, width, height, duration, codec, bitrate, uploadedBy);
+          file, entityId, entityType, mediaType, metadata, uploadedBy);
       return ResponseEntity.status(HttpStatus.CREATED).body(mediaFile);
     } catch (Exception e) {
       return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();

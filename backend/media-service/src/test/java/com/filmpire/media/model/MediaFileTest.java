@@ -9,13 +9,13 @@ import org.junit.jupiter.api.Test;
  * Unit tests validating domain record instantiation and defensive compact constructor validation
  * rules for {@link MediaFile} metadata documents.
  */
-public class MediaFileTest {
+class MediaFileTest {
 
   /**
    * Verifies that initializing a MediaFile record with valid positive file sizing succeeds cleanly.
    */
   @Test
-  public void whenValidMediaFileCreated_thenFieldsMatchAndNoExceptionThrown() {
+  void whenValidMediaFileCreated_thenFieldsMatchAndNoExceptionThrown() {
     MediaMetadata metadata = new MediaMetadata(1920, 1080, null, "PNG", 0L);
     MediaFile mediaFile = new MediaFile(
         "file-uuid-123",
@@ -42,8 +42,10 @@ public class MediaFileTest {
    * Verifies that providing a negative file size parameter triggers an immediate {@link IllegalArgumentException}.
    */
   @Test
-  public void whenNegativeFileSizeProvided_thenThrowsIllegalArgumentException() {
+  void whenNegativeFileSizeProvided_thenThrowsIllegalArgumentException() {
     MediaMetadata metadata = new MediaMetadata(100, 100, null, null, null);
+    Map<String, String> emptyThumbnails = Map.of();
+    Instant now = Instant.now();
     Assertions.assertThrows(IllegalArgumentException.class, () -> new MediaFile(
         "file-uuid-err",
         "entity-err",
@@ -53,9 +55,9 @@ public class MediaFileTest {
         "review/err/invalid.dat",
         -100L,
         "application/octet-stream",
-        Map.of(),
+        emptyThumbnails,
         metadata,
-        Instant.now(),
+        now,
         "reviewer-1"
     ));
   }
