@@ -33,7 +33,7 @@ zero bugs.
       checked in its parent Epic); when closing a Story, verified if its parent
       Epic is now ready to close.
 - [ ] Committed with a message referencing this issue, pushed to
-      `develop` (and for a completed Epic, merged `develop` → `main`).
+      `develop` (and for a completed Story, merged `develop` → `main`).
 
 Any Non-Functional Requirement that applies to this change (see
 [NON_FUNCTIONAL_REQUIREMENTS.md](NON_FUNCTIONAL_REQUIREMENTS.md)) is also
