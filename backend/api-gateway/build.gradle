@@ -35,8 +35,10 @@ dependencies {
     // Testing
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-security-test'
+    testImplementation 'org.springframework.cloud:spring-cloud-starter-contract-stub-runner'
     // Boot 4 modularized WebTestClient auto-configuration into its own module.
     testImplementation 'org.springframework.boot:spring-boot-webtestclient'
+
     testImplementation 'io.projectreactor:reactor-test'
     testImplementation 'org.testcontainers:testcontainers'
     testImplementation 'org.testcontainers:testcontainers-junit-jupiter'

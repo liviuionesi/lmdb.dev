@@ -2,7 +2,10 @@ plugins {
     id 'java'
     id 'org.springframework.boot'
     id 'io.spring.dependency-management'
+    id 'maven-publish'
+    id 'org.springframework.cloud.contract' version '4.2.0'
 }
+
 
 compileJava {
     options.compilerArgs += ['-parameters']
@@ -11,6 +14,12 @@ compileJava {
 compileTestJava {
     options.compilerArgs += ['-parameters']
 }
+
+contracts {
+    baseClassForTests = 'com.filmpire.movie.contract.BaseContractTest'
+    testFramework = 'JUNIT5'
+}
+
 
 dependencies {
     implementation project(':backend:shared-library')
@@ -40,6 +49,8 @@ dependencies {
     
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+    testImplementation 'org.springframework.cloud:spring-cloud-starter-contract-verifier'
+
     // Boot 4 modularized the @DataMongoTest slice into its own test module.
     testImplementation 'org.springframework.boot:spring-boot-data-mongodb-test'
     testImplementation 'org.springframework.boot:spring-boot-testcontainers'
