@@ -2,9 +2,17 @@ plugins {
     id 'java'
     id 'org.springframework.boot'
     id 'io.spring.dependency-management'
+    id 'maven-publish'
+    id 'org.springframework.cloud.contract' version '4.2.0'
     // Generates Java stubs from src/main/proto/ai_service.proto (#36).
     id 'com.google.protobuf' version "${protobufPluginVersion}"
 }
+
+contracts {
+    baseClassForTests = 'com.filmpire.ai.contract.BaseContractTest'
+    testFramework = 'JUNIT5'
+}
+
 
 dependencies {
     implementation project(':backend:shared-library')
@@ -45,6 +53,8 @@ dependencies {
     implementation "io.grpc:grpc-stub:${grpcVersion}"
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.cloud:spring-cloud-starter-contract-verifier'
+
     testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
     testImplementation 'org.springframework.boot:spring-boot-testcontainers'
     testImplementation "org.wiremock:wiremock-standalone:${wiremockVersion}"
