@@ -2,14 +2,14 @@ package com.filmpire.gateway.filter;
 
 import com.filmpire.gateway.util.JwtUtil;
 import java.util.List;
-import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.jspecify.annotations.NonNull;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
+import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -19,14 +19,14 @@ import org.springframework.web.server.WebFilterChain;
 import reactor.core.publisher.Mono;
 
 /**
- * JWT Authentication Filter for Spring Cloud Gateway. Validates JWT tokens and sets authentication
- * context for authenticated requests.
+ * Custom WebFilter for JWT authentication in API Gateway. Validates JWT tokens in incoming
+ * request headers and populates reactive security context.
  *
  * @author Filmpire Development Team
  * @version 1.0.0
  */
-@Slf4j
 @Component
+@Slf4j
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter implements WebFilter {
 
@@ -37,7 +37,7 @@ public class JwtAuthenticationFilter implements WebFilter {
    *
    * @param exchange the current server exchange
    * @param chain the web filter chain
-   * @return Mono<Void> representing the completion of filter processing
+   * @return Mono&lt;Void&gt; representing the completion of filter processing
    */
   @Override
   @NonNull
@@ -74,44 +74,45 @@ public class JwtAuthenticationFilter implements WebFilter {
       String userId = jwtUtil.extractUserId(token);
       List<String> roles = jwtUtil.extractRoles(token);
 
-      // Convert roles to Spring Security authorities
+      // Create authorities
       List<SimpleGrantedAuthority> authorities =
           roles.stream()
-              .map(role -> new SimpleGrantedAuthority("ROLE_" + role.toUpperCase()))
+              .map(
+                  role ->
+                      role.startsWith("ROLE_")
+                          ? new SimpleGrantedAuthority(role)
+                          : new SimpleGrantedAuthority("ROLE_" + role))
               .toList();
 
-      // Create authentication token
-      UsernamePasswordAuthenticationToken authentication =
+      // Create Authentication object
+      Authentication authentication =
           new UsernamePasswordAuthenticationToken(username, null, authorities);
 
-      // Add user details to request headers for downstream services
+      // Mutate request with user context headers for downstream microservices
       ServerHttpRequest mutatedRequest =
-          exchange
-              .getRequest()
+          request
               .mutate()
-              .header("X-User-Id", userId)
-              .header("X-Username", username)
+              .header("X-User-Id", userId != null ? userId : "")
+              .header("X-User-Name", username != null ? username : "")
               .header("X-User-Roles", String.join(",", roles))
               .build();
 
-      ServerWebExchange mutatedExchange = exchange.mutate().request(mutatedRequest).build();
+      log.debug("Successfully authenticated user: {} (ID: {}) for path: {}", username, userId, path);
 
-      // Set authentication in security context and continue filter chain
-      return Objects.requireNonNull(
-          chain
-              .filter(mutatedExchange)
-              .contextWrite(ReactiveSecurityContextHolder.withAuthentication(authentication)),
-          "Filter chain result must not be null");
+      // Continue filter chain with mutated request and updated security context
+      return chain
+          .filter(exchange.mutate().request(mutatedRequest).build())
+          .contextWrite(ReactiveSecurityContextHolder.withAuthentication(authentication));
 
     } catch (Exception e) {
-      log.error("Error processing JWT token: {}", e.getMessage(), e);
+      log.error("JWT authentication error for path: {}", path, e);
       exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
       return exchange.getResponse().setComplete();
     }
   }
 
   /**
-   * Checks if the request path is public (doesn't require authentication)
+   * Checks if the path is a public endpoint that doesn't require JWT validation
    *
    * @param path the request path
    * @return true if path is public, false otherwise
@@ -123,9 +124,6 @@ public class JwtAuthenticationFilter implements WebFilter {
         || path.startsWith("/actuator")
         || path.startsWith("/fallback")
         || (path.startsWith("/api/v1/movies") && !path.contains("/admin"))
-        || (path.startsWith("/api/v1/actors") && !path.contains("/admin"))
-        || path.startsWith("/api/v1/ai")
-        || path.startsWith("/api/v1/recommendations");
+        || (path.startsWith("/api/v1/actors") && !path.contains("/admin"));
   }
-
 }
