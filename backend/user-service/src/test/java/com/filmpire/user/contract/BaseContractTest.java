@@ -1,6 +1,7 @@
 package com.filmpire.user.contract;
 
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.filmpire.user.controller.UserController;
@@ -8,17 +9,25 @@ import com.filmpire.user.dto.AuthDtos.UserProfileResponse;
 import com.filmpire.user.service.UserAccountService;
 import io.restassured.module.mockmvc.RestAssuredMockMvc;
 import java.time.LocalDateTime;
+import java.time.Month;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
-import org.mockito.Mockito;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 
+/**
+ * Base setup class for Spring Cloud Contract generated producer tests in {@code user-service}.
+ * Mocks {@link UserAccountService} responses and configures {@link RestAssuredMockMvc} with mock authentication.
+ */
 public abstract class BaseContractTest {
 
+  /**
+   * Sets up mock MVC controller environment with stubbed user profiles and security principal before each contract test.
+   */
   @BeforeEach
   public void setup() {
-    UserAccountService userAccountService = Mockito.mock(UserAccountService.class);
+    UserAccountService userAccountService = mock(UserAccountService.class);
 
     UserProfileResponse profileResponse =
         new UserProfileResponse(
@@ -26,15 +35,15 @@ public abstract class BaseContractTest {
             "liviu",
             "liviu@example.com",
             "ROLE_USER",
-            LocalDateTime.of(2026, 8, 5, 12, 0),
-            LocalDateTime.of(2026, 8, 5, 12, 0));
+            LocalDateTime.of(2026, Month.AUGUST, 5, 12, 0),
+            LocalDateTime.of(2026, Month.AUGUST, 5, 12, 0));
 
     when(userAccountService.getProfile(anyString())).thenReturn(profileResponse);
 
     UserController userController = new UserController(userAccountService);
 
     Authentication auth =
-        new UsernamePasswordAuthenticationToken("liviu", null, java.util.List.of());
+        new UsernamePasswordAuthenticationToken("liviu", null, List.of());
 
     RestAssuredMockMvc.standaloneSetup(userController);
     RestAssuredMockMvc.postProcessors(

@@ -26,8 +26,10 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
 /**
- * Consumer-side Spring Cloud Contract StubRunner test for the api-gateway -> user-service
+ * Consumer-side Spring Cloud Contract StubRunner test for the api-gateway -&gt; user-service
  * boundary (ADR-008, Task #43).
+ *
+ * <p>Uses StubRunner in LOCAL mode to consume the generated stub JAR published by user-service.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("gateway-it")
@@ -51,6 +53,11 @@ class UserServiceContractTest {
 
   private WebTestClient client;
 
+  /**
+   * Registers dynamic properties for Redis container host/port and points user-service gateway route to StubRunner.
+   *
+   * @param registry dynamic property registry
+   */
   @DynamicPropertySource
   static void redisProperties(DynamicPropertyRegistry registry) {
     registry.add("spring.data.redis.host", redis::getHost);
@@ -58,6 +65,9 @@ class UserServiceContractTest {
     registry.add("spring.cloud.gateway.routes[3].uri", () -> "http://localhost:9975");
   }
 
+  /**
+   * Initializes {@link WebTestClient} bound to the randomly assigned local server port.
+   */
   @BeforeEach
   void setUp() {
     client =
@@ -67,6 +77,11 @@ class UserServiceContractTest {
             .build();
   }
 
+  /**
+   * Generates a signed JWT bearer token using the test secret key to satisfy gateway security filters.
+   *
+   * @return signed JWT string
+   */
   private String createTestToken() {
     SecretKey key = Keys.hmacShaKeyFor(TEST_SECRET.getBytes(StandardCharsets.UTF_8));
     return Jwts.builder()
@@ -78,6 +93,9 @@ class UserServiceContractTest {
         .compact();
   }
 
+  /**
+   * Verifies that the gateway routes GET /api/v1/users/profile to the running StubRunner mock server with valid Bearer token.
+   */
   @Test
   @DisplayName("Gateway routes GET /api/v1/users/profile against published user-service stubs")
   void routesUserRequestToContractStub() {

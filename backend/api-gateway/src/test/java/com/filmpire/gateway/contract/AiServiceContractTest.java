@@ -23,8 +23,10 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
 /**
- * Consumer-side Spring Cloud Contract StubRunner test for the api-gateway -> ai-service
+ * Consumer-side Spring Cloud Contract StubRunner test for the api-gateway -&gt; ai-service
  * boundary (ADR-008, Task #43).
+ *
+ * <p>Uses StubRunner in LOCAL mode to consume the generated stub JAR published by ai-service.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("gateway-it")
@@ -45,6 +47,11 @@ class AiServiceContractTest {
 
   private WebTestClient client;
 
+  /**
+   * Registers dynamic properties for Redis container host/port and points ai-service gateway route to StubRunner.
+   *
+   * @param registry dynamic property registry
+   */
   @DynamicPropertySource
   static void redisProperties(DynamicPropertyRegistry registry) {
     registry.add("spring.data.redis.host", redis::getHost);
@@ -52,6 +59,9 @@ class AiServiceContractTest {
     registry.add("spring.cloud.gateway.routes[5].uri", () -> "http://localhost:9976");
   }
 
+  /**
+   * Initializes {@link WebTestClient} bound to the randomly assigned local server port.
+   */
   @BeforeEach
   void setUp() {
     client =
@@ -61,6 +71,9 @@ class AiServiceContractTest {
             .build();
   }
 
+  /**
+   * Verifies that the gateway routes POST /api/v1/ai/recommendations to the running StubRunner mock server.
+   */
   @Test
   @DisplayName("Gateway routes POST /api/v1/ai/recommendations against published ai-service stubs")
   void routesAiRequestToContractStub() {

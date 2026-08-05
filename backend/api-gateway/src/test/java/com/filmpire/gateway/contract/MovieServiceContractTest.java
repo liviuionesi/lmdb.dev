@@ -21,7 +21,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
 /**
- * Consumer-side Spring Cloud Contract StubRunner test for the api-gateway -> movie-service
+ * Consumer-side Spring Cloud Contract StubRunner test for the api-gateway -&gt; movie-service
  * boundary (ADR-008, Task #43).
  *
  * <p>Uses StubRunner in LOCAL mode to consume the generated stub JAR published by movie-service.
@@ -33,7 +33,6 @@ import org.testcontainers.utility.DockerImageName;
 @AutoConfigureStubRunner(
     ids = "com.filmpire:movie-service:+:stubs:9973",
     stubsMode = StubRunnerProperties.StubsMode.LOCAL)
-
 @DisplayName("Movie Service Contract Integration Test (#43)")
 class MovieServiceContractTest {
 
@@ -46,6 +45,11 @@ class MovieServiceContractTest {
 
   private WebTestClient client;
 
+  /**
+   * Registers dynamic properties for Redis container host/port and points movie-service gateway route to StubRunner.
+   *
+   * @param registry dynamic property registry
+   */
   @DynamicPropertySource
   static void redisProperties(DynamicPropertyRegistry registry) {
     registry.add("spring.data.redis.host", redis::getHost);
@@ -53,7 +57,9 @@ class MovieServiceContractTest {
     registry.add("spring.cloud.gateway.routes[2].uri", () -> "http://localhost:9973");
   }
 
-
+  /**
+   * Initializes {@link WebTestClient} bound to the randomly assigned local server port.
+   */
   @BeforeEach
   void setUp() {
     client =
@@ -63,6 +69,9 @@ class MovieServiceContractTest {
             .build();
   }
 
+  /**
+   * Verifies that the gateway routes GET /api/v1/movies/550 to the running StubRunner mock server.
+   */
   @Test
   @DisplayName("Gateway routes GET /api/v1/movies/550 against published movie-service stubs")
   void routesMovieRequestToContractStub() {

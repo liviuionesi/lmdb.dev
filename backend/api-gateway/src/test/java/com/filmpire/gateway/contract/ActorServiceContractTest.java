@@ -21,8 +21,10 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
 /**
- * Consumer-side Spring Cloud Contract StubRunner test for the api-gateway -> actor-service
+ * Consumer-side Spring Cloud Contract StubRunner test for the api-gateway -&gt; actor-service
  * boundary (ADR-008, Task #43).
+ *
+ * <p>Uses StubRunner in LOCAL mode to consume the generated stub JAR published by actor-service.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("gateway-it")
@@ -43,6 +45,11 @@ class ActorServiceContractTest {
 
   private WebTestClient client;
 
+  /**
+   * Registers dynamic properties for Redis container host/port and points actor-service gateway route to StubRunner.
+   *
+   * @param registry dynamic property registry
+   */
   @DynamicPropertySource
   static void redisProperties(DynamicPropertyRegistry registry) {
     registry.add("spring.data.redis.host", redis::getHost);
@@ -50,6 +57,9 @@ class ActorServiceContractTest {
     registry.add("spring.cloud.gateway.routes[4].uri", () -> "http://localhost:9974");
   }
 
+  /**
+   * Initializes {@link WebTestClient} bound to the randomly assigned local server port.
+   */
   @BeforeEach
   void setUp() {
     client =
@@ -59,6 +69,9 @@ class ActorServiceContractTest {
             .build();
   }
 
+  /**
+   * Verifies that the gateway routes GET /api/v1/actors/819 to the running StubRunner mock server.
+   */
   @Test
   @DisplayName("Gateway routes GET /api/v1/actors/819 against published actor-service stubs")
   void routesActorRequestToContractStub() {

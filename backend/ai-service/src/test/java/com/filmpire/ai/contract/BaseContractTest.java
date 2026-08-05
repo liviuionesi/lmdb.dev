@@ -1,6 +1,7 @@
 package com.filmpire.ai.contract;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.filmpire.ai.controller.AiController;
@@ -14,16 +15,22 @@ import com.filmpire.ai.service.SpeechToTextService;
 import io.restassured.module.mockmvc.RestAssuredMockMvc;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
-import org.mockito.Mockito;
 
+/**
+ * Base setup class for Spring Cloud Contract generated producer tests in {@code ai-service}.
+ * Mocks {@link RecommendationService} and other AI services and configures {@link RestAssuredMockMvc}.
+ */
 public abstract class BaseContractTest {
 
+  /**
+   * Sets up mock MVC controller environment with stubbed AI recommendations before each contract test execution.
+   */
   @BeforeEach
   public void setup() {
-    RecommendationService recommendationService = Mockito.mock(RecommendationService.class);
-    ChatAssistantService chatAssistantService = Mockito.mock(ChatAssistantService.class);
-    SemanticSearchService semanticSearchService = Mockito.mock(SemanticSearchService.class);
-    SpeechToTextService speechToTextService = Mockito.mock(SpeechToTextService.class);
+    RecommendationService recommendationService = mock(RecommendationService.class);
+    ChatAssistantService chatAssistantService = mock(ChatAssistantService.class);
+    SemanticSearchService semanticSearchService = mock(SemanticSearchService.class);
+    SpeechToTextService speechToTextService = mock(SpeechToTextService.class);
 
     MovieRecommendationDto recommendation =
         new MovieRecommendationDto(
