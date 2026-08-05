@@ -5,6 +5,8 @@ kind: Kustomization
 resources:
   - ../../base
   - kafka.yaml
+  - zipkin.yaml
+
 
 # secrets.env is gitignored — copy secrets.env.example to secrets.env first
 # (see that file). Kustomize's name-suffix-hash keeps this in sync: every

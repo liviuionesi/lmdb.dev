@@ -140,6 +140,24 @@ services:
       start_period: 20s
     restart: unless-stopped
 
+  # Zipkin - Distributed Tracing UI (ADR-007, Task #42)
+  # Receives spans from all services via Micrometer Tracing + Zipkin reporter.
+  # UI: http://localhost:9411
+  zipkin:
+    image: openzipkin/zipkin:3
+    container_name: filmpire-zipkin
+    ports:
+      - "9411:9411"
+    networks:
+      - filmpire-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:9411/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+
   # Adminer - Database Management UI (Optional). Behind the `dev-tools`
   # profile, same reasoning as SonarQube's `sonar` profile below — an
   # unauthenticated DB browser has no business running by default outside
@@ -208,6 +226,7 @@ services:
       - filmpire-network
     environment:
       SPRING_APPLICATION_NAME: discovery-service
+      MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
       EUREKA_INSTANCE_HOSTNAME: discovery-service
       EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://discovery-service:8761/eureka/
     # k8s-file (not the podman default, journald) so the local ELK stack's
@@ -234,6 +253,7 @@ services:
       - filmpire-network
     environment:
       SPRING_APPLICATION_NAME: config-service
+      MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
       SPRING_CLOUD_CONFIG_SERVER_NATIVE_SEARCHLOCATIONS: classpath:/config
     logging:
@@ -261,6 +281,7 @@ services:
       - filmpire-network
     environment:
       SPRING_APPLICATION_NAME: api-gateway
+      MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
       SPRING_CONFIG_IMPORT: optional:configserver:http://config-service:8888
       REDIS_HOST: redis
@@ -301,6 +322,7 @@ services:
       - filmpire-network
     environment:
       SPRING_APPLICATION_NAME: movie-service
+      MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
       SPRING_PROFILES_ACTIVE: prod
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
       EUREKA_SERVER_URL: http://discovery-service:8761/eureka/
@@ -345,6 +367,7 @@ services:
       - filmpire-network
     environment:
       SPRING_APPLICATION_NAME: user-service
+      MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
       SPRING_CONFIG_IMPORT: optional:configserver:http://config-service:8888
       POSTGRES_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-filmpire}
@@ -383,6 +406,7 @@ services:
       - filmpire-network
     environment:
       SPRING_APPLICATION_NAME: actor-service
+      MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
       SPRING_CONFIG_IMPORT: optional:configserver:http://config-service:8888
       POSTGRES_URL: jdbc:postgresql://postgres:5432/filmpire_actor
@@ -445,6 +469,7 @@ services:
       - filmpire-network
     environment:
       SPRING_APPLICATION_NAME: ai-service
+      MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
       SPRING_CONFIG_IMPORT: optional:configserver:http://config-service:8888
       POSTGRES_URL: jdbc:postgresql://postgres:5432/filmpire_ai

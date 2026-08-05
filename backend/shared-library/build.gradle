@@ -13,6 +13,7 @@ dependencies {
     implementation 'com.fasterxml.jackson.core:jackson-annotations'
     
     // Annotation processors with proper configuration
+    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
     annotationProcessor "org.mapstruct:mapstruct-processor:${mapstructVersion}"
     annotationProcessor "org.projectlombok:lombok:${lombokVersion}"
     // Lombok must be before MapStruct for proper integration

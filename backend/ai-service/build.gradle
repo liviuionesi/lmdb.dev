@@ -17,6 +17,8 @@ dependencies {
     // recommendation candidates come from Filmpire's own catalog, not TMDB).
     implementation 'org.springframework.cloud:spring-cloud-starter-loadbalancer'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'io.micrometer:micrometer-tracing-bridge-brave'
+    runtimeOnly 'io.zipkin.reporter2:zipkin-reporter-brave'
     implementation 'org.springframework.boot:spring-boot-starter-restclient'
     implementation 'org.postgresql:postgresql'
     // hibernate-core's built-in vector JdbcTypes (SqlTypes.VECTOR et al.) are

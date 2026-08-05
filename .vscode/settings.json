@@ -77,5 +77,19 @@
   "sonarlint.focusOnNewCode": false,
   // Tell SonarLint which files are tests, so test-only rule relaxations apply
   // and main-code rules aren't reported against test sources.
-  "sonarlint.testFilePattern": "**/src/test/**/*"
+  "sonarlint.testFilePattern": "**/src/test/**/*",
+
+  // Spring Boot Language Server — ONLY scan/inspect standard Spring framework properties
+  // Properties starting with spring.*, management.*, server.*, eureka.*, resilience4j.*, logging.*, grpc.*, springdoc.* ARE scanned.
+  // All non-Spring properties are excluded from unknown-property inspection.
+  "boot-java.properties.validations.unknown-property.excludes": [
+    "^(?!(spring|management|server|eureka|resilience4j|logging|grpc|springdoc)\\.).*"
+  ],
+  "spring-boot.ls.yaml.validations.unknown-property.excludes": [
+    "^(?!(spring|management|server|eureka|resilience4j|logging|grpc|springdoc)\\.).*"
+  ]
 }
+
+
+
+

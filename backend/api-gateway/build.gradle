@@ -25,6 +25,8 @@ dependencies {
     
     // Actuator for health checks
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'io.micrometer:micrometer-tracing-bridge-brave'
+    runtimeOnly 'io.zipkin.reporter2:zipkin-reporter-brave'
 
     // Lombok for cleaner code
     compileOnly "org.projectlombok:lombok:${lombokVersion}"
