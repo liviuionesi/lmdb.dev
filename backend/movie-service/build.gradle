@@ -20,6 +20,16 @@ contracts {
     testFramework = 'JUNIT5'
 }
 
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+            artifact verifierStubsJar
+        }
+    }
+}
+
+
 
 dependencies {
     implementation project(':backend:shared-library')
