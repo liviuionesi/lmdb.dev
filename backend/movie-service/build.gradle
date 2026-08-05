@@ -60,6 +60,9 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
     testImplementation 'org.springframework.cloud:spring-cloud-starter-contract-verifier'
+    testImplementation 'io.rest-assured:rest-assured'
+    testImplementation 'io.rest-assured:spring-mock-mvc'
+
 
     // Boot 4 modularized the @DataMongoTest slice into its own test module.
     testImplementation 'org.springframework.boot:spring-boot-data-mongodb-test'
