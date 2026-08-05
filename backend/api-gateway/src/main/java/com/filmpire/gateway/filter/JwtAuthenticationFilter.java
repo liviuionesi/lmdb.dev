@@ -93,8 +93,9 @@ public class JwtAuthenticationFilter implements WebFilter {
           request
               .mutate()
               .header("X-User-Id", userId != null ? userId : "")
-              .header("X-User-Name", username != null ? username : "")
+              .header("X-Username", username != null ? username : "")
               .header("X-User-Roles", String.join(",", roles))
+
               .build();
 
       log.debug("Successfully authenticated user: {} (ID: {}) for path: {}", username, userId, path);
