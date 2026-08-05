@@ -10,28 +10,28 @@ importers:
     dependencies:
       '@emotion/react':
         specifier: ^11.4.1
-        version: 11.13.5(@types/react@18.3.12)(react@17.0.2)
+        version: 11.13.5(@types/react@18.3.12)(react@19.2.8)
       '@emotion/styled':
         specifier: ^11.3.0
-        version: 11.13.5(@emotion/react@11.13.5(@types/react@18.3.12)(react@17.0.2))(@types/react@18.3.12)(react@17.0.2)
+        version: 11.13.5(@emotion/react@11.13.5(@types/react@18.3.12)(react@19.2.8))(@types/react@18.3.12)(react@19.2.8)
       '@mui/icons-material':
         specifier: ^5.0.3
-        version: 5.16.7(@mui/material@5.16.7(@emotion/react@11.13.5(@types/react@18.3.12)(react@17.0.2))(@emotion/styled@11.13.5(@emotion/react@11.13.5(@types/react@18.3.12)(react@17.0.2))(@types/react@18.3.12)(react@17.0.2))(@types/react@18.3.12)(react-dom@17.0.2(react@17.0.2))(react@17.0.2))(@types/react@18.3.12)(react@17.0.2)
+        version: 5.16.7(@mui/material@5.16.7(@emotion/react@11.13.5(@types/react@18.3.12)(react@19.2.8))(@emotion/styled@11.13.5(@emotion/react@11.13.5(@types/react@18.3.12)(react@19.2.8))(@types/react@18.3.12)(react@19.2.8))(@types/react@18.3.12)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(@types/react@18.3.12)(react@19.2.8)
       '@mui/material':
         specifier: ^5.15.18
-        version: 5.16.7(@emotion/react@11.13.5(@types/react@18.3.12)(react@17.0.2))(@emotion/styled@11.13.5(@emotion/react@11.13.5(@types/react@18.3.12)(react@17.0.2))(@types/react@18.3.12)(react@17.0.2))(@types/react@18.3.12)(react-dom@17.0.2(react@17.0.2))(react@17.0.2)
+        version: 5.16.7(@emotion/react@11.13.5(@types/react@18.3.12)(react@19.2.8))(@emotion/styled@11.13.5(@emotion/react@11.13.5(@types/react@18.3.12)(react@19.2.8))(@types/react@18.3.12)(react@19.2.8))(@types/react@18.3.12)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@mui/styles':
         specifier: ^5.15.18
-        version: 5.16.7(@types/react@18.3.12)(react@17.0.2)
+        version: 5.16.7(@types/react@18.3.12)(react@19.2.8)
       '@reduxjs/toolkit':
         specifier: ^1.6.2
-        version: 1.9.7(react-redux@7.2.9(react-dom@17.0.2(react@17.0.2))(react@17.0.2))(react@17.0.2)
+        version: 1.9.7(react-redux@7.2.9(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)
       '@testing-library/jest-dom':
         specifier: ^5.11.4
         version: 5.17.0
       '@testing-library/react':
         specifier: ^11.1.0
-        version: 11.2.7(react-dom@17.0.2(react@17.0.2))(react@17.0.2)
+        version: 11.2.7(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@testing-library/user-event':
         specifier: ^12.1.10
         version: 12.8.3(@testing-library/dom@7.31.2)
@@ -39,20 +39,20 @@ importers:
         specifier: ^1.6.8
         version: 1.7.7
       react:
-        specifier: ^17.0.2
-        version: 17.0.2
+        specifier: ^19.2.8
+        version: 19.2.8
       react-dom:
-        specifier: ^17.0.2
-        version: 17.0.2(react@17.0.2)
+        specifier: ^19.2.8
+        version: 19.2.8(react@19.2.8)
       react-redux:
         specifier: ^7.2.5
-        version: 7.2.9(react-dom@17.0.2(react@17.0.2))(react@17.0.2)
+        version: 7.2.9(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       react-router-dom:
         specifier: ^5.3.0
-        version: 5.3.4(react@17.0.2)
+        version: 5.3.4(react@19.2.8)
       react-scripts:
         specifier: 5.0.1
-        version: 5.0.1(@babel/plugin-syntax-flow@7.26.0(@babel/core@7.29.7))(@babel/plugin-transform-react-jsx@7.25.9(@babel/core@7.29.7))(@types/babel__core@7.20.5)(esbuild@0.13.15)(eslint@7.32.0)(react@17.0.2)(type-fest@0.21.3)(typescript@4.9.5)
+        version: 5.0.1(@babel/plugin-syntax-flow@7.26.0(@babel/core@7.29.7))(@babel/plugin-transform-react-jsx@7.25.9(@babel/core@7.29.7))(@types/babel__core@7.20.5)(esbuild@0.13.15)(eslint@7.32.0)(react@19.2.8)(type-fest@0.21.3)(typescript@4.9.5)
       web-vitals:
         specifier: ^6.0.1
         version: 6.0.1
@@ -5140,10 +5140,10 @@ packages:
       typescript:
         optional: true
 
-  react-dom@17.0.2:
-    resolution: {integrity: sha512-s4h96KtLDUQlsENhMn1ar8t2bEa+q/YAtj8pPPdIjPDGBDIVNsrD9aXNWqspUe6AzKCIG0C1HZZLqLV7qpOBGA==}
+  react-dom@19.2.8:
+    resolution: {integrity: sha512-rVprimfGBG3DR+Tq0IQG2DT5PxKth1WIGDmj5yPmlzr4YBe7uyE+Du4oVqTDXZSHGGGXRtTJEGSSePyQCMBglQ==}
     peerDependencies:
-      react: 17.0.2
+      react: ^19.2.8
 
   react-error-overlay@6.0.11:
     resolution: {integrity: sha512-/6UZ2qgEyH2aqzYZgQPxEnz33NJ2gNsnHA2o5+o4wW9bLM/JYQitNP9xPhsXwC08hMMovfGe/8retsdDsczPRg==}
@@ -5201,8 +5201,8 @@ packages:
       react: '>=16.6.0'
       react-dom: '>=16.6.0'
 
-  react@17.0.2:
-    resolution: {integrity: sha512-gnhPt75i/dq/z3/6q/0asP78D0u592D5L1pd7M8P+dck6Fu/jJeL6iVVK23fptSUZj8Vjf++7wXA8UNclGQcbA==}
+  react@19.2.8:
+    resolution: {integrity: sha512-PWaYA1L/q9u2u7xYQi+Y3L3Yfnie7XyLeaJICV1MGD6LprsBxcAqGjYyr0eY3p+QdsA+x/Irkt4Qif8D63+Sbw==}
     engines: {node: '>=0.10.0'}
 
   read-cache@1.0.0:
@@ -5422,8 +5422,8 @@ packages:
     resolution: {integrity: sha512-5LBh1Tls8c9xgGjw3QrMwETmTMVk0oFgvrFSvWx62llR2hcEInrKNZ2GZCCuuy2lvWrdl5jhbpeqc5hRYKFOcw==}
     engines: {node: '>=10'}
 
-  scheduler@0.20.2:
-    resolution: {integrity: sha512-2eWfGgAqqWFGqtdMmcL5zCMK1U8KlXv8SQFGglL3CEtd0aDVDWgeF/YoCmvln55m5zSk3J/20hTaSBeSObsQDQ==}
+  scheduler@0.27.0:
+    resolution: {integrity: sha512-eNv+WrVbKu1f3vbYJT/xtiF5syA5HPIMtf9IgY/nKg0sWqzAUEvqY/xm7OcZc/qafLx/iO9FgOmeSAp4v5ti/Q==}
 
   schema-utils@2.7.0:
     resolution: {integrity: sha512-0ilKFI6QQF5nxDZLFn2dMjvc4hjg/Wkg7rHd3jK6/A4a1Hl9VFdQWvgB1UMGoU94pad1P/8N7fMcEnLnSiju8A==}
@@ -8135,17 +8135,17 @@ snapshots:
 
   '@emotion/memoize@0.9.0': {}
 
-  '@emotion/react@11.13.5(@types/react@18.3.12)(react@17.0.2)':
+  '@emotion/react@11.13.5(@types/react@18.3.12)(react@19.2.8)':
     dependencies:
       '@babel/runtime': 7.26.0
       '@emotion/babel-plugin': 11.13.5
       '@emotion/cache': 11.13.5
       '@emotion/serialize': 1.3.3
-      '@emotion/use-insertion-effect-with-fallbacks': 1.1.0(react@17.0.2)
+      '@emotion/use-insertion-effect-with-fallbacks': 1.1.0(react@19.2.8)
       '@emotion/utils': 1.4.2
       '@emotion/weak-memoize': 0.4.0
       hoist-non-react-statics: 3.3.2
-      react: 17.0.2
+      react: 19.2.8
     optionalDependencies:
       '@types/react': 18.3.12
     transitivePeerDependencies:
@@ -8161,16 +8161,16 @@ snapshots:
 
   '@emotion/sheet@1.4.0': {}
 
-  '@emotion/styled@11.13.5(@emotion/react@11.13.5(@types/react@18.3.12)(react@17.0.2))(@types/react@18.3.12)(react@17.0.2)':
+  '@emotion/styled@11.13.5(@emotion/react@11.13.5(@types/react@18.3.12)(react@19.2.8))(@types/react@18.3.12)(react@19.2.8)':
     dependencies:
       '@babel/runtime': 7.26.0
       '@emotion/babel-plugin': 11.13.5
       '@emotion/is-prop-valid': 1.3.1
-      '@emotion/react': 11.13.5(@types/react@18.3.12)(react@17.0.2)
+      '@emotion/react': 11.13.5(@types/react@18.3.12)(react@19.2.8)
       '@emotion/serialize': 1.3.3
-      '@emotion/use-insertion-effect-with-fallbacks': 1.1.0(react@17.0.2)
+      '@emotion/use-insertion-effect-with-fallbacks': 1.1.0(react@19.2.8)
       '@emotion/utils': 1.4.2
-      react: 17.0.2
+      react: 19.2.8
     optionalDependencies:
       '@types/react': 18.3.12
     transitivePeerDependencies:
@@ -8178,9 +8178,9 @@ snapshots:
 
   '@emotion/unitless@0.10.0': {}
 
-  '@emotion/use-insertion-effect-with-fallbacks@1.1.0(react@17.0.2)':
+  '@emotion/use-insertion-effect-with-fallbacks@1.1.0(react@19.2.8)':
     dependencies:
-      react: 17.0.2
+      react: 19.2.8
 
   '@emotion/utils@1.4.2': {}
 
@@ -8473,62 +8473,62 @@ snapshots:
 
   '@mui/core-downloads-tracker@5.16.7': {}
 
-  '@mui/icons-material@5.16.7(@mui/material@5.16.7(@emotion/react@11.13.5(@types/react@18.3.12)(react@17.0.2))(@emotion/styled@11.13.5(@emotion/react@11.13.5(@types/react@18.3.12)(react@17.0.2))(@types/react@18.3.12)(react@17.0.2))(@types/react@18.3.12)(react-dom@17.0.2(react@17.0.2))(react@17.0.2))(@types/react@18.3.12)(react@17.0.2)':
+  '@mui/icons-material@5.16.7(@mui/material@5.16.7(@emotion/react@11.13.5(@types/react@18.3.12)(react@19.2.8))(@emotion/styled@11.13.5(@emotion/react@11.13.5(@types/react@18.3.12)(react@19.2.8))(@types/react@18.3.12)(react@19.2.8))(@types/react@18.3.12)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(@types/react@18.3.12)(react@19.2.8)':
     dependencies:
       '@babel/runtime': 7.26.0
-      '@mui/material': 5.16.7(@emotion/react@11.13.5(@types/react@18.3.12)(react@17.0.2))(@emotion/styled@11.13.5(@emotion/react@11.13.5(@types/react@18.3.12)(react@17.0.2))(@types/react@18.3.12)(react@17.0.2))(@types/react@18.3.12)(react-dom@17.0.2(react@17.0.2))(react@17.0.2)
-      react: 17.0.2
+      '@mui/material': 5.16.7(@emotion/react@11.13.5(@types/react@18.3.12)(react@19.2.8))(@emotion/styled@11.13.5(@emotion/react@11.13.5(@types/react@18.3.12)(react@19.2.8))(@types/react@18.3.12)(react@19.2.8))(@types/react@18.3.12)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      react: 19.2.8
     optionalDependencies:
       '@types/react': 18.3.12
 
-  '@mui/material@5.16.7(@emotion/react@11.13.5(@types/react@18.3.12)(react@17.0.2))(@emotion/styled@11.13.5(@emotion/react@11.13.5(@types/react@18.3.12)(react@17.0.2))(@types/react@18.3.12)(react@17.0.2))(@types/react@18.3.12)(react-dom@17.0.2(react@17.0.2))(react@17.0.2)':
+  '@mui/material@5.16.7(@emotion/react@11.13.5(@types/react@18.3.12)(react@19.2.8))(@emotion/styled@11.13.5(@emotion/react@11.13.5(@types/react@18.3.12)(react@19.2.8))(@types/react@18.3.12)(react@19.2.8))(@types/react@18.3.12)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
     dependencies:
       '@babel/runtime': 7.26.0
       '@mui/core-downloads-tracker': 5.16.7
-      '@mui/system': 5.16.7(@emotion/react@11.13.5(@types/react@18.3.12)(react@17.0.2))(@emotion/styled@11.13.5(@emotion/react@11.13.5(@types/react@18.3.12)(react@17.0.2))(@types/react@18.3.12)(react@17.0.2))(@types/react@18.3.12)(react@17.0.2)
+      '@mui/system': 5.16.7(@emotion/react@11.13.5(@types/react@18.3.12)(react@19.2.8))(@emotion/styled@11.13.5(@emotion/react@11.13.5(@types/react@18.3.12)(react@19.2.8))(@types/react@18.3.12)(react@19.2.8))(@types/react@18.3.12)(react@19.2.8)
       '@mui/types': 7.2.19(@types/react@18.3.12)
-      '@mui/utils': 5.16.6(@types/react@18.3.12)(react@17.0.2)
+      '@mui/utils': 5.16.6(@types/react@18.3.12)(react@19.2.8)
       '@popperjs/core': 2.11.8
       '@types/react-transition-group': 4.4.11
       clsx: 2.1.1
       csstype: 3.1.3
       prop-types: 15.8.1
-      react: 17.0.2
-      react-dom: 17.0.2(react@17.0.2)
+      react: 19.2.8
+      react-dom: 19.2.8(react@19.2.8)
       react-is: 18.3.1
-      react-transition-group: 4.4.5(react-dom@17.0.2(react@17.0.2))(react@17.0.2)
+      react-transition-group: 4.4.5(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
     optionalDependencies:
-      '@emotion/react': 11.13.5(@types/react@18.3.12)(react@17.0.2)
-      '@emotion/styled': 11.13.5(@emotion/react@11.13.5(@types/react@18.3.12)(react@17.0.2))(@types/react@18.3.12)(react@17.0.2)
+      '@emotion/react': 11.13.5(@types/react@18.3.12)(react@19.2.8)
+      '@emotion/styled': 11.13.5(@emotion/react@11.13.5(@types/react@18.3.12)(react@19.2.8))(@types/react@18.3.12)(react@19.2.8)
       '@types/react': 18.3.12
 
-  '@mui/private-theming@5.16.6(@types/react@18.3.12)(react@17.0.2)':
+  '@mui/private-theming@5.16.6(@types/react@18.3.12)(react@19.2.8)':
     dependencies:
       '@babel/runtime': 7.26.0
-      '@mui/utils': 5.16.6(@types/react@18.3.12)(react@17.0.2)
+      '@mui/utils': 5.16.6(@types/react@18.3.12)(react@19.2.8)
       prop-types: 15.8.1
-      react: 17.0.2
+      react: 19.2.8
     optionalDependencies:
       '@types/react': 18.3.12
 
-  '@mui/styled-engine@5.16.6(@emotion/react@11.13.5(@types/react@18.3.12)(react@17.0.2))(@emotion/styled@11.13.5(@emotion/react@11.13.5(@types/react@18.3.12)(react@17.0.2))(@types/react@18.3.12)(react@17.0.2))(react@17.0.2)':
+  '@mui/styled-engine@5.16.6(@emotion/react@11.13.5(@types/react@18.3.12)(react@19.2.8))(@emotion/styled@11.13.5(@emotion/react@11.13.5(@types/react@18.3.12)(react@19.2.8))(@types/react@18.3.12)(react@19.2.8))(react@19.2.8)':
     dependencies:
       '@babel/runtime': 7.26.0
       '@emotion/cache': 11.13.5
       csstype: 3.1.3
       prop-types: 15.8.1
-      react: 17.0.2
+      react: 19.2.8
     optionalDependencies:
-      '@emotion/react': 11.13.5(@types/react@18.3.12)(react@17.0.2)
-      '@emotion/styled': 11.13.5(@emotion/react@11.13.5(@types/react@18.3.12)(react@17.0.2))(@types/react@18.3.12)(react@17.0.2)
+      '@emotion/react': 11.13.5(@types/react@18.3.12)(react@19.2.8)
+      '@emotion/styled': 11.13.5(@emotion/react@11.13.5(@types/react@18.3.12)(react@19.2.8))(@types/react@18.3.12)(react@19.2.8)
 
-  '@mui/styles@5.16.7(@types/react@18.3.12)(react@17.0.2)':
+  '@mui/styles@5.16.7(@types/react@18.3.12)(react@19.2.8)':
     dependencies:
       '@babel/runtime': 7.26.0
       '@emotion/hash': 0.9.2
-      '@mui/private-theming': 5.16.6(@types/react@18.3.12)(react@17.0.2)
+      '@mui/private-theming': 5.16.6(@types/react@18.3.12)(react@19.2.8)
       '@mui/types': 7.2.19(@types/react@18.3.12)
-      '@mui/utils': 5.16.6(@types/react@18.3.12)(react@17.0.2)
+      '@mui/utils': 5.16.6(@types/react@18.3.12)(react@19.2.8)
       clsx: 2.1.1
       csstype: 3.1.3
       hoist-non-react-statics: 3.3.2
@@ -8541,38 +8541,38 @@ snapshots:
       jss-plugin-rule-value-function: 10.10.0
       jss-plugin-vendor-prefixer: 10.10.0
       prop-types: 15.8.1
-      react: 17.0.2
+      react: 19.2.8
     optionalDependencies:
       '@types/react': 18.3.12
 
-  '@mui/system@5.16.7(@emotion/react@11.13.5(@types/react@18.3.12)(react@17.0.2))(@emotion/styled@11.13.5(@emotion/react@11.13.5(@types/react@18.3.12)(react@17.0.2))(@types/react@18.3.12)(react@17.0.2))(@types/react@18.3.12)(react@17.0.2)':
+  '@mui/system@5.16.7(@emotion/react@11.13.5(@types/react@18.3.12)(react@19.2.8))(@emotion/styled@11.13.5(@emotion/react@11.13.5(@types/react@18.3.12)(react@19.2.8))(@types/react@18.3.12)(react@19.2.8))(@types/react@18.3.12)(react@19.2.8)':
     dependencies:
       '@babel/runtime': 7.26.0
-      '@mui/private-theming': 5.16.6(@types/react@18.3.12)(react@17.0.2)
-      '@mui/styled-engine': 5.16.6(@emotion/react@11.13.5(@types/react@18.3.12)(react@17.0.2))(@emotion/styled@11.13.5(@emotion/react@11.13.5(@types/react@18.3.12)(react@17.0.2))(@types/react@18.3.12)(react@17.0.2))(react@17.0.2)
+      '@mui/private-theming': 5.16.6(@types/react@18.3.12)(react@19.2.8)
+      '@mui/styled-engine': 5.16.6(@emotion/react@11.13.5(@types/react@18.3.12)(react@19.2.8))(@emotion/styled@11.13.5(@emotion/react@11.13.5(@types/react@18.3.12)(react@19.2.8))(@types/react@18.3.12)(react@19.2.8))(react@19.2.8)
       '@mui/types': 7.2.19(@types/react@18.3.12)
-      '@mui/utils': 5.16.6(@types/react@18.3.12)(react@17.0.2)
+      '@mui/utils': 5.16.6(@types/react@18.3.12)(react@19.2.8)
       clsx: 2.1.1
       csstype: 3.1.3
       prop-types: 15.8.1
-      react: 17.0.2
+      react: 19.2.8
     optionalDependencies:
-      '@emotion/react': 11.13.5(@types/react@18.3.12)(react@17.0.2)
-      '@emotion/styled': 11.13.5(@emotion/react@11.13.5(@types/react@18.3.12)(react@17.0.2))(@types/react@18.3.12)(react@17.0.2)
+      '@emotion/react': 11.13.5(@types/react@18.3.12)(react@19.2.8)
+      '@emotion/styled': 11.13.5(@emotion/react@11.13.5(@types/react@18.3.12)(react@19.2.8))(@types/react@18.3.12)(react@19.2.8)
       '@types/react': 18.3.12
 
   '@mui/types@7.2.19(@types/react@18.3.12)':
     optionalDependencies:
       '@types/react': 18.3.12
 
-  '@mui/utils@5.16.6(@types/react@18.3.12)(react@17.0.2)':
+  '@mui/utils@5.16.6(@types/react@18.3.12)(react@19.2.8)':
     dependencies:
       '@babel/runtime': 7.26.0
       '@mui/types': 7.2.19(@types/react@18.3.12)
       '@types/prop-types': 15.7.13
       clsx: 2.1.1
       prop-types: 15.8.1
-      react: 17.0.2
+      react: 19.2.8
       react-is: 18.3.1
     optionalDependencies:
       '@types/react': 18.3.12
@@ -8613,15 +8613,15 @@ snapshots:
 
   '@popperjs/core@2.11.8': {}
 
-  '@reduxjs/toolkit@1.9.7(react-redux@7.2.9(react-dom@17.0.2(react@17.0.2))(react@17.0.2))(react@17.0.2)':
+  '@reduxjs/toolkit@1.9.7(react-redux@7.2.9(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)':
     dependencies:
       immer: 9.0.21
       redux: 4.2.1
       redux-thunk: 2.4.2(redux@4.2.1)
       reselect: 4.1.8
     optionalDependencies:
-      react: 17.0.2
-      react-redux: 7.2.9(react-dom@17.0.2(react@17.0.2))(react@17.0.2)
+      react: 19.2.8
+      react-redux: 7.2.9(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
 
   '@rollup/plugin-babel@5.3.1(@babel/core@7.26.0)(@types/babel__core@7.20.5)(rollup@2.79.2)':
     dependencies:
@@ -8776,12 +8776,12 @@ snapshots:
       lodash: 4.17.21
       redent: 3.0.0
 
-  '@testing-library/react@11.2.7(react-dom@17.0.2(react@17.0.2))(react@17.0.2)':
+  '@testing-library/react@11.2.7(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
     dependencies:
       '@babel/runtime': 7.26.0
       '@testing-library/dom': 7.31.2
-      react: 17.0.2
-      react-dom: 17.0.2(react@17.0.2)
+      react: 19.2.8
+      react-dom: 19.2.8(react@19.2.8)
 
   '@testing-library/user-event@12.8.3(@testing-library/dom@7.31.2)':
     dependencies:
@@ -13062,12 +13062,10 @@ snapshots:
       - supports-color
       - vue-template-compiler
 
-  react-dom@17.0.2(react@17.0.2):
+  react-dom@19.2.8(react@19.2.8):
     dependencies:
-      loose-envify: 1.4.0
-      object-assign: 4.1.1
-      react: 17.0.2
-      scheduler: 0.20.2
+      react: 19.2.8
+      scheduler: 0.27.0
 
   react-error-overlay@6.0.11: {}
 
@@ -13077,32 +13075,32 @@ snapshots:
 
   react-is@18.3.1: {}
 
-  react-redux@7.2.9(react-dom@17.0.2(react@17.0.2))(react@17.0.2):
+  react-redux@7.2.9(react-dom@19.2.8(react@19.2.8))(react@19.2.8):
     dependencies:
       '@babel/runtime': 7.26.0
       '@types/react-redux': 7.1.34
       hoist-non-react-statics: 3.3.2
       loose-envify: 1.4.0
       prop-types: 15.8.1
-      react: 17.0.2
+      react: 19.2.8
       react-is: 17.0.2
     optionalDependencies:
-      react-dom: 17.0.2(react@17.0.2)
+      react-dom: 19.2.8(react@19.2.8)
 
   react-refresh@0.11.0: {}
 
-  react-router-dom@5.3.4(react@17.0.2):
+  react-router-dom@5.3.4(react@19.2.8):
     dependencies:
       '@babel/runtime': 7.26.0
       history: 4.10.1
       loose-envify: 1.4.0
       prop-types: 15.8.1
-      react: 17.0.2
-      react-router: 5.3.4(react@17.0.2)
+      react: 19.2.8
+      react-router: 5.3.4(react@19.2.8)
       tiny-invariant: 1.3.3
       tiny-warning: 1.0.3
 
-  react-router@5.3.4(react@17.0.2):
+  react-router@5.3.4(react@19.2.8):
     dependencies:
       '@babel/runtime': 7.26.0
       history: 4.10.1
@@ -13110,12 +13108,12 @@ snapshots:
       loose-envify: 1.4.0
       path-to-regexp: 1.9.0
       prop-types: 15.8.1
-      react: 17.0.2
+      react: 19.2.8
       react-is: 16.13.1
       tiny-invariant: 1.3.3
       tiny-warning: 1.0.3
 
-  react-scripts@5.0.1(@babel/plugin-syntax-flow@7.26.0(@babel/core@7.29.7))(@babel/plugin-transform-react-jsx@7.25.9(@babel/core@7.29.7))(@types/babel__core@7.20.5)(esbuild@0.13.15)(eslint@7.32.0)(react@17.0.2)(type-fest@0.21.3)(typescript@4.9.5):
+  react-scripts@5.0.1(@babel/plugin-syntax-flow@7.26.0(@babel/core@7.29.7))(@babel/plugin-transform-react-jsx@7.25.9(@babel/core@7.29.7))(@types/babel__core@7.20.5)(esbuild@0.13.15)(eslint@7.32.0)(react@19.2.8)(type-fest@0.21.3)(typescript@4.9.5):
     dependencies:
       '@babel/core': 7.26.0
       '@pmmmwh/react-refresh-webpack-plugin': 0.5.15(react-refresh@0.11.0)(type-fest@0.21.3)(webpack-dev-server@4.15.2(webpack@5.96.1(esbuild@0.13.15)))(webpack@5.96.1(esbuild@0.13.15))
@@ -13149,7 +13147,7 @@ snapshots:
       postcss-normalize: 10.0.1(browserslist@4.24.2)(postcss@8.4.49)
       postcss-preset-env: 7.8.3(postcss@8.4.49)
       prompts: 2.4.2
-      react: 17.0.2
+      react: 19.2.8
       react-app-polyfill: 3.0.0
       react-dev-utils: 12.0.1(eslint@7.32.0)(typescript@4.9.5)(webpack@5.96.1(esbuild@0.13.15))
       react-refresh: 0.11.0
@@ -13202,19 +13200,16 @@ snapshots:
       - webpack-hot-middleware
       - webpack-plugin-serve
 
-  react-transition-group@4.4.5(react-dom@17.0.2(react@17.0.2))(react@17.0.2):
+  react-transition-group@4.4.5(react-dom@19.2.8(react@19.2.8))(react@19.2.8):
     dependencies:
       '@babel/runtime': 7.26.0
       dom-helpers: 5.2.1
       loose-envify: 1.4.0
       prop-types: 15.8.1
-      react: 17.0.2
-      react-dom: 17.0.2(react@17.0.2)
+      react: 19.2.8
+      react-dom: 19.2.8(react@19.2.8)
 
-  react@17.0.2:
-    dependencies:
-      loose-envify: 1.4.0
-      object-assign: 4.1.1
+  react@19.2.8: {}
 
   read-cache@1.0.0:
     dependencies:
@@ -13430,10 +13425,7 @@ snapshots:
     dependencies:
       xmlchars: 2.2.0
 
-  scheduler@0.20.2:
-    dependencies:
-      loose-envify: 1.4.0
-      object-assign: 4.1.1
+  scheduler@0.27.0: {}
 
   schema-utils@2.7.0:
     dependencies:
