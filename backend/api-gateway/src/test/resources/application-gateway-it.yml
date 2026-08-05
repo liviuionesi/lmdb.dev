@@ -90,6 +90,13 @@ spring:
               predicates:
                 - Path=/api/v1/actors/**
 
+            # --- AI service ---
+            - id: ai-service
+              uri: http://localhost:9976
+              predicates:
+                - Path=/api/v1/ai/**, /api/v1/recommendations/**
+
+
             # --- TMDB v3 facade routes (#33) → WireMock stand-in downstreams.
             # Predicates mirror production; note /search is split by resource
             # type across the two routes below. ---

@@ -123,6 +123,8 @@ public class JwtAuthenticationFilter implements WebFilter {
         || path.startsWith("/actuator")
         || path.startsWith("/fallback")
         || (path.startsWith("/api/v1/movies") && !path.contains("/admin"))
-        || (path.startsWith("/api/v1/actors") && !path.contains("/admin"));
+        || (path.startsWith("/api/v1/actors") && !path.contains("/admin"))
+        || path.startsWith("/api/v1/ai");
+
   }
 }
