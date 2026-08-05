@@ -133,15 +133,12 @@ class TmdbAnalyticsConsumerIntegrationTest extends AbstractMongoIntegrationTest 
               assertThat(counts).hasSize(1);
             });
 
-    // Count must be exactly 1 — the duplicate eventId was detected via $addToSet
-    // Note: $addToSet prevents re-inserting the same eventId but $inc still fires.
-    // The idempotency guarantee means the business count reflects real unique events.
+    // Count must be exactly 1 — duplicate eventId is detected and skipped by consumer
     RequestCount count = requestCountRepository.findAll().get(0);
     assertThat(count.key()).isEqualTo(canonicalKey);
-    // Both messages arrive; count=2 for first, +0 for second (addToSet dedup tracked at consumer).
-    // The actual idempotency enforcement is that the eventId set grows by only 1 element total.
-    assertThat(count.count()).isGreaterThanOrEqualTo(1L);
+    assertThat(count.count()).isEqualTo(1L);
   }
+
 
   /**
    * Verifies that multiple distinct keys each get their own counter and that the most-requested

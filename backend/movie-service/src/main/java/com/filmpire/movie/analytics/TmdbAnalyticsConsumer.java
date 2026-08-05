@@ -74,6 +74,21 @@ public class TmdbAnalyticsConsumer {
           event.key(),
           offset);
 
+      // Idempotency check: skip processing if this eventId was already processed for this key
+      Query existsQuery =
+          Query.query(
+              Criteria.where(FIELD_ID)
+                  .is(event.key())
+                  .and(FIELD_PROCESSED_EVENT_IDS)
+                  .is(event.eventId()));
+      if (mongoTemplate.exists(existsQuery, RequestCount.class)) {
+        log.debug(
+            "Event eventId={} for key={} was already processed; skipping replay",
+            event.eventId(),
+            event.key());
+        return;
+      }
+
       // Idempotent atomic upsert: increment count + track processed event ID
       Query query = Query.query(Criteria.where(FIELD_ID).is(event.key()));
       Update update =
@@ -82,7 +97,6 @@ public class TmdbAnalyticsConsumer {
               .set(FIELD_ENDPOINT_TYPE, event.endpointType())
               .set(FIELD_LAST_UPDATED_AT, Instant.now())
               .setOnInsert(FIELD_KEY, event.key())
-              // addToSet is idempotent — replaying the same eventId does NOT increment count again
               .addToSet(FIELD_PROCESSED_EVENT_IDS, event.eventId());
 
       mongoTemplate.findAndModify(
@@ -92,6 +106,7 @@ public class TmdbAnalyticsConsumer {
           RequestCount.class);
 
       log.debug("Upserted request count for key={}", event.key());
+
 
     } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
       log.warn(
