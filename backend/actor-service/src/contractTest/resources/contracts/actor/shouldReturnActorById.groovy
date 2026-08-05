@@ -7,10 +7,8 @@ Contract.make {
     request {
         method GET()
         url "/api/v1/actors/819"
-        headers {
-            contentType applicationJson()
-        }
     }
+
     response {
         status OK()
         headers {
