@@ -57,4 +57,12 @@ bootJar {
     archiveVersion = project.version
 }
 
+tasks.named('test') {
+    dependsOn ':backend:movie-service:publishToMavenLocal'
+    dependsOn ':backend:actor-service:publishToMavenLocal'
+    dependsOn ':backend:user-service:publishToMavenLocal'
+    dependsOn ':backend:ai-service:publishToMavenLocal'
+}
+
+
 
