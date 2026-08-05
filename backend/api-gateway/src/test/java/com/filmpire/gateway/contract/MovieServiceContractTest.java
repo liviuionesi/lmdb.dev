@@ -54,7 +54,8 @@ class MovieServiceContractTest {
   static void redisProperties(DynamicPropertyRegistry registry) {
     registry.add("spring.data.redis.host", redis::getHost);
     registry.add("spring.data.redis.port", () -> redis.getMappedPort(6379));
-    registry.add("spring.cloud.gateway.routes[2].uri", () -> "http://localhost:9973");
+    registry.add("movie-service.uri", () -> "http://localhost:9973");
+
   }
 
   /**

@@ -64,7 +64,7 @@ spring:
 
             # --- Movie service (public GET; also serves /api/v1/genres) ---
             - id: movie-service
-              uri: http://localhost:9971
+              uri: ${movie-service.uri:http://localhost:9971}
               predicates:
                 - Path=/api/v1/movies/**,/api/v1/genres/**
               filters:
@@ -75,7 +75,7 @@ spring:
 
             # --- User service (protected by Spring Security) ---
             - id: user-service
-              uri: http://localhost:9971
+              uri: ${user-service.uri:http://localhost:9971}
               predicates:
                 - Path=/api/v1/users/**
               filters:
@@ -86,15 +86,16 @@ spring:
 
             # --- Actor service (public GET) → the actor WireMock on 9972 ---
             - id: actor-service
-              uri: http://localhost:9972
+              uri: ${actor-service.uri:http://localhost:9972}
               predicates:
                 - Path=/api/v1/actors/**
 
             # --- AI service ---
             - id: ai-service
-              uri: http://localhost:9976
+              uri: ${ai-service.uri:http://localhost:9976}
               predicates:
                 - Path=/api/v1/ai/**, /api/v1/recommendations/**
+
 
 
             # --- TMDB v3 facade routes (#33) → WireMock stand-in downstreams.

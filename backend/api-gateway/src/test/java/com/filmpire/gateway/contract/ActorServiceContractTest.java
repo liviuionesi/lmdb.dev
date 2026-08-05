@@ -54,7 +54,8 @@ class ActorServiceContractTest {
   static void redisProperties(DynamicPropertyRegistry registry) {
     registry.add("spring.data.redis.host", redis::getHost);
     registry.add("spring.data.redis.port", () -> redis.getMappedPort(6379));
-    registry.add("spring.cloud.gateway.routes[4].uri", () -> "http://localhost:9974");
+    registry.add("actor-service.uri", () -> "http://localhost:9974");
+
   }
 
   /**

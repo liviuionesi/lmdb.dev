@@ -62,7 +62,8 @@ class UserServiceContractTest {
   static void redisProperties(DynamicPropertyRegistry registry) {
     registry.add("spring.data.redis.host", redis::getHost);
     registry.add("spring.data.redis.port", () -> redis.getMappedPort(6379));
-    registry.add("spring.cloud.gateway.routes[3].uri", () -> "http://localhost:9975");
+    registry.add("user-service.uri", () -> "http://localhost:9975");
+
   }
 
   /**

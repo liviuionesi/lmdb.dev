@@ -56,7 +56,8 @@ class AiServiceContractTest {
   static void redisProperties(DynamicPropertyRegistry registry) {
     registry.add("spring.data.redis.host", redis::getHost);
     registry.add("spring.data.redis.port", () -> redis.getMappedPort(6379));
-    registry.add("spring.cloud.gateway.routes[5].uri", () -> "http://localhost:9976");
+    registry.add("ai-service.uri", () -> "http://localhost:9976");
+
   }
 
   /**
