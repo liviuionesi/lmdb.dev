@@ -12,6 +12,15 @@ module.exports = {
     ecmaFeatures: {
       jsx: true,
     },
+    // requireConfigFile: false + an inline preset lets @babel/eslint-parser
+    // parse JSX without a project-wide Babel config file. Previously relied
+    // on .babelrc's "babel-preset-react-app", which shipped inside
+    // react-scripts and no longer exists now that Vite (esbuild) has
+    // replaced it as the actual build/transform toolchain (#125).
+    requireConfigFile: false,
+    babelOptions: {
+      presets: ['@babel/preset-react'],
+    },
   },
   settings: {
     react: {
