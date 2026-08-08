@@ -1,6 +1,6 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 
-const filmpireApiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8080';
+const filmpireApiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
 export const getMediaUrl = (url) => {
   if (!url) return null;

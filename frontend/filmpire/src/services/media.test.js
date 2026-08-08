@@ -19,7 +19,7 @@ describe('media service', () => {
 
     it('prepends API gateway URL when URL is relative', () => {
       const relativeUrl = '/api/v1/media/uuid-123/download';
-      const expectedPrefix = process.env.REACT_APP_API_URL || 'http://localhost:8080';
+      const expectedPrefix = import.meta.env.VITE_API_URL || 'http://localhost:8080';
       expect(getMediaUrl(relativeUrl)).toBe(`${expectedPrefix}${relativeUrl}`);
     });
   });

@@ -12,7 +12,7 @@ import { encodeToWav } from '../../utils/wavEncoder';
 import { parseVoiceCommand } from '../../utils/voiceCommands';
 import { useGetGenresQuery } from '../../services/TMDB';
 
-const aiServiceUrl = process.env.REACT_APP_API_URL || 'http://localhost:8080';
+const aiServiceUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
 /**
  * Click-to-talk voice control (#68): records a

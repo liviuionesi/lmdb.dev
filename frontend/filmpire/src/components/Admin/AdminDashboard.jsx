@@ -7,10 +7,10 @@ import { userSelector } from '../../features/auth';
 import { useGetProfileQuery } from '../../services/user';
 import StatusCard from './StatusCard';
 
-const filmpireApiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8080';
-const discoveryUrl = process.env.REACT_APP_DISCOVERY_URL || 'http://localhost:8761';
-const kibanaUrl = process.env.REACT_APP_KIBANA_URL || 'http://localhost:5601';
-const grafanaUrl = process.env.REACT_APP_GRAFANA_URL;
+const filmpireApiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+const discoveryUrl = import.meta.env.VITE_DISCOVERY_URL || 'http://localhost:8761';
+const kibanaUrl = import.meta.env.VITE_KIBANA_URL || 'http://localhost:5601';
+const grafanaUrl = import.meta.env.VITE_GRAFANA_URL;
 
 /**
  * Read-only ops view: one card per infrastructure tool this stack runs
@@ -91,7 +91,7 @@ const AdminDashboard = () => {
               grafanaUrl
                 ? 'Dashboards and alerts (deployed stack).'
                 : 'Raw Prometheus metrics from the gateway. Grafana itself only '
-                  + 'runs on the minikube/k8s deployment — set REACT_APP_GRAFANA_URL '
+                  + 'runs on the minikube/k8s deployment — set VITE_GRAFANA_URL '
                   + 'to link there instead.'
             }
             url={grafanaUrl || `${filmpireApiUrl}/actuator/prometheus`}
