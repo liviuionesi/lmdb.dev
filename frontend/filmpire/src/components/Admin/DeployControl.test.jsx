@@ -21,6 +21,9 @@ describe('DeployControl', () => {
       if (url === '/api/dispatch') {
         return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ ok: true }) });
       }
+      if (url.startsWith('https://raw.githubusercontent.com')) {
+        return Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve('https://fresh-tunnel.trycloudflare.com\n') });
+      }
       return Promise.resolve({ ok: true, status: 200 });
     });
   });
@@ -113,5 +116,39 @@ describe('DeployControl', () => {
     fireEvent.click(localBtn);
 
     expect(screen.getByRole('button', { name: /Connect Local Backend/i })).toBeInTheDocument();
+  });
+
+  it('connecting local backend looks up the currently published tunnel URL rather than a hardcoded one', async () => {
+    renderDeployControl();
+
+    fireEvent.click(screen.getByRole('button', { name: /Select Local Tunnel/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Connect Local Backend/i }));
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('https://raw.githubusercontent.com'),
+        expect.anything(),
+      );
+      expect(localStorage.getItem('filmpire_api_url')).toBe('https://fresh-tunnel.trycloudflare.com');
+      expect(screen.getByText(/Local Cloudflare Tunnel linked \(https:\/\/fresh-tunnel\.trycloudflare\.com\)/i)).toBeInTheDocument();
+    });
+  });
+
+  it('shows an error when connecting local backend and no tunnel is currently published', async () => {
+    global.fetch = vi.fn().mockImplementation((url) => {
+      if (url.startsWith('https://raw.githubusercontent.com')) {
+        return Promise.resolve({ ok: false, status: 404 });
+      }
+      return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ status: 'UP' }) });
+    });
+    renderDeployControl();
+
+    fireEvent.click(screen.getByRole('button', { name: /Select Local Tunnel/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Connect Local Backend/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/No local tunnel is currently published/i)).toBeInTheDocument();
+      expect(localStorage.getItem('filmpire_api_url')).toBeNull();
+    });
   });
 });

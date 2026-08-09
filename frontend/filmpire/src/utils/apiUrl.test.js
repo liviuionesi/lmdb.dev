@@ -1,0 +1,176 @@
+// Tests apiUrl.js's backend URL resolution waterfall and the joinUrl logic
+// exercised through createDynamicBaseQuery. Each network-waterfall test
+// resets modules (vi.resetModules + dynamic import) so the internal
+// resolution cache from one test can't leak into the next - the cache is
+// intentionally module-level, not exported, to keep resolveApiUrl()'s
+// public contract simple. VITE_API_URL is explicitly stubbed empty in every
+// test so local dev's own .env.local (which sets it to localhost:8080)
+// can't shadow the branch actually under test.
+const stubNonLocalhost = () => {
+  Object.defineProperty(window, 'location', {
+    writable: true,
+    value: { hostname: 'filmpire-microservices-tan.vercel.app' },
+  });
+};
+
+const restoreLocalhost = () => {
+  Object.defineProperty(window, 'location', {
+    writable: true,
+    value: { hostname: 'localhost' },
+  });
+};
+
+describe('apiUrl static overrides (no network involved)', () => {
+  let getApiUrl;
+  let resolveApiUrl;
+
+  beforeEach(async () => {
+    vi.resetModules();
+    vi.stubEnv('VITE_API_URL', '');
+    localStorage.clear();
+    restoreLocalhost();
+    ({ getApiUrl, resolveApiUrl } = await import('./apiUrl'));
+  });
+
+  afterEach(() => {
+    localStorage.clear();
+    delete global.fetch;
+    vi.unstubAllEnvs();
+  });
+
+  it('getApiUrl and resolveApiUrl both return the manual localStorage override when set', async () => {
+    localStorage.setItem('filmpire_api_url', 'https://manually-pinned.example.com');
+
+    expect(getApiUrl()).toBe('https://manually-pinned.example.com');
+    await expect(resolveApiUrl()).resolves.toBe('https://manually-pinned.example.com');
+  });
+
+  it('falls back to localhost:8080 when running on localhost, without any fetch calls', async () => {
+    global.fetch = vi.fn();
+
+    expect(getApiUrl()).toBe('http://localhost:8080');
+    await expect(resolveApiUrl()).resolves.toBe('http://localhost:8080');
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it('prefers VITE_API_URL when set at build time, over the localhost default', async () => {
+    vi.stubEnv('VITE_API_URL', 'https://pinned-build-target.example.com');
+    ({ getApiUrl, resolveApiUrl } = await import('./apiUrl'));
+
+    expect(getApiUrl()).toBe('https://pinned-build-target.example.com');
+    await expect(resolveApiUrl()).resolves.toBe('https://pinned-build-target.example.com');
+  });
+});
+
+describe('apiUrl health-checked waterfall (non-localhost)', () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.stubEnv('VITE_API_URL', '');
+    localStorage.clear();
+    stubNonLocalhost();
+  });
+
+  afterEach(() => {
+    localStorage.clear();
+    restoreLocalhost();
+    delete global.fetch;
+    vi.unstubAllEnvs();
+  });
+
+  it('resolves to the cloud URL when its health check succeeds', async () => {
+    global.fetch = vi.fn().mockResolvedValue({ ok: true });
+    const { resolveApiUrl } = await import('./apiUrl');
+
+    await expect(resolveApiUrl()).resolves.toBe('https://filmpire-api.duckdns.org');
+    expect(global.fetch).toHaveBeenCalledWith(
+      'https://filmpire-api.duckdns.org/actuator/health',
+      expect.objectContaining({ method: 'GET' }),
+    );
+  });
+
+  it('falls back to the published tunnel URL when the cloud health check fails and the tunnel is healthy', async () => {
+    global.fetch = vi.fn().mockImplementation((url) => {
+      if (url.startsWith('https://filmpire-api.duckdns.org')) {
+        return Promise.reject(new Error('unreachable'));
+      }
+      if (url.startsWith('https://raw.githubusercontent.com')) {
+        return Promise.resolve({ ok: true, text: () => Promise.resolve('https://current-tunnel.trycloudflare.com') });
+      }
+      if (url.startsWith('https://current-tunnel.trycloudflare.com')) {
+        return Promise.resolve({ ok: true });
+      }
+      throw new Error(`unexpected fetch: ${url}`);
+    });
+    const { resolveApiUrl } = await import('./apiUrl');
+
+    await expect(resolveApiUrl()).resolves.toBe('https://current-tunnel.trycloudflare.com');
+  });
+
+  it('falls back to the cloud URL as a last resort when both cloud and tunnel are unreachable', async () => {
+    global.fetch = vi.fn().mockRejectedValue(new Error('unreachable'));
+    const { resolveApiUrl } = await import('./apiUrl');
+
+    await expect(resolveApiUrl()).resolves.toBe('https://filmpire-api.duckdns.org');
+  });
+
+  it('caches a health-checked resolution instead of re-probing on every call', async () => {
+    global.fetch = vi.fn().mockResolvedValue({ ok: true });
+    const { resolveApiUrl } = await import('./apiUrl');
+
+    await resolveApiUrl();
+    await resolveApiUrl();
+
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('createDynamicBaseQuery URL joining', () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.stubEnv('VITE_API_URL', '');
+    localStorage.clear();
+    restoreLocalhost();
+  });
+
+  afterEach(() => {
+    localStorage.clear();
+    delete global.fetch;
+    vi.unstubAllEnvs();
+  });
+
+  it('joins baseUrl, prefix and path with exactly one slash regardless of leading/trailing slashes', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Headers({ 'content-type': 'application/json' }),
+      json: async () => ({}),
+      text: async () => '{}',
+      clone() { return this; },
+    });
+    const { createDynamicBaseQuery } = await import('./apiUrl');
+    const baseQuery = createDynamicBaseQuery('/api/v1');
+
+    await baseQuery('/media/upload', {}, {});
+
+    const request = global.fetch.mock.calls[0][0];
+    expect(request.url).toBe('http://localhost:8080/api/v1/media/upload');
+  });
+
+  it('treats an empty prefix as pass-through, for endpoints whose query already includes the full path', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Headers({ 'content-type': 'application/json' }),
+      json: async () => ({}),
+      text: async () => '{}',
+      clone() { return this; },
+    });
+    const { createDynamicBaseQuery } = await import('./apiUrl');
+    const baseQuery = createDynamicBaseQuery('');
+
+    await baseQuery('genre/movie/list?api_key=abc', {}, {});
+
+    const request = global.fetch.mock.calls[0][0];
+    expect(request.url).toBe('http://localhost:8080/genre/movie/list?api_key=abc');
+  });
+});

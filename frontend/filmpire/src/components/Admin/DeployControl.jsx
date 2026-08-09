@@ -24,9 +24,8 @@ import LaptopMacIcon from '@mui/icons-material/LaptopMac';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 
-import { getApiUrl } from '../../utils/apiUrl';
+import { getApiUrl, fetchPublishedTunnelUrl } from '../../utils/apiUrl';
 
-const ACTIVE_TUNNEL_URL = 'https://humanities-exactly-criterion-buyer.trycloudflare.com';
 const ADMIN_KEY_STORAGE_KEY = 'filmpire_admin_key';
 
 /**
@@ -140,8 +139,18 @@ function DeployControl({ apiUrl }) {
 
   const handleDeploy = async () => {
     if (cloudTarget === 'local') {
-      localStorage.setItem('filmpire_api_url', ACTIVE_TUNNEL_URL);
-      setStatusMessage(`Local Cloudflare Tunnel linked (${ACTIVE_TUNNEL_URL})! Verifying gateway health...`);
+      // Look up the tunnel's current URL rather than trusting a hardcoded
+      // one - cloudflared quick tunnels get a new random hostname every
+      // time start-tunnel.sh restarts them.
+      setStatusMessage('Looking up the currently published local tunnel URL...');
+      const tunnelUrl = await fetchPublishedTunnelUrl();
+      if (!tunnelUrl) {
+        setErrorMessage('No local tunnel is currently published. Run infrastructure/scripts/start-tunnel.sh (or start-infrastructure.sh --tunnel) first.');
+        setStatusMessage('');
+        return;
+      }
+      localStorage.setItem('filmpire_api_url', tunnelUrl);
+      setStatusMessage(`Local Cloudflare Tunnel linked (${tunnelUrl})! Verifying gateway health...`);
       await checkBackendHealth();
       return;
     }

@@ -44,16 +44,36 @@ for i in {1..20}; do
 done
 
 if [ -n "$TUNNEL_URL" ]; then
+  # 5. Publish the URL so the deployed frontend can find it without any
+  # manual step: cloudflared mints a new random hostname every restart, so
+  # apiUrl.js's health-check fallback fetches this file (via
+  # raw.githubusercontent.com) rather than trusting a hardcoded value.
+  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+  POINTER_FILE="$REPO_ROOT/infrastructure/tunnel-url.txt"
+  echo "$TUNNEL_URL" > "$POINTER_FILE"
+
+  if git -C "$REPO_ROOT" diff --quiet -- "$POINTER_FILE" 2>/dev/null; then
+    echo "ℹ️  Tunnel URL unchanged from last published value; nothing to push."
+  elif git -C "$REPO_ROOT" add "$POINTER_FILE" \
+    && git -C "$REPO_ROOT" commit -m "chore: publish local tunnel URL for FE auto-discovery (#151)" >/dev/null 2>&1 \
+    && git -C "$REPO_ROOT" push origin HEAD:develop >/dev/null 2>&1; then
+    echo "✅ Published tunnel URL to develop for automatic frontend discovery."
+  else
+    echo "⚠️  Could not publish the tunnel URL to develop (offline, or push rejected)." >&2
+    echo "   The deployed frontend will keep using the last published URL until this succeeds." >&2
+  fi
+
   echo ""
   echo "=================================================="
   echo "  🎉 Cloudflare Tunnel is LIVE!"
   echo "=================================================="
   echo "  Public URL: $TUNNEL_URL"
   echo ""
-  echo "  To connect your Vercel frontend:"
-  echo "  1. Open the Admin Dashboard on Vercel"
-  echo "  2. In Deploy Control, select 'Local Tunnel' & paste: $TUNNEL_URL"
-  echo "  Or set VITE_API_URL=$TUNNEL_URL in Vercel settings."
+  echo "  The deployed frontend picks this up automatically (within ~30s.,"
+  echo "  see apiUrl.js) whenever the cloud backend is unreachable - no"
+  echo "  manual step needed. To force it immediately in one browser, open"
+  echo "  the Admin Dashboard and select 'Local Tunnel'."
   echo "=================================================="
   echo "  To stop the tunnel, run: ./infrastructure/scripts/stop-tunnel.sh"
   echo "=================================================="

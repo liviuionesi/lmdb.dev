@@ -1,10 +1,16 @@
-import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import { createApi } from '@reduxjs/toolkit/query/react';
+import { createDynamicBaseQuery } from '../utils/apiUrl';
 
 const tmdbApiKey = import.meta.env.VITE_TMDB_KEY;
 
 export const tmdbApi = createApi({
   reducerPath: 'tmdbApi',
-  baseQuery: fetchBaseQuery({ baseUrl: import.meta.env.VITE_API_URL || 'https://api.themoviedb.org/3' }),
+  // Routes through our own gateway's TMDB-shaped facade (TmdbFacadeController)
+  // rather than the real themoviedb.org, resolved dynamically so it always
+  // targets whichever backend (cloud or local tunnel) is actually up. Empty
+  // prefix: these endpoints' query strings already include the full path
+  // (e.g. `genre/movie/list`), matching the facade's routes exactly.
+  baseQuery: createDynamicBaseQuery(''),
   endpoints: (builder) => ({
     //* Get Genres
     getGenres: builder.query({

@@ -6,7 +6,10 @@ import { configureStore } from '@reduxjs/toolkit';
 import { tmdbApi } from './TMDB';
 
 const apiKey = import.meta.env.VITE_TMDB_KEY;
-const baseUrl = import.meta.env.VITE_API_URL || 'https://api.themoviedb.org/3';
+// createDynamicBaseQuery resolves to this under jsdom's default
+// `window.location.hostname` ('localhost') without any network health
+// checks - see apiUrl.js's getStaticOverride().
+const baseUrl = 'http://localhost:8080';
 
 const buildStore = () => configureStore({
   reducer: { [tmdbApi.reducerPath]: tmdbApi.reducer },
@@ -32,6 +35,7 @@ describe('tmdbApi endpoint query builders', () => {
 
   afterEach(() => {
     delete global.fetch;
+    localStorage.clear();
   });
 
   // fetchBaseQuery passes fetch a Request object (not a plain string) once
