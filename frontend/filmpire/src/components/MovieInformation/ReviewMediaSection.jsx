@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { Box, Typography, Button, TextField, Grid, Modal, Alert, CircularProgress, Card, CardMedia, IconButton } from '@mui/material';
-import { AttachFile, PlayCircleOutline, Send, Close } from '@mui/icons-material';
+// MUI 9 removed the bare `PlayCircleOutline` export (deduped against the
+// identical SVG path already exposed as `PlayCircleOutlineOutlined`) — see #135.
+import { AttachFile, PlayCircleOutlineOutlined as PlayCircleOutline, Send, Close } from '@mui/icons-material';
 import { useSelector } from 'react-redux';
 import { userSelector } from '../../features/auth';
 import { useGetMediaForEntityQuery, useUploadMediaMutation, getMediaUrl } from '../../services/media';
 
-const ReviewMediaSection = ({ movieId }) => {
+function ReviewMediaSection({ movieId }) {
   const { isAuthenticated, user } = useSelector(userSelector);
   const [comment, setComment] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
@@ -81,7 +83,12 @@ const ReviewMediaSection = ({ movieId }) => {
   };
 
   return (
-    <Box marginTop="4rem" width="100%">
+    <Box
+      sx={{
+        marginTop: '4rem',
+        width: '100%',
+      }}
+    >
       <Typography variant="h4" gutterBottom>
         Fan Reviews & Proof Gallery
       </Typography>
@@ -112,8 +119,22 @@ const ReviewMediaSection = ({ movieId }) => {
             disabled={isUploading}
             sx={{ mb: 2 }}
           />
-          <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2}>
-            <Box display="flex" alignItems="center" gap={2}>
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: 2,
+            }}
+          >
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 2,
+              }}
+            >
               <Button
                 variant="outlined"
                 component="label"
@@ -147,12 +168,18 @@ const ReviewMediaSection = ({ movieId }) => {
             </Button>
           </Box>
           {validationError && (
-            <Box mt={2}>
+            <Box sx={{
+              mt: 2,
+            }}
+            >
               <Alert severity="error" onClose={() => setValidationError('')}>{validationError}</Alert>
             </Box>
           )}
           {successMessage && (
-            <Box mt={2}>
+            <Box sx={{
+              mt: 2,
+            }}
+            >
               <Alert severity="success" onClose={() => setSuccessMessage('')}>{successMessage}</Alert>
             </Box>
           )}
@@ -164,7 +191,13 @@ const ReviewMediaSection = ({ movieId }) => {
       )}
 
       {isFetching && (
-        <Box display="flex" justifyContent="center" my={3}>
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'center',
+            my: 3,
+          }}
+        >
           <CircularProgress />
         </Box>
       )}
@@ -176,7 +209,14 @@ const ReviewMediaSection = ({ movieId }) => {
             const isTextOnly = media.mediaType === 'ATTACHMENT' && media.mimeType === 'text/plain';
             const displayUrl = getMediaUrl(media.thumbnails?.medium || media.thumbnails?.original);
             return (
-              <Grid item xs={12} sm={isTextOnly ? 12 : 6} md={isTextOnly ? 12 : 4} key={media.id || media.storagePath}>
+              <Grid
+                key={media.id || media.storagePath}
+                size={{
+                  xs: 12,
+                  sm: isTextOnly ? 12 : 6,
+                  md: isTextOnly ? 12 : 4,
+                }}
+              >
                 <Card
                   sx={{
                     cursor: isTextOnly ? 'default' : 'pointer',
@@ -191,7 +231,10 @@ const ReviewMediaSection = ({ movieId }) => {
                   data-testid={`gallery-item-${media.id || 'default'}`}
                 >
                   {isTextOnly ? (
-                    <Box p={2}>
+                    <Box sx={{
+                      p: 2,
+                    }}
+                    >
                       <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', mb: 1 }}>
                         {media.description || media.originalFilename}
                       </Typography>
@@ -211,12 +254,14 @@ const ReviewMediaSection = ({ movieId }) => {
                         />
                       ) : (
                         <Box
-                          height="180"
-                          display="flex"
-                          flexDirection="column"
-                          justifyContent="center"
-                          alignItems="center"
-                          color="white"
+                          sx={{
+                            height: '180',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            color: 'white',
+                          }}
                         >
                           <PlayCircleOutline sx={{ fontSize: 48, mb: 1 }} />
                           <Typography variant="caption" noWrap sx={{ px: 1, maxWidth: '90%' }}>
@@ -225,18 +270,36 @@ const ReviewMediaSection = ({ movieId }) => {
                         </Box>
                       )}
                       <Box
-                        position="absolute"
-                        bottom={0}
-                        width="100%"
-                        bgcolor="rgba(0, 0, 0, 0.6)"
-                        p={0.5}
+                        sx={{
+                          position: 'absolute',
+                          bottom: 0,
+                          width: '100%',
+                          bgcolor: 'rgba(0, 0, 0, 0.6)',
+                          p: 0.5,
+                        }}
                       >
                         {media.description && (
-                          <Typography variant="caption" sx={{ color: '#dddddd' }} display="block" noWrap align="center">
+                          <Typography
+                            variant="caption"
+                            noWrap
+                            align="center"
+                            sx={{
+                              display: 'block',
+                              color: '#dddddd',
+                            }}
+                          >
                             {media.description}
                           </Typography>
                         )}
-                        <Typography variant="caption" sx={{ color: '#ffffff' }} display="block" noWrap align="center">
+                        <Typography
+                          variant="caption"
+                          noWrap
+                          align="center"
+                          sx={{
+                            display: 'block',
+                            color: '#ffffff',
+                          }}
+                        >
                           By @{media.uploadedBy || 'anonymous'}
                         </Typography>
                       </Box>
@@ -248,7 +311,13 @@ const ReviewMediaSection = ({ movieId }) => {
           })}
         </Grid>
       ) : (
-        <Box textAlign="center" py={3} color="textSecondary">
+        <Box
+          sx={{
+            textAlign: 'center',
+            py: 3,
+            color: 'textSecondary',
+          }}
+        >
           <Typography variant="body1">No review attachments uploaded for this movie yet. Be the first!</Typography>
         </Box>
       )}
@@ -259,7 +328,17 @@ const ReviewMediaSection = ({ movieId }) => {
         sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', p: 2 }}
         data-testid="lightbox-modal"
       >
-        <Box position="relative" bgcolor="background.paper" borderRadius={2} p={2} boxShadow={24} maxWidth="90vw" maxHeight="90vh">
+        <Box
+          sx={{
+            position: 'relative',
+            bgcolor: 'background.paper',
+            borderRadius: 2,
+            p: 2,
+            boxShadow: 24,
+            maxWidth: '90vw',
+            maxHeight: '90vh',
+          }}
+        >
           <IconButton
             onClick={() => setSelectedLightboxItem(null)}
             sx={{ position: 'absolute', right: 8, top: 8, zIndex: 10, bgcolor: 'background.paper' }}
@@ -268,7 +347,14 @@ const ReviewMediaSection = ({ movieId }) => {
             <Close />
           </IconButton>
           {selectedLightboxItem && (
-            <Box display="flex" flexDirection="column" alignItems="center" pt={3}>
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                pt: 3,
+              }}
+            >
               {selectedLightboxItem.mediaType === 'VIDEO' || selectedLightboxItem.mimeType?.startsWith('video/') ? (
                 <video
                   controls
@@ -296,6 +382,6 @@ const ReviewMediaSection = ({ movieId }) => {
       </Modal>
     </Box>
   );
-};
+}
 
 export default ReviewMediaSection;

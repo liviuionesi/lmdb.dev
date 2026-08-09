@@ -21,7 +21,7 @@ const grafanaUrl = import.meta.env.VITE_GRAFANA_URL;
  * Promoting an account to `ADMIN` currently requires a manual DB update —
  * there is no account-management UI for it yet.
  */
-const AdminDashboard = () => {
+function AdminDashboard() {
   const { isAuthenticated, user } = useSelector(userSelector);
   const hasStoredSession = !!localStorage.getItem('access_token');
 
@@ -41,7 +41,13 @@ const AdminDashboard = () => {
 
   if (!isAuthenticated && isLoading) {
     return (
-      <Box display="flex" justifyContent="center" sx={{ mt: 4 }}>
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          mt: 4,
+        }}
+      >
         <CircularProgress />
       </Box>
     );
@@ -61,14 +67,26 @@ const AdminDashboard = () => {
         a deep health check.
       </Typography>
       <Grid container spacing={2}>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid
+          size={{
+            xs: 12,
+            sm: 6,
+            md: 3,
+          }}
+        >
           <StatusCard
             title="Discovery (Eureka)"
             description="Service registry — which instances are registered and up."
             url={discoveryUrl}
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid
+          size={{
+            xs: 12,
+            sm: 6,
+            md: 3,
+          }}
+        >
           <StatusCard
             title="API Gateway"
             description="Gateway health and routing."
@@ -77,14 +95,26 @@ const AdminDashboard = () => {
             secondaryLabel="Routes"
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid
+          size={{
+            xs: 12,
+            sm: 6,
+            md: 3,
+          }}
+        >
           <StatusCard
             title="Kibana"
             description="Centralized logs (ELK stack)."
             url={kibanaUrl}
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid
+          size={{
+            xs: 12,
+            sm: 6,
+            md: 3,
+          }}
+        >
           <StatusCard
             title={grafanaUrl ? 'Grafana' : 'Metrics'}
             description={
@@ -100,6 +130,6 @@ const AdminDashboard = () => {
       </Grid>
     </Box>
   );
-};
+}
 
 export default AdminDashboard;

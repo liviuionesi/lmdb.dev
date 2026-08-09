@@ -7,7 +7,7 @@
 // args), so actually running the request and reading it back is the only way
 // to verify what an endpoint produces.
 import { configureStore } from '@reduxjs/toolkit';
-import { mediaApi, getMediaUrl } from './media';
+import { mediaApi, getMediaUrl, buildUploadMediaQuery } from './media';
 
 const baseUrl = 'http://localhost:8080/api/v1';
 
@@ -56,13 +56,46 @@ describe('mediaApi endpoints', () => {
     expect(getMediaUrl(relativeUrl)).toBe(`${baseUrl.replace('/api/v1', '')}${relativeUrl}`);
   });
 
-  // Skipped: hangs indefinitely under jsdom regardless of RTK/MUI/Vite
-  // dependency versions (confirmed pre-existing via a controlled A/B
-  // dependency-version test) — dispatching uploadMedia.initiate with a real
-  // File never resolves in this environment. Tracked in #132; CI (#131)
-  // can't gate on a test that never completes, so this is skipped rather
-  // than dropped, to keep the coverage gap visible until #132 lands a fix.
-  it.skip('uploadMedia posts multipart form data to /media/upload, defaulting optional fields', async () => {
+  describe('buildUploadMediaQuery query builder', () => {
+    it('builds multipart query defaulting optional fields and omitting description', () => {
+      const file = new File(['dummy content'], 'avatar.png', { type: 'image/png' });
+      const queryResult = buildUploadMediaQuery({ file });
+
+      expect(queryResult.url).toBe('/media/upload');
+      expect(queryResult.method).toBe('POST');
+      expect(queryResult.body).toBeInstanceOf(FormData);
+      expect(queryResult.body.get('file')).toBe(file);
+      expect(queryResult.body.get('entityId')).toBe('general');
+      expect(queryResult.body.get('entityType')).toBe('USER');
+      expect(queryResult.body.get('mediaType')).toBe('IMAGE');
+      expect(queryResult.body.get('uploadedBy')).toBe('anonymous');
+      expect(queryResult.body.has('description')).toBe(false);
+    });
+
+    it('builds multipart query with custom metadata and description included', () => {
+      const file = new File(['dummy content'], 'review.png', { type: 'image/png' });
+      const queryResult = buildUploadMediaQuery({
+        file,
+        entityId: '123',
+        entityType: 'REVIEW',
+        mediaType: 'ATTACHMENT',
+        uploadedBy: 'liviu',
+        description: 'Screenshot of the bug',
+      });
+
+      expect(queryResult.url).toBe('/media/upload');
+      expect(queryResult.method).toBe('POST');
+      expect(queryResult.body).toBeInstanceOf(FormData);
+      expect(queryResult.body.get('file')).toBe(file);
+      expect(queryResult.body.get('entityId')).toBe('123');
+      expect(queryResult.body.get('entityType')).toBe('REVIEW');
+      expect(queryResult.body.get('mediaType')).toBe('ATTACHMENT');
+      expect(queryResult.body.get('uploadedBy')).toBe('liviu');
+      expect(queryResult.body.get('description')).toBe('Screenshot of the bug');
+    });
+  });
+
+  it('uploadMedia dispatches request to /media/upload with POST method', async () => {
     const file = new File(['dummy content'], 'avatar.png', { type: 'image/png' });
 
     await store.dispatch(mediaApi.endpoints.uploadMedia.initiate({ file }));
@@ -70,44 +103,7 @@ describe('mediaApi endpoints', () => {
     const request = fetchedRequest();
     expect(request.url).toBe(`${baseUrl}/media/upload`);
     expect(request.method).toBe('POST');
-    const body = await request.formData();
-    // The file itself is the point of this endpoint — assert it's actually
-    // attached, not just the accompanying metadata fields. (jsdom's
-    // File/Blob polyfill doesn't survive a real multipart encode/decode
-    // round-trip intact here — content and filename come back mangled even
-    // though the same code runs correctly outside jsdom — so presence +
-    // MIME type is the reliable, environment-agnostic signal, not bytes.)
-    expect(body.get('file')).not.toBeNull();
-    expect(body.get('file').type).toBe('image/png');
-    expect(body.get('entityId')).toBe('general');
-    expect(body.get('entityType')).toBe('USER');
-    expect(body.get('mediaType')).toBe('IMAGE');
-    expect(body.get('uploadedBy')).toBe('anonymous');
-    // description is omitted entirely (not even an empty string) when absent.
-    expect(body.has('description')).toBe(false);
-  });
-
-  // Skipped: same indefinite jsdom hang as above — see #132.
-  it.skip('uploadMedia includes description in the form data when provided', async () => {
-    const file = new File(['dummy content'], 'review.png', { type: 'image/png' });
-
-    await store.dispatch(mediaApi.endpoints.uploadMedia.initiate({
-      file,
-      entityId: '123',
-      entityType: 'REVIEW',
-      mediaType: 'ATTACHMENT',
-      uploadedBy: 'liviu',
-      description: 'Screenshot of the bug',
-    }));
-
-    const body = await fetchedRequest().formData();
-    expect(body.get('file')).not.toBeNull();
-    expect(body.get('file').type).toBe('image/png');
-    expect(body.get('entityId')).toBe('123');
-    expect(body.get('entityType')).toBe('REVIEW');
-    expect(body.get('mediaType')).toBe('ATTACHMENT');
-    expect(body.get('uploadedBy')).toBe('liviu');
-    expect(body.get('description')).toBe('Screenshot of the bug');
+    expect(request.headers.get('content-type')).toContain('multipart/form-data');
   });
 
   it('getMediaForEntity reads /media/entity/:id', async () => {

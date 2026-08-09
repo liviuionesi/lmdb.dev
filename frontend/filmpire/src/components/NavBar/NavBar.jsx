@@ -14,7 +14,7 @@ import { clearAuthTokens } from '../../utils';
 import LoginDialog from './LoginDialog';
 import useStyles from './styles';
 
-const NavBar = () => {
+function NavBar() {
   const { isAuthenticated, user } = useSelector(userSelector);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
@@ -80,7 +80,12 @@ const NavBar = () => {
                 Login &nbsp; <AccountCircle />
               </Button>
             ) : (
-              <Box display="flex" alignItems="center">
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+              >
                 {user?.role === 'ADMIN' && (
                   <Button
                     color="inherit"
@@ -138,6 +143,6 @@ const NavBar = () => {
       <LoginDialog open={loginOpen} onClose={() => setLoginOpen(false)} />
     </>
   );
-};
+}
 
 export default NavBar;

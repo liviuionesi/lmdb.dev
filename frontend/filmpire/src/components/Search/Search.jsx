@@ -7,7 +7,7 @@ import { useLocation } from 'react-router-dom';
 import { searchMovie } from '../../features/currentGenreOrCategory';
 import useStyles from './styles';
 
-const Search = () => {
+function Search() {
   const [query, setQuery] = useState('');
   const { classes } = useStyles();
   const dispatch = useDispatch();
@@ -41,6 +41,6 @@ const Search = () => {
       />
     </div>
   );
-};
+}
 
 export default Search;

@@ -7,7 +7,9 @@ import { render, screen } from '@testing-library/react';
 
 import useServiceStatus from './useServiceStatus';
 
-const Probe = ({ url }) => <div>{useServiceStatus(url)}</div>;
+function Probe({ url }) {
+  return <div>{useServiceStatus(url)}</div>;
+}
 
 describe('useServiceStatus', () => {
   afterEach(() => {

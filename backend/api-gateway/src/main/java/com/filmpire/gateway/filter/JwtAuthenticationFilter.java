@@ -7,7 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
-import org.springframework.lang.NonNull;
+import jakarta.annotation.Nonnull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -40,8 +40,8 @@ public class JwtAuthenticationFilter implements WebFilter {
    * @return Mono&lt;Void&gt; representing the completion of filter processing
    */
   @Override
-  @NonNull
-  public Mono<Void> filter(@NonNull ServerWebExchange exchange, @NonNull WebFilterChain chain) {
+  @Nonnull
+  public Mono<Void> filter(@Nonnull ServerWebExchange exchange, @Nonnull WebFilterChain chain) {
     ServerHttpRequest request = exchange.getRequest();
     String path = request.getURI().getPath();
 

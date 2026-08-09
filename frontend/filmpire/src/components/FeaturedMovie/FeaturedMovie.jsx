@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 
 import useStyles from './styles';
 
-const FeaturedMovie = ({ movie }) => {
+function FeaturedMovie({ movie }) {
   const { classes } = useStyles();
 
   if (!movie) return null;
@@ -19,7 +19,10 @@ const FeaturedMovie = ({ movie }) => {
           title={movie.title}
           className={classes.cardMedia}
         />
-        <Box padding="20px">
+        <Box sx={{
+          padding: '20px',
+        }}
+        >
           <CardContent className={classes.cardContent} classes={{ root: classes.cardContentRoot }}>
             <Typography variant="h5" gutterBottom>{movie.title}</Typography>
             <Typography variant="body2">{movie.overview}</Typography>
@@ -28,6 +31,6 @@ const FeaturedMovie = ({ movie }) => {
       </Card>
     </Box>
   );
-};
+}
 
 export default FeaturedMovie;

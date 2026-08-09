@@ -20,7 +20,7 @@ import { MovieList } from '..';
 import { userSelector } from '../../features/auth';
 import ReviewMediaSection from './ReviewMediaSection';
 
-const MovieInformation = () => {
+function MovieInformation() {
   const { isAuthenticated } = useSelector(userSelector);
   const { id } = useParams();
   const { classes } = useStyles();
@@ -58,7 +58,13 @@ const MovieInformation = () => {
 
   if (isFetching) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center">
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}
+      >
         <CircularProgress size="8rem" />
       </Box>
     );
@@ -66,7 +72,13 @@ const MovieInformation = () => {
 
   if (error) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center">
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}
+      >
         <Link to="/">Something has gone wrong - Go back</Link>
       </Box>
     );
@@ -74,22 +86,39 @@ const MovieInformation = () => {
 
   return (
     <Grid container className={classes.containerSpaceAround}>
-      <Grid item sm={12} lg={4} style={{ display: 'flex', marginBottom: '30px' }}>
+      <Grid
+        style={{ display: 'flex', marginBottom: '30px' }}
+        size={{
+          sm: 12,
+          lg: 4,
+        }}
+      >
         <img
           className={classes.poster}
           src={`https://image.tmdb.org/t/p/w500/${data?.poster_path}`}
           alt={data?.title}
         />
       </Grid>
-      <Grid item container direction="column" lg={7}>
+      <Grid
+        container
+        direction="column"
+        size={{
+          lg: 7,
+        }}
+      >
         <Typography variant="h3" align="center" gutterBottom>
           {data?.title} ({data.release_date.split('-')[0]})
         </Typography>
         <Typography variant="h5" align="center" gutterBottom>
           {data?.tagline}
         </Typography>
-        <Grid item className={classes.containerSpaceAround}>
-          <Box display="flex" align="center">
+        <Grid className={classes.containerSpaceAround}>
+          <Box
+            align="center"
+            sx={{
+              display: 'flex',
+            }}
+          >
             <Rating readOnly value={data.vote_average / 2} />
             <Typography variant="subtitle1" gutterBottom style={{ marginLeft: '10px' }}>
               {data?.vote_average} / 10
@@ -99,7 +128,7 @@ const MovieInformation = () => {
             {data?.runtime}min | Language: {data?.spoken_languages[0].name}
           </Typography>
         </Grid>
-        <Grid item className={classes.genresContainer}>
+        <Grid className={classes.genresContainer}>
           {data?.genres?.map((genre) => (
             <Link
               key={genre.name}
@@ -121,10 +150,19 @@ const MovieInformation = () => {
           {data?.overview}
         </Typography>
         <Typography variant="h5" gutterBottom>Top Cast</Typography>
-        <Grid item container spacing={2}>
+        <Grid container spacing={2}>
           {data?.credits?.cast?.map((character, i) => (
             character.profile_path && (
-              <Grid key={character.id || i} item xs={4} md={2} component={Link} to={`/actors/${character.id}`} style={{ textDecoration: 'none' }}>
+              <Grid
+                key={character.id || i}
+                component={Link}
+                to={`/actors/${character.id}`}
+                style={{ textDecoration: 'none' }}
+                size={{
+                  xs: 4,
+                  md: 2,
+                }}
+              >
                 <img className={classes.castImage} src={`https://image.tmdb.org/t/p/w500/${character.profile_path}`} alt={character.name} />
                 <Typography color="textPrimary">{character?.name}</Typography>
                 <Typography color="textSecondary">
@@ -134,16 +172,28 @@ const MovieInformation = () => {
             )
           )).slice(0, 6)}
         </Grid>
-        <Grid item container style={{ marginTop: '2rem' }}>
+        <Grid container style={{ marginTop: '2rem' }}>
           <div className={classes.buttonsContainer}>
-            <Grid item xs={12} sm={6} className={classes.buttonsContainer}>
+            <Grid
+              className={classes.buttonsContainer}
+              size={{
+                xs: 12,
+                sm: 6,
+              }}
+            >
               <ButtonGroup size="small" variant="outlined">
                 <Button target="_blank" rel="noopener noreferrer" href={data?.homepage} endIcon={<Language />}>Website</Button>
                 <Button target="_blank" rel="noopener noreferrer" href={`https://www.imdb.com/title/${data?.imdb_id}`} endIcon={<MovieIcon />}>IMDB</Button>
                 <Button onClick={() => setOpen(true)} href="#" endIcon={<Theaters />}>Trailer</Button>
               </ButtonGroup>
             </Grid>
-            <Grid item xs={12} sm={6} className={classes.buttonsContainer}>
+            <Grid
+              className={classes.buttonsContainer}
+              size={{
+                xs: 12,
+                sm: 6,
+              }}
+            >
               <ButtonGroup size="medium" variant="outlined">
                 <Button onClick={addToFavorites} endIcon={isMovieFavorited ? <FavoriteBorderOutlined /> : <Favorite />}>
                   {isMovieFavorited ? 'Unfavorite' : 'Favorite'}
@@ -152,7 +202,15 @@ const MovieInformation = () => {
                   Watchlist
                 </Button>
                 <Button endIcon={<ArrowBack />} sx={{ borderColor: 'primary.main' }}>
-                  <Typography style={{ textDecoration: 'none' }} component={Link} to="/" color="inherit" variant="subtitle2">
+                  <Typography
+                    style={{ textDecoration: 'none' }}
+                    component={Link}
+                    to="/"
+                    variant="subtitle2"
+                    sx={{
+                      color: 'inherit',
+                    }}
+                  >
                     Back
                   </Typography>
                 </Button>
@@ -162,7 +220,12 @@ const MovieInformation = () => {
         </Grid>
       </Grid>
       <ReviewMediaSection movieId={id} />
-      <Box marginTop="5rem" width="100%">
+      <Box
+        sx={{
+          marginTop: '5rem',
+          width: '100%',
+        }}
+      >
         <Typography variant="h3" gutterBottom align="center">
           You might also like
         </Typography>
@@ -194,6 +257,6 @@ const MovieInformation = () => {
       </Modal>
     </Grid>
   );
-};
+}
 
 export default MovieInformation;

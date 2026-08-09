@@ -10,7 +10,7 @@ import { storeAuthTokens } from '../../utils';
  * Login/register modal backed by Filmpire's own user-service JWT API
  * (replaces the old redirect-to-themoviedb.org flow).
  */
-const LoginDialog = ({ open, onClose }) => {
+function LoginDialog({ open, onClose }) {
   const dispatch = useDispatch();
   const [tab, setTab] = useState('login');
   const [form, setForm] = useState({ username: '', email: '', password: '' });
@@ -60,7 +60,16 @@ const LoginDialog = ({ open, onClose }) => {
         <Tab label="Register" value="register" />
       </Tabs>
       <DialogContent>
-        <Box component="form" onSubmit={handleSubmit} display="flex" flexDirection="column" gap={2} pt={1}>
+        <Box
+          component="form"
+          onSubmit={handleSubmit}
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 2,
+            pt: 1,
+          }}
+        >
           {error && (
             <Alert severity="error">
               {error.data?.message || 'Something went wrong. Please try again.'}
@@ -96,6 +105,6 @@ const LoginDialog = ({ open, onClose }) => {
       </DialogContent>
     </Dialog>
   );
-};
+}
 
 export default LoginDialog;

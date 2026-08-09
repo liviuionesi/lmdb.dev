@@ -41,10 +41,10 @@ const buildStore = (authenticated) => configureStore({
 // used <Navigate replace> rather than a regular push — the two render
 // identically at the destination, so nothing else in this file would catch
 // a regression that dropped `replace`.
-const NavigationTypeProbe = () => {
+function NavigationTypeProbe() {
   const navigationType = useNavigationType();
   return <div data-testid="nav-type">{navigationType}</div>;
-};
+}
 
 /**
  * Renders Profile at "/profile/1" alongside a sentinel "/" route, so an
@@ -179,5 +179,25 @@ describe('Profile', () => {
 
     const avatar = screen.getByTestId('user-avatar');
     expect(avatar.getAttribute('data-src')).toContain('http://localhost:8085/thumb.jpg');
+  });
+
+  // Exercises the fallback branch of Profile.jsx's userAvatar selection: when
+  // no AVATAR-typed entry exists, it falls back to the most recently uploaded
+  // media item of any type (the `lastMediaItem` path) rather than showing no
+  // avatar at all.
+  it('falls back to the most recent media item when no AVATAR-typed entry exists', () => {
+    useGetMediaForEntityQuery.mockReturnValue({
+      data: [
+        { mediaType: 'REVIEW', thumbnails: { medium: 'http://localhost:8085/review-old.jpg' } },
+        { mediaType: 'REVIEW', thumbnails: { medium: 'http://localhost:8085/review-latest.jpg' } },
+      ],
+      refetch: vi.fn(),
+    });
+
+    renderWithProviders(<Profile />, { store: buildStore(true) });
+
+    const avatar = screen.getByTestId('user-avatar');
+    // Must pick the *last* entry (most recently uploaded), not the first.
+    expect(avatar.getAttribute('data-src')).toContain('http://localhost:8085/review-latest.jpg');
   });
 });

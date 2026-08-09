@@ -9,7 +9,7 @@ import useStyles from './styles';
 // card hydrates its own movie details via the TMDB facade rather than the
 // parent fetching them all at once (keeps the movieId->movie fetch inside
 // the rules of hooks instead of calling a hook in a loop).
-const FavoriteMovie = ({ movieId, i }) => {
+function FavoriteMovie({ movieId, i }) {
   const { data: movie, isFetching } = useGetMovieQuery(movieId);
 
   if (isFetching || !movie) {
@@ -17,21 +17,27 @@ const FavoriteMovie = ({ movieId, i }) => {
   }
 
   return <Movie movie={movie} i={i} />;
-};
+}
 
-const RatedCards = ({ title, movieIds }) => {
+function RatedCards({ title, movieIds }) {
   const { classes } = useStyles();
 
   return (
     <Box>
       <Typography variant="h5" gutterBottom>{title}</Typography>
-      <Box display="flex" flexWrap="wrap" className={classes.container}>
+      <Box
+        className={classes.container}
+        sx={{
+          display: 'flex',
+          flexWrap: 'wrap',
+        }}
+      >
         {movieIds?.map((movieId, i) => (
           <FavoriteMovie key={movieId} movieId={movieId} i={i} />
         ))}
       </Box>
     </Box>
   );
-};
+}
 
 export default RatedCards;

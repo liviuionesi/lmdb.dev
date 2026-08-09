@@ -7,7 +7,7 @@ import useStyles from './styles';
 import { useGetActorsDetailsQuery, useGetMoviesByActorIdQuery } from '../../services/TMDB';
 import { MovieList, Pagination } from '..';
 
-const Actors = () => {
+function Actors() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { classes } = useStyles();
@@ -18,7 +18,12 @@ const Actors = () => {
 
   if (isFetching) {
     return (
-      <Box display="flex" justifyContent="center">
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+        }}
+      >
         <CircularProgress size="8rem" />
       </Box>
     );
@@ -26,7 +31,13 @@ const Actors = () => {
 
   if (error) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center">
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}
+      >
         <Button startIcon={<ArrowBack />} onClick={() => navigate(-1)} color="primary">
           Go back
         </Button>
@@ -37,14 +48,25 @@ const Actors = () => {
   return (
     <>
       <Grid container spacing={3}>
-        <Grid item lg={5} xl={4}>
+        <Grid
+          size={{
+            lg: 5,
+            xl: 4,
+          }}
+        >
           <img
             className={classes.image}
             src={`https://image.tmdb.org/t/p/w780/${data?.profile_path}`}
             alt={data.name}
           />
         </Grid>
-        <Grid item lg={7} xl={8} style={{ display: 'flex', justifyContent: 'center', flexDirection: 'column' }}>
+        <Grid
+          style={{ display: 'flex', justifyContent: 'center', flexDirection: 'column' }}
+          size={{
+            lg: 7,
+            xl: 8,
+          }}
+        >
           <Typography variant="h2" gutterBottom>
             {data?.name}
           </Typography>
@@ -54,7 +76,13 @@ const Actors = () => {
           <Typography variant="body1" align="justify" sx={{ marginBottom: '16px' }}>
             {data?.biography || 'Sorry, no biography yet...'}
           </Typography>
-          <Box marginTop="2rem" display="flex" justifyContent="space-around">
+          <Box
+            sx={{
+              marginTop: '2rem',
+              display: 'flex',
+              justifyContent: 'space-around',
+            }}
+          >
             <Button variant="contained" color="primary" target="_blank" href={`https://www.imdb.com/name/${data?.imdb_id}`}>
               IMDB
             </Button>
@@ -64,13 +92,16 @@ const Actors = () => {
           </Box>
         </Grid>
       </Grid>
-      <Box margin="2rem 0">
+      <Box sx={{
+        margin: '2rem 0',
+      }}
+      >
         <Typography variant="h2" gutterBottom align="center">Movies</Typography>
         {movies && <MovieList movies={movies} numberOfMovies={12} />}
         <Pagination currentPage={page} setPage={setPage} totalPages={movies?.total_pages} />
       </Box>
     </>
   );
-};
+}
 
 export default Actors;

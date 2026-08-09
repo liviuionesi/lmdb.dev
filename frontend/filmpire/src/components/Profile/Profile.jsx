@@ -10,7 +10,7 @@ import { clearUser, userSelector } from '../../features/auth';
 import { clearAuthTokens } from '../../utils';
 import { RatedCards } from '..';
 
-const Profile = () => {
+function Profile() {
   const { isAuthenticated, user } = useSelector(userSelector);
   const dispatch = useDispatch();
   const [logout] = useLogoutMutation();
@@ -35,9 +35,14 @@ const Profile = () => {
   const favoriteIds = favorites?.map((entry) => entry.movieId) ?? [];
   const watchlistIds = watchlist?.map((entry) => entry.movieId) ?? [];
 
-  // Pick the most recently uploaded AVATAR asset
+  // Pick the most recently uploaded AVATAR asset, falling back to the most
+  // recent media item of any type. `mediaList && mediaList.length > 0` (rather
+  // than `mediaList?.length - 1`) keeps the length check and the arithmetic on
+  // it separate, since ESLint's no-unsafe-optional-chaining flags arithmetic
+  // directly on an optional-chained value (it can silently evaluate to NaN).
   const avatarList = mediaList?.filter((item) => item.mediaType === 'AVATAR' || item.entityType === 'USER') || [];
-  const userAvatar = avatarList.length > 0 ? avatarList[avatarList.length - 1] : mediaList?.[mediaList?.length - 1];
+  const lastMediaItem = mediaList && mediaList.length > 0 ? mediaList[mediaList.length - 1] : undefined;
+  const userAvatar = avatarList.length > 0 ? avatarList[avatarList.length - 1] : lastMediaItem;
   const rawAvatarUrl = getMediaUrl(userAvatar?.thumbnails?.medium || userAvatar?.thumbnails?.original);
   const avatarSeparator = rawAvatarUrl?.includes('?') ? '&' : '?';
   const avatarTimestamp = new Date(userAvatar?.uploadedAt || Date.now()).getTime();
@@ -85,9 +90,25 @@ const Profile = () => {
 
   return (
     <Box>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
-        <Box display="flex" alignItems="center" gap={3}>
-          <Box position="relative">
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          mb: 4,
+        }}
+      >
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 3,
+          }}
+        >
+          <Box sx={{
+            position: 'relative',
+          }}
+          >
             <Avatar
               data-testid="user-avatar"
               data-src={avatarUrl || ''}
@@ -134,12 +155,18 @@ const Profile = () => {
         </Button>
       </Box>
       {validationError && (
-        <Box mb={3}>
+        <Box sx={{
+          mb: 3,
+        }}
+        >
           <Alert severity="error" onClose={() => setValidationError('')}>{validationError}</Alert>
         </Box>
       )}
       {uploadSuccess && (
-        <Box mb={3}>
+        <Box sx={{
+          mb: 3,
+        }}
+        >
           <Alert severity="success" onClose={() => setUploadSuccess(false)}>Avatar updated successfully!</Alert>
         </Box>
       )}
@@ -153,6 +180,6 @@ const Profile = () => {
         )}
     </Box>
   );
-};
+}
 
 export default Profile;

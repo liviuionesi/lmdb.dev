@@ -1,9 +1,11 @@
-import React, { useState, useMemo, createContext, useEffect } from 'react';
+import React, {
+  useState, useMemo, useCallback, createContext, useEffect,
+} from 'react';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 
 export const ColorModeContext = createContext();
 
-const ToggleColorMode = ({ children }) => {
+function ToggleColorMode({ children }) {
   const [mode, setMode] = useState(() => {
     // Check if user has a saved preference
     const savedMode = localStorage.getItem('themeMode');
@@ -29,11 +31,14 @@ const ToggleColorMode = ({ children }) => {
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, []);
 
-  const toggleColorMode = () => {
+  // useCallback keeps this function's identity stable across renders (it only
+  // needs to change if `mode` itself changes), which the context value below
+  // depends on to stay stable in turn.
+  const toggleColorMode = useCallback(() => {
     const newMode = mode === 'light' ? 'dark' : 'light';
     setMode(newMode);
     localStorage.setItem('themeMode', newMode);
-  };
+  }, [mode]);
 
   const theme = useMemo(() => createTheme({
     palette: {
@@ -41,13 +46,21 @@ const ToggleColorMode = ({ children }) => {
     },
   }), [mode]);
 
+  // react/jsx-no-constructed-context-values: without useMemo, this object
+  // literal is a new reference every render, forcing every consumer to
+  // re-render even when mode hasn't actually changed.
+  const contextValue = useMemo(
+    () => ({ mode, setMode, toggleColorMode }),
+    [mode, toggleColorMode],
+  );
+
   return (
-    <ColorModeContext.Provider value={{ mode, setMode, toggleColorMode }}>
+    <ColorModeContext.Provider value={contextValue}>
       <ThemeProvider theme={theme}>
         {children}
       </ThemeProvider>
     </ColorModeContext.Provider>
   );
-};
+}
 
 export default ToggleColorMode;

@@ -144,7 +144,7 @@ services:
   # Receives spans from all services via Micrometer Tracing + Zipkin reporter.
   # UI: http://localhost:9411
   zipkin:
-    image: openzipkin/zipkin:3
+    image: docker.io/openzipkin/zipkin:3
     container_name: filmpire-zipkin
     ports:
       - "9411:9411"
