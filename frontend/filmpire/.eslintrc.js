@@ -4,13 +4,33 @@ module.exports = {
   env: {
     browser: true,
     es6: true,
-    jest: true,
+  },
+  // ESLint has no built-in "vitest" env (unlike "jest"), and adding
+  // eslint-plugin-vitest is out of scope for a test-runner swap (#127), so
+  // the handful of Vitest globals the test suite actually uses (from
+  // `test.globals: true` in vite.config.js) are declared by hand instead.
+  globals: {
+    describe: "readonly",
+    it: "readonly",
+    expect: "readonly",
+    beforeEach: "readonly",
+    afterEach: "readonly",
+    vi: "readonly",
   },
   parserOptions: {
     ecmaVersion: 2021,
     sourceType: "module",
     ecmaFeatures: {
       jsx: true,
+    },
+    // requireConfigFile: false + an inline preset lets @babel/eslint-parser
+    // parse JSX without a project-wide Babel config file. Previously relied
+    // on .babelrc's "babel-preset-react-app", which shipped inside
+    // react-scripts and no longer exists now that Vite (esbuild) has
+    // replaced it as the actual build/transform toolchain (#125).
+    requireConfigFile: false,
+    babelOptions: {
+      presets: ['@babel/preset-react'],
     },
   },
   settings: {

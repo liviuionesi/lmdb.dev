@@ -25,6 +25,8 @@ dependencies {
     
     // Actuator for health checks
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'io.micrometer:micrometer-tracing-bridge-brave'
+    runtimeOnly 'io.zipkin.reporter2:zipkin-reporter-brave'
 
     // Lombok for cleaner code
     compileOnly "org.projectlombok:lombok:${lombokVersion}"
@@ -33,8 +35,10 @@ dependencies {
     // Testing
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-security-test'
+    testImplementation 'org.springframework.cloud:spring-cloud-starter-contract-stub-runner'
     // Boot 4 modularized WebTestClient auto-configuration into its own module.
     testImplementation 'org.springframework.boot:spring-boot-webtestclient'
+
     testImplementation 'io.projectreactor:reactor-test'
     testImplementation 'org.testcontainers:testcontainers'
     testImplementation 'org.testcontainers:testcontainers-junit-jupiter'
@@ -52,5 +56,13 @@ bootJar {
     archiveBaseName = 'api-gateway'
     archiveVersion = project.version
 }
+
+tasks.named('test') {
+    dependsOn ':backend:movie-service:publishToMavenLocal'
+    dependsOn ':backend:actor-service:publishToMavenLocal'
+    dependsOn ':backend:user-service:publishToMavenLocal'
+    dependsOn ':backend:ai-service:publishToMavenLocal'
+}
+
 
 

@@ -2,7 +2,7 @@ import React, { useContext, useRef, useState } from 'react';
 import { Fab, CircularProgress, Snackbar, Alert, Tooltip } from '@mui/material';
 import { Mic, Stop } from '@mui/icons-material';
 import { useDispatch } from 'react-redux';
-import { useHistory } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 import { ColorModeContext } from '../../utils/ToggleColorMode';
 import { selectGenreOrCategory, searchMovie } from '../../features/currentGenreOrCategory';
@@ -12,7 +12,7 @@ import { encodeToWav } from '../../utils/wavEncoder';
 import { parseVoiceCommand } from '../../utils/voiceCommands';
 import { useGetGenresQuery } from '../../services/TMDB';
 
-const aiServiceUrl = process.env.REACT_APP_API_URL || 'http://localhost:8080';
+const aiServiceUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
 /**
  * Click-to-talk voice control (#68): records a
@@ -24,7 +24,7 @@ const aiServiceUrl = process.env.REACT_APP_API_URL || 'http://localhost:8080';
 const VoiceControl = () => {
   const { setMode } = useContext(ColorModeContext);
   const dispatch = useDispatch();
-  const history = useHistory();
+  const navigate = useNavigate();
   const { data: genresData } = useGetGenresQuery();
 
   const [status, setStatus] = useState('idle'); // idle | recording | transcribing
@@ -37,16 +37,16 @@ const VoiceControl = () => {
 
     if (command === 'chooseGenre') {
       const foundGenre = genres.find((g) => g.name.toLowerCase() === genreOrCategory.toLowerCase());
-      history.push('/');
+      navigate('/');
       dispatch(selectGenreOrCategory(foundGenre ? foundGenre.id : genreOrCategory));
     } else if (command === 'changeMode') {
       setMode(mode);
     } else if (command === 'logout') {
       clearAuthTokens();
       dispatch(clearUser());
-      history.push('/');
+      navigate('/');
     } else if (command === 'search') {
-      history.push('/');
+      navigate('/');
       dispatch(searchMovie(query));
     }
   };

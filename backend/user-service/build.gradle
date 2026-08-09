@@ -1,7 +1,25 @@
 plugins {
+    id 'java'
     id 'org.springframework.boot'
     id 'io.spring.dependency-management'
+    id 'maven-publish'
+    id 'org.springframework.cloud.contract' version '4.2.0'
 }
+
+contracts {
+    baseClassForTests = 'com.filmpire.user.contract.BaseContractTest'
+    testFramework = 'JUNIT5'
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+            artifact verifierStubsJar
+        }
+    }
+}
+
 
 dependencies {
     implementation project(':backend:shared-library')
@@ -12,6 +30,8 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'io.micrometer:micrometer-tracing-bridge-brave'
+    runtimeOnly 'io.zipkin.reporter2:zipkin-reporter-brave'
     implementation "io.jsonwebtoken:jjwt-api:${jjwtVersion}"
     implementation "io.jsonwebtoken:jjwt-impl:${jjwtVersion}"
     implementation "io.jsonwebtoken:jjwt-jackson:${jjwtVersion}"
@@ -23,6 +43,11 @@ dependencies {
     annotationProcessor "org.projectlombok:lombok:${lombokVersion}"
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.cloud:spring-cloud-starter-contract-verifier'
+    testImplementation 'io.rest-assured:rest-assured'
+    testImplementation 'io.rest-assured:spring-mock-mvc'
+
+
     testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
     testImplementation 'org.springframework.boot:spring-boot-testcontainers'
     testImplementation 'org.springframework.boot:spring-boot-starter-security-test'

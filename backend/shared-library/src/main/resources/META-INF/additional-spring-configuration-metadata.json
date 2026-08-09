@@ -1,0 +1,19 @@
+{
+  "properties": [
+    {
+      "name": "management.tracing.sampling.probability",
+      "type": "java.lang.Double",
+      "description": "Sampling probability for distributed tracing span creation (0.0 to 1.0)."
+    },
+    {
+      "name": "management.zipkin.tracing.endpoint",
+      "type": "java.lang.String",
+      "description": "Zipkin HTTP collector endpoint URL for exporting tracing spans."
+    },
+    {
+      "name": "spring.ai.ollama.chat.options.timeout",
+      "type": "java.lang.String",
+      "description": "Timeout duration for Ollama model inference requests."
+    }
+  ]
+}

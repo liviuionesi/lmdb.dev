@@ -9,8 +9,8 @@ import genreOrCategoryReducer from '../../features/currentGenreOrCategory';
 import { renderWithProviders } from '../../test-utils/render';
 import { useGetMoviesQuery } from '../../services/TMDB';
 
-jest.mock('../../services/TMDB', () => ({
-  useGetMoviesQuery: jest.fn(),
+vi.mock('../../services/TMDB', () => ({
+  useGetMoviesQuery: vi.fn(),
 }));
 
 const buildStore = () => configureStore({ reducer: { currentGenreOrCategory: genreOrCategoryReducer } });

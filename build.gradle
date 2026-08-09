@@ -326,7 +326,11 @@ subprojects {
             // runtimeOnly because nothing compiles against it.
             runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
             implementation "net.logstash.logback:logstash-logback-encoder:${logstashEncoderVersion}"
+            // Distributed Tracing (ADR-007, Task #42) — Micrometer Tracing + Zipkin
+            implementation 'io.micrometer:micrometer-tracing-bridge-brave'
+            implementation 'io.zipkin.reporter2:zipkin-reporter-brave'
         }
+
 
         // Ship the one shared logback-spring.xml inside every service jar instead
         // of duplicating it per module, so the log schema cannot drift between

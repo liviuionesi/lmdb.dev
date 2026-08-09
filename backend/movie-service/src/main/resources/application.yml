@@ -35,6 +35,20 @@ spring:
     redis:
       time-to-live: 300000  # 5 minutes (300,000 ms)
 
+  # Kafka Event Bus Configuration
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      properties:
+        "[max.block.ms]": 2000
+    consumer:
+      group-id: movie-service-analytics
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+
   # Feign Client Configuration
   cloud:
     openfeign:
@@ -95,6 +109,13 @@ management:
     distribution:
       percentiles-histogram:
         "[http.server.requests]": true
+  # Distributed Tracing (ADR-007, Task #42) — Micrometer Tracing + Zipkin
+  tracing:
+    sampling:
+      probability: ${TRACING_SAMPLE_RATE:1.0}
+  zipkin:
+    tracing:
+      endpoint: ${ZIPKIN_ENDPOINT:http://localhost:9411/api/v2/spans}
 
 # Logging Configuration
 logging:
@@ -106,8 +127,8 @@ logging:
     "[org.springframework.cache]": DEBUG
     "[feign]": DEBUG
   pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
-    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%X{traceId}/%X{spanId}] - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} [traceId=%X{traceId} spanId=%X{spanId}] - %msg%n"
 
 # OpenAPI/Swagger Documentation
 springdoc:
@@ -132,3 +153,4 @@ spring:
     activate:
       on-profile: "!test"
     import: optional:configserver:http://localhost:8888
+

@@ -21,7 +21,15 @@ const Movies = () => {
     );
   }
 
-  if (!data.results.length) {
+  if (error) {
+    return (
+      <Box display="flex" alignItems="center" mt="20px">
+        <Typography variant="h4">An error has occurred.</Typography>
+      </Box>
+    );
+  }
+
+  if (!data?.results?.length) {
     return (
       <Box display="flex" alignItems="center" mt="20px">
         <Typography variant="h4">
@@ -32,8 +40,6 @@ const Movies = () => {
       </Box>
     );
   }
-
-  if (error) return 'An error has occured.';
 
   return (
     <div>

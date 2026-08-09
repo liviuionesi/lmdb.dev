@@ -7,8 +7,8 @@ import RatedCards from './RatedCards';
 import { renderWithProviders } from '../../test-utils/render';
 import { useGetMovieQuery } from '../../services/TMDB';
 
-jest.mock('../../services/TMDB', () => ({
-  useGetMovieQuery: jest.fn(),
+vi.mock('../../services/TMDB', () => ({
+  useGetMovieQuery: vi.fn(),
 }));
 
 describe('RatedCards', () => {

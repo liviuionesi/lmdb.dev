@@ -29,7 +29,7 @@ describe('userApi endpoints', () => {
 
   beforeEach(() => {
     store = buildStore();
-    global.fetch = jest.fn().mockResolvedValue(jsonResponse({ data: { id: 1 } }));
+    global.fetch = vi.fn().mockResolvedValue(jsonResponse({ data: { id: 1 } }));
   });
 
   afterEach(() => {
@@ -129,7 +129,7 @@ describe('userApi baseQuery Authorization header injection', () => {
 
   it('attaches a Bearer Authorization header when an access token is stored', async () => {
     localStorage.setItem('access_token', 'my-jwt');
-    global.fetch = jest.fn().mockResolvedValue(jsonResponse({ data: { id: 1 } }));
+    global.fetch = vi.fn().mockResolvedValue(jsonResponse({ data: { id: 1 } }));
 
     await buildAuthStore().dispatch(userApi.endpoints.getProfile.initiate());
 
@@ -138,7 +138,7 @@ describe('userApi baseQuery Authorization header injection', () => {
   });
 
   it('omits the Authorization header when no access token is stored', async () => {
-    global.fetch = jest.fn().mockResolvedValue(jsonResponse({ data: {} }));
+    global.fetch = vi.fn().mockResolvedValue(jsonResponse({ data: {} }));
 
     await buildAuthStore().dispatch(userApi.endpoints.getProfile.initiate());
 

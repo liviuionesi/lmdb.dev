@@ -106,6 +106,58 @@ services:
       start_period: 10s
     restart: unless-stopped
 
+  # Kafka (KRaft mode) - For Event-Driven Analytics (#40, ADR-006)
+  # Runs single-node without ZooKeeper for local event publishing and analytics.
+  kafka:
+    image: docker.io/confluentinc/cp-kafka:7.7.1
+    container_name: filmpire-kafka
+    ports:
+      - "${KAFKA_PORT:-9092}:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092'
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka:29093'
+      KAFKA_LISTENERS: 'PLAINTEXT://kafka:29092,CONTROLLER://kafka:29093,PLAINTEXT_HOST://0.0.0.0:9092'
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      KAFKA_LOG_DIRS: '/tmp/kraft-combined-logs'
+      CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk'
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    networks:
+      - filmpire-network
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9092 --list || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+
+  # Zipkin - Distributed Tracing UI (ADR-007, Task #42)
+  # Receives spans from all services via Micrometer Tracing + Zipkin reporter.
+  # UI: http://localhost:9411
+  zipkin:
+    image: openzipkin/zipkin:3
+    container_name: filmpire-zipkin
+    ports:
+      - "9411:9411"
+    networks:
+      - filmpire-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:9411/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+
   # Adminer - Database Management UI (Optional). Behind the `dev-tools`
   # profile, same reasoning as SonarQube's `sonar` profile below — an
   # unauthenticated DB browser has no business running by default outside
@@ -174,6 +226,7 @@ services:
       - filmpire-network
     environment:
       SPRING_APPLICATION_NAME: discovery-service
+      MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
       EUREKA_INSTANCE_HOSTNAME: discovery-service
       EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://discovery-service:8761/eureka/
     # k8s-file (not the podman default, journald) so the local ELK stack's
@@ -200,6 +253,7 @@ services:
       - filmpire-network
     environment:
       SPRING_APPLICATION_NAME: config-service
+      MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
       SPRING_CLOUD_CONFIG_SERVER_NATIVE_SEARCHLOCATIONS: classpath:/config
     logging:
@@ -227,6 +281,7 @@ services:
       - filmpire-network
     environment:
       SPRING_APPLICATION_NAME: api-gateway
+      MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
       SPRING_CONFIG_IMPORT: optional:configserver:http://config-service:8888
       REDIS_HOST: redis
@@ -267,6 +322,7 @@ services:
       - filmpire-network
     environment:
       SPRING_APPLICATION_NAME: movie-service
+      MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
       SPRING_PROFILES_ACTIVE: prod
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
       EUREKA_SERVER_URL: http://discovery-service:8761/eureka/
@@ -276,6 +332,7 @@ services:
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD}
       TMDB_API_KEY: ${TMDB_API_KEY}
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
     logging:
       driver: k8s-file
     depends_on:
@@ -286,6 +343,8 @@ services:
       mongodb:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      kafka:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8081/actuator/health"]
@@ -308,6 +367,7 @@ services:
       - filmpire-network
     environment:
       SPRING_APPLICATION_NAME: user-service
+      MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
       SPRING_CONFIG_IMPORT: optional:configserver:http://config-service:8888
       POSTGRES_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-filmpire}
@@ -346,6 +406,7 @@ services:
       - filmpire-network
     environment:
       SPRING_APPLICATION_NAME: actor-service
+      MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
       SPRING_CONFIG_IMPORT: optional:configserver:http://config-service:8888
       POSTGRES_URL: jdbc:postgresql://postgres:5432/filmpire_actor
@@ -408,6 +469,7 @@ services:
       - filmpire-network
     environment:
       SPRING_APPLICATION_NAME: ai-service
+      MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
       SPRING_CONFIG_IMPORT: optional:configserver:http://config-service:8888
       POSTGRES_URL: jdbc:postgresql://postgres:5432/filmpire_ai
@@ -439,6 +501,42 @@ services:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8084/actuator/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 90s
+    restart: unless-stopped
+
+  media-service:
+    build:
+      context: ../..
+      dockerfile: backend/media-service/Dockerfile
+    container_name: filmpire-media-service
+    ports:
+      - "${MEDIA_SERVICE_PORT:-8085}:8085"
+    networks:
+      - filmpire-network
+    environment:
+      SPRING_APPLICATION_NAME: media-service
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
+      SPRING_CONFIG_IMPORT: optional:configserver:http://config-service:8888
+      MONGODB_URI: mongodb://${MONGO_ROOT_USER:-admin}:${MONGO_ROOT_PASSWORD}@mongodb:27017/filmpire?authSource=admin
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+    logging:
+      driver: k8s-file
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+      config-service:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8085/actuator/health"]
       interval: 30s
       timeout: 3s
       retries: 3
@@ -520,6 +618,8 @@ volumes:
   minio_data:
     driver: local
   ollama_data:
+    driver: local
+  kafka_data:
     driver: local
   # SonarQube (#20). NOTE: do not reuse volumes across major SonarQube
   # versions — a data dir written by an older image (e.g. the old

@@ -1,5 +1,5 @@
 import React from 'react';
-import ReactDOM from 'react-dom';
+import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { Provider } from 'react-redux';
 
@@ -8,7 +8,9 @@ import App from './components/App';
 import store from './app/store';
 import './index.css';
 
-ReactDOM.render(
+// React 18+ removed ReactDOM.render in favor of the createRoot API (#128).
+const root = createRoot(document.getElementById('root'));
+root.render(
   <Provider store={store}>
     <ToggleColorModeProvider>
       <BrowserRouter>
@@ -16,5 +18,4 @@ ReactDOM.render(
       </BrowserRouter>
     </ToggleColorModeProvider>
   </Provider>,
-  document.getElementById('root'),
 );

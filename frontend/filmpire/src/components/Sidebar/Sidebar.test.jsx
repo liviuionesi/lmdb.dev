@@ -10,8 +10,8 @@ import genreOrCategoryReducer from '../../features/currentGenreOrCategory';
 import { renderWithProviders } from '../../test-utils/render';
 import { useGetGenresQuery } from '../../services/TMDB';
 
-jest.mock('../../services/TMDB', () => ({
-  useGetGenresQuery: jest.fn(),
+vi.mock('../../services/TMDB', () => ({
+  useGetGenresQuery: vi.fn(),
 }));
 
 const buildStore = (preloadedState) => configureStore({
@@ -39,7 +39,7 @@ describe('Sidebar', () => {
     expect(screen.getByRole('progressbar')).toBeInTheDocument();
   });
 
-  it('renders each genre once loaded and dispatches its id on click', () => {
+  it('renders each genre once loaded and dispatches its id on click', async () => {
     useGetGenresQuery.mockReturnValue({
       data: { genres: [{ id: 28, name: 'Action' }, { id: 35, name: 'Comedy' }] },
       isFetching: false,
@@ -48,25 +48,49 @@ describe('Sidebar', () => {
     renderWithProviders(<Sidebar setMobileOpen={() => {}} />, { store });
 
     expect(screen.getByText('Action')).toBeInTheDocument();
-    userEvent.click(screen.getByText('Comedy'));
+    // userEvent v14+ dispatches events asynchronously, so the click must be awaited.
+    await userEvent.click(screen.getByText('Comedy'));
 
     expect(store.getState().currentGenreOrCategory.genreIdOrCategoryName).toBe(35);
   });
 
-  it('dispatches "popular" and clears the search query when a category is clicked', () => {
+  it('dispatches "popular" and clears the search query when a category is clicked', async () => {
     const store = buildStore({ currentGenreOrCategory: { genreIdOrCategoryName: '', page: 1, searchQuery: 'batman' } });
     renderWithProviders(<Sidebar setMobileOpen={() => {}} />, { store });
 
-    userEvent.click(screen.getByText('Top Rated'));
+    await userEvent.click(screen.getByText('Top Rated'));
 
     expect(store.getState().currentGenreOrCategory.genreIdOrCategoryName).toBe('top_rated');
     expect(store.getState().currentGenreOrCategory.searchQuery).toBe('');
   });
 
   it('closes the mobile drawer via setMobileOpen on mount', () => {
-    const setMobileOpen = jest.fn();
+    const setMobileOpen = vi.fn();
     renderWithProviders(<Sidebar setMobileOpen={setMobileOpen} />, { store: buildStore() });
 
     expect(setMobileOpen).toHaveBeenCalledWith(false);
+  });
+
+  // Guards the ListItem→ListItemButton conversion (#130): the old `button`
+  // prop was deprecated in MUI v6, but `selected` still needs to reach the
+  // rendered element as MUI's `Mui-selected` class, not just the click
+  // handler that the tests above already cover.
+  it('marks only the currently-selected genre with the MUI selected class', () => {
+    useGetGenresQuery.mockReturnValue({
+      data: { genres: [{ id: 28, name: 'Action' }, { id: 35, name: 'Comedy' }] },
+      isFetching: false,
+    });
+    const store = buildStore({ currentGenreOrCategory: { genreIdOrCategoryName: 35, page: 1, searchQuery: '' } });
+    renderWithProviders(<Sidebar setMobileOpen={() => {}} />, { store });
+
+    expect(screen.getByText('Comedy').closest('.MuiListItemButton-root')).toHaveClass('Mui-selected');
+    expect(screen.getByText('Action').closest('.MuiListItemButton-root')).not.toHaveClass('Mui-selected');
+  });
+
+  it('defaults to marking "Popular" selected when no genre/category is set', () => {
+    renderWithProviders(<Sidebar setMobileOpen={() => {}} />, { store: buildStore() });
+
+    expect(screen.getByText('Popular').closest('.MuiListItemButton-root')).toHaveClass('Mui-selected');
+    expect(screen.getByText('Top Rated').closest('.MuiListItemButton-root')).not.toHaveClass('Mui-selected');
   });
 });

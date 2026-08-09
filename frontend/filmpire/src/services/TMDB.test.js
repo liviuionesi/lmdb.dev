@@ -5,7 +5,7 @@
 import { configureStore } from '@reduxjs/toolkit';
 import { tmdbApi } from './TMDB';
 
-const apiKey = process.env.REACT_APP_TMDB_KEY;
+const apiKey = import.meta.env.VITE_TMDB_KEY;
 const baseUrl = 'https://api.themoviedb.org/3';
 
 const buildStore = () => configureStore({
@@ -27,7 +27,7 @@ describe('tmdbApi endpoint query builders', () => {
 
   beforeEach(() => {
     store = buildStore();
-    global.fetch = jest.fn().mockResolvedValue(jsonResponse({ ok: true }));
+    global.fetch = vi.fn().mockResolvedValue(jsonResponse({ ok: true }));
   });
 
   afterEach(() => {

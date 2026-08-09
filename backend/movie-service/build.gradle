@@ -2,7 +2,10 @@ plugins {
     id 'java'
     id 'org.springframework.boot'
     id 'io.spring.dependency-management'
+    id 'maven-publish'
+    id 'org.springframework.cloud.contract' version '4.2.0'
 }
+
 
 compileJava {
     options.compilerArgs += ['-parameters']
@@ -11,6 +14,22 @@ compileJava {
 compileTestJava {
     options.compilerArgs += ['-parameters']
 }
+
+contracts {
+    baseClassForTests = 'com.filmpire.movie.contract.BaseContractTest'
+    testFramework = 'JUNIT5'
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+            artifact verifierStubsJar
+        }
+    }
+}
+
+
 
 dependencies {
     implementation project(':backend:shared-library')
@@ -24,6 +43,9 @@ dependencies {
     implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
     implementation 'org.springframework.cloud:spring-cloud-starter-config'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'io.micrometer:micrometer-tracing-bridge-brave'
+    runtimeOnly 'io.zipkin.reporter2:zipkin-reporter-brave'
+    implementation 'org.springframework.boot:spring-boot-starter-kafka'
     implementation "org.springdoc:springdoc-openapi-starter-webmvc-ui:${springdocVersion}"
     implementation "org.mapstruct:mapstruct:${mapstructVersion}"
     
@@ -37,14 +59,22 @@ dependencies {
     
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+    testImplementation 'org.springframework.cloud:spring-cloud-starter-contract-verifier'
+    testImplementation 'io.rest-assured:rest-assured'
+    testImplementation 'io.rest-assured:spring-mock-mvc'
+
+
     // Boot 4 modularized the @DataMongoTest slice into its own test module.
     testImplementation 'org.springframework.boot:spring-boot-data-mongodb-test'
     testImplementation 'org.springframework.boot:spring-boot-testcontainers'
     testImplementation 'org.testcontainers:testcontainers-mongodb'
+    testImplementation 'org.testcontainers:testcontainers-kafka'
+    testImplementation 'org.springframework.kafka:spring-kafka-test'
     testImplementation 'org.testcontainers:testcontainers-junit-jupiter'
     testImplementation "org.wiremock:wiremock-standalone:${wiremockVersion}"
     testImplementation "io.gatling.highcharts:gatling-charts-highcharts:${gatlingVersion}"
     testImplementation "io.gatling:gatling-app:${gatlingVersion}"
+    testImplementation 'org.awaitility:awaitility:4.2.2'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 

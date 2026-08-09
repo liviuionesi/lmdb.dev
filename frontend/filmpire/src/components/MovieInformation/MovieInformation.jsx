@@ -23,7 +23,7 @@ import ReviewMediaSection from './ReviewMediaSection';
 const MovieInformation = () => {
   const { isAuthenticated } = useSelector(userSelector);
   const { id } = useParams();
-  const classes = useStyles();
+  const { classes } = useStyles();
   const dispatch = useDispatch();
   const [open, setOpen] = useState(false);
 
@@ -107,7 +107,7 @@ const MovieInformation = () => {
               to="/"
               onClick={() => dispatch(selectGenreOrCategory(genre.id))}
             >
-              <img src={genreIcons[genre.name.toLowerCase()]} className={classes.genreImage} height={30} />
+              <img src={genreIcons[genre.name.toLowerCase()]} alt={genre.name} className={classes.genreImage} height={30} />
               <Typography color="textPrimary" variant="subtitle1">
                 {genre?.name}
               </Typography>
@@ -122,9 +122,9 @@ const MovieInformation = () => {
         </Typography>
         <Typography variant="h5" gutterBottom>Top Cast</Typography>
         <Grid item container spacing={2}>
-          {data && data.credits.cast.map((character, i) => (
+          {data?.credits?.cast?.map((character, i) => (
             character.profile_path && (
-              <Grid key={i} item xs={4} md={2} component={Link} to={`/actors/${character.id}`} style={{ textDecoration: 'none' }}>
+              <Grid key={character.id || i} item xs={4} md={2} component={Link} to={`/actors/${character.id}`} style={{ textDecoration: 'none' }}>
                 <img className={classes.castImage} src={`https://image.tmdb.org/t/p/w500/${character.profile_path}`} alt={character.name} />
                 <Typography color="textPrimary">{character?.name}</Typography>
                 <Typography color="textSecondary">
@@ -182,7 +182,7 @@ const MovieInformation = () => {
               autoPlay
               width="100%"
               height="100%"
-              frameBorder="0"
+              style={{ border: 0 }}
               title="Trailer"
               src={`https://www.youtube.com/embed/${data.videos.results[0].key}`}
               allow="autoplay"

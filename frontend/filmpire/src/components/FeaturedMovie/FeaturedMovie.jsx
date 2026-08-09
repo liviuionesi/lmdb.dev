@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 import useStyles from './styles';
 
 const FeaturedMovie = ({ movie }) => {
-  const classes = useStyles();
+  const { classes } = useStyles();
 
   if (!movie) return null;
 

@@ -21,18 +21,20 @@ import { parseVoiceCommand } from '../../utils/voiceCommands';
 import { clearAuthTokens } from '../../utils';
 import { ColorModeContext } from '../../utils/ToggleColorMode';
 
-jest.mock('../../services/TMDB', () => ({ useGetGenresQuery: jest.fn() }));
-jest.mock('../../utils/wavEncoder', () => ({ encodeToWav: jest.fn() }));
-jest.mock('../../utils/voiceCommands', () => ({ parseVoiceCommand: jest.fn() }));
-jest.mock('../../utils', () => ({
-  ...jest.requireActual('../../utils'),
-  clearAuthTokens: jest.fn(),
+vi.mock('../../services/TMDB', () => ({ useGetGenresQuery: vi.fn() }));
+vi.mock('../../utils/wavEncoder', () => ({ encodeToWav: vi.fn() }));
+vi.mock('../../utils/voiceCommands', () => ({ parseVoiceCommand: vi.fn() }));
+// Vitest hoists vi.mock calls above imports, so the real module is fetched
+// via the `importOriginal` callback rather than a synchronous requireActual.
+vi.mock('../../utils', async (importOriginal) => ({
+  ...(await importOriginal()),
+  clearAuthTokens: vi.fn(),
 }));
 
-const mockHistoryPush = jest.fn();
-jest.mock('react-router-dom', () => ({
-  ...jest.requireActual('react-router-dom'),
-  useHistory: () => ({ push: mockHistoryPush }),
+const mockNavigate = vi.fn();
+vi.mock('react-router-dom', async (importOriginal) => ({
+  ...(await importOriginal()),
+  useNavigate: () => mockNavigate,
 }));
 
 /**
@@ -62,9 +64,9 @@ const buildStore = () => configureStore({
   reducer: { currentGenreOrCategory: genreOrCategoryReducer, user: authReducer },
 });
 
-const renderVoiceControl = (setMode = jest.fn()) => {
+const renderVoiceControl = (setMode = vi.fn()) => {
   const store = buildStore();
-  const dispatchSpy = jest.spyOn(store, 'dispatch');
+  const dispatchSpy = vi.spyOn(store, 'dispatch');
   renderWithProviders(
     <Provider store={store}>
       <ColorModeContext.Provider value={{ setMode }}>
@@ -91,18 +93,18 @@ describe('VoiceControl', () => {
   let getUserMedia;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     useGetGenresQuery.mockReturnValue({
       data: { genres: [{ id: 28, name: 'Action' }, { id: 35, name: 'Comedy' }] },
     });
     encodeToWav.mockResolvedValue(new Blob(['wav']));
-    getUserMedia = jest.fn().mockResolvedValue({ getTracks: () => [{ stop: jest.fn() }] });
+    getUserMedia = vi.fn().mockResolvedValue({ getTracks: () => [{ stop: vi.fn() }] });
     Object.defineProperty(global.navigator, 'mediaDevices', {
       value: { getUserMedia },
       configurable: true,
     });
     global.MediaRecorder = MockMediaRecorder;
-    global.fetch = jest.fn();
+    global.fetch = vi.fn();
   });
 
   it('renders idle with a mic icon and no open feedback', () => {
@@ -138,7 +140,10 @@ describe('VoiceControl', () => {
     await userEvent.click(getFab());
 
     await waitFor(() => expect(getFab()).toBeDisabled());
-    await userEvent.click(getFab());
+    // MUI sets `pointer-events: none` on a disabled Fab, which userEvent v14+
+    // refuses to click by default; skip that check since this test is
+    // deliberately exercising the disabled state.
+    await userEvent.click(getFab(), { pointerEventsCheck: 0 });
     expect(global.fetch).toHaveBeenCalledTimes(1);
 
     // Let the pending transcription settle so it doesn't leak into the next test.
@@ -154,7 +159,7 @@ describe('VoiceControl', () => {
     await recordAndStop();
 
     await waitFor(() => expect(store.getState().currentGenreOrCategory.genreIdOrCategoryName).toBe(28));
-    expect(mockHistoryPush).toHaveBeenCalledWith('/');
+    expect(mockNavigate).toHaveBeenCalledWith('/');
     expect(await screen.findByText('Heard: "action movies"')).toBeInTheDocument();
   });
 
@@ -171,7 +176,7 @@ describe('VoiceControl', () => {
   it('calls setMode on a "changeMode" command', async () => {
     global.fetch.mockResolvedValue({ ok: true, json: async () => ({ text: 'dark mode' }) });
     parseVoiceCommand.mockReturnValue({ command: 'changeMode', mode: 'dark' });
-    const setMode = jest.fn();
+    const setMode = vi.fn();
     renderVoiceControl(setMode);
 
     await recordAndStop();
@@ -188,7 +193,7 @@ describe('VoiceControl', () => {
 
     await waitFor(() => expect(clearAuthTokens).toHaveBeenCalled());
     expect(store.getState().user.isAuthenticated).toBe(false);
-    expect(mockHistoryPush).toHaveBeenCalledWith('/');
+    expect(mockNavigate).toHaveBeenCalledWith('/');
   });
 
   it('dispatches searchMovie with the parsed query on a "search" command', async () => {
@@ -199,7 +204,7 @@ describe('VoiceControl', () => {
     await recordAndStop();
 
     await waitFor(() => expect(store.getState().currentGenreOrCategory.searchQuery).toBe('batman'));
-    expect(mockHistoryPush).toHaveBeenCalledWith('/');
+    expect(mockNavigate).toHaveBeenCalledWith('/');
   });
 
   it('shows an info message when transcribed text matches no known command', async () => {

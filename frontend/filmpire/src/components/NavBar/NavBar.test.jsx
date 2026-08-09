@@ -16,24 +16,26 @@ import { clearAuthTokens } from '../../utils';
 import { ColorModeContext } from '../../utils/ToggleColorMode';
 
 // NavBar renders LoginDialog too, which needs the login/register hooks.
-jest.mock('../../services/user', () => ({
-  useGetProfileQuery: jest.fn(),
-  useLoginMutation: jest.fn(),
-  useRegisterMutation: jest.fn(),
+vi.mock('../../services/user', () => ({
+  useGetProfileQuery: vi.fn(),
+  useLoginMutation: vi.fn(),
+  useRegisterMutation: vi.fn(),
 }));
 
-jest.mock('../../services/media', () => ({
-  useGetMediaForEntityQuery: jest.fn(),
-  getMediaUrl: jest.fn(),
+vi.mock('../../services/media', () => ({
+  useGetMediaForEntityQuery: vi.fn(),
+  getMediaUrl: vi.fn(),
 }));
 
-jest.mock('../../services/TMDB', () => ({
-  useGetGenresQuery: jest.fn(),
+vi.mock('../../services/TMDB', () => ({
+  useGetGenresQuery: vi.fn(),
 }));
 
-jest.mock('../../utils', () => ({
-  ...jest.requireActual('../../utils'),
-  clearAuthTokens: jest.fn(),
+// Vitest hoists vi.mock calls above imports, so the real module is fetched
+// via the `importOriginal` callback rather than a synchronous requireActual.
+vi.mock('../../utils', async (importOriginal) => ({
+  ...(await importOriginal()),
+  clearAuthTokens: vi.fn(),
 }));
 
 const buildStore = (preloadedState) => configureStore({
@@ -42,7 +44,7 @@ const buildStore = (preloadedState) => configureStore({
 });
 
 const renderNavBar = (options) => renderWithProviders(
-  <ColorModeContext.Provider value={{ mode: 'light', toggleColorMode: jest.fn() }}>
+  <ColorModeContext.Provider value={{ mode: 'light', toggleColorMode: vi.fn() }}>
     <NavBar />
   </ColorModeContext.Provider>,
   options,
@@ -51,13 +53,13 @@ const renderNavBar = (options) => renderWithProviders(
 describe('NavBar', () => {
   beforeEach(() => {
     localStorage.clear();
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     useGetGenresQuery.mockReturnValue({ data: undefined, isFetching: false });
     useGetProfileQuery.mockReturnValue({ data: undefined, error: undefined });
     useGetMediaForEntityQuery.mockReturnValue({ data: [], isFetching: false });
     getMediaUrl.mockImplementation((url) => url);
-    useLoginMutation.mockReturnValue([jest.fn(), { isLoading: false, error: undefined }]);
-    useRegisterMutation.mockReturnValue([jest.fn(), { isLoading: false, error: undefined }]);
+    useLoginMutation.mockReturnValue([vi.fn(), { isLoading: false, error: undefined }]);
+    useRegisterMutation.mockReturnValue([vi.fn(), { isLoading: false, error: undefined }]);
   });
 
   it('shows a Login button when unauthenticated', () => {

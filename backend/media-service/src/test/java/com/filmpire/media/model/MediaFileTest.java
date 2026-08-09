@@ -30,7 +30,8 @@ class MediaFileTest {
             Map.of("thumb", "http://localhost:8085/api/v1/media/file-uuid-123/download?size=thumb"),
             metadata,
             Instant.now(),
-            "test-user");
+            "test-user",
+            null);
 
     Assertions.assertEquals("file-uuid-123", mediaFile.id());
     Assertions.assertEquals(EntityType.USER, mediaFile.entityType());
@@ -62,6 +63,7 @@ class MediaFileTest {
                 emptyThumbnails,
                 metadata,
                 now,
-                "reviewer-1"));
+                "reviewer-1",
+                null));
   }
 }

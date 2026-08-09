@@ -334,6 +334,14 @@ management:
       enabled: true
     ratelimiters:
       enabled: true
+  # Distributed Tracing (ADR-007, Task #42) — Micrometer Tracing + Zipkin
+  tracing:
+    sampling:
+      probability: ${TRACING_SAMPLE_RATE:1.0}
+  zipkin:
+    tracing:
+      endpoint: ${ZIPKIN_ENDPOINT:http://localhost:9411/api/v2/spans}
+
 
 # Logging configuration
 logging:
@@ -516,5 +524,4 @@ resilience4j:
       aiServiceCircuitBreaker:
         slow-call-duration-threshold: 60s
         slow-call-rate-threshold: 100
-
 

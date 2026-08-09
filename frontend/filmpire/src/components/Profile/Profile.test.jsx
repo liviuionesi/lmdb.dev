@@ -1,31 +1,34 @@
 // Tests Profile: the empty state, rendering favorites/watchlist, logging out,
 // unauthenticated redirect, and custom avatar photo uploading & validation.
 import React from 'react';
-import { screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { configureStore } from '@reduxjs/toolkit';
+import { Provider } from 'react-redux';
+import { MemoryRouter, Route, Routes, useNavigationType } from 'react-router-dom';
+import { ThemeProvider } from '@mui/material/styles';
 
 import Profile from './Profile';
 import authReducer from '../../features/auth';
-import { renderWithProviders } from '../../test-utils/render';
+import { renderWithProviders, theme } from '../../test-utils/render';
 import { useGetFavoritesQuery, useGetWatchlistQuery, useLogoutMutation } from '../../services/user';
 import { useGetMediaForEntityQuery, useUploadMediaMutation, getMediaUrl } from '../../services/media';
 import { useGetMovieQuery } from '../../services/TMDB';
 
-jest.mock('../../services/user', () => ({
-  useGetFavoritesQuery: jest.fn(),
-  useGetWatchlistQuery: jest.fn(),
-  useLogoutMutation: jest.fn(),
+vi.mock('../../services/user', () => ({
+  useGetFavoritesQuery: vi.fn(),
+  useGetWatchlistQuery: vi.fn(),
+  useLogoutMutation: vi.fn(),
 }));
 
-jest.mock('../../services/media', () => ({
-  useGetMediaForEntityQuery: jest.fn(),
-  useUploadMediaMutation: jest.fn(),
-  getMediaUrl: jest.fn(),
+vi.mock('../../services/media', () => ({
+  useGetMediaForEntityQuery: vi.fn(),
+  useUploadMediaMutation: vi.fn(),
+  getMediaUrl: vi.fn(),
 }));
 
-jest.mock('../../services/TMDB', () => ({
-  useGetMovieQuery: jest.fn(),
+vi.mock('../../services/TMDB', () => ({
+  useGetMovieQuery: vi.fn(),
 }));
 
 const buildStore = (authenticated) => configureStore({
@@ -33,16 +36,47 @@ const buildStore = (authenticated) => configureStore({
   preloadedState: authenticated ? { user: { user: { id: 1, username: 'liviu' }, isAuthenticated: true } } : undefined,
 });
 
+// Surfaces react-router's own classification of the last navigation
+// ('PUSH' | 'REPLACE' | 'POP') so a test can assert that Profile's redirect
+// used <Navigate replace> rather than a regular push — the two render
+// identically at the destination, so nothing else in this file would catch
+// a regression that dropped `replace`.
+const NavigationTypeProbe = () => {
+  const navigationType = useNavigationType();
+  return <div data-testid="nav-type">{navigationType}</div>;
+};
+
+/**
+ * Renders Profile at "/profile/1" alongside a sentinel "/" route, so an
+ * unauthenticated `<Navigate to="/" replace />` is observable as "the Home
+ * sentinel replaced Profile" (matching AdminDashboard.test.jsx's pattern)
+ * rather than inferred from Profile's own content being absent, which would
+ * also be true if the component crashed or rendered null.
+ */
+const renderAtProfileRoute = (store) => render(
+  <ThemeProvider theme={theme}>
+    <Provider store={store}>
+      <MemoryRouter initialEntries={['/profile/1']}>
+        <NavigationTypeProbe />
+        <Routes>
+          <Route path="/" element="Home" />
+          <Route path="/profile/:id" element={<Profile />} />
+        </Routes>
+      </MemoryRouter>
+    </Provider>
+  </ThemeProvider>,
+);
+
 describe('Profile', () => {
   beforeEach(() => {
-    useLogoutMutation.mockReturnValue([jest.fn().mockResolvedValue({})]);
+    useLogoutMutation.mockReturnValue([vi.fn().mockResolvedValue({})]);
     useGetFavoritesQuery.mockReturnValue({ data: [] });
     useGetWatchlistQuery.mockReturnValue({ data: [] });
-    useGetMediaForEntityQuery.mockReturnValue({ data: [], refetch: jest.fn() });
-    useUploadMediaMutation.mockReturnValue([jest.fn().mockReturnValue({ unwrap: jest.fn().mockResolvedValue({}) }), { isLoading: false }]);
+    useGetMediaForEntityQuery.mockReturnValue({ data: [], refetch: vi.fn() });
+    useUploadMediaMutation.mockReturnValue([vi.fn().mockReturnValue({ unwrap: vi.fn().mockResolvedValue({}) }), { isLoading: false }]);
     getMediaUrl.mockImplementation((url) => url);
     localStorage.clear();
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('shows a placeholder message when there are no favorites or watchlist entries', () => {
@@ -63,7 +97,7 @@ describe('Profile', () => {
 
   it('logs out: revokes the session, clears local tokens/redux state, and redirects home', async () => {
     localStorage.setItem('access_token', 'jwt');
-    const logout = jest.fn().mockResolvedValue({});
+    const logout = vi.fn().mockResolvedValue({});
     useLogoutMutation.mockReturnValue([logout]);
 
     delete window.location;
@@ -77,10 +111,17 @@ describe('Profile', () => {
     await waitFor(() => expect(localStorage.getItem('access_token')).toBeNull());
   });
 
-  it('redirects an unauthenticated user to the home page (/)', () => {
-    renderWithProviders(<Profile />, { store: buildStore(false), initialEntries: ['/profile/1'] });
+  it('redirects an unauthenticated user to the home page (/) via history replace', () => {
+    renderAtProfileRoute(buildStore(false));
 
+    // The Home sentinel took over the route — a genuine redirect, not just
+    // Profile rendering nothing (which would also leave "My Profile" absent).
+    expect(screen.getByText('Home')).toBeInTheDocument();
     expect(screen.queryByText(/My Profile/i)).not.toBeInTheDocument();
+    // <Navigate replace> must classify as a REPLACE navigation, not PUSH —
+    // otherwise the redirect would leave the protected /profile/1 route
+    // behind in history, reachable again via the browser Back button.
+    expect(screen.getByTestId('nav-type')).toHaveTextContent('REPLACE');
   });
 
   it('displays validation error when uploading a non-image format file', async () => {
@@ -107,7 +148,7 @@ describe('Profile', () => {
   });
 
   it('successfully uploads valid JPG avatar and shows success notification', async () => {
-    const mockUpload = jest.fn().mockReturnValue({ unwrap: jest.fn().mockResolvedValue({}) });
+    const mockUpload = vi.fn().mockReturnValue({ unwrap: vi.fn().mockResolvedValue({}) });
     useUploadMediaMutation.mockReturnValue([mockUpload, { isLoading: false }]);
 
     renderWithProviders(<Profile />, { store: buildStore(true) });
@@ -131,12 +172,12 @@ describe('Profile', () => {
   it('renders uploaded avatar thumbnail when media items are returned', () => {
     useGetMediaForEntityQuery.mockReturnValue({
       data: [{ mediaType: 'AVATAR', thumbnails: { medium: 'http://localhost:8085/thumb.jpg' } }],
-      refetch: jest.fn(),
+      refetch: vi.fn(),
     });
 
     renderWithProviders(<Profile />, { store: buildStore(true) });
 
     const avatar = screen.getByTestId('user-avatar');
-    expect(avatar).toHaveAttribute('data-src', 'http://localhost:8085/thumb.jpg');
+    expect(avatar.getAttribute('data-src')).toContain('http://localhost:8085/thumb.jpg');
   });
 });

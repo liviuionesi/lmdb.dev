@@ -24,7 +24,7 @@ const STATUS_LABEL = {
  * @param {string} [secondaryLabel] label for secondaryUrl
  */
 const StatusCard = ({ title, description, url, secondaryUrl, secondaryLabel }) => {
-  const classes = useStyles();
+  const { classes } = useStyles();
   const status = useServiceStatus(url);
 
   const dotClass = {

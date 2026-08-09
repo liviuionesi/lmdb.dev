@@ -9,7 +9,7 @@ import useStyles from './styles';
 
 const Search = () => {
   const [query, setQuery] = useState('');
-  const classes = useStyles();
+  const { classes } = useStyles();
   const dispatch = useDispatch();
   const location = useLocation();
 
@@ -28,13 +28,15 @@ const Search = () => {
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         variant="standard"
-        InputProps={{
-          className: classes.input,
-          startAdornment: (
-            <InputAdornment position="start">
-              <SearchIcon />
-            </InputAdornment>
-          ),
+        slotProps={{
+          input: {
+            className: classes.input,
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon />
+              </InputAdornment>
+            ),
+          },
         }}
       />
     </div>

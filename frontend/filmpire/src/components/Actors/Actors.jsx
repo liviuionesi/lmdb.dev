@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Box, Button, CircularProgress, Grid, Typography } from '@mui/material';
-import { useHistory, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowBack } from '@mui/icons-material';
 
 import useStyles from './styles';
@@ -9,8 +9,8 @@ import { MovieList, Pagination } from '..';
 
 const Actors = () => {
   const { id } = useParams();
-  const history = useHistory();
-  const classes = useStyles();
+  const navigate = useNavigate();
+  const { classes } = useStyles();
   const [page, setPage] = useState(1);
 
   const { data, isFetching, error } = useGetActorsDetailsQuery(id);
@@ -27,7 +27,7 @@ const Actors = () => {
   if (error) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center">
-        <Button startIcon={<ArrowBack />} onClick={() => history.goBack()} color="primary">
+        <Button startIcon={<ArrowBack />} onClick={() => navigate(-1)} color="primary">
           Go back
         </Button>
       </Box>
@@ -51,14 +51,14 @@ const Actors = () => {
           <Typography variant="h5" gutterBottom>
             Born: {new Date(data?.birthday).toDateString()}
           </Typography>
-          <Typography variant="body1" align="justify" paragraph>
+          <Typography variant="body1" align="justify" sx={{ marginBottom: '16px' }}>
             {data?.biography || 'Sorry, no biography yet...'}
           </Typography>
           <Box marginTop="2rem" display="flex" justifyContent="space-around">
             <Button variant="contained" color="primary" target="_blank" href={`https://www.imdb.com/name/${data?.imdb_id}`}>
               IMDB
             </Button>
-            <Button startIcon={<ArrowBack />} onClick={() => history.goBack()} color="primary">
+            <Button startIcon={<ArrowBack />} onClick={() => navigate(-1)} color="primary">
               Back
             </Button>
           </Box>

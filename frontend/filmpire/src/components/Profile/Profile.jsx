@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Typography, Button, Box, Avatar, CircularProgress, Alert } from '@mui/material';
 import { useDispatch, useSelector } from 'react-redux';
 import { ExitToApp, PhotoCamera } from '@mui/icons-material';
-import { Redirect } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 
 import { useGetFavoritesQuery, useGetWatchlistQuery, useLogoutMutation } from '../../services/user';
 import { useGetMediaForEntityQuery, useUploadMediaMutation, getMediaUrl } from '../../services/media';
@@ -21,20 +21,27 @@ const Profile = () => {
   const { data: favorites } = useGetFavoritesQuery(undefined, { skip: !isAuthenticated });
   const { data: watchlist } = useGetWatchlistQuery(undefined, { skip: !isAuthenticated });
 
+  const profileEntityId = String(user?.id || user?.username || 'user');
   const { data: mediaList, refetch: refetchMedia } = useGetMediaForEntityQuery(
-    String(user?.id || ''),
-    { skip: !isAuthenticated || !user?.id },
+    profileEntityId,
+    { skip: !isAuthenticated },
   );
   const [uploadMedia, { isLoading: isUploading }] = useUploadMediaMutation();
 
   if (!isAuthenticated) {
-    return <Redirect to="/" />;
+    return <Navigate to="/" replace />;
   }
 
   const favoriteIds = favorites?.map((entry) => entry.movieId) ?? [];
   const watchlistIds = watchlist?.map((entry) => entry.movieId) ?? [];
-  const userAvatar = mediaList?.find((item) => item.mediaType === 'AVATAR') || mediaList?.[0];
-  const avatarUrl = getMediaUrl(userAvatar?.thumbnails?.medium || userAvatar?.thumbnails?.original);
+
+  // Pick the most recently uploaded AVATAR asset
+  const avatarList = mediaList?.filter((item) => item.mediaType === 'AVATAR' || item.entityType === 'USER') || [];
+  const userAvatar = avatarList.length > 0 ? avatarList[avatarList.length - 1] : mediaList?.[mediaList?.length - 1];
+  const rawAvatarUrl = getMediaUrl(userAvatar?.thumbnails?.medium || userAvatar?.thumbnails?.original);
+  const avatarSeparator = rawAvatarUrl?.includes('?') ? '&' : '?';
+  const avatarTimestamp = new Date(userAvatar?.uploadedAt || Date.now()).getTime();
+  const avatarUrl = rawAvatarUrl ? `${rawAvatarUrl}${avatarSeparator}t=${avatarTimestamp}` : '';
 
   const handleFileChange = async (e) => {
     setValidationError('');
@@ -55,7 +62,7 @@ const Profile = () => {
     try {
       await uploadMedia({
         file,
-        entityId: String(user?.id || 'user'),
+        entityId: profileEntityId,
         entityType: 'USER',
         mediaType: 'AVATAR',
         uploadedBy: user?.username || 'anonymous',

@@ -67,6 +67,8 @@ public class MediaController {
    * @param codec Codec identifier metadata string (optional).
    * @param bitrate Data stream bit rate metadata (optional).
    * @param uploadedBy User account identifier responsible for submission (optional).
+   * @param description Optional review comment or caption text to store alongside the media asset
+   *     (e.g., the written review text paired with a screenshot proof image).
    * @return ResponseEntity holding persisted {@link MediaFile} record metadata with HTTP 201
    *     status.
    */
@@ -91,11 +93,16 @@ public class MediaController {
       @RequestParam(value = "duration", required = false) Integer duration,
       @RequestParam(value = "codec", required = false) String codec,
       @RequestParam(value = "bitrate", required = false) Long bitrate,
-      @RequestParam(value = "uploadedBy", defaultValue = "anonymous") String uploadedBy) {
+      @RequestParam(value = "uploadedBy", defaultValue = "anonymous") String uploadedBy,
+      @org.springframework.web.bind.annotation.RequestHeader(value = "X-Username", required = false)
+          String xUsername,
+      @RequestParam(value = "description", required = false) String description) {
     try {
+      String effectiveUser = (xUsername != null && !xUsername.isBlank()) ? xUsername : uploadedBy;
       MediaMetadata metadata = new MediaMetadata(width, height, duration, codec, bitrate);
       MediaFile mediaFile =
-          mediaService.uploadMedia(file, entityId, entityType, mediaType, metadata, uploadedBy);
+          mediaService.uploadMedia(
+              file, entityId, entityType, mediaType, metadata, effectiveUser, description);
       return ResponseEntity.status(HttpStatus.CREATED).body(mediaFile);
     } catch (Exception e) {
       log.error("Media asset upload encountered an error: {}", e.getMessage(), e);

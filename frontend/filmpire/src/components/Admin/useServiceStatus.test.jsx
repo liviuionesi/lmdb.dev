@@ -20,7 +20,7 @@ describe('useServiceStatus', () => {
   });
 
   it('resolves to "up" when the probe succeeds', async () => {
-    global.fetch = jest.fn().mockResolvedValue({});
+    global.fetch = vi.fn().mockResolvedValue({});
     render(<Probe url="http://example.com" />);
 
     expect(screen.getByText('checking')).toBeInTheDocument();
@@ -29,7 +29,7 @@ describe('useServiceStatus', () => {
   });
 
   it('resolves to "down" when the probe rejects', async () => {
-    global.fetch = jest.fn().mockRejectedValue(new Error('network error'));
+    global.fetch = vi.fn().mockRejectedValue(new Error('network error'));
     render(<Probe url="http://example.com" />);
 
     expect(await screen.findByText('down')).toBeInTheDocument();
@@ -37,7 +37,7 @@ describe('useServiceStatus', () => {
 
   it('ignores a resolved probe after the url changes to falsy (cancelled guard)', async () => {
     let resolveFetch;
-    global.fetch = jest.fn().mockReturnValue(new Promise((resolve) => { resolveFetch = resolve; }));
+    global.fetch = vi.fn().mockReturnValue(new Promise((resolve) => { resolveFetch = resolve; }));
 
     const { rerender } = render(<Probe url="http://example.com" />);
     expect(screen.getByText('checking')).toBeInTheDocument();

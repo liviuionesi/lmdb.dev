@@ -1,17 +1,26 @@
 // Tests Actors: loading spinner, the error/go-back state, and the happy
 // path rendering the actor's bio plus their movies.
 import React from 'react';
-import { screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
+import { ThemeProvider } from '@mui/material/styles';
 
 import Actors from './Actors';
-import { renderWithProviders } from '../../test-utils/render';
+import { renderWithProviders, theme } from '../../test-utils/render';
 import { useGetActorsDetailsQuery, useGetMoviesByActorIdQuery } from '../../services/TMDB';
 
-jest.mock('../../services/TMDB', () => ({
-  useGetActorsDetailsQuery: jest.fn(),
-  useGetMoviesByActorIdQuery: jest.fn(),
+vi.mock('../../services/TMDB', () => ({
+  useGetActorsDetailsQuery: vi.fn(),
+  useGetMoviesByActorIdQuery: vi.fn(),
 }));
+
+// Renders the pathname alongside Actors so the "Back" test can observe an
+// actual route change instead of only asserting the click doesn't throw.
+const LocationProbe = () => {
+  const location = useLocation();
+  return <div data-testid="location">{location.pathname}</div>;
+};
 
 describe('Actors', () => {
   beforeEach(() => {
@@ -59,16 +68,30 @@ describe('Actors', () => {
     expect(screen.getByText('Sorry, no biography yet...')).toBeInTheDocument();
   });
 
-  it('navigates back when Back is clicked', () => {
+  it('navigates back when Back is clicked', async () => {
     useGetActorsDetailsQuery.mockReturnValue({
       data: { name: 'Brad Pitt', biography: 'x', birthday: '1963-12-18', profile_path: '/p.jpg', imdb_id: 'nm1' },
       isFetching: false,
       error: undefined,
     });
-    renderWithProviders(<Actors />, { route: '/actors/42', path: '/actors/:id' });
+    // Two history entries (with the second active) so that clicking Back has
+    // an observable effect: the MemoryRouter can actually go back one step.
+    render(
+      <ThemeProvider theme={theme}>
+        <MemoryRouter initialEntries={['/actors/1', '/actors/42']} initialIndex={1}>
+          <LocationProbe />
+          <Routes>
+            <Route path="/actors/:id" element={<Actors />} />
+          </Routes>
+        </MemoryRouter>
+      </ThemeProvider>,
+    );
 
-    // Clicking Back calls history.goBack(); this just proves it doesn't throw
-    // and the button is wired to the handler.
-    userEvent.click(screen.getByRole('button', { name: /^back$/i }));
+    expect(screen.getByTestId('location')).toHaveTextContent('/actors/42');
+
+    // userEvent v14+ dispatches events asynchronously, so the click must be awaited.
+    await userEvent.click(screen.getByRole('button', { name: /^back$/i }));
+
+    expect(screen.getByTestId('location')).toHaveTextContent('/actors/1');
   });
 });
