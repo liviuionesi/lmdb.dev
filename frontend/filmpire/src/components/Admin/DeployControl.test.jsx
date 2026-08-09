@@ -18,8 +18,8 @@ describe('DeployControl', () => {
       if (url.includes('/actuator/health')) {
         return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ status: 'UP' }) });
       }
-      if (url.includes('/actions/workflows/')) {
-        return Promise.resolve({ ok: true, status: 204 });
+      if (url === '/api/dispatch') {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ ok: true }) });
       }
       return Promise.resolve({ ok: true, status: 200 });
     });
@@ -27,6 +27,7 @@ describe('DeployControl', () => {
 
   afterEach(() => {
     delete global.fetch;
+    vi.restoreAllMocks();
   });
 
   it('renders target selector options and control buttons in executive layout', async () => {
@@ -40,19 +41,20 @@ describe('DeployControl', () => {
     expect(screen.getByRole('button', { name: /Tear Down/i })).toBeInTheDocument();
   });
 
-  it('shows error if deploy is triggered without a token configured', async () => {
+  it('shows error if deploy is triggered and the admin passphrase prompt is cancelled', async () => {
+    vi.spyOn(window, 'prompt').mockReturnValue(null);
     renderDeployControl();
 
     const deployBtn = screen.getByRole('button', { name: /Launch Azure AKS/i });
     fireEvent.click(deployBtn);
 
     await waitFor(() => {
-      expect(screen.getByText(/GitHub Personal Access Token or VITE_GITHUB_TOKEN/i)).toBeInTheDocument();
+      expect(screen.getByText(/Admin passphrase is required/i)).toBeInTheDocument();
     });
   });
 
-  it('dispatches deployment workflow when token is present in localStorage or environment', async () => {
-    localStorage.setItem('filmpire_gh_token', 'ghp_testtoken123');
+  it('dispatches deployment workflow via the serverless proxy using the cached admin passphrase', async () => {
+    localStorage.setItem('filmpire_admin_key', 'test-passphrase');
     renderDeployControl();
 
     const deployBtn = screen.getByRole('button', { name: /Launch Azure AKS/i });
@@ -60,12 +62,13 @@ describe('DeployControl', () => {
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('/actions/workflows/deploy.yml/dispatches'),
+        '/api/dispatch',
         expect.objectContaining({
           method: 'POST',
           headers: expect.objectContaining({
-            Authorization: 'Bearer ghp_testtoken123',
+            'x-admin-key': 'test-passphrase',
           }),
+          body: JSON.stringify({ workflow: 'deploy.yml', inputs: { cloud: 'azure' } }),
         }),
       );
       expect(screen.getByText(/Automated deployment dispatched for AZURE/i)).toBeInTheDocument();
@@ -73,7 +76,7 @@ describe('DeployControl', () => {
   });
 
   it('dispatches destroy workflow when teardown button is clicked', async () => {
-    localStorage.setItem('filmpire_gh_token', 'ghp_testtoken123');
+    localStorage.setItem('filmpire_admin_key', 'test-passphrase');
     renderDeployControl();
 
     const destroyBtn = screen.getByRole('button', { name: /Tear Down/i });
@@ -81,12 +84,13 @@ describe('DeployControl', () => {
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('/actions/workflows/destroy.yml/dispatches'),
+        '/api/dispatch',
         expect.objectContaining({
           method: 'POST',
           headers: expect.objectContaining({
-            Authorization: 'Bearer ghp_testtoken123',
+            'x-admin-key': 'test-passphrase',
           }),
+          body: JSON.stringify({ workflow: 'destroy.yml', inputs: { cloud: 'azure' } }),
         }),
       );
       expect(screen.getByText(/Teardown dispatched for AZURE/i)).toBeInTheDocument();

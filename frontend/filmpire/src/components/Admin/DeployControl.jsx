@@ -26,9 +26,28 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 
 import { getApiUrl } from '../../utils/apiUrl';
 
-const REPO_OWNER = 'pehlivanu';
-const REPO_NAME = 'filmpire-microservices';
 const ACTIVE_TUNNEL_URL = 'https://humanities-exactly-criterion-buyer.trycloudflare.com';
+const ADMIN_KEY_STORAGE_KEY = 'filmpire_admin_key';
+
+/**
+ * Returns the shared admin passphrase used to authorize dispatch requests,
+ * prompting for it once and caching the result in localStorage so this
+ * browser never has to ask again.
+ *
+ * @returns {string|null} The cached or freshly entered passphrase, or null if the user cancelled the prompt.
+ */
+function getOrPromptAdminKey() {
+  const cached = localStorage.getItem(ADMIN_KEY_STORAGE_KEY);
+  if (cached) {
+    return cached;
+  }
+  // eslint-disable-next-line no-alert
+  const entered = window.prompt('Enter the admin passphrase to authorize cloud deployment:');
+  if (entered) {
+    localStorage.setItem(ADMIN_KEY_STORAGE_KEY, entered);
+  }
+  return entered || null;
+}
 
 /**
  * Modern, Executive 1-Click Cloud & Local Deployment Deck.
@@ -82,33 +101,34 @@ function DeployControl({ apiUrl }) {
 
   const dispatchWorkflow = async (workflowFile, inputs = {}) => {
     setErrorMessage('');
-    const token = import.meta.env.VITE_GITHUB_TOKEN || localStorage.getItem('filmpire_gh_token');
+    const adminKey = getOrPromptAdminKey();
 
-    if (!token) {
-      setErrorMessage('GitHub Personal Access Token or VITE_GITHUB_TOKEN is required to trigger automated cloud deployment.');
+    if (!adminKey) {
+      setErrorMessage('Admin passphrase is required to trigger automated cloud deployment.');
       return false;
     }
 
     try {
-      const response = await fetch(
-        `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/actions/workflows/${workflowFile}/dispatches`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: 'application/vnd.github.v3+json',
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            ref: 'develop',
-            inputs,
-          }),
+      // Calls our own serverless proxy (api/dispatch.js) rather than the
+      // GitHub API directly, so the GitHub token stays server-side and is
+      // never shipped in the client bundle.
+      const response = await fetch('/api/dispatch', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-key': adminKey,
         },
-      );
+        body: JSON.stringify({ workflow: workflowFile, inputs }),
+      });
 
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
-        throw new Error(err.message || `GitHub API error: ${response.status}`);
+        // A wrong/stale cached passphrase should not get stuck forever -
+        // clear it so the next attempt re-prompts instead of failing silently.
+        if (response.status === 401) {
+          localStorage.removeItem(ADMIN_KEY_STORAGE_KEY);
+        }
+        throw new Error(err.message || `Dispatch failed: ${response.status}`);
       }
 
       return true;
