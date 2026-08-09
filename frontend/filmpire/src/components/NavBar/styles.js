@@ -1,8 +1,8 @@
-import { makeStyles } from '@mui/styles';
+import { makeStyles } from 'tss-react/mui';
 
 const drawerWidth = 240;
 
-export default makeStyles((theme) => ({
+export default makeStyles()((theme) => ({
   toolbar: {
     height: '80px',
     display: 'flex',

@@ -85,7 +85,7 @@ const ReviewMediaSection = ({ movieId }) => {
       <Typography variant="h4" gutterBottom>
         Fan Reviews & Proof Gallery
       </Typography>
-      <Typography variant="subtitle1" color="textSecondary" paragraph>
+      <Typography variant="subtitle1" color="textSecondary" sx={{ marginBottom: '16px' }}>
         Share screenshot reactions, easter eggs, or video review clips with the community.
       </Typography>
 

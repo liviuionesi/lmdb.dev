@@ -20,7 +20,7 @@ const FavoriteMovie = ({ movieId, i }) => {
 };
 
 const RatedCards = ({ title, movieIds }) => {
-  const classes = useStyles();
+  const { classes } = useStyles();
 
   return (
     <Box>

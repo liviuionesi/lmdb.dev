@@ -10,7 +10,7 @@ import { MovieList, Pagination } from '..';
 const Actors = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const classes = useStyles();
+  const { classes } = useStyles();
   const [page, setPage] = useState(1);
 
   const { data, isFetching, error } = useGetActorsDetailsQuery(id);
@@ -51,7 +51,7 @@ const Actors = () => {
           <Typography variant="h5" gutterBottom>
             Born: {new Date(data?.birthday).toDateString()}
           </Typography>
-          <Typography variant="body1" align="justify" paragraph>
+          <Typography variant="body1" align="justify" sx={{ marginBottom: '16px' }}>
             {data?.biography || 'Sorry, no biography yet...'}
           </Typography>
           <Box marginTop="2rem" display="flex" justifyContent="space-around">

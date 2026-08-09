@@ -70,4 +70,27 @@ describe('Sidebar', () => {
 
     expect(setMobileOpen).toHaveBeenCalledWith(false);
   });
+
+  // Guards the ListItem→ListItemButton conversion (#130): the old `button`
+  // prop was deprecated in MUI v6, but `selected` still needs to reach the
+  // rendered element as MUI's `Mui-selected` class, not just the click
+  // handler that the tests above already cover.
+  it('marks only the currently-selected genre with the MUI selected class', () => {
+    useGetGenresQuery.mockReturnValue({
+      data: { genres: [{ id: 28, name: 'Action' }, { id: 35, name: 'Comedy' }] },
+      isFetching: false,
+    });
+    const store = buildStore({ currentGenreOrCategory: { genreIdOrCategoryName: 35, page: 1, searchQuery: '' } });
+    renderWithProviders(<Sidebar setMobileOpen={() => {}} />, { store });
+
+    expect(screen.getByText('Comedy').closest('.MuiListItemButton-root')).toHaveClass('Mui-selected');
+    expect(screen.getByText('Action').closest('.MuiListItemButton-root')).not.toHaveClass('Mui-selected');
+  });
+
+  it('defaults to marking "Popular" selected when no genre/category is set', () => {
+    renderWithProviders(<Sidebar setMobileOpen={() => {}} />, { store: buildStore() });
+
+    expect(screen.getByText('Popular').closest('.MuiListItemButton-root')).toHaveClass('Mui-selected');
+    expect(screen.getByText('Top Rated').closest('.MuiListItemButton-root')).not.toHaveClass('Mui-selected');
+  });
 });

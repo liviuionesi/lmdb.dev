@@ -4,11 +4,12 @@ import '@testing-library/jest-dom';
 
 // jsdom's CSS.escape is spec-strict about its receiver: called as a detached
 // function reference (no `CSS.` in front) it throws "called on an object
-// that is not a valid instance of CSS". @mui/styles' JSS caches exactly such
-// a detached reference (`CSS.escape` with no bound `this`) the first time it
-// is imported, so any component using `makeStyles` blows up. Binding it here
-// — before any test file (and therefore JSS) is imported — makes the cached
-// reference itself carry the right `this`, which fixes it for every test.
+// that is not a valid instance of CSS". Emotion (the engine behind
+// tss-react/mui's makeStyles, replacing @mui/styles' JSS since #130) can
+// pick up exactly such a detached reference the first time it's imported.
+// Binding it here — before any test file (and therefore Emotion) is
+// imported — makes the cached reference itself carry the right `this`,
+// which fixes it for every test.
 if (typeof window !== 'undefined' && window.CSS && typeof window.CSS.escape === 'function') {
   window.CSS.escape = window.CSS.escape.bind(window.CSS);
 }

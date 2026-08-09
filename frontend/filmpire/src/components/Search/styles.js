@@ -1,6 +1,6 @@
-import { makeStyles } from '@mui/styles';
+import { makeStyles } from 'tss-react/mui';
 
-export default makeStyles((theme) => ({
+export default makeStyles()((theme) => ({
   searchContainer: {
     [theme.breakpoints.down('sm')]: {
       display: 'flex',

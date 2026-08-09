@@ -23,7 +23,7 @@ import ReviewMediaSection from './ReviewMediaSection';
 const MovieInformation = () => {
   const { isAuthenticated } = useSelector(userSelector);
   const { id } = useParams();
-  const classes = useStyles();
+  const { classes } = useStyles();
   const dispatch = useDispatch();
   const [open, setOpen] = useState(false);
 

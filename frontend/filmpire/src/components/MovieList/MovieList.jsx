@@ -5,7 +5,7 @@ import useStyles from './styles';
 import { Movie } from '..';
 
 const MovieList = ({ movies, numberOfMovies, excludeFirst }) => {
-  const classes = useStyles();
+  const { classes } = useStyles();
   const startFrom = excludeFirst ? 1 : 0;
 
   return (

@@ -8,7 +8,7 @@ import VoiceControl from './VoiceControl/VoiceControl';
 import { Actors, AdminDashboard, MovieInformation, Movies, NavBar, Profile } from '.';
 
 const App = () => {
-  const classes = useStyles();
+  const { classes } = useStyles();
 
   return (
     <div className={classes.root}>
