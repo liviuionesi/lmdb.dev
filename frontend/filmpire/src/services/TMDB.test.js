@@ -6,7 +6,7 @@ import { configureStore } from '@reduxjs/toolkit';
 import { tmdbApi } from './TMDB';
 
 const apiKey = import.meta.env.VITE_TMDB_KEY;
-const baseUrl = 'https://api.themoviedb.org/3';
+const baseUrl = import.meta.env.VITE_API_URL || 'https://api.themoviedb.org/3';
 
 const buildStore = () => configureStore({
   reducer: { [tmdbApi.reducerPath]: tmdbApi.reducer },

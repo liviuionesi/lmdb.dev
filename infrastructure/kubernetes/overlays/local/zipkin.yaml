@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: zipkin
-          image: openzipkin/zipkin:3
+          image: docker.io/openzipkin/zipkin:3
           ports:
             - containerPort: 9411
               name: http
