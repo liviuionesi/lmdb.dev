@@ -6,6 +6,7 @@ import { useSelector } from 'react-redux';
 import { userSelector } from '../../features/auth';
 import { useGetProfileQuery } from '../../services/user';
 import StatusCard from './StatusCard';
+import DeployControl from './DeployControl';
 
 const filmpireApiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 const discoveryUrl = import.meta.env.VITE_DISCOVERY_URL || 'http://localhost:8761';
@@ -62,10 +63,11 @@ function AdminDashboard() {
     <Box>
       <Typography variant="h4" gutterBottom>Admin Dashboard</Typography>
       <Typography variant="body2" color="textSecondary" sx={{ mb: 3 }}>
-        Live links to the infrastructure this stack runs locally. The green/red
-        dot only means &quot;something answered on that port&quot; — it isn&apos;t
-        a deep health check.
+        Live controls and status for the Filmpire infrastructure. Trigger cloud deployments or monitor local stack services.
       </Typography>
+
+      <DeployControl apiUrl={filmpireApiUrl} />
+
       <Grid container spacing={2}>
         <Grid
           size={{
