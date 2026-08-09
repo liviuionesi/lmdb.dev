@@ -41,11 +41,19 @@ cd "$DOCKER_DIR"
 # the ELK-overlay containers/network and will leave them running.
 COMPOSE_FILES="-f docker-compose.yml -f docker-compose.elk.yml"
 
+# Stop any running Cloudflare tunnel
+if [ -f "$SCRIPT_DIR/stop-tunnel.sh" ]; then
+    "$SCRIPT_DIR/stop-tunnel.sh" || true
+    echo ""
+fi
+
 # Frontend (frontend/filmpire) isn't part of the compose stack — it's a
 # plain background npm process started by start-infrastructure.sh.
-if pgrep -f "react-scripts start" > /dev/null; then
+if pgrep -f "vite" > /dev/null || pgrep -f "react-scripts start" > /dev/null; then
     echo -e "${BLUE}🛑 Stopping frontend dev server...${NC}"
-    pkill -f "react-scripts start" && echo -e "${GREEN}✓ Frontend stopped${NC}"
+    pkill -f "vite" || true
+    pkill -f "react-scripts start" || true
+    echo -e "${GREEN}✓ Frontend stopped${NC}"
     echo ""
 fi
 

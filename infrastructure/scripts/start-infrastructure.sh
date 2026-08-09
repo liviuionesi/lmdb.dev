@@ -18,8 +18,12 @@ DOCKER_DIR="$SCRIPT_DIR/../docker"
 
 echo -e "${BLUE}================================================${NC}"
 echo -e "${BLUE}  Filmpire Microservices - Infrastructure${NC}"
-echo -e "${BLUE}================================================${NC}"
-echo ""
+ENABLE_TUNNEL=false
+for arg in "$@"; do
+    if [ "$arg" == "--tunnel" ] || [ "$arg" == "--live" ]; then
+        ENABLE_TUNNEL=true
+    fi
+done
 
 # Detect container runtime (Docker or Podman)
 CONTAINER_RUNTIME=""
@@ -112,6 +116,11 @@ else
     echo -e "${BLUE}💻 Starting frontend (React) dev server on port 3000...${NC}"
     (cd "$FRONTEND_DIR" && BROWSER=none nohup npm start > "$FRONTEND_LOG" 2>&1 &)
     echo -e "${GREEN}✓ Frontend launch triggered — log: $FRONTEND_LOG${NC}"
+fi
+
+if [ "$ENABLE_TUNNEL" = true ]; then
+    echo ""
+    "$SCRIPT_DIR/start-tunnel.sh"
 fi
 
 echo ""
