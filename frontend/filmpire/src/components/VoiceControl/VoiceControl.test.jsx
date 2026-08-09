@@ -21,17 +21,19 @@ import { parseVoiceCommand } from '../../utils/voiceCommands';
 import { clearAuthTokens } from '../../utils';
 import { ColorModeContext } from '../../utils/ToggleColorMode';
 
-jest.mock('../../services/TMDB', () => ({ useGetGenresQuery: jest.fn() }));
-jest.mock('../../utils/wavEncoder', () => ({ encodeToWav: jest.fn() }));
-jest.mock('../../utils/voiceCommands', () => ({ parseVoiceCommand: jest.fn() }));
-jest.mock('../../utils', () => ({
-  ...jest.requireActual('../../utils'),
-  clearAuthTokens: jest.fn(),
+vi.mock('../../services/TMDB', () => ({ useGetGenresQuery: vi.fn() }));
+vi.mock('../../utils/wavEncoder', () => ({ encodeToWav: vi.fn() }));
+vi.mock('../../utils/voiceCommands', () => ({ parseVoiceCommand: vi.fn() }));
+// Vitest hoists vi.mock calls above imports, so the real module is fetched
+// via the `importOriginal` callback rather than a synchronous requireActual.
+vi.mock('../../utils', async (importOriginal) => ({
+  ...(await importOriginal()),
+  clearAuthTokens: vi.fn(),
 }));
 
-const mockHistoryPush = jest.fn();
-jest.mock('react-router-dom', () => ({
-  ...jest.requireActual('react-router-dom'),
+const mockHistoryPush = vi.fn();
+vi.mock('react-router-dom', async (importOriginal) => ({
+  ...(await importOriginal()),
   useHistory: () => ({ push: mockHistoryPush }),
 }));
 
@@ -62,9 +64,9 @@ const buildStore = () => configureStore({
   reducer: { currentGenreOrCategory: genreOrCategoryReducer, user: authReducer },
 });
 
-const renderVoiceControl = (setMode = jest.fn()) => {
+const renderVoiceControl = (setMode = vi.fn()) => {
   const store = buildStore();
-  const dispatchSpy = jest.spyOn(store, 'dispatch');
+  const dispatchSpy = vi.spyOn(store, 'dispatch');
   renderWithProviders(
     <Provider store={store}>
       <ColorModeContext.Provider value={{ setMode }}>
@@ -91,18 +93,18 @@ describe('VoiceControl', () => {
   let getUserMedia;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     useGetGenresQuery.mockReturnValue({
       data: { genres: [{ id: 28, name: 'Action' }, { id: 35, name: 'Comedy' }] },
     });
     encodeToWav.mockResolvedValue(new Blob(['wav']));
-    getUserMedia = jest.fn().mockResolvedValue({ getTracks: () => [{ stop: jest.fn() }] });
+    getUserMedia = vi.fn().mockResolvedValue({ getTracks: () => [{ stop: vi.fn() }] });
     Object.defineProperty(global.navigator, 'mediaDevices', {
       value: { getUserMedia },
       configurable: true,
     });
     global.MediaRecorder = MockMediaRecorder;
-    global.fetch = jest.fn();
+    global.fetch = vi.fn();
   });
 
   it('renders idle with a mic icon and no open feedback', () => {
@@ -171,7 +173,7 @@ describe('VoiceControl', () => {
   it('calls setMode on a "changeMode" command', async () => {
     global.fetch.mockResolvedValue({ ok: true, json: async () => ({ text: 'dark mode' }) });
     parseVoiceCommand.mockReturnValue({ command: 'changeMode', mode: 'dark' });
-    const setMode = jest.fn();
+    const setMode = vi.fn();
     renderVoiceControl(setMode);
 
     await recordAndStop();

@@ -14,7 +14,7 @@ describe('Pagination', () => {
   });
 
   it('calls setPage with the previous page when Prev is clicked', () => {
-    const setPage = jest.fn();
+    const setPage = vi.fn();
     renderWithProviders(<Pagination currentPage={3} totalPages={10} setPage={setPage} />);
 
     userEvent.click(screen.getByText('Prev'));
@@ -24,7 +24,7 @@ describe('Pagination', () => {
   });
 
   it('does not call setPage when Prev is clicked on the first page', () => {
-    const setPage = jest.fn();
+    const setPage = vi.fn();
     renderWithProviders(<Pagination currentPage={1} totalPages={10} setPage={setPage} />);
 
     userEvent.click(screen.getByText('Prev'));
@@ -33,7 +33,7 @@ describe('Pagination', () => {
   });
 
   it('calls setPage with the next page when Next is clicked', () => {
-    const setPage = jest.fn();
+    const setPage = vi.fn();
     renderWithProviders(<Pagination currentPage={3} totalPages={10} setPage={setPage} />);
 
     userEvent.click(screen.getByText('Next'));
@@ -43,7 +43,7 @@ describe('Pagination', () => {
   });
 
   it('does not call setPage when Next is clicked on the last page', () => {
-    const setPage = jest.fn();
+    const setPage = vi.fn();
     renderWithProviders(<Pagination currentPage={10} totalPages={10} setPage={setPage} />);
 
     userEvent.click(screen.getByText('Next'));

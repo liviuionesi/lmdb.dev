@@ -8,9 +8,9 @@ import Actors from './Actors';
 import { renderWithProviders } from '../../test-utils/render';
 import { useGetActorsDetailsQuery, useGetMoviesByActorIdQuery } from '../../services/TMDB';
 
-jest.mock('../../services/TMDB', () => ({
-  useGetActorsDetailsQuery: jest.fn(),
-  useGetMoviesByActorIdQuery: jest.fn(),
+vi.mock('../../services/TMDB', () => ({
+  useGetActorsDetailsQuery: vi.fn(),
+  useGetMoviesByActorIdQuery: vi.fn(),
 }));
 
 describe('Actors', () => {

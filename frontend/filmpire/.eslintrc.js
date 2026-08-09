@@ -4,7 +4,18 @@ module.exports = {
   env: {
     browser: true,
     es6: true,
-    jest: true,
+  },
+  // ESLint has no built-in "vitest" env (unlike "jest"), and adding
+  // eslint-plugin-vitest is out of scope for a test-runner swap (#127), so
+  // the handful of Vitest globals the test suite actually uses (from
+  // `test.globals: true` in vite.config.js) are declared by hand instead.
+  globals: {
+    describe: "readonly",
+    it: "readonly",
+    expect: "readonly",
+    beforeEach: "readonly",
+    afterEach: "readonly",
+    vi: "readonly",
   },
   parserOptions: {
     ecmaVersion: 2021,

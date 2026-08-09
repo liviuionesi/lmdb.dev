@@ -17,9 +17,9 @@ import authReducer from '../../features/auth';
 import { renderWithProviders } from '../../test-utils/render';
 import { useLoginMutation, useRegisterMutation } from '../../services/user';
 
-jest.mock('../../services/user', () => ({
-  useLoginMutation: jest.fn(),
-  useRegisterMutation: jest.fn(),
+vi.mock('../../services/user', () => ({
+  useLoginMutation: vi.fn(),
+  useRegisterMutation: vi.fn(),
 }));
 
 const buildStore = () => configureStore({ reducer: { user: authReducer } });
@@ -32,16 +32,16 @@ describe('LoginDialog', () => {
   });
 
   it('renders nothing meaningful when closed (Dialog unmounts its content)', () => {
-    useLoginMutation.mockReturnValue([jest.fn(), { isLoading: false, error: undefined }]);
-    useRegisterMutation.mockReturnValue([jest.fn(), { isLoading: false, error: undefined }]);
+    useLoginMutation.mockReturnValue([vi.fn(), { isLoading: false, error: undefined }]);
+    useRegisterMutation.mockReturnValue([vi.fn(), { isLoading: false, error: undefined }]);
     renderWithProviders(<LoginDialog open={false} onClose={() => {}} />, { store: buildStore() });
 
     expect(screen.queryByText('Filmpire account')).not.toBeInTheDocument();
   });
 
   it('shows the Register fields only after switching tabs', async () => {
-    useLoginMutation.mockReturnValue([jest.fn(), { isLoading: false, error: undefined }]);
-    useRegisterMutation.mockReturnValue([jest.fn(), { isLoading: false, error: undefined }]);
+    useLoginMutation.mockReturnValue([vi.fn(), { isLoading: false, error: undefined }]);
+    useRegisterMutation.mockReturnValue([vi.fn(), { isLoading: false, error: undefined }]);
     renderWithProviders(<LoginDialog open onClose={() => {}} />, { store: buildStore() });
 
     expect(screen.queryByLabelText(/^email/i)).not.toBeInTheDocument();
@@ -52,26 +52,26 @@ describe('LoginDialog', () => {
   });
 
   it('shows the login error message when the login mutation fails', () => {
-    useLoginMutation.mockReturnValue([jest.fn(), { isLoading: false, error: { data: { message: 'Bad credentials' } } }]);
-    useRegisterMutation.mockReturnValue([jest.fn(), { isLoading: false, error: undefined }]);
+    useLoginMutation.mockReturnValue([vi.fn(), { isLoading: false, error: { data: { message: 'Bad credentials' } } }]);
+    useRegisterMutation.mockReturnValue([vi.fn(), { isLoading: false, error: undefined }]);
     renderWithProviders(<LoginDialog open onClose={() => {}} />, { store: buildStore() });
 
     expect(screen.getByText('Bad credentials')).toBeInTheDocument();
   });
 
   it('shows a generic error message when the error has no message field', () => {
-    useLoginMutation.mockReturnValue([jest.fn(), { isLoading: false, error: {} }]);
-    useRegisterMutation.mockReturnValue([jest.fn(), { isLoading: false, error: undefined }]);
+    useLoginMutation.mockReturnValue([vi.fn(), { isLoading: false, error: {} }]);
+    useRegisterMutation.mockReturnValue([vi.fn(), { isLoading: false, error: undefined }]);
     renderWithProviders(<LoginDialog open onClose={() => {}} />, { store: buildStore() });
 
     expect(screen.getByText('Something went wrong. Please try again.')).toBeInTheDocument();
   });
 
   it('logs in, stores tokens, dispatches the user, and closes the dialog on success', async () => {
-    const login = jest.fn().mockResolvedValue({ data: { accessToken: 'a', refreshToken: 'r', user: { id: 1, username: 'liviu' } } });
+    const login = vi.fn().mockResolvedValue({ data: { accessToken: 'a', refreshToken: 'r', user: { id: 1, username: 'liviu' } } });
     useLoginMutation.mockReturnValue([login, { isLoading: false, error: undefined }]);
-    useRegisterMutation.mockReturnValue([jest.fn(), { isLoading: false, error: undefined }]);
-    const onClose = jest.fn();
+    useRegisterMutation.mockReturnValue([vi.fn(), { isLoading: false, error: undefined }]);
+    const onClose = vi.fn();
     const store = buildStore();
     renderWithProviders(<LoginDialog open onClose={onClose} />, { store });
 
@@ -86,8 +86,8 @@ describe('LoginDialog', () => {
   });
 
   it('registers a new account when submitted from the Register tab', async () => {
-    const register = jest.fn().mockResolvedValue({ data: { accessToken: 'a', refreshToken: 'r', user: { id: 2, username: 'newbie' } } });
-    useLoginMutation.mockReturnValue([jest.fn(), { isLoading: false, error: undefined }]);
+    const register = vi.fn().mockResolvedValue({ data: { accessToken: 'a', refreshToken: 'r', user: { id: 2, username: 'newbie' } } });
+    useLoginMutation.mockReturnValue([vi.fn(), { isLoading: false, error: undefined }]);
     useRegisterMutation.mockReturnValue([register, { isLoading: false, error: undefined }]);
     renderWithProviders(<LoginDialog open onClose={() => {}} />, { store: buildStore() });
 
@@ -101,10 +101,10 @@ describe('LoginDialog', () => {
   });
 
   it('does not authenticate when the login mutation returns no data', async () => {
-    const login = jest.fn().mockResolvedValue({ error: { status: 401 } });
+    const login = vi.fn().mockResolvedValue({ error: { status: 401 } });
     useLoginMutation.mockReturnValue([login, { isLoading: false, error: undefined }]);
-    useRegisterMutation.mockReturnValue([jest.fn(), { isLoading: false, error: undefined }]);
-    const onClose = jest.fn();
+    useRegisterMutation.mockReturnValue([vi.fn(), { isLoading: false, error: undefined }]);
+    const onClose = vi.fn();
     const store = buildStore();
     renderWithProviders(<LoginDialog open onClose={onClose} />, { store });
 

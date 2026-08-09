@@ -12,20 +12,20 @@ import { useGetFavoritesQuery, useGetWatchlistQuery, useLogoutMutation } from '.
 import { useGetMediaForEntityQuery, useUploadMediaMutation, getMediaUrl } from '../../services/media';
 import { useGetMovieQuery } from '../../services/TMDB';
 
-jest.mock('../../services/user', () => ({
-  useGetFavoritesQuery: jest.fn(),
-  useGetWatchlistQuery: jest.fn(),
-  useLogoutMutation: jest.fn(),
+vi.mock('../../services/user', () => ({
+  useGetFavoritesQuery: vi.fn(),
+  useGetWatchlistQuery: vi.fn(),
+  useLogoutMutation: vi.fn(),
 }));
 
-jest.mock('../../services/media', () => ({
-  useGetMediaForEntityQuery: jest.fn(),
-  useUploadMediaMutation: jest.fn(),
-  getMediaUrl: jest.fn(),
+vi.mock('../../services/media', () => ({
+  useGetMediaForEntityQuery: vi.fn(),
+  useUploadMediaMutation: vi.fn(),
+  getMediaUrl: vi.fn(),
 }));
 
-jest.mock('../../services/TMDB', () => ({
-  useGetMovieQuery: jest.fn(),
+vi.mock('../../services/TMDB', () => ({
+  useGetMovieQuery: vi.fn(),
 }));
 
 const buildStore = (authenticated) => configureStore({
@@ -35,14 +35,14 @@ const buildStore = (authenticated) => configureStore({
 
 describe('Profile', () => {
   beforeEach(() => {
-    useLogoutMutation.mockReturnValue([jest.fn().mockResolvedValue({})]);
+    useLogoutMutation.mockReturnValue([vi.fn().mockResolvedValue({})]);
     useGetFavoritesQuery.mockReturnValue({ data: [] });
     useGetWatchlistQuery.mockReturnValue({ data: [] });
-    useGetMediaForEntityQuery.mockReturnValue({ data: [], refetch: jest.fn() });
-    useUploadMediaMutation.mockReturnValue([jest.fn().mockReturnValue({ unwrap: jest.fn().mockResolvedValue({}) }), { isLoading: false }]);
+    useGetMediaForEntityQuery.mockReturnValue({ data: [], refetch: vi.fn() });
+    useUploadMediaMutation.mockReturnValue([vi.fn().mockReturnValue({ unwrap: vi.fn().mockResolvedValue({}) }), { isLoading: false }]);
     getMediaUrl.mockImplementation((url) => url);
     localStorage.clear();
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('shows a placeholder message when there are no favorites or watchlist entries', () => {
@@ -63,7 +63,7 @@ describe('Profile', () => {
 
   it('logs out: revokes the session, clears local tokens/redux state, and redirects home', async () => {
     localStorage.setItem('access_token', 'jwt');
-    const logout = jest.fn().mockResolvedValue({});
+    const logout = vi.fn().mockResolvedValue({});
     useLogoutMutation.mockReturnValue([logout]);
 
     delete window.location;
@@ -107,7 +107,7 @@ describe('Profile', () => {
   });
 
   it('successfully uploads valid JPG avatar and shows success notification', async () => {
-    const mockUpload = jest.fn().mockReturnValue({ unwrap: jest.fn().mockResolvedValue({}) });
+    const mockUpload = vi.fn().mockReturnValue({ unwrap: vi.fn().mockResolvedValue({}) });
     useUploadMediaMutation.mockReturnValue([mockUpload, { isLoading: false }]);
 
     renderWithProviders(<Profile />, { store: buildStore(true) });
@@ -131,7 +131,7 @@ describe('Profile', () => {
   it('renders uploaded avatar thumbnail when media items are returned', () => {
     useGetMediaForEntityQuery.mockReturnValue({
       data: [{ mediaType: 'AVATAR', thumbnails: { medium: 'http://localhost:8085/thumb.jpg' } }],
-      refetch: jest.fn(),
+      refetch: vi.fn(),
     });
 
     renderWithProviders(<Profile />, { store: buildStore(true) });

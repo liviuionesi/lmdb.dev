@@ -20,24 +20,24 @@ import {
 } from '../../services/user';
 import { useGetMediaForEntityQuery, useUploadMediaMutation, getMediaUrl } from '../../services/media';
 
-jest.mock('../../services/TMDB', () => ({
-  useGetMovieQuery: jest.fn(),
-  useGetRecommendationsQuery: jest.fn(),
+vi.mock('../../services/TMDB', () => ({
+  useGetMovieQuery: vi.fn(),
+  useGetRecommendationsQuery: vi.fn(),
 }));
 
-jest.mock('../../services/user', () => ({
-  useGetFavoritesQuery: jest.fn(),
-  useGetWatchlistQuery: jest.fn(),
-  useAddFavoriteMutation: jest.fn(),
-  useRemoveFavoriteMutation: jest.fn(),
-  useAddToWatchlistMutation: jest.fn(),
-  useRemoveFromWatchlistMutation: jest.fn(),
+vi.mock('../../services/user', () => ({
+  useGetFavoritesQuery: vi.fn(),
+  useGetWatchlistQuery: vi.fn(),
+  useAddFavoriteMutation: vi.fn(),
+  useRemoveFavoriteMutation: vi.fn(),
+  useAddToWatchlistMutation: vi.fn(),
+  useRemoveFromWatchlistMutation: vi.fn(),
 }));
 
-jest.mock('../../services/media', () => ({
-  useGetMediaForEntityQuery: jest.fn(),
-  useUploadMediaMutation: jest.fn(),
-  getMediaUrl: jest.fn(),
+vi.mock('../../services/media', () => ({
+  useGetMediaForEntityQuery: vi.fn(),
+  useUploadMediaMutation: vi.fn(),
+  getMediaUrl: vi.fn(),
 }));
 
 const buildStore = (isAuthenticated = false) => configureStore({
@@ -64,15 +64,15 @@ const fullMovie = {
 
 describe('MovieInformation', () => {
   beforeEach(() => {
-    useAddFavoriteMutation.mockReturnValue([jest.fn()]);
-    useRemoveFavoriteMutation.mockReturnValue([jest.fn()]);
-    useAddToWatchlistMutation.mockReturnValue([jest.fn()]);
-    useRemoveFromWatchlistMutation.mockReturnValue([jest.fn()]);
+    useAddFavoriteMutation.mockReturnValue([vi.fn()]);
+    useRemoveFavoriteMutation.mockReturnValue([vi.fn()]);
+    useAddToWatchlistMutation.mockReturnValue([vi.fn()]);
+    useRemoveFromWatchlistMutation.mockReturnValue([vi.fn()]);
     useGetFavoritesQuery.mockReturnValue({ data: undefined });
     useGetWatchlistQuery.mockReturnValue({ data: undefined });
     useGetRecommendationsQuery.mockReturnValue({ data: undefined });
-    useGetMediaForEntityQuery.mockReturnValue({ data: [], refetch: jest.fn(), isFetching: false });
-    useUploadMediaMutation.mockReturnValue([jest.fn().mockReturnValue({ unwrap: jest.fn().mockResolvedValue({}) }), { isLoading: false }]);
+    useGetMediaForEntityQuery.mockReturnValue({ data: [], refetch: vi.fn(), isFetching: false });
+    useUploadMediaMutation.mockReturnValue([vi.fn().mockReturnValue({ unwrap: vi.fn().mockResolvedValue({}) }), { isLoading: false }]);
     getMediaUrl.mockImplementation((url) => url);
   });
 
@@ -126,7 +126,7 @@ describe('MovieInformation', () => {
   });
 
   it('adds the movie to favorites when unauthenticated-favorited and the button is clicked', async () => {
-    const addFavorite = jest.fn();
+    const addFavorite = vi.fn();
     useAddFavoriteMutation.mockReturnValue([addFavorite]);
     useGetMovieQuery.mockReturnValue({ data: fullMovie, isFetching: false, error: undefined });
     renderWithProviders(<MovieInformation />, { route: '/movie/550', path: '/movie/:id', store: buildStore(true) });
@@ -137,7 +137,7 @@ describe('MovieInformation', () => {
   });
 
   it('removes the movie from favorites when it is already favorited', async () => {
-    const removeFavorite = jest.fn();
+    const removeFavorite = vi.fn();
     useRemoveFavoriteMutation.mockReturnValue([removeFavorite]);
     useGetFavoritesQuery.mockReturnValue({ data: [{ movieId: 550 }] });
     useGetMovieQuery.mockReturnValue({ data: fullMovie, isFetching: false, error: undefined });
@@ -150,7 +150,7 @@ describe('MovieInformation', () => {
   });
 
   it('toggles the watchlist mutation depending on current watchlist state', async () => {
-    const addToWatchlist = jest.fn();
+    const addToWatchlist = vi.fn();
     useAddToWatchlistMutation.mockReturnValue([addToWatchlist]);
     useGetMovieQuery.mockReturnValue({ data: fullMovie, isFetching: false, error: undefined });
     renderWithProviders(<MovieInformation />, { route: '/movie/550', path: '/movie/:id', store: buildStore(true) });

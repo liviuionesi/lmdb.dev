@@ -27,7 +27,7 @@ describe('tmdbApi endpoint query builders', () => {
 
   beforeEach(() => {
     store = buildStore();
-    global.fetch = jest.fn().mockResolvedValue(jsonResponse({ ok: true }));
+    global.fetch = vi.fn().mockResolvedValue(jsonResponse({ ok: true }));
   });
 
   afterEach(() => {

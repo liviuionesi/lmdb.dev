@@ -7,7 +7,7 @@ import StatusCard from './StatusCard';
 import { renderWithProviders } from '../../test-utils/render';
 import useServiceStatus from './useServiceStatus';
 
-jest.mock('./useServiceStatus');
+vi.mock('./useServiceStatus');
 
 describe('StatusCard', () => {
   it('shows the title, description, and an enabled Open link when a url is given', () => {

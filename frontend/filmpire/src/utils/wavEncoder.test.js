@@ -50,12 +50,15 @@ describe('encodeToWav', () => {
   let closeMock;
 
   beforeEach(() => {
-    decodeAudioDataMock = jest.fn();
-    closeMock = jest.fn().mockResolvedValue(undefined);
-    window.AudioContext = jest.fn().mockImplementation(() => ({
-      decodeAudioData: decodeAudioDataMock,
-      close: closeMock,
-    }));
+    decodeAudioDataMock = vi.fn();
+    closeMock = vi.fn().mockResolvedValue(undefined);
+    // wavEncoder.js calls `new AudioContextClass()`; Vitest (unlike Jest)
+    // requires the mock implementation itself to be a `function` rather than
+    // an arrow function for the mock to be usable as a constructor.
+    // eslint-disable-next-line prefer-arrow-callback
+    window.AudioContext = vi.fn().mockImplementation(function AudioContextMock() {
+      return { decodeAudioData: decodeAudioDataMock, close: closeMock };
+    });
   });
 
   afterEach(() => {
@@ -134,10 +137,10 @@ describe('encodeToWav', () => {
 
   it('falls back to webkitAudioContext when AudioContext is unavailable', async () => {
     delete window.AudioContext;
-    window.webkitAudioContext = jest.fn().mockImplementation(() => ({
-      decodeAudioData: decodeAudioDataMock,
-      close: closeMock,
-    }));
+    // eslint-disable-next-line prefer-arrow-callback -- see AudioContext mock above
+    window.webkitAudioContext = vi.fn().mockImplementation(function WebkitAudioContextMock() {
+      return { decodeAudioData: decodeAudioDataMock, close: closeMock };
+    });
     decodeAudioDataMock.mockResolvedValue(buildFakeAudioBuffer());
 
     const blob = await encodeToWav(fakeBlob());

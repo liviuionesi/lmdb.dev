@@ -10,8 +10,8 @@ import genreOrCategoryReducer from '../../features/currentGenreOrCategory';
 import { renderWithProviders } from '../../test-utils/render';
 import { useGetGenresQuery } from '../../services/TMDB';
 
-jest.mock('../../services/TMDB', () => ({
-  useGetGenresQuery: jest.fn(),
+vi.mock('../../services/TMDB', () => ({
+  useGetGenresQuery: vi.fn(),
 }));
 
 const buildStore = (preloadedState) => configureStore({
@@ -64,7 +64,7 @@ describe('Sidebar', () => {
   });
 
   it('closes the mobile drawer via setMobileOpen on mount', () => {
-    const setMobileOpen = jest.fn();
+    const setMobileOpen = vi.fn();
     renderWithProviders(<Sidebar setMobileOpen={setMobileOpen} />, { store: buildStore() });
 
     expect(setMobileOpen).toHaveBeenCalledWith(false);

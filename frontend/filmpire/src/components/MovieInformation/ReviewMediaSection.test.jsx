@@ -10,10 +10,10 @@ import authReducer from '../../features/auth';
 import { renderWithProviders } from '../../test-utils/render';
 import { useGetMediaForEntityQuery, useUploadMediaMutation, getMediaUrl } from '../../services/media';
 
-jest.mock('../../services/media', () => ({
-  useGetMediaForEntityQuery: jest.fn(),
-  useUploadMediaMutation: jest.fn(),
-  getMediaUrl: jest.fn(),
+vi.mock('../../services/media', () => ({
+  useGetMediaForEntityQuery: vi.fn(),
+  useUploadMediaMutation: vi.fn(),
+  getMediaUrl: vi.fn(),
 }));
 
 const buildStore = (authenticated = true) => configureStore({
@@ -25,11 +25,11 @@ describe('ReviewMediaSection', () => {
   let mockUpload;
 
   beforeEach(() => {
-    mockUpload = jest.fn().mockReturnValue({ unwrap: jest.fn().mockResolvedValue({}) });
-    useGetMediaForEntityQuery.mockReturnValue({ data: [], refetch: jest.fn(), isFetching: false });
+    mockUpload = vi.fn().mockReturnValue({ unwrap: vi.fn().mockResolvedValue({}) });
+    useGetMediaForEntityQuery.mockReturnValue({ data: [], refetch: vi.fn(), isFetching: false });
     useUploadMediaMutation.mockReturnValue([mockUpload, { isLoading: false }]);
     getMediaUrl.mockImplementation((url) => url);
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('renders login notification when user is unauthenticated', () => {
@@ -95,7 +95,7 @@ describe('ReviewMediaSection', () => {
         { id: 'm1', mediaType: 'IMAGE', thumbnails: { medium: '/med.jpg', original: '/orig.jpg' }, uploadedBy: 'bob' },
         { id: 'm2', mediaType: 'VIDEO', mimeType: 'video/mp4', thumbnails: { original: '/clip.mp4' }, uploadedBy: 'alice' },
       ],
-      refetch: jest.fn(),
+      refetch: vi.fn(),
       isFetching: false,
     });
 
