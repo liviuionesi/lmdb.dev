@@ -1,0 +1,12 @@
+# Cloudflare Tunnel compose extension for exposing local microservices stack over public HTTPS
+services:
+  cloudflare-tunnel:
+    image: docker.io/cloudflare/cloudflared:latest
+    container_name: filmpire-cloudflare-tunnel
+    restart: unless-stopped
+    command: tunnel --no-autoupdate --url http://api-gateway:8080
+    networks:
+      - filmpire-network
+    depends_on:
+      api-gateway:
+        condition: service_healthy
