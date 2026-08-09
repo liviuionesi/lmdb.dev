@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Box, Button, CircularProgress, Grid, Typography } from '@mui/material';
-import { useHistory, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowBack } from '@mui/icons-material';
 
 import useStyles from './styles';
@@ -9,7 +9,7 @@ import { MovieList, Pagination } from '..';
 
 const Actors = () => {
   const { id } = useParams();
-  const history = useHistory();
+  const navigate = useNavigate();
   const classes = useStyles();
   const [page, setPage] = useState(1);
 
@@ -27,7 +27,7 @@ const Actors = () => {
   if (error) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center">
-        <Button startIcon={<ArrowBack />} onClick={() => history.goBack()} color="primary">
+        <Button startIcon={<ArrowBack />} onClick={() => navigate(-1)} color="primary">
           Go back
         </Button>
       </Box>
@@ -58,7 +58,7 @@ const Actors = () => {
             <Button variant="contained" color="primary" target="_blank" href={`https://www.imdb.com/name/${data?.imdb_id}`}>
               IMDB
             </Button>
-            <Button startIcon={<ArrowBack />} onClick={() => history.goBack()} color="primary">
+            <Button startIcon={<ArrowBack />} onClick={() => navigate(-1)} color="primary">
               Back
             </Button>
           </Box>

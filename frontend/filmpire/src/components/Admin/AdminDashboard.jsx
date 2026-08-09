@@ -1,5 +1,5 @@
 import React from 'react';
-import { Redirect } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { Typography, Grid, Box, CircularProgress } from '@mui/material';
 import { useSelector } from 'react-redux';
 
@@ -36,7 +36,7 @@ const AdminDashboard = () => {
   });
 
   if (!hasStoredSession || isError) {
-    return <Redirect to="/" />;
+    return <Navigate to="/" replace />;
   }
 
   if (!isAuthenticated && isLoading) {
@@ -49,7 +49,7 @@ const AdminDashboard = () => {
 
   const role = isAuthenticated ? user?.role : profile?.role;
   if (role !== 'ADMIN') {
-    return <Redirect to="/" />;
+    return <Navigate to="/" replace />;
   }
 
   return (

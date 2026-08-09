@@ -3,7 +3,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, useLocation } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 
 import Actors from './Actors';
@@ -80,7 +80,9 @@ describe('Actors', () => {
       <ThemeProvider theme={theme}>
         <MemoryRouter initialEntries={['/actors/1', '/actors/42']} initialIndex={1}>
           <LocationProbe />
-          <Route path="/actors/:id"><Actors /></Route>
+          <Routes>
+            <Route path="/actors/:id" element={<Actors />} />
+          </Routes>
         </MemoryRouter>
       </ThemeProvider>,
     );

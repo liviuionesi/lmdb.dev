@@ -7,7 +7,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { Provider } from 'react-redux';
-import { MemoryRouter, Route, Switch } from 'react-router-dom';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import { configureStore } from '@reduxjs/toolkit';
 
@@ -30,7 +30,7 @@ const buildStore = (preloadedState) => configureStore({
 
 /**
  * Renders AdminDashboard at "/admin" alongside a sentinel "/" route, so a
- * `<Redirect to="/">` is observable as "the Home sentinel replaced
+ * `<Navigate to="/">` is observable as "the Home sentinel replaced
  * AdminDashboard" rather than inferred from AdminDashboard's absence (which
  * would also be true if the component just crashed or rendered null).
  */
@@ -38,10 +38,10 @@ const renderAtAdminRoute = (store) => render(
   <ThemeProvider theme={theme}>
     <Provider store={store}>
       <MemoryRouter initialEntries={['/admin']}>
-        <Switch>
-          <Route exact path="/">Home</Route>
-          <Route path="/admin"><AdminDashboard /></Route>
-        </Switch>
+        <Routes>
+          <Route path="/" element="Home" />
+          <Route path="/admin" element={<AdminDashboard />} />
+        </Routes>
       </MemoryRouter>
     </Provider>
   </ThemeProvider>,

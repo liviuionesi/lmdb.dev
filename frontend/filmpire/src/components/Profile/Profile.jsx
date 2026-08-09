@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Typography, Button, Box, Avatar, CircularProgress, Alert } from '@mui/material';
 import { useDispatch, useSelector } from 'react-redux';
 import { ExitToApp, PhotoCamera } from '@mui/icons-material';
-import { Redirect } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 
 import { useGetFavoritesQuery, useGetWatchlistQuery, useLogoutMutation } from '../../services/user';
 import { useGetMediaForEntityQuery, useUploadMediaMutation, getMediaUrl } from '../../services/media';
@@ -29,7 +29,7 @@ const Profile = () => {
   const [uploadMedia, { isLoading: isUploading }] = useUploadMediaMutation();
 
   if (!isAuthenticated) {
-    return <Redirect to="/" />;
+    return <Navigate to="/" replace />;
   }
 
   const favoriteIds = favorites?.map((entry) => entry.movieId) ?? [];

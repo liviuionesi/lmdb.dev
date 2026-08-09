@@ -31,10 +31,10 @@ vi.mock('../../utils', async (importOriginal) => ({
   clearAuthTokens: vi.fn(),
 }));
 
-const mockHistoryPush = vi.fn();
+const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async (importOriginal) => ({
   ...(await importOriginal()),
-  useHistory: () => ({ push: mockHistoryPush }),
+  useNavigate: () => mockNavigate,
 }));
 
 /**
@@ -159,7 +159,7 @@ describe('VoiceControl', () => {
     await recordAndStop();
 
     await waitFor(() => expect(store.getState().currentGenreOrCategory.genreIdOrCategoryName).toBe(28));
-    expect(mockHistoryPush).toHaveBeenCalledWith('/');
+    expect(mockNavigate).toHaveBeenCalledWith('/');
     expect(await screen.findByText('Heard: "action movies"')).toBeInTheDocument();
   });
 
@@ -193,7 +193,7 @@ describe('VoiceControl', () => {
 
     await waitFor(() => expect(clearAuthTokens).toHaveBeenCalled());
     expect(store.getState().user.isAuthenticated).toBe(false);
-    expect(mockHistoryPush).toHaveBeenCalledWith('/');
+    expect(mockNavigate).toHaveBeenCalledWith('/');
   });
 
   it('dispatches searchMovie with the parsed query on a "search" command', async () => {
@@ -204,7 +204,7 @@ describe('VoiceControl', () => {
     await recordAndStop();
 
     await waitFor(() => expect(store.getState().currentGenreOrCategory.searchQuery).toBe('batman'));
-    expect(mockHistoryPush).toHaveBeenCalledWith('/');
+    expect(mockNavigate).toHaveBeenCalledWith('/');
   });
 
   it('shows an info message when transcribed text matches no known command', async () => {
