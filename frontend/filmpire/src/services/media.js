@@ -1,10 +1,9 @@
-import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
-
-const filmpireApiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+import { createApi } from '@reduxjs/toolkit/query/react';
+import { getApiUrl, createDynamicBaseQuery } from '../utils/apiUrl';
 
 export const getMediaUrl = (url) => {
   if (!url) return null;
-  return url.startsWith('/') ? `${filmpireApiUrl}${url}` : url;
+  return url.startsWith('/') ? `${getApiUrl()}${url}` : url;
 };
 
 export const buildUploadMediaQuery = ({
@@ -34,16 +33,7 @@ export const buildUploadMediaQuery = ({
 
 export const mediaApi = createApi({
   reducerPath: 'mediaApi',
-  baseQuery: fetchBaseQuery({
-    baseUrl: `${filmpireApiUrl}/api/v1`,
-    prepareHeaders: (headers) => {
-      const accessToken = localStorage.getItem('access_token');
-      if (accessToken) {
-        headers.set('Authorization', `Bearer ${accessToken}`);
-      }
-      return headers;
-    },
-  }),
+  baseQuery: createDynamicBaseQuery('/api/v1'),
   tagTypes: ['Media'],
   endpoints: (builder) => ({
     uploadMedia: builder.mutation({

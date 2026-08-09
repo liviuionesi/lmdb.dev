@@ -7,12 +7,13 @@ import { useNavigate } from 'react-router-dom';
 import { ColorModeContext } from '../../utils/ToggleColorMode';
 import { selectGenreOrCategory, searchMovie } from '../../features/currentGenreOrCategory';
 import { clearUser } from '../../features/auth';
+import { getApiUrl } from '../../utils/apiUrl';
 import { clearAuthTokens } from '../../utils';
 import { encodeToWav } from '../../utils/wavEncoder';
 import { parseVoiceCommand } from '../../utils/voiceCommands';
 import { useGetGenresQuery } from '../../services/TMDB';
 
-const aiServiceUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+const getAiServiceUrl = () => getApiUrl();
 
 /**
  * Click-to-talk voice control (#68): records a
@@ -58,7 +59,7 @@ function VoiceControl() {
       const formData = new FormData();
       formData.append('audio', wavBlob, 'command.wav');
 
-      const response = await fetch(`${aiServiceUrl}/api/v1/ai/speech-to-text`, {
+      const response = await fetch(`${getAiServiceUrl()}/api/v1/ai/speech-to-text`, {
         method: 'POST',
         body: formData,
       });

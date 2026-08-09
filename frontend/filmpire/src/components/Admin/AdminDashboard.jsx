@@ -12,10 +12,10 @@ import SettingsSuggestIcon from '@mui/icons-material/SettingsSuggest';
 
 import { userSelector } from '../../features/auth';
 import { useGetProfileQuery } from '../../services/user';
+import { getApiUrl } from '../../utils/apiUrl';
 import StatusCard from './StatusCard';
 import DeployControl from './DeployControl';
 
-const filmpireApiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 const discoveryUrl = import.meta.env.VITE_DISCOVERY_URL || 'http://localhost:8761';
 const kibanaUrl = import.meta.env.VITE_KIBANA_URL || 'http://localhost:5601';
 const grafanaUrl = import.meta.env.VITE_GRAFANA_URL;
@@ -59,6 +59,8 @@ function AdminDashboard() {
   if (role !== 'ADMIN') {
     return <Navigate to="/" replace />;
   }
+
+  const filmpireApiUrl = getApiUrl();
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4, pb: 8, width: '100%' }}>

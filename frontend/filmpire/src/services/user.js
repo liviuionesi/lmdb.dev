@@ -1,24 +1,9 @@
-import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
-
-// user-service is Filmpire's own account API (JWT auth + favorites/watchlist)
-// and has no real-TMDB equivalent, so unlike services/TMDB.js this always
-// targets the local gateway rather than falling back to api.themoviedb.org.
-const filmpireApiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+import { createApi } from '@reduxjs/toolkit/query/react';
+import { createDynamicBaseQuery } from '../utils/apiUrl';
 
 export const userApi = createApi({
   reducerPath: 'userApi',
-  baseQuery: fetchBaseQuery({
-    baseUrl: `${filmpireApiUrl}/api/v1`,
-    prepareHeaders: (headers) => {
-      const accessToken = localStorage.getItem('access_token');
-
-      if (accessToken) {
-        headers.set('Authorization', `Bearer ${accessToken}`);
-      }
-
-      return headers;
-    },
-  }),
+  baseQuery: createDynamicBaseQuery('/api/v1'),
   tagTypes: ['Favorites', 'Watchlist'],
   endpoints: (builder) => ({
     //* Register a new Filmpire account

@@ -24,8 +24,11 @@ import LaptopMacIcon from '@mui/icons-material/LaptopMac';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 
+import { getApiUrl } from '../../utils/apiUrl';
+
 const REPO_OWNER = 'pehlivanu';
 const REPO_NAME = 'filmpire-microservices';
+const ACTIVE_TUNNEL_URL = 'https://humanities-exactly-criterion-buyer.trycloudflare.com';
 
 /**
  * Modern, Executive 1-Click Cloud & Local Deployment Deck.
@@ -45,8 +48,9 @@ function DeployControl({ apiUrl }) {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   const checkBackendHealth = useCallback(async () => {
+    const targetUrl = apiUrl || getApiUrl();
     try {
-      const res = await fetch(`${apiUrl}/actuator/health`, { method: 'GET', mode: 'cors' });
+      const res = await fetch(`${targetUrl}/actuator/health`, { method: 'GET', mode: 'cors' });
       if (res.ok) {
         setBackendHealthy(true);
         if (!sessionStartTime) {
@@ -116,7 +120,8 @@ function DeployControl({ apiUrl }) {
 
   const handleDeploy = async () => {
     if (cloudTarget === 'local') {
-      setStatusMessage('Local tunnel connected! Verifying gateway health...');
+      localStorage.setItem('filmpire_api_url', ACTIVE_TUNNEL_URL);
+      setStatusMessage(`Local Cloudflare Tunnel linked (${ACTIVE_TUNNEL_URL})! Verifying gateway health...`);
       await checkBackendHealth();
       return;
     }
@@ -126,6 +131,7 @@ function DeployControl({ apiUrl }) {
 
     const success = await dispatchWorkflow('deploy.yml', { cloud: cloudTarget });
     if (success) {
+      localStorage.setItem('filmpire_api_url', 'https://filmpire-api.duckdns.org');
       setStatusMessage(`Automated deployment dispatched for ${cloudTarget.toUpperCase()}! Cloud backend is spinning up.`);
     }
     setIsDeploying(false);
@@ -133,7 +139,8 @@ function DeployControl({ apiUrl }) {
 
   const handleDestroy = async () => {
     if (cloudTarget === 'local') {
-      setStatusMessage('Local demo stopped. Run ./infrastructure/scripts/stop-infrastructure.sh to stop local processes.');
+      localStorage.removeItem('filmpire_api_url');
+      setStatusMessage('Local tunnel disconnected. Frontend reset to cloud DNS.');
       setSessionStartTime(null);
       setElapsedSeconds(0);
       setBackendHealthy(false);
