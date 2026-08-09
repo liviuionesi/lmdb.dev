@@ -1,6 +1,6 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
-import { Typography, Grid, Box, CircularProgress, Paper, Chip } from '@mui/material';
+import { Typography, Box, CircularProgress, Paper, Chip } from '@mui/material';
 import { useSelector } from 'react-redux';
 import HubIcon from '@mui/icons-material/Hub';
 import MovieIcon from '@mui/icons-material/Movie';
@@ -32,7 +32,7 @@ const CORE_SERVICES = [
 ];
 
 /**
- * Modern Executive Ops Center.
+ * Modern Executive Ops Center with pixel-perfect responsive CSS Grid layout.
  * Visible only to users with role `ADMIN`.
  */
 function AdminDashboard() {
@@ -61,9 +61,9 @@ function AdminDashboard() {
   }
 
   return (
-    <Box sx={{ pb: 6 }}>
-      {/* Header */}
-      <Box sx={{ mb: 3.5 }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4, pb: 8, width: '100%' }}>
+      {/* 1. Unified Page Header */}
+      <Box>
         <Typography variant="h4" fontWeight={800} sx={{ letterSpacing: '-0.03em', mb: 0.5 }}>
           Admin Dashboard
         </Typography>
@@ -72,112 +72,86 @@ function AdminDashboard() {
         </Typography>
       </Box>
 
-      {/* Cloud & Local 1-Click Orchestrator */}
+      {/* 2. Full-Width Orchestrator Deck */}
       <DeployControl apiUrl={filmpireApiUrl} />
 
-      {/* Infrastructure Mesh Section */}
-      <Box sx={{ mt: 4 }}>
-        <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={1.5} mb={2.5}>
-          <Box>
-            <Typography variant="h6" fontWeight={700}>
-              Infrastructure &amp; Observability Hub
-            </Typography>
-            <Typography variant="body2" color="textSecondary">
-              Live status, routing metrics, and distributed monitoring consoles.
-            </Typography>
-          </Box>
+      {/* 3. Observability & Infrastructure Hub (2-Column Balanced Grid) */}
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+        <Box>
+          <Typography variant="h6" fontWeight={700} sx={{ mb: 0.5 }}>
+            Infrastructure &amp; Observability Hub
+          </Typography>
+          <Typography variant="body2" color="textSecondary">
+            Live status, routing metrics, and distributed monitoring consoles.
+          </Typography>
         </Box>
 
-        <Grid container spacing={2.5}>
-          <Grid
-            size={{
-              xs: 12,
-              sm: 6,
-              md: 3,
-            }}
-          >
-            <StatusCard
-              title="Discovery (Eureka)"
-              description="Service registry & dynamic microservices instance discovery."
-              url={discoveryUrl}
-            />
-          </Grid>
-          <Grid
-            size={{
-              xs: 12,
-              sm: 6,
-              md: 3,
-            }}
-          >
-            <StatusCard
-              title="API Gateway"
-              description="Central entry point, JWT authentication & route filter."
-              url={`${filmpireApiUrl}/actuator/health`}
-              secondaryUrl={`${filmpireApiUrl}/actuator/gateway/routes`}
-              secondaryLabel="Routes"
-            />
-          </Grid>
-          <Grid
-            size={{
-              xs: 12,
-              sm: 6,
-              md: 3,
-            }}
-          >
-            <StatusCard
-              title="Kibana"
-              description="Distributed log search & visualization across all services."
-              url={kibanaUrl}
-            />
-          </Grid>
-          <Grid
-            size={{
-              xs: 12,
-              sm: 6,
-              md: 3,
-            }}
-          >
-            <StatusCard
-              title={grafanaUrl ? 'Grafana' : 'Metrics'}
-              description={
-                grafanaUrl
-                  ? 'Real-time performance dashboards & alerts.'
-                  : 'Prometheus performance metrics and service telemetries.'
-              }
-              url={grafanaUrl || `${filmpireApiUrl}/actuator/prometheus`}
-            />
-          </Grid>
-        </Grid>
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
+            gap: 3,
+            width: '100%',
+          }}
+        >
+          <StatusCard
+            title="Discovery (Eureka)"
+            description="Service registry & dynamic microservices instance discovery."
+            url={discoveryUrl}
+          />
+          <StatusCard
+            title="API Gateway"
+            description="Central entry point, JWT authentication & route filter."
+            url={`${filmpireApiUrl}/actuator/health`}
+            secondaryUrl={`${filmpireApiUrl}/actuator/gateway/routes`}
+            secondaryLabel="Routes"
+          />
+          <StatusCard
+            title="Kibana"
+            description="Distributed log search & visualization across all services."
+            url={kibanaUrl}
+          />
+          <StatusCard
+            title={grafanaUrl ? 'Grafana' : 'Metrics'}
+            description={
+              grafanaUrl
+                ? 'Real-time performance dashboards & alerts.'
+                : 'Prometheus performance metrics and service telemetries.'
+            }
+            url={grafanaUrl || `${filmpireApiUrl}/actuator/prometheus`}
+          />
+        </Box>
       </Box>
 
-      {/* Registered Microservices Mesh Topology Strip */}
+      {/* 4. Registered Microservices Mesh Topology Strip */}
       <Paper
         elevation={0}
         sx={{
-          mt: 3.5,
-          p: 2.5,
+          p: 3,
           borderRadius: 3,
           border: '1px solid',
           borderColor: 'divider',
           background: (theme) => (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)'),
+          width: '100%',
         }}
       >
         <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1.5, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'text.secondary' }}>
           Registered Service Mesh Topology
         </Typography>
-        <Box display="flex" flexWrap="wrap" gap={1}>
+        <Box display="flex" flexWrap="wrap" gap={1.2}>
           {CORE_SERVICES.map((svc) => (
             <Chip
               key={svc.name}
               icon={svc.icon}
               label={`${svc.name} (:${svc.port})`}
-              size="small"
+              size="medium"
               variant="outlined"
               sx={{
                 borderRadius: 2,
-                px: 0.5,
+                px: 0.8,
+                py: 0.5,
                 fontWeight: 600,
-                fontSize: '0.75rem',
+                fontSize: '0.8rem',
               }}
             />
           ))}

@@ -165,7 +165,6 @@ function DeployControl({ apiUrl }) {
     <Card
       elevation={0}
       sx={{
-        mb: 4,
         borderRadius: 3,
         border: '1px solid',
         borderColor: 'divider',
