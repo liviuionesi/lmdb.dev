@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, CardContent, CardActions, Button, Typography, Box, Tooltip } from '@mui/material';
+import { Card, CardContent, CardActions, Button, Typography, Box, Tooltip, Chip } from '@mui/material';
 import { OpenInNew } from '@mui/icons-material';
 
 import useServiceStatus from './useServiceStatus';
@@ -12,16 +12,15 @@ const STATUS_LABEL = {
   unknown: 'Not configured',
 };
 
+const STATUS_COLOR = {
+  checking: 'default',
+  up: 'success',
+  down: 'error',
+  unknown: 'default',
+};
+
 /**
- * One ops-tool tile on the admin dashboard: a live reachability dot, a
- * short description, and an "Open" link to the tool itself.
- *
- * @param {string} title tool name (e.g. "Discovery (Eureka)")
- * @param {string} description one-line explanation of what this tool is
- * @param {string} [url] absolute URL to link to and probe; omitted renders
- *   the card as "not configured" (e.g. Grafana with no env var set)
- * @param {string} [secondaryUrl] optional second link (e.g. gateway routes)
- * @param {string} [secondaryLabel] label for secondaryUrl
+ * Modern SaaS Ops Card with live health chip and quick launch links.
  */
 function StatusCard({ title, description, url, secondaryUrl, secondaryLabel }) {
   const { classes } = useStyles();
@@ -35,38 +34,70 @@ function StatusCard({ title, description, url, secondaryUrl, secondaryLabel }) {
   }[status];
 
   return (
-    <Card className={classes.card} variant="outlined">
-      <CardContent>
-        <Box className={classes.cardHeader}>
-          <Tooltip title={STATUS_LABEL[status]}>
-            <span className={`${classes.statusDot} ${dotClass}`} />
-          </Tooltip>
-          <Typography variant="h6">{title}</Typography>
+    <Card
+      elevation={0}
+      sx={{
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        borderRadius: 2.5,
+        border: '1px solid',
+        borderColor: 'divider',
+        transition: 'all 0.2s ease-in-out',
+        '&:hover': {
+          transform: 'translateY(-2px)',
+          boxShadow: 2,
+        },
+      }}
+    >
+      <CardContent sx={{ p: 2.5, flexGrow: 1 }}>
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={1.5}>
+          <Box display="flex" alignItems="center" gap={1}>
+            <Tooltip title={STATUS_LABEL[status]}>
+              <span className={`${classes.statusDot} ${dotClass}`} aria-label={STATUS_LABEL[status]} />
+            </Tooltip>
+            <Typography variant="subtitle1" fontWeight={700}>
+              {title}
+            </Typography>
+          </Box>
+          <Chip
+            size="small"
+            label={status === 'up' ? 'Online' : (status === 'down' ? 'Offline' : 'Standby')}
+            color={STATUS_COLOR[status]}
+            variant="outlined"
+            sx={{ fontSize: '0.7rem', height: 20, fontWeight: 600 }}
+          />
         </Box>
-        <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
+
+        <Typography variant="body2" color="textSecondary" sx={{ lineHeight: 1.5 }}>
           {description}
         </Typography>
       </CardContent>
-      <CardActions className={classes.cardActions}>
+
+      <CardActions sx={{ p: 2, pt: 0, gap: 1 }}>
         <Button
           size="small"
-          endIcon={<OpenInNew />}
+          variant="outlined"
+          endIcon={<OpenInNew sx={{ fontSize: 14 }} />}
           disabled={!url}
           component="a"
           href={url}
           target="_blank"
           rel="noopener noreferrer"
+          sx={{ borderRadius: 1.5, textTransform: 'none', fontWeight: 600 }}
         >
           Open
         </Button>
         {secondaryUrl && (
           <Button
             size="small"
-            endIcon={<OpenInNew />}
+            variant="text"
+            endIcon={<OpenInNew sx={{ fontSize: 14 }} />}
             component="a"
             href={secondaryUrl}
             target="_blank"
             rel="noopener noreferrer"
+            sx={{ borderRadius: 1.5, textTransform: 'none', fontWeight: 600 }}
           >
             {secondaryLabel}
           </Button>

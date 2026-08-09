@@ -4,52 +4,38 @@ import {
   Card,
   CardContent,
   Typography,
-  RadioGroup,
-  FormControlLabel,
-  Radio,
+  ToggleButtonGroup,
+  ToggleButton,
   Button,
-  Stepper,
-  Step,
-  StepLabel,
   Alert,
   CircularProgress,
   Chip,
   Divider,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  TextField,
+  Paper,
 } from '@mui/material';
-import CloudUploadIcon from '@mui/icons-material/CloudUpload';
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import CloudQueueIcon from '@mui/icons-material/CloudQueue';
+import CloudDoneIcon from '@mui/icons-material/CloudDone';
+import PowerSettingsNewIcon from '@mui/icons-material/PowerSettingsNew';
 import RefreshIcon from '@mui/icons-material/Refresh';
-import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
-import CableIcon from '@mui/icons-material/Cable';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-
-const STEPS = [
-  'Select Target',
-  'Trigger Workflow / Launch',
-  'Provisioning Cloud / Cluster',
-  'Deploying Microservices',
-  'DNS Synced & Backend Live',
-];
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import RadioButtonCheckedIcon from '@mui/icons-material/RadioButtonChecked';
+import StorageIcon from '@mui/icons-material/Storage';
+import LaptopMacIcon from '@mui/icons-material/LaptopMac';
+import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
 
 const REPO_OWNER = 'pehlivanu';
 const REPO_NAME = 'filmpire-microservices';
 
 /**
- * 1-Click Zero-Touch Cloud & Local Deployment Control Center.
- * Provides 1-click automated provisioning and teardown with zero manual configuration.
+ * Modern, Executive 1-Click Cloud & Local Deployment Deck.
+ * Provides instant 1-click cloud orchestration with zero clutter and zero manual setup.
  *
  * @author Filmpire Development Team
- * @version 1.2.0
+ * @version 2.0.0
  */
 function DeployControl({ apiUrl }) {
   const [cloudTarget, setCloudTarget] = useState('azure');
-  const [githubToken, setGithubToken] = useState(() => import.meta.env.VITE_GITHUB_TOKEN || localStorage.getItem('filmpire_gh_token') || '');
-  const [customTunnelUrl, setCustomTunnelUrl] = useState(() => localStorage.getItem('filmpire_tunnel_url') || '');
-  const [activeStep, setActiveStep] = useState(0);
   const [isDeploying, setIsDeploying] = useState(false);
   const [isDestroying, setIsDestroying] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
@@ -58,11 +44,9 @@ function DeployControl({ apiUrl }) {
   const [sessionStartTime, setSessionStartTime] = useState(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
-  const effectiveApiUrl = (cloudTarget === 'local' && customTunnelUrl) ? customTunnelUrl : apiUrl;
-
   const checkBackendHealth = useCallback(async () => {
     try {
-      const res = await fetch(`${effectiveApiUrl}/actuator/health`, { method: 'GET', mode: 'cors' });
+      const res = await fetch(`${apiUrl}/actuator/health`, { method: 'GET', mode: 'cors' });
       if (res.ok) {
         setBackendHealthy(true);
         if (!sessionStartTime) {
@@ -74,7 +58,7 @@ function DeployControl({ apiUrl }) {
     } catch {
       setBackendHealthy(false);
     }
-  }, [effectiveApiUrl, sessionStartTime]);
+  }, [apiUrl, sessionStartTime]);
 
   useEffect(() => {
     checkBackendHealth();
@@ -94,10 +78,10 @@ function DeployControl({ apiUrl }) {
 
   const dispatchWorkflow = async (workflowFile, inputs = {}) => {
     setErrorMessage('');
-    const token = githubToken || import.meta.env.VITE_GITHUB_TOKEN || localStorage.getItem('filmpire_gh_token');
+    const token = import.meta.env.VITE_GITHUB_TOKEN || localStorage.getItem('filmpire_gh_token');
 
     if (!token) {
-      setErrorMessage('GitHub Personal Access Token or VITE_GITHUB_TOKEN environment variable is required to trigger automated cloud deployment.');
+      setErrorMessage('GitHub Personal Access Token or VITE_GITHUB_TOKEN is required to trigger automated cloud deployment.');
       return false;
     }
 
@@ -133,22 +117,16 @@ function DeployControl({ apiUrl }) {
   const handleDeploy = async () => {
     if (cloudTarget === 'local') {
       setStatusMessage('Local tunnel connected! Verifying gateway health...');
-      setActiveStep(4);
       await checkBackendHealth();
       return;
     }
 
     setIsDeploying(true);
-    setStatusMessage(`Triggering automated ${cloudTarget.toUpperCase()} deployment workflow...`);
-    setActiveStep(1);
+    setStatusMessage(`Provisioning ${cloudTarget.toUpperCase()} cloud backend & linking DNS...`);
 
     const success = await dispatchWorkflow('deploy.yml', { cloud: cloudTarget });
     if (success) {
-      setStatusMessage(`Automated deployment dispatched for ${cloudTarget.toUpperCase()}! Provisioning cloud infrastructure and linking DNS...`);
-      setActiveStep(2);
-      setTimeout(() => setActiveStep(3), 8000);
-    } else {
-      setActiveStep(0);
+      setStatusMessage(`Automated deployment dispatched for ${cloudTarget.toUpperCase()}! Cloud backend is spinning up.`);
     }
     setIsDeploying(false);
   };
@@ -159,17 +137,15 @@ function DeployControl({ apiUrl }) {
       setSessionStartTime(null);
       setElapsedSeconds(0);
       setBackendHealthy(false);
-      setActiveStep(0);
       return;
     }
 
     setIsDestroying(true);
-    setStatusMessage(`Triggering automated ${cloudTarget.toUpperCase()} teardown workflow...`);
+    setStatusMessage(`Terminating ${cloudTarget.toUpperCase()} backend to maintain $0 spend...`);
 
     const success = await dispatchWorkflow('destroy.yml', { cloud: cloudTarget });
     if (success) {
-      setStatusMessage(`Teardown dispatched for ${cloudTarget.toUpperCase()}! Cloud resources will be destroyed to preserve $0 spend.`);
-      setActiveStep(0);
+      setStatusMessage(`Teardown dispatched for ${cloudTarget.toUpperCase()}! Cloud resources will be destroyed.`);
       setSessionStartTime(null);
       setElapsedSeconds(0);
       setBackendHealthy(false);
@@ -186,154 +162,204 @@ function DeployControl({ apiUrl }) {
   const estimatedCost = cloudTarget === 'local' ? '0.00' : (elapsedSeconds * (0.04 / 3600)).toFixed(4);
 
   return (
-    <Card sx={{ mb: 4, p: 1 }}>
-      <CardContent>
-        <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2} mb={2}>
+    <Card
+      elevation={0}
+      sx={{
+        mb: 4,
+        borderRadius: 3,
+        border: '1px solid',
+        borderColor: 'divider',
+        background: (theme) => (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.01)'),
+        backdropFilter: 'blur(8px)',
+      }}
+    >
+      <CardContent sx={{ p: 3 }}>
+        {/* Header bar */}
+        <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2} mb={3}>
           <Box>
-            <Typography variant="h5" fontWeight="bold" gutterBottom>
-              1-Click Automated Deployment Control
+            <Typography variant="h5" fontWeight={700} sx={{ letterSpacing: '-0.02em' }}>
+              Live Infrastructure Orchestrator
             </Typography>
-            <Typography variant="body2" color="textSecondary">
-              Zero-touch automated deployment for live portfolio demonstrations. Spin up Azure AKS, AWS EC2, or connect to local stack with 1 click.
+            <Typography variant="body2" color="textSecondary" sx={{ mt: 0.5 }}>
+              1-Click on-demand backend provisioning with automated Dynamic DNS synchronization.
             </Typography>
           </Box>
-          <Box display="flex" alignItems="center" gap={1}>
+
+          <Box display="flex" alignItems="center" gap={1.5}>
             <Chip
-              icon={backendHealthy ? <CheckCircleOutlineIcon /> : undefined}
-              label={backendHealthy ? 'Backend Live 🟢' : 'Backend Offline 🔴'}
+              icon={backendHealthy ? <CheckCircleIcon /> : <RadioButtonCheckedIcon />}
+              label={backendHealthy ? 'Backend Live' : 'Backend Standby'}
               color={backendHealthy ? 'success' : 'default'}
-              variant="outlined"
+              variant={backendHealthy ? 'filled' : 'outlined'}
+              sx={{ fontWeight: 600, px: 0.5 }}
             />
-            <Button size="small" variant="outlined" startIcon={<RefreshIcon />} onClick={checkBackendHealth}>
+            <Button
+              size="small"
+              variant="outlined"
+              startIcon={<RefreshIcon />}
+              onClick={checkBackendHealth}
+              sx={{ borderRadius: 2 }}
+            >
               Ping
             </Button>
           </Box>
         </Box>
 
-        <Divider sx={{ my: 2 }} />
-
         {errorMessage && (
-          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setErrorMessage('')}>
+          <Alert severity="error" sx={{ mb: 2.5, borderRadius: 2 }} onClose={() => setErrorMessage('')}>
             {errorMessage}
           </Alert>
         )}
 
         {statusMessage && (
-          <Alert severity="info" sx={{ mb: 2 }} onClose={() => setStatusMessage('')}>
+          <Alert severity="info" sx={{ mb: 2.5, borderRadius: 2 }} onClose={() => setStatusMessage('')}>
             {statusMessage}
           </Alert>
         )}
 
-        <Box display="flex" flexDirection="column" gap={2} mb={3}>
-          <Typography variant="subtitle2" fontWeight="bold">
-            Select Deployment Target:
-          </Typography>
-          <RadioGroup
-            row
-            value={cloudTarget}
-            onChange={(e) => setCloudTarget(e.target.value)}
-          >
-            <FormControlLabel
-              value="azure"
-              control={<Radio />}
-              label="Azure AKS (Cloud 1-Click)"
-            />
-            <FormControlLabel
-              value="aws"
-              control={<Radio />}
-              label="AWS EC2 (Cloud 1-Click)"
-            />
-            <FormControlLabel
-              value="local"
-              control={<Radio />}
-              label="Local Stack (Zero-Touch Tunnel)"
-            />
-          </RadioGroup>
+        {/* Target Switcher + Action Controls */}
+        <Box
+          display="flex"
+          alignItems="center"
+          justifyContent="space-between"
+          flexWrap="wrap"
+          gap={2.5}
+          sx={{
+            p: 2,
+            borderRadius: 2.5,
+            bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)'),
+            border: '1px solid',
+            borderColor: 'divider',
+          }}
+        >
+          {/* Target Toggle Group */}
+          <Box display="flex" flexDirection="column" gap={1}>
+            <Typography variant="caption" fontWeight={600} color="textSecondary" sx={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Target Environment
+            </Typography>
+            <ToggleButtonGroup
+              value={cloudTarget}
+              exclusive
+              onChange={(_, val) => val && setCloudTarget(val)}
+              size="small"
+              sx={{
+                '& .MuiToggleButton-root': {
+                  px: 2,
+                  py: 0.8,
+                  borderRadius: 2,
+                  fontWeight: 600,
+                  textTransform: 'none',
+                },
+              }}
+            >
+              <ToggleButton value="azure" aria-label="Select Azure AKS">
+                <CloudQueueIcon sx={{ mr: 1, fontSize: 18 }} />
+                Azure AKS
+              </ToggleButton>
+              <ToggleButton value="aws" aria-label="Select AWS EC2">
+                <StorageIcon sx={{ mr: 1, fontSize: 18 }} />
+                AWS EC2
+              </ToggleButton>
+              <ToggleButton value="local" aria-label="Select Local Tunnel">
+                <LaptopMacIcon sx={{ mr: 1, fontSize: 18 }} />
+                Local Tunnel
+              </ToggleButton>
+            </ToggleButtonGroup>
+          </Box>
+
+          {/* Action Buttons */}
+          <Box display="flex" gap={1.5} flexWrap="wrap" alignItems="center">
+            <Button
+              variant="contained"
+              color="primary"
+              size="large"
+              disabled={isDeploying || isDestroying}
+              onClick={handleDeploy}
+              startIcon={
+                isDeploying
+                  ? <CircularProgress size={18} color="inherit" />
+                  : (cloudTarget === 'local' ? <CloudDoneIcon /> : <CloudQueueIcon />)
+              }
+              sx={{
+                px: 3,
+                py: 1,
+                borderRadius: 2,
+                fontWeight: 700,
+                boxShadow: 2,
+              }}
+            >
+              {cloudTarget === 'local'
+                ? 'Connect Local Backend'
+                : `Launch ${cloudTarget === 'azure' ? 'Azure AKS' : 'AWS EC2'}`}
+            </Button>
+
+            <Button
+              variant="outlined"
+              color="error"
+              size="large"
+              disabled={isDeploying || isDestroying}
+              onClick={handleDestroy}
+              startIcon={
+                isDestroying
+                  ? <CircularProgress size={18} color="inherit" />
+                  : <PowerSettingsNewIcon />
+              }
+              sx={{
+                px: 2.5,
+                py: 1,
+                borderRadius: 2,
+                fontWeight: 600,
+              }}
+            >
+              {cloudTarget === 'local' ? 'Disconnect' : 'Tear Down ($0 Cost)'}
+            </Button>
+          </Box>
         </Box>
 
-        <Box display="flex" gap={2} flexWrap="wrap" mb={3}>
-          <Button
-            variant="contained"
-            color="primary"
-            size="large"
-            startIcon={
-              isDeploying
-                ? <CircularProgress size={20} color="inherit" />
-                : (cloudTarget === 'local' ? <CableIcon /> : <CloudUploadIcon />)
-            }
-            onClick={handleDeploy}
-            disabled={isDeploying || isDestroying}
-          >
-            {cloudTarget === 'local' ? 'Connect Local Backend' : `Deploy Backend to ${cloudTarget === 'azure' ? 'Azure AKS' : 'AWS k3s'}`}
-          </Button>
-
-          <Button
-            variant="outlined"
-            color="error"
-            size="large"
-            startIcon={isDestroying ? <CircularProgress size={20} color="inherit" /> : <DeleteOutlineIcon />}
-            onClick={handleDestroy}
-            disabled={isDeploying || isDestroying}
-          >
-            {cloudTarget === 'local' ? 'Disconnect Backend' : 'Tear Down Backend (Destroy)'}
-          </Button>
-        </Box>
-
-        <Stepper activeStep={activeStep} alternativeLabel sx={{ my: 3 }}>
-          {STEPS.map((label) => (
-            <Step key={label}>
-              <StepLabel>{label}</StepLabel>
-            </Step>
-          ))}
-        </Stepper>
-
+        {/* Live Metrics Row */}
         {sessionStartTime && backendHealthy && (
-          <Box bgcolor="action.hover" p={2} borderRadius={2} display="flex" justifyContent="space-between" flexWrap="wrap" gap={2} mb={2}>
-            <Typography variant="body2">
-              <strong>Active Session Time:</strong> {formatElapsed(elapsedSeconds)}
-            </Typography>
-            <Typography variant="body2" color={cloudTarget === 'local' ? 'success.main' : 'warning.main'}>
-              <strong>Estimated Spend:</strong> {cloudTarget === 'local' ? '$0.00 (Local Free Demo)' : `~$${estimatedCost}`}
-            </Typography>
+          <Box display="grid" gridTemplateColumns={{ xs: '1fr', sm: '1fr 1fr' }} gap={2} mt={2.5}>
+            <Paper
+              elevation={0}
+              sx={{
+                p: 1.5,
+                borderRadius: 2,
+                border: '1px solid',
+                borderColor: 'divider',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1.5,
+              }}
+            >
+              <AccessTimeIcon color="primary" />
+              <Box>
+                <Typography variant="caption" color="textSecondary">Active Session Duration</Typography>
+                <Typography variant="body1" fontWeight={700}>{formatElapsed(elapsedSeconds)}</Typography>
+              </Box>
+            </Paper>
+
+            <Paper
+              elevation={0}
+              sx={{
+                p: 1.5,
+                borderRadius: 2,
+                border: '1px solid',
+                borderColor: 'divider',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1.5,
+              }}
+            >
+              <AttachMoneyIcon color={cloudTarget === 'local' ? 'success' : 'warning'} />
+              <Box>
+                <Typography variant="caption" color="textSecondary">Current Cloud Spend</Typography>
+                <Typography variant="body1" fontWeight={700} color={cloudTarget === 'local' ? 'success.main' : 'warning.main'}>
+                  {cloudTarget === 'local' ? '$0.00 (Local Machine)' : `~$${estimatedCost} USD`}
+                </Typography>
+              </Box>
+            </Paper>
           </Box>
         )}
-
-        <Accordion sx={{ mt: 2, boxShadow: 'none', border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography variant="body2" color="textSecondary">
-              Advanced Settings &amp; Token Overrides (Optional)
-            </Typography>
-          </AccordionSummary>
-          <AccordionDetails>
-            <Box display="flex" flexDirection="column" gap={2}>
-              <TextField
-                label="GitHub Personal Access Token (Override)"
-                type="password"
-                size="small"
-                value={githubToken}
-                onChange={(e) => {
-                  setGithubToken(e.target.value);
-                  localStorage.setItem('filmpire_gh_token', e.target.value);
-                }}
-                placeholder="ghp_..."
-                helperText="Optional: defaults to VITE_GITHUB_TOKEN environment variable."
-                fullWidth
-              />
-              <TextField
-                label="Custom API / Tunnel URL (Override)"
-                size="small"
-                value={customTunnelUrl}
-                onChange={(e) => {
-                  setCustomTunnelUrl(e.target.value);
-                  localStorage.setItem('filmpire_tunnel_url', e.target.value);
-                }}
-                placeholder="https://filmpire-api.duckdns.org"
-                helperText="Optional: defaults to VITE_API_URL or DuckDNS sync."
-                fullWidth
-              />
-            </Box>
-          </AccordionDetails>
-        </Accordion>
       </CardContent>
     </Card>
   );

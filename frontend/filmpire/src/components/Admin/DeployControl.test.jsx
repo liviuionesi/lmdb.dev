@@ -29,21 +29,21 @@ describe('DeployControl', () => {
     delete global.fetch;
   });
 
-  it('renders target selector options and control buttons without manual inputs in default view', async () => {
+  it('renders target selector options and control buttons in executive layout', async () => {
     renderDeployControl();
 
-    expect(screen.getByText(/1-Click Automated Deployment Control/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Azure AKS/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/AWS EC2/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Local Stack/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Deploy Backend to Azure AKS/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Tear Down Backend/i })).toBeInTheDocument();
+    expect(screen.getByText(/Live Infrastructure Orchestrator/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Select Azure AKS/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Select AWS EC2/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Select Local Tunnel/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Launch Azure AKS/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Tear Down/i })).toBeInTheDocument();
   });
 
   it('shows error if deploy is triggered without a token configured', async () => {
     renderDeployControl();
 
-    const deployBtn = screen.getByRole('button', { name: /Deploy Backend to Azure AKS/i });
+    const deployBtn = screen.getByRole('button', { name: /Launch Azure AKS/i });
     fireEvent.click(deployBtn);
 
     await waitFor(() => {
@@ -55,7 +55,7 @@ describe('DeployControl', () => {
     localStorage.setItem('filmpire_gh_token', 'ghp_testtoken123');
     renderDeployControl();
 
-    const deployBtn = screen.getByRole('button', { name: /Deploy Backend to Azure AKS/i });
+    const deployBtn = screen.getByRole('button', { name: /Launch Azure AKS/i });
     fireEvent.click(deployBtn);
 
     await waitFor(() => {
@@ -76,7 +76,7 @@ describe('DeployControl', () => {
     localStorage.setItem('filmpire_gh_token', 'ghp_testtoken123');
     renderDeployControl();
 
-    const destroyBtn = screen.getByRole('button', { name: /Tear Down Backend/i });
+    const destroyBtn = screen.getByRole('button', { name: /Tear Down/i });
     fireEvent.click(destroyBtn);
 
     await waitFor(() => {
@@ -93,20 +93,20 @@ describe('DeployControl', () => {
     });
   });
 
-  it('switches cloud target when AWS radio button is selected', async () => {
+  it('switches cloud target when AWS button is selected', async () => {
     renderDeployControl();
 
-    const awsRadio = screen.getByLabelText(/AWS EC2/i);
-    fireEvent.click(awsRadio);
+    const awsBtn = screen.getByRole('button', { name: /Select AWS EC2/i });
+    fireEvent.click(awsBtn);
 
-    expect(screen.getByRole('button', { name: /Deploy Backend to AWS k3s/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Launch AWS EC2/i })).toBeInTheDocument();
   });
 
   it('switches to local mode and displays connect button', async () => {
     renderDeployControl();
 
-    const localRadio = screen.getByLabelText(/Local Stack/i);
-    fireEvent.click(localRadio);
+    const localBtn = screen.getByRole('button', { name: /Select Local Tunnel/i });
+    fireEvent.click(localBtn);
 
     expect(screen.getByRole('button', { name: /Connect Local Backend/i })).toBeInTheDocument();
   });
