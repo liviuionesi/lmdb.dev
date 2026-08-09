@@ -13,40 +13,41 @@ describe('Pagination', () => {
     expect(screen.getByText('3')).toBeInTheDocument();
   });
 
-  it('calls setPage with the previous page when Prev is clicked', () => {
+  it('calls setPage with the previous page when Prev is clicked', async () => {
     const setPage = vi.fn();
     renderWithProviders(<Pagination currentPage={3} totalPages={10} setPage={setPage} />);
 
-    userEvent.click(screen.getByText('Prev'));
+    // userEvent v14+ dispatches events asynchronously, so the click must be awaited.
+    await userEvent.click(screen.getByText('Prev'));
 
     expect(setPage).toHaveBeenCalledTimes(1);
     expect(setPage.mock.calls[0][0](3)).toBe(2);
   });
 
-  it('does not call setPage when Prev is clicked on the first page', () => {
+  it('does not call setPage when Prev is clicked on the first page', async () => {
     const setPage = vi.fn();
     renderWithProviders(<Pagination currentPage={1} totalPages={10} setPage={setPage} />);
 
-    userEvent.click(screen.getByText('Prev'));
+    await userEvent.click(screen.getByText('Prev'));
 
     expect(setPage).not.toHaveBeenCalled();
   });
 
-  it('calls setPage with the next page when Next is clicked', () => {
+  it('calls setPage with the next page when Next is clicked', async () => {
     const setPage = vi.fn();
     renderWithProviders(<Pagination currentPage={3} totalPages={10} setPage={setPage} />);
 
-    userEvent.click(screen.getByText('Next'));
+    await userEvent.click(screen.getByText('Next'));
 
     expect(setPage).toHaveBeenCalledTimes(1);
     expect(setPage.mock.calls[0][0](3)).toBe(4);
   });
 
-  it('does not call setPage when Next is clicked on the last page', () => {
+  it('does not call setPage when Next is clicked on the last page', async () => {
     const setPage = vi.fn();
     renderWithProviders(<Pagination currentPage={10} totalPages={10} setPage={setPage} />);
 
-    userEvent.click(screen.getByText('Next'));
+    await userEvent.click(screen.getByText('Next'));
 
     expect(setPage).not.toHaveBeenCalled();
   });

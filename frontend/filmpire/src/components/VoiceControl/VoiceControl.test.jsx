@@ -140,7 +140,10 @@ describe('VoiceControl', () => {
     await userEvent.click(getFab());
 
     await waitFor(() => expect(getFab()).toBeDisabled());
-    await userEvent.click(getFab());
+    // MUI sets `pointer-events: none` on a disabled Fab, which userEvent v14+
+    // refuses to click by default; skip that check since this test is
+    // deliberately exercising the disabled state.
+    await userEvent.click(getFab(), { pointerEventsCheck: 0 });
     expect(global.fetch).toHaveBeenCalledTimes(1);
 
     // Let the pending transcription settle so it doesn't leak into the next test.

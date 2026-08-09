@@ -39,7 +39,7 @@ describe('Sidebar', () => {
     expect(screen.getByRole('progressbar')).toBeInTheDocument();
   });
 
-  it('renders each genre once loaded and dispatches its id on click', () => {
+  it('renders each genre once loaded and dispatches its id on click', async () => {
     useGetGenresQuery.mockReturnValue({
       data: { genres: [{ id: 28, name: 'Action' }, { id: 35, name: 'Comedy' }] },
       isFetching: false,
@@ -48,16 +48,17 @@ describe('Sidebar', () => {
     renderWithProviders(<Sidebar setMobileOpen={() => {}} />, { store });
 
     expect(screen.getByText('Action')).toBeInTheDocument();
-    userEvent.click(screen.getByText('Comedy'));
+    // userEvent v14+ dispatches events asynchronously, so the click must be awaited.
+    await userEvent.click(screen.getByText('Comedy'));
 
     expect(store.getState().currentGenreOrCategory.genreIdOrCategoryName).toBe(35);
   });
 
-  it('dispatches "popular" and clears the search query when a category is clicked', () => {
+  it('dispatches "popular" and clears the search query when a category is clicked', async () => {
     const store = buildStore({ currentGenreOrCategory: { genreIdOrCategoryName: '', page: 1, searchQuery: 'batman' } });
     renderWithProviders(<Sidebar setMobileOpen={() => {}} />, { store });
 
-    userEvent.click(screen.getByText('Top Rated'));
+    await userEvent.click(screen.getByText('Top Rated'));
 
     expect(store.getState().currentGenreOrCategory.genreIdOrCategoryName).toBe('top_rated');
     expect(store.getState().currentGenreOrCategory.searchQuery).toBe('');

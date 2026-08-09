@@ -21,20 +21,21 @@ describe('Search', () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it('dispatches searchMovie with the typed query when Enter is pressed', () => {
+  it('dispatches searchMovie with the typed query when Enter is pressed', async () => {
     const store = buildStore();
     renderWithProviders(<Search />, { route: '/', store });
 
-    userEvent.type(screen.getByRole('textbox'), 'batman{enter}');
+    // userEvent v14+ dispatches events asynchronously, so typing must be awaited.
+    await userEvent.type(screen.getByRole('textbox'), 'batman{enter}');
 
     expect(store.getState().currentGenreOrCategory.searchQuery).toBe('batman');
   });
 
-  it('does not dispatch on other key presses', () => {
+  it('does not dispatch on other key presses', async () => {
     const store = buildStore();
     renderWithProviders(<Search />, { route: '/', store });
 
-    userEvent.type(screen.getByRole('textbox'), 'batman');
+    await userEvent.type(screen.getByRole('textbox'), 'batman');
 
     expect(store.getState().currentGenreOrCategory.searchQuery).toBe('');
   });

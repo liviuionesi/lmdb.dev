@@ -49,11 +49,12 @@ describe('ToggleColorMode', () => {
     expect(screen.getByText('Mode: dark')).toBeInTheDocument();
   });
 
-  it('toggleColorMode flips the mode and persists it', () => {
+  it('toggleColorMode flips the mode and persists it', async () => {
     window.matchMedia = (query) => ({ matches: false, media: query, addEventListener: () => {}, removeEventListener: () => {} });
     render(<ToggleColorMode><Probe /></ToggleColorMode>);
 
-    userEvent.click(screen.getByText('Toggle'));
+    // userEvent v14+ dispatches events asynchronously, so the click must be awaited.
+    await userEvent.click(screen.getByText('Toggle'));
 
     expect(screen.getByText('Mode: dark')).toBeInTheDocument();
     expect(localStorage.getItem('themeMode')).toBe('dark');
