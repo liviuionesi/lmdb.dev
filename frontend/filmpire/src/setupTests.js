@@ -1,5 +1,5 @@
 // Vitest auto-loads this file (via the `test.setupFiles` entry in
-// vite.config.js) before every test file.
+// vite.config.mjs) before every test file.
 import '@testing-library/jest-dom';
 
 // jsdom's CSS.escape is spec-strict about its receiver: called as a detached

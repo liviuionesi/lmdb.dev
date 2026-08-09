@@ -8,7 +8,7 @@ module.exports = {
   // ESLint has no built-in "vitest" env (unlike "jest"), and adding
   // eslint-plugin-vitest is out of scope for a test-runner swap (#127), so
   // the handful of Vitest globals the test suite actually uses (from
-  // `test.globals: true` in vite.config.js) are declared by hand instead.
+  // `test.globals: true` in vite.config.mjs) are declared by hand instead.
   globals: {
     describe: "readonly",
     it: "readonly",
