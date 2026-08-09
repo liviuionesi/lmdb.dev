@@ -21,29 +21,31 @@ import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import CableIcon from '@mui/icons-material/Cable';
 
 const STEPS = [
   'Select Target',
-  'Trigger Workflow',
-  'Provisioning Cloud',
-  'Deploying K8s',
-  'Linking DNS & Ready',
+  'Trigger Workflow / Launch Tunnel',
+  'Provisioning & Connecting',
+  'Deploying K8s / Services',
+  'DNS / Tunnel Linked & Ready',
 ];
 
 const REPO_OWNER = 'pehlivanu';
 const REPO_NAME = 'filmpire-microservices';
 
 /**
- * 1-Click Cloud Deployment and Lifecycle Control Center.
- * Allows administrators to provision and destroy ephemeral Azure AKS or AWS k3s
- * clusters via GitHub Actions API and dynamically link the Vercel frontend.
+ * 1-Click Cloud & Local Deployment Control Center.
+ * Allows administrators to provision ephemeral Azure AKS, AWS k3s clusters,
+ * or connect to a local workstation / Minikube stack via Cloudflare Tunnel.
  *
  * @author Filmpire Development Team
- * @version 1.0.0
+ * @version 1.1.0
  */
 function DeployControl({ apiUrl }) {
   const [cloudTarget, setCloudTarget] = useState('azure');
   const [githubToken, setGithubToken] = useState(() => localStorage.getItem('filmpire_gh_token') || '');
+  const [customTunnelUrl, setCustomTunnelUrl] = useState(() => localStorage.getItem('filmpire_tunnel_url') || '');
   const [activeStep, setActiveStep] = useState(0);
   const [isDeploying, setIsDeploying] = useState(false);
   const [isDestroying, setIsDestroying] = useState(false);
@@ -53,9 +55,11 @@ function DeployControl({ apiUrl }) {
   const [sessionStartTime, setSessionStartTime] = useState(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
+  const effectiveApiUrl = cloudTarget === 'local' && customTunnelUrl ? customTunnelUrl : apiUrl;
+
   const checkBackendHealth = useCallback(async () => {
     try {
-      const res = await fetch(`${apiUrl}/actuator/health`, { method: 'GET', mode: 'cors' });
+      const res = await fetch(`${effectiveApiUrl}/actuator/health`, { method: 'GET', mode: 'cors' });
       if (res.ok) {
         setBackendHealthy(true);
         if (!sessionStartTime) {
@@ -67,7 +71,7 @@ function DeployControl({ apiUrl }) {
     } catch {
       setBackendHealthy(false);
     }
-  }, [apiUrl, sessionStartTime]);
+  }, [effectiveApiUrl, sessionStartTime]);
 
   useEffect(() => {
     checkBackendHealth();
@@ -89,6 +93,12 @@ function DeployControl({ apiUrl }) {
     const val = e.target.value;
     setGithubToken(val);
     localStorage.setItem('filmpire_gh_token', val);
+  };
+
+  const handleTunnelUrlChange = (e) => {
+    const val = e.target.value;
+    setCustomTunnelUrl(val);
+    localStorage.setItem('filmpire_tunnel_url', val);
   };
 
   const dispatchWorkflow = async (workflowFile, inputs = {}) => {
@@ -128,6 +138,13 @@ function DeployControl({ apiUrl }) {
   };
 
   const handleDeploy = async () => {
+    if (cloudTarget === 'local') {
+      setStatusMessage('Checking local Cloudflare Tunnel health...');
+      setActiveStep(4);
+      await checkBackendHealth();
+      return;
+    }
+
     setIsDeploying(true);
     setStatusMessage(`Triggering ${cloudTarget.toUpperCase()} deployment workflow...`);
     setActiveStep(1);
@@ -144,6 +161,15 @@ function DeployControl({ apiUrl }) {
   };
 
   const handleDestroy = async () => {
+    if (cloudTarget === 'local') {
+      setStatusMessage('To stop the local tunnel, run: ./infrastructure/scripts/stop-tunnel.sh in your terminal.');
+      setSessionStartTime(null);
+      setElapsedSeconds(0);
+      setBackendHealthy(false);
+      setActiveStep(0);
+      return;
+    }
+
     setIsDestroying(true);
     setStatusMessage(`Triggering ${cloudTarget.toUpperCase()} teardown workflow...`);
 
@@ -164,7 +190,7 @@ function DeployControl({ apiUrl }) {
     return `${mins}m ${s}s`;
   };
 
-  const estimatedCost = (elapsedSeconds * (0.04 / 3600)).toFixed(4);
+  const estimatedCost = cloudTarget === 'local' ? '0.00' : (elapsedSeconds * (0.04 / 3600)).toFixed(4);
 
   return (
     <Card sx={{ mb: 4, p: 1 }}>
@@ -172,10 +198,10 @@ function DeployControl({ apiUrl }) {
         <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2} mb={2}>
           <Box>
             <Typography variant="h5" fontWeight="bold" gutterBottom>
-              1-Click Cloud Deployment &amp; Teardown Control
+              1-Click Deployment &amp; Tunnel Control
             </Typography>
             <Typography variant="body2" color="textSecondary">
-              Spin up an ephemeral cloud backend (Azure AKS or AWS k3s) on demand. Dynamic DNS auto-connects this Vercel frontend in minutes.
+              Connect this Vercel frontend to an ephemeral cloud backend (Azure/AWS) or a local Docker/Minikube instance via Cloudflare Tunnel.
             </Typography>
           </Box>
           <Box display="flex" alignItems="center" gap={1}>
@@ -207,7 +233,7 @@ function DeployControl({ apiUrl }) {
 
         <Box display="flex" flexDirection="column" gap={2} mb={3}>
           <Typography variant="subtitle2" fontWeight="bold">
-            1. Select Target Cloud:
+            1. Select Deployment Target:
           </Typography>
           <RadioGroup
             row
@@ -217,36 +243,62 @@ function DeployControl({ apiUrl }) {
             <FormControlLabel
               value="azure"
               control={<Radio />}
-              label="Azure AKS (1 Node D2ls_v7, NodePort 30080)"
+              label="Azure AKS (Cloud)"
             />
             <FormControlLabel
               value="aws"
               control={<Radio />}
-              label="AWS EC2 (k3s t3.small, NodePort 30080)"
+              label="AWS EC2 / k3s (Cloud)"
+            />
+            <FormControlLabel
+              value="local"
+              control={<Radio />}
+              label="Local Docker / Minikube (Cloudflare Tunnel)"
             />
           </RadioGroup>
 
-          <TextField
-            label="GitHub Personal Access Token (PAT)"
-            type="password"
-            size="small"
-            value={githubToken}
-            onChange={handleTokenChange}
-            placeholder="ghp_..."
-            helperText="Stored locally in browser localStorage only. Needs 'actions:write' scope to trigger deploy workflows."
-            fullWidth
-          />
+          {cloudTarget === 'local' ? (
+            <Box bgcolor="action.hover" p={2} borderRadius={2} display="flex" flexDirection="column" gap={1.5}>
+              <Typography variant="body2">
+                <strong>Run local tunnel command:</strong> <code>./infrastructure/scripts/start-tunnel.sh</code>
+              </Typography>
+              <TextField
+                label="Custom Cloudflare Tunnel URL"
+                size="small"
+                value={customTunnelUrl}
+                onChange={handleTunnelUrlChange}
+                placeholder="https://xxxx-xxxx.trycloudflare.com"
+                helperText="Paste the public trycloudflare.com URL printed by start-tunnel.sh"
+                fullWidth
+              />
+            </Box>
+          ) : (
+            <TextField
+              label="GitHub Personal Access Token (PAT)"
+              type="password"
+              size="small"
+              value={githubToken}
+              onChange={handleTokenChange}
+              placeholder="ghp_..."
+              helperText="Stored locally in browser localStorage. Requires 'actions:write' scope to trigger deploy workflows."
+              fullWidth
+            />
+          )}
         </Box>
 
         <Box display="flex" gap={2} flexWrap="wrap" mb={3}>
           <Button
             variant="contained"
             color="primary"
-            startIcon={isDeploying ? <CircularProgress size={20} color="inherit" /> : <CloudUploadIcon />}
+            startIcon={
+              isDeploying
+                ? <CircularProgress size={20} color="inherit" />
+                : (cloudTarget === 'local' ? <CableIcon /> : <CloudUploadIcon />)
+            }
             onClick={handleDeploy}
             disabled={isDeploying || isDestroying}
           >
-            Deploy Backend to {cloudTarget === 'azure' ? 'Azure AKS' : 'AWS k3s'}
+            {cloudTarget === 'local' ? 'Connect Local Tunnel' : `Deploy Backend to ${cloudTarget === 'azure' ? 'Azure AKS' : 'AWS k3s'}`}
           </Button>
 
           <Button
@@ -256,7 +308,7 @@ function DeployControl({ apiUrl }) {
             onClick={handleDestroy}
             disabled={isDeploying || isDestroying}
           >
-            Tear Down Backend (Destroy)
+            {cloudTarget === 'local' ? 'Disconnect Tunnel' : 'Tear Down Backend (Destroy)'}
           </Button>
         </Box>
 
@@ -273,8 +325,8 @@ function DeployControl({ apiUrl }) {
             <Typography variant="body2">
               <strong>Active Session Time:</strong> {formatElapsed(elapsedSeconds)}
             </Typography>
-            <Typography variant="body2" color="warning.main">
-              <strong>Estimated Session Cost:</strong> ~${estimatedCost}
+            <Typography variant="body2" color={cloudTarget === 'local' ? 'success.main' : 'warning.main'}>
+              <strong>Estimated Spend:</strong> {cloudTarget === 'local' ? '$0.00 (Local Free Tunnel)' : `~$${estimatedCost}`}
             </Typography>
           </Box>
         )}

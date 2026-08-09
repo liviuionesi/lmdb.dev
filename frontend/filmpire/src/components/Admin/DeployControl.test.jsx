@@ -32,9 +32,10 @@ describe('DeployControl', () => {
   it('renders target selector options and control buttons', async () => {
     renderDeployControl();
 
-    expect(screen.getByText(/1-Click Cloud Deployment & Teardown Control/i)).toBeInTheDocument();
+    expect(screen.getByText(/1-Click Deployment & Tunnel Control/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Azure AKS/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/AWS EC2/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Local Docker \/ Minikube/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Deploy Backend to Azure AKS/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Tear Down Backend/i })).toBeInTheDocument();
   });
@@ -103,5 +104,20 @@ describe('DeployControl', () => {
     fireEvent.click(awsRadio);
 
     expect(screen.getByRole('button', { name: /Deploy Backend to AWS k3s/i })).toBeInTheDocument();
+  });
+
+  it('switches to local tunnel mode and saves custom tunnel URL', async () => {
+    renderDeployControl();
+
+    const localRadio = screen.getByLabelText(/Local Docker \/ Minikube/i);
+    fireEvent.click(localRadio);
+
+    expect(screen.getAllByText(/start-tunnel\.sh/i)[0]).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Connect Local Tunnel/i })).toBeInTheDocument();
+
+    const tunnelInput = screen.getByLabelText(/Custom Cloudflare Tunnel URL/i);
+    fireEvent.change(tunnelInput, { target: { value: 'https://demo-test.trycloudflare.com' } });
+
+    expect(localStorage.getItem('filmpire_tunnel_url')).toBe('https://demo-test.trycloudflare.com');
   });
 });
