@@ -7,7 +7,7 @@ import useStyles from './styles';
 import { useGetActorsDetailsQuery, useGetMoviesByActorIdQuery } from '../../services/TMDB';
 import { MovieList, Pagination } from '..';
 
-const Actors = () => {
+function Actors() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { classes } = useStyles();
@@ -102,6 +102,6 @@ const Actors = () => {
       </Box>
     </>
   );
-};
+}
 
 export default Actors;

@@ -20,7 +20,7 @@ import { MovieList } from '..';
 import { userSelector } from '../../features/auth';
 import ReviewMediaSection from './ReviewMediaSection';
 
-const MovieInformation = () => {
+function MovieInformation() {
   const { isAuthenticated } = useSelector(userSelector);
   const { id } = useParams();
   const { classes } = useStyles();
@@ -257,6 +257,6 @@ const MovieInformation = () => {
       </Modal>
     </Grid>
   );
-};
+}
 
 export default MovieInformation;

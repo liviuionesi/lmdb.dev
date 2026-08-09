@@ -3,7 +3,7 @@ import { Typography, Button } from '@mui/material';
 
 import useStyles from './styles';
 
-const Pagination = ({ currentPage, totalPages, setPage }) => {
+function Pagination({ currentPage, totalPages, setPage }) {
   const { classes } = useStyles();
 
   const handlePrev = () => {
@@ -27,6 +27,6 @@ const Pagination = ({ currentPage, totalPages, setPage }) => {
       <Button onClick={handleNext} className={classes.button} variant="contained" color="primary" type="button">Next</Button>
     </div>
   );
-};
+}
 
 export default Pagination;

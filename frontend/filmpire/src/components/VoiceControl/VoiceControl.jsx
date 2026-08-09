@@ -21,7 +21,7 @@ const aiServiceUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080';
  * (browse a genre/category, toggle dark/light mode, log out, search)
  * against the transcribed text.
  */
-const VoiceControl = () => {
+function VoiceControl() {
   const { setMode } = useContext(ColorModeContext);
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -149,6 +149,6 @@ const VoiceControl = () => {
       </Snackbar>
     </>
   );
-};
+}
 
 export default VoiceControl;

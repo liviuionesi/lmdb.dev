@@ -23,7 +23,7 @@ const STATUS_LABEL = {
  * @param {string} [secondaryUrl] optional second link (e.g. gateway routes)
  * @param {string} [secondaryLabel] label for secondaryUrl
  */
-const StatusCard = ({ title, description, url, secondaryUrl, secondaryLabel }) => {
+function StatusCard({ title, description, url, secondaryUrl, secondaryLabel }) {
   const { classes } = useStyles();
   const status = useServiceStatus(url);
 
@@ -74,6 +74,6 @@ const StatusCard = ({ title, description, url, secondaryUrl, secondaryLabel }) =
       </CardActions>
     </Card>
   );
-};
+}
 
 export default StatusCard;

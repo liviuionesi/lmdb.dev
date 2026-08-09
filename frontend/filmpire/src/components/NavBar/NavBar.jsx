@@ -14,7 +14,7 @@ import { clearAuthTokens } from '../../utils';
 import LoginDialog from './LoginDialog';
 import useStyles from './styles';
 
-const NavBar = () => {
+function NavBar() {
   const { isAuthenticated, user } = useSelector(userSelector);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
@@ -143,6 +143,6 @@ const NavBar = () => {
       <LoginDialog open={loginOpen} onClose={() => setLoginOpen(false)} />
     </>
   );
-};
+}
 
 export default NavBar;

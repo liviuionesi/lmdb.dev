@@ -10,7 +10,7 @@ import { storeAuthTokens } from '../../utils';
  * Login/register modal backed by Filmpire's own user-service JWT API
  * (replaces the old redirect-to-themoviedb.org flow).
  */
-const LoginDialog = ({ open, onClose }) => {
+function LoginDialog({ open, onClose }) {
   const dispatch = useDispatch();
   const [tab, setTab] = useState('login');
   const [form, setForm] = useState({ username: '', email: '', password: '' });
@@ -105,6 +105,6 @@ const LoginDialog = ({ open, onClose }) => {
       </DialogContent>
     </Dialog>
   );
-};
+}
 
 export default LoginDialog;

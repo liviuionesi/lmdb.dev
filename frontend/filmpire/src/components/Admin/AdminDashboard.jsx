@@ -21,7 +21,7 @@ const grafanaUrl = import.meta.env.VITE_GRAFANA_URL;
  * Promoting an account to `ADMIN` currently requires a manual DB update —
  * there is no account-management UI for it yet.
  */
-const AdminDashboard = () => {
+function AdminDashboard() {
   const { isAuthenticated, user } = useSelector(userSelector);
   const hasStoredSession = !!localStorage.getItem('access_token');
 
@@ -130,6 +130,6 @@ const AdminDashboard = () => {
       </Grid>
     </Box>
   );
-};
+}
 
 export default AdminDashboard;

@@ -1,12 +1,13 @@
 // Tests ToggleColorMode's mode resolution (saved/system preference), the
-// toggle action, and that it persists the chosen mode to localStorage.
-import React, { useContext } from 'react';
+// toggle action, that it persists the chosen mode to localStorage, and that
+// its context value stays referentially stable across unrelated re-renders.
+import React, { useContext, useState } from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import ToggleColorMode, { ColorModeContext } from './ToggleColorMode';
 
-const Probe = () => {
+function Probe() {
   const { mode, toggleColorMode } = useContext(ColorModeContext);
   return (
     <div>
@@ -14,7 +15,30 @@ const Probe = () => {
       <button type="button" onClick={toggleColorMode}>Toggle</button>
     </div>
   );
-};
+}
+
+// Reports every context value it sees (via `onValue`) without rendering
+// anything itself, so a test can inspect reference identity across renders.
+function ReferenceProbe({ onValue }) {
+  const value = useContext(ColorModeContext);
+  onValue(value);
+  return null;
+}
+
+// Owns state *above* ToggleColorMode so clicking "Rerender" re-renders
+// ToggleColorMode itself (not just one of its children) without touching
+// `mode` — the state lives in this wrapper, not in ToggleColorMode or below
+// it, which is what actually re-invokes ToggleColorMode's function body on
+// each click and exercises its useCallback/useMemo memoization.
+function RerenderWrapper({ children }) {
+  const [, setTick] = useState(0);
+  return (
+    <>
+      <button type="button" onClick={() => setTick((n) => n + 1)}>Rerender</button>
+      <ToggleColorMode>{children}</ToggleColorMode>
+    </>
+  );
+}
 
 describe('ToggleColorMode', () => {
   const originalMatchMedia = window.matchMedia;
@@ -58,5 +82,27 @@ describe('ToggleColorMode', () => {
 
     expect(screen.getByText('Mode: dark')).toBeInTheDocument();
     expect(localStorage.getItem('themeMode')).toBe('dark');
+  });
+
+  it('keeps the context value and toggleColorMode reference stable across a re-render that does not change mode', async () => {
+    window.matchMedia = (query) => ({ matches: false, media: query, addEventListener: () => {}, removeEventListener: () => {} });
+    const seenValues = [];
+    render(
+      <RerenderWrapper>
+        <ReferenceProbe onValue={(value) => seenValues.push(value)} />
+      </RerenderWrapper>,
+    );
+    const beforeRerender = seenValues.at(-1);
+
+    // Triggers RerenderWrapper's state update, which re-renders ToggleColorMode
+    // itself without touching `mode` — without useCallback/useMemo in
+    // ToggleColorMode, this would produce a brand-new context value object and
+    // a brand-new toggleColorMode function every time, defeating memoization
+    // for every consumer regardless of whether `mode` actually changed.
+    await userEvent.click(screen.getByText('Rerender'));
+    const afterRerender = seenValues.at(-1);
+
+    expect(afterRerender).toBe(beforeRerender);
+    expect(afterRerender.toggleColorMode).toBe(beforeRerender.toggleColorMode);
   });
 });

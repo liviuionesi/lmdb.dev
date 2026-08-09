@@ -7,7 +7,7 @@ import VoiceControl from './VoiceControl/VoiceControl';
 
 import { Actors, AdminDashboard, MovieInformation, Movies, NavBar, Profile } from '.';
 
-const App = () => {
+function App() {
   const { classes } = useStyles();
 
   return (
@@ -27,6 +27,6 @@ const App = () => {
       <VoiceControl />
     </div>
   );
-};
+}
 
 export default App;

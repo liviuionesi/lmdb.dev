@@ -7,7 +7,7 @@ import { useSelector } from 'react-redux';
 import { userSelector } from '../../features/auth';
 import { useGetMediaForEntityQuery, useUploadMediaMutation, getMediaUrl } from '../../services/media';
 
-const ReviewMediaSection = ({ movieId }) => {
+function ReviewMediaSection({ movieId }) {
   const { isAuthenticated, user } = useSelector(userSelector);
   const [comment, setComment] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
@@ -382,6 +382,6 @@ const ReviewMediaSection = ({ movieId }) => {
       </Modal>
     </Box>
   );
-};
+}
 
 export default ReviewMediaSection;

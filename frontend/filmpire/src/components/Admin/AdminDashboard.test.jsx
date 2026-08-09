@@ -33,10 +33,10 @@ const buildStore = (preloadedState) => configureStore({
 // used <Navigate replace> rather than a regular push — the two render
 // identically at the destination, so nothing else here would catch a
 // regression that dropped `replace`.
-const NavigationTypeProbe = () => {
+function NavigationTypeProbe() {
   const navigationType = useNavigationType();
   return <div data-testid="nav-type">{navigationType}</div>;
-};
+}
 
 /**
  * Renders AdminDashboard at "/admin" alongside a sentinel "/" route, so a

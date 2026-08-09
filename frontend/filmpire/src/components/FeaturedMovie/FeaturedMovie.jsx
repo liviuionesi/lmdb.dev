@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 
 import useStyles from './styles';
 
-const FeaturedMovie = ({ movie }) => {
+function FeaturedMovie({ movie }) {
   const { classes } = useStyles();
 
   if (!movie) return null;
@@ -31,6 +31,6 @@ const FeaturedMovie = ({ movie }) => {
       </Card>
     </Box>
   );
-};
+}
 
 export default FeaturedMovie;

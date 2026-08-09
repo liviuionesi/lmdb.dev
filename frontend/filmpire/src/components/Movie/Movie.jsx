@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 
 import useStyles from './styles';
 
-const Movie = ({ movie, i }) => {
+function Movie({ movie, i }) {
   const { classes } = useStyles();
 
   return (
@@ -35,6 +35,6 @@ const Movie = ({ movie, i }) => {
       </Grow>
     </Grid>
   );
-};
+}
 
 export default Movie;

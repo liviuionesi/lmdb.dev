@@ -17,10 +17,10 @@ vi.mock('../../services/TMDB', () => ({
 
 // Renders the pathname alongside Actors so the "Back" test can observe an
 // actual route change instead of only asserting the click doesn't throw.
-const LocationProbe = () => {
+function LocationProbe() {
   const location = useLocation();
   return <div data-testid="location">{location.pathname}</div>;
-};
+}
 
 describe('Actors', () => {
   beforeEach(() => {
