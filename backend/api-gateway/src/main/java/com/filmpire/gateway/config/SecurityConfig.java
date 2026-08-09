@@ -145,7 +145,8 @@ public class SecurityConfig {
             "http://localhost:3000", // React default
             "http://localhost:3001", // Alternative React port
             "http://localhost:5173", // Vite default
-            "http://localhost:5174" // Alternative Vite port
+            "http://localhost:5174", // Alternative Vite port
+            "https://filmpire-microservices-tan.vercel.app" // Deployed Vercel frontend (#151)
             ));
 
     // Allowed HTTP methods
