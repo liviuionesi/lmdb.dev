@@ -85,12 +85,14 @@ jobs:
           kubectl rollout status deployment/api-gateway --timeout=180s
           kubectl rollout status deployment/movie-service --timeout=180s
 
-      - name: Update DuckDNS domain
+      - name: Update Dynamic DNS
+        env:
+          DUCKDNS_DOMAIN: ${{ vars.DUCKDNS_DOMAIN }}
+          DUCKDNS_TOKEN: ${{ secrets.DUCKDNS_TOKEN }}
         run: |
-          NODE_IP=$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="ExternalIP")].address}')
+          NODE_IP=$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="ExternalIP")].address}' || true)
           if [ -n "$NODE_IP" ]; then
-            curl -s "https://www.duckdns.org/update?domains=filmpire-api&token=${{ secrets.DUCKDNS_TOKEN || '30f79514-ac7b-4cb9-b979-6520c69aec5c' }}&ip=${NODE_IP}"
-            echo "Updated filmpire-api.duckdns.org with IP: $NODE_IP"
+            ../../scripts/update-duckdns.sh "$NODE_IP"
           fi
 
   deploy-aws:
@@ -154,10 +156,9 @@ jobs:
           kubectl rollout status deployment/api-gateway --timeout=180s
           kubectl rollout status deployment/movie-service --timeout=180s
 
-      - name: Update DuckDNS domain
+      - name: Update Dynamic DNS
+        env:
+          DUCKDNS_DOMAIN: ${{ vars.DUCKDNS_DOMAIN }}
+          DUCKDNS_TOKEN: ${{ secrets.DUCKDNS_TOKEN }}
         run: |
-          NODE_IP="${{ steps.tf.outputs.public_ip }}"
-          if [ -n "$NODE_IP" ]; then
-            curl -s "https://www.duckdns.org/update?domains=filmpire-api&token=${{ secrets.DUCKDNS_TOKEN || '30f79514-ac7b-4cb9-b979-6520c69aec5c' }}&ip=${NODE_IP}"
-            echo "Updated filmpire-api.duckdns.org with IP: $NODE_IP"
-          fi
+          ../../scripts/update-duckdns.sh "${{ steps.tf.outputs.public_ip }}"
