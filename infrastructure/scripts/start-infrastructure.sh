@@ -93,14 +93,15 @@ if [ ! -d "$FRONTEND_DIR" ]; then
 elif ! command -v npm &> /dev/null; then
     echo -e "${YELLOW}⚠  npm not found on PATH — skipping frontend startup. Install Node.js 24.x (NVM) and run:${NC}"
     echo "     cd frontend/filmpire && npm install && npm start"
-elif pgrep -f "react-scripts start" > /dev/null; then
+elif pgrep -f "vite" > /dev/null || pgrep -f "react-scripts start" > /dev/null; then
     echo -e "${GREEN}✓ Frontend dev server already running.${NC}"
 else
-    # .env.local is CRA's gitignored local-override file — point it at this
+    # .env.local is Vite's gitignored local-override file — point it at this
     # stack's gateway so the app doesn't fall back to the real TMDB API.
     if [ ! -f "$FRONTEND_DIR/.env.local" ]; then
-        echo "REACT_APP_API_URL=http://localhost:${API_GATEWAY_PORT:-8080}" > "$FRONTEND_DIR/.env.local"
-        echo -e "${GREEN}✓ Created frontend/filmpire/.env.local (REACT_APP_API_URL=http://localhost:${API_GATEWAY_PORT:-8080})${NC}"
+        echo "VITE_API_URL=http://localhost:${API_GATEWAY_PORT:-8080}" > "$FRONTEND_DIR/.env.local"
+        echo "REACT_APP_API_URL=http://localhost:${API_GATEWAY_PORT:-8080}" >> "$FRONTEND_DIR/.env.local"
+        echo -e "${GREEN}✓ Created frontend/filmpire/.env.local (VITE_API_URL=http://localhost:${API_GATEWAY_PORT:-8080})${NC}"
     fi
 
     if [ ! -d "$FRONTEND_DIR/node_modules" ]; then
