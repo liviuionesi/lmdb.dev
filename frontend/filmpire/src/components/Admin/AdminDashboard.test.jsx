@@ -7,7 +7,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { Provider } from 'react-redux';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useNavigationType } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import { configureStore } from '@reduxjs/toolkit';
 
@@ -28,6 +28,16 @@ const buildStore = (preloadedState) => configureStore({
   preloadedState,
 });
 
+// Surfaces react-router's own classification of the last navigation
+// ('PUSH' | 'REPLACE' | 'POP') so a test can assert AdminDashboard's redirect
+// used <Navigate replace> rather than a regular push — the two render
+// identically at the destination, so nothing else here would catch a
+// regression that dropped `replace`.
+const NavigationTypeProbe = () => {
+  const navigationType = useNavigationType();
+  return <div data-testid="nav-type">{navigationType}</div>;
+};
+
 /**
  * Renders AdminDashboard at "/admin" alongside a sentinel "/" route, so a
  * `<Navigate to="/">` is observable as "the Home sentinel replaced
@@ -38,6 +48,7 @@ const renderAtAdminRoute = (store) => render(
   <ThemeProvider theme={theme}>
     <Provider store={store}>
       <MemoryRouter initialEntries={['/admin']}>
+        <NavigationTypeProbe />
         <Routes>
           <Route path="/" element="Home" />
           <Route path="/admin" element={<AdminDashboard />} />
@@ -55,11 +66,14 @@ describe('AdminDashboard', () => {
     useServiceStatus.mockReturnValue('up');
   });
 
-  it('redirects to home when there is no stored session', () => {
+  it('redirects to home when there is no stored session, via history replace', () => {
     renderAtAdminRoute(buildStore());
 
     expect(screen.getByText('Home')).toBeInTheDocument();
     expect(screen.queryByText('Admin Dashboard')).not.toBeInTheDocument();
+    // <Navigate replace> must classify as REPLACE, not PUSH — otherwise the
+    // gated /admin route would stay in history, reachable again via Back.
+    expect(screen.getByTestId('nav-type')).toHaveTextContent('REPLACE');
   });
 
   it('redirects to home when the profile refetch errors even with a stored token', () => {
@@ -92,6 +106,9 @@ describe('AdminDashboard', () => {
     renderAtAdminRoute(store);
 
     expect(screen.getByText('Home')).toBeInTheDocument();
+    // This exercises the role-check's own Navigate call site (distinct from
+    // the hasStoredSession/isError one above) — confirm it also replaces.
+    expect(screen.getByTestId('nav-type')).toHaveTextContent('REPLACE');
   });
 
   it('redirects to home for a stored-session non-admin profile that has not hydrated redux yet', () => {

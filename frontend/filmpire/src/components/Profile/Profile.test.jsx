@@ -1,13 +1,16 @@
 // Tests Profile: the empty state, rendering favorites/watchlist, logging out,
 // unauthenticated redirect, and custom avatar photo uploading & validation.
 import React from 'react';
-import { screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { configureStore } from '@reduxjs/toolkit';
+import { Provider } from 'react-redux';
+import { MemoryRouter, Route, Routes, useNavigationType } from 'react-router-dom';
+import { ThemeProvider } from '@mui/material/styles';
 
 import Profile from './Profile';
 import authReducer from '../../features/auth';
-import { renderWithProviders } from '../../test-utils/render';
+import { renderWithProviders, theme } from '../../test-utils/render';
 import { useGetFavoritesQuery, useGetWatchlistQuery, useLogoutMutation } from '../../services/user';
 import { useGetMediaForEntityQuery, useUploadMediaMutation, getMediaUrl } from '../../services/media';
 import { useGetMovieQuery } from '../../services/TMDB';
@@ -32,6 +35,37 @@ const buildStore = (authenticated) => configureStore({
   reducer: { user: authReducer },
   preloadedState: authenticated ? { user: { user: { id: 1, username: 'liviu' }, isAuthenticated: true } } : undefined,
 });
+
+// Surfaces react-router's own classification of the last navigation
+// ('PUSH' | 'REPLACE' | 'POP') so a test can assert that Profile's redirect
+// used <Navigate replace> rather than a regular push — the two render
+// identically at the destination, so nothing else in this file would catch
+// a regression that dropped `replace`.
+const NavigationTypeProbe = () => {
+  const navigationType = useNavigationType();
+  return <div data-testid="nav-type">{navigationType}</div>;
+};
+
+/**
+ * Renders Profile at "/profile/1" alongside a sentinel "/" route, so an
+ * unauthenticated `<Navigate to="/" replace />` is observable as "the Home
+ * sentinel replaced Profile" (matching AdminDashboard.test.jsx's pattern)
+ * rather than inferred from Profile's own content being absent, which would
+ * also be true if the component crashed or rendered null.
+ */
+const renderAtProfileRoute = (store) => render(
+  <ThemeProvider theme={theme}>
+    <Provider store={store}>
+      <MemoryRouter initialEntries={['/profile/1']}>
+        <NavigationTypeProbe />
+        <Routes>
+          <Route path="/" element="Home" />
+          <Route path="/profile/:id" element={<Profile />} />
+        </Routes>
+      </MemoryRouter>
+    </Provider>
+  </ThemeProvider>,
+);
 
 describe('Profile', () => {
   beforeEach(() => {
@@ -77,10 +111,17 @@ describe('Profile', () => {
     await waitFor(() => expect(localStorage.getItem('access_token')).toBeNull());
   });
 
-  it('redirects an unauthenticated user to the home page (/)', () => {
-    renderWithProviders(<Profile />, { store: buildStore(false), initialEntries: ['/profile/1'] });
+  it('redirects an unauthenticated user to the home page (/) via history replace', () => {
+    renderAtProfileRoute(buildStore(false));
 
+    // The Home sentinel took over the route — a genuine redirect, not just
+    // Profile rendering nothing (which would also leave "My Profile" absent).
+    expect(screen.getByText('Home')).toBeInTheDocument();
     expect(screen.queryByText(/My Profile/i)).not.toBeInTheDocument();
+    // <Navigate replace> must classify as a REPLACE navigation, not PUSH —
+    // otherwise the redirect would leave the protected /profile/1 route
+    // behind in history, reachable again via the browser Back button.
+    expect(screen.getByTestId('nav-type')).toHaveTextContent('REPLACE');
   });
 
   it('displays validation error when uploading a non-image format file', async () => {
