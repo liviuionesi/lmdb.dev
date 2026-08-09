@@ -26,6 +26,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "lint": "NODE_ENV=development eslint src --ext .js,.jsx",
     "deps:check": "ncu",
     "deps:update": "ncu -u && npm install",
