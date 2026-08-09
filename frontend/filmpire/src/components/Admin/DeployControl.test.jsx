@@ -29,35 +29,31 @@ describe('DeployControl', () => {
     delete global.fetch;
   });
 
-  it('renders target selector options and control buttons', async () => {
+  it('renders target selector options and control buttons without manual inputs in default view', async () => {
     renderDeployControl();
 
-    expect(screen.getByText(/1-Click Deployment & Tunnel Control/i)).toBeInTheDocument();
+    expect(screen.getByText(/1-Click Automated Deployment Control/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Azure AKS/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/AWS EC2/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Local Docker \/ Minikube/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Local Stack/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Deploy Backend to Azure AKS/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Tear Down Backend/i })).toBeInTheDocument();
   });
 
-  it('shows an error message if deploy is clicked without a GitHub token', async () => {
+  it('shows error if deploy is triggered without a token configured', async () => {
     renderDeployControl();
 
     const deployBtn = screen.getByRole('button', { name: /Deploy Backend to Azure AKS/i });
     fireEvent.click(deployBtn);
 
     await waitFor(() => {
-      expect(screen.getByText(/GitHub Personal Access Token is required/i)).toBeInTheDocument();
+      expect(screen.getByText(/GitHub Personal Access Token or VITE_GITHUB_TOKEN/i)).toBeInTheDocument();
     });
   });
 
-  it('saves token to localStorage and dispatches deployment workflow', async () => {
+  it('dispatches deployment workflow when token is present in localStorage or environment', async () => {
+    localStorage.setItem('filmpire_gh_token', 'ghp_testtoken123');
     renderDeployControl();
-
-    const tokenInput = screen.getByLabelText(/GitHub Personal Access Token/i);
-    fireEvent.change(tokenInput, { target: { value: 'ghp_testtoken123' } });
-
-    expect(localStorage.getItem('filmpire_gh_token')).toBe('ghp_testtoken123');
 
     const deployBtn = screen.getByRole('button', { name: /Deploy Backend to Azure AKS/i });
     fireEvent.click(deployBtn);
@@ -72,7 +68,7 @@ describe('DeployControl', () => {
           }),
         }),
       );
-      expect(screen.getByText(/Deployment workflow dispatched on GitHub/i)).toBeInTheDocument();
+      expect(screen.getByText(/Automated deployment dispatched for AZURE/i)).toBeInTheDocument();
     });
   });
 
@@ -93,7 +89,7 @@ describe('DeployControl', () => {
           }),
         }),
       );
-      expect(screen.getByText(/Teardown workflow dispatched on GitHub/i)).toBeInTheDocument();
+      expect(screen.getByText(/Teardown dispatched for AZURE/i)).toBeInTheDocument();
     });
   });
 
@@ -106,18 +102,12 @@ describe('DeployControl', () => {
     expect(screen.getByRole('button', { name: /Deploy Backend to AWS k3s/i })).toBeInTheDocument();
   });
 
-  it('switches to local tunnel mode and saves custom tunnel URL', async () => {
+  it('switches to local mode and displays connect button', async () => {
     renderDeployControl();
 
-    const localRadio = screen.getByLabelText(/Local Docker \/ Minikube/i);
+    const localRadio = screen.getByLabelText(/Local Stack/i);
     fireEvent.click(localRadio);
 
-    expect(screen.getAllByText(/start-tunnel\.sh/i)[0]).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Connect Local Tunnel/i })).toBeInTheDocument();
-
-    const tunnelInput = screen.getByLabelText(/Custom Cloudflare Tunnel URL/i);
-    fireEvent.change(tunnelInput, { target: { value: 'https://demo-test.trycloudflare.com' } });
-
-    expect(localStorage.getItem('filmpire_tunnel_url')).toBe('https://demo-test.trycloudflare.com');
+    expect(screen.getByRole('button', { name: /Connect Local Backend/i })).toBeInTheDocument();
   });
 });

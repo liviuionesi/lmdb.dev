@@ -12,39 +12,42 @@ import {
   Step,
   StepLabel,
   Alert,
-  TextField,
   CircularProgress,
   Chip,
   Divider,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  TextField,
 } from '@mui/material';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import CableIcon from '@mui/icons-material/Cable';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 
 const STEPS = [
   'Select Target',
-  'Trigger Workflow / Launch Tunnel',
-  'Provisioning & Connecting',
-  'Deploying K8s / Services',
-  'DNS / Tunnel Linked & Ready',
+  'Trigger Workflow / Launch',
+  'Provisioning Cloud / Cluster',
+  'Deploying Microservices',
+  'DNS Synced & Backend Live',
 ];
 
 const REPO_OWNER = 'pehlivanu';
 const REPO_NAME = 'filmpire-microservices';
 
 /**
- * 1-Click Cloud & Local Deployment Control Center.
- * Allows administrators to provision ephemeral Azure AKS, AWS k3s clusters,
- * or connect to a local workstation / Minikube stack via Cloudflare Tunnel.
+ * 1-Click Zero-Touch Cloud & Local Deployment Control Center.
+ * Provides 1-click automated provisioning and teardown with zero manual configuration.
  *
  * @author Filmpire Development Team
- * @version 1.1.0
+ * @version 1.2.0
  */
 function DeployControl({ apiUrl }) {
   const [cloudTarget, setCloudTarget] = useState('azure');
-  const [githubToken, setGithubToken] = useState(() => localStorage.getItem('filmpire_gh_token') || '');
+  const [githubToken, setGithubToken] = useState(() => import.meta.env.VITE_GITHUB_TOKEN || localStorage.getItem('filmpire_gh_token') || '');
   const [customTunnelUrl, setCustomTunnelUrl] = useState(() => localStorage.getItem('filmpire_tunnel_url') || '');
   const [activeStep, setActiveStep] = useState(0);
   const [isDeploying, setIsDeploying] = useState(false);
@@ -55,7 +58,7 @@ function DeployControl({ apiUrl }) {
   const [sessionStartTime, setSessionStartTime] = useState(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
-  const effectiveApiUrl = cloudTarget === 'local' && customTunnelUrl ? customTunnelUrl : apiUrl;
+  const effectiveApiUrl = (cloudTarget === 'local' && customTunnelUrl) ? customTunnelUrl : apiUrl;
 
   const checkBackendHealth = useCallback(async () => {
     try {
@@ -89,22 +92,12 @@ function DeployControl({ apiUrl }) {
     return () => clearInterval(timer);
   }, [sessionStartTime, backendHealthy]);
 
-  const handleTokenChange = (e) => {
-    const val = e.target.value;
-    setGithubToken(val);
-    localStorage.setItem('filmpire_gh_token', val);
-  };
-
-  const handleTunnelUrlChange = (e) => {
-    const val = e.target.value;
-    setCustomTunnelUrl(val);
-    localStorage.setItem('filmpire_tunnel_url', val);
-  };
-
   const dispatchWorkflow = async (workflowFile, inputs = {}) => {
     setErrorMessage('');
-    if (!githubToken) {
-      setErrorMessage('GitHub Personal Access Token is required to trigger cloud deployment.');
+    const token = githubToken || import.meta.env.VITE_GITHUB_TOKEN || localStorage.getItem('filmpire_gh_token');
+
+    if (!token) {
+      setErrorMessage('GitHub Personal Access Token or VITE_GITHUB_TOKEN environment variable is required to trigger automated cloud deployment.');
       return false;
     }
 
@@ -114,7 +107,7 @@ function DeployControl({ apiUrl }) {
         {
           method: 'POST',
           headers: {
-            Authorization: `Bearer ${githubToken}`,
+            Authorization: `Bearer ${token}`,
             Accept: 'application/vnd.github.v3+json',
             'Content-Type': 'application/json',
           },
@@ -139,19 +132,19 @@ function DeployControl({ apiUrl }) {
 
   const handleDeploy = async () => {
     if (cloudTarget === 'local') {
-      setStatusMessage('Checking local Cloudflare Tunnel health...');
+      setStatusMessage('Local tunnel connected! Verifying gateway health...');
       setActiveStep(4);
       await checkBackendHealth();
       return;
     }
 
     setIsDeploying(true);
-    setStatusMessage(`Triggering ${cloudTarget.toUpperCase()} deployment workflow...`);
+    setStatusMessage(`Triggering automated ${cloudTarget.toUpperCase()} deployment workflow...`);
     setActiveStep(1);
 
     const success = await dispatchWorkflow('deploy.yml', { cloud: cloudTarget });
     if (success) {
-      setStatusMessage(`Deployment workflow dispatched on GitHub for ${cloudTarget.toUpperCase()}! Provisioning cloud infrastructure...`);
+      setStatusMessage(`Automated deployment dispatched for ${cloudTarget.toUpperCase()}! Provisioning cloud infrastructure and linking DNS...`);
       setActiveStep(2);
       setTimeout(() => setActiveStep(3), 8000);
     } else {
@@ -162,7 +155,7 @@ function DeployControl({ apiUrl }) {
 
   const handleDestroy = async () => {
     if (cloudTarget === 'local') {
-      setStatusMessage('To stop the local tunnel, run: ./infrastructure/scripts/stop-tunnel.sh in your terminal.');
+      setStatusMessage('Local demo stopped. Run ./infrastructure/scripts/stop-infrastructure.sh to stop local processes.');
       setSessionStartTime(null);
       setElapsedSeconds(0);
       setBackendHealthy(false);
@@ -171,11 +164,11 @@ function DeployControl({ apiUrl }) {
     }
 
     setIsDestroying(true);
-    setStatusMessage(`Triggering ${cloudTarget.toUpperCase()} teardown workflow...`);
+    setStatusMessage(`Triggering automated ${cloudTarget.toUpperCase()} teardown workflow...`);
 
     const success = await dispatchWorkflow('destroy.yml', { cloud: cloudTarget });
     if (success) {
-      setStatusMessage(`Teardown workflow dispatched on GitHub for ${cloudTarget.toUpperCase()}! Destroying cloud resources...`);
+      setStatusMessage(`Teardown dispatched for ${cloudTarget.toUpperCase()}! Cloud resources will be destroyed to preserve $0 spend.`);
       setActiveStep(0);
       setSessionStartTime(null);
       setElapsedSeconds(0);
@@ -198,10 +191,10 @@ function DeployControl({ apiUrl }) {
         <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2} mb={2}>
           <Box>
             <Typography variant="h5" fontWeight="bold" gutterBottom>
-              1-Click Deployment &amp; Tunnel Control
+              1-Click Automated Deployment Control
             </Typography>
             <Typography variant="body2" color="textSecondary">
-              Connect this Vercel frontend to an ephemeral cloud backend (Azure/AWS) or a local Docker/Minikube instance via Cloudflare Tunnel.
+              Zero-touch automated deployment for live portfolio demonstrations. Spin up Azure AKS, AWS EC2, or connect to local stack with 1 click.
             </Typography>
           </Box>
           <Box display="flex" alignItems="center" gap={1}>
@@ -233,7 +226,7 @@ function DeployControl({ apiUrl }) {
 
         <Box display="flex" flexDirection="column" gap={2} mb={3}>
           <Typography variant="subtitle2" fontWeight="bold">
-            1. Select Deployment Target:
+            Select Deployment Target:
           </Typography>
           <RadioGroup
             row
@@ -243,53 +236,26 @@ function DeployControl({ apiUrl }) {
             <FormControlLabel
               value="azure"
               control={<Radio />}
-              label="Azure AKS (Cloud)"
+              label="Azure AKS (Cloud 1-Click)"
             />
             <FormControlLabel
               value="aws"
               control={<Radio />}
-              label="AWS EC2 / k3s (Cloud)"
+              label="AWS EC2 (Cloud 1-Click)"
             />
             <FormControlLabel
               value="local"
               control={<Radio />}
-              label="Local Docker / Minikube (Cloudflare Tunnel)"
+              label="Local Stack (Zero-Touch Tunnel)"
             />
           </RadioGroup>
-
-          {cloudTarget === 'local' ? (
-            <Box bgcolor="action.hover" p={2} borderRadius={2} display="flex" flexDirection="column" gap={1.5}>
-              <Typography variant="body2">
-                <strong>Run local tunnel command:</strong> <code>./infrastructure/scripts/start-tunnel.sh</code>
-              </Typography>
-              <TextField
-                label="Custom Cloudflare Tunnel URL"
-                size="small"
-                value={customTunnelUrl}
-                onChange={handleTunnelUrlChange}
-                placeholder="https://xxxx-xxxx.trycloudflare.com"
-                helperText="Paste the public trycloudflare.com URL printed by start-tunnel.sh"
-                fullWidth
-              />
-            </Box>
-          ) : (
-            <TextField
-              label="GitHub Personal Access Token (PAT)"
-              type="password"
-              size="small"
-              value={githubToken}
-              onChange={handleTokenChange}
-              placeholder="ghp_..."
-              helperText="Stored locally in browser localStorage. Requires 'actions:write' scope to trigger deploy workflows."
-              fullWidth
-            />
-          )}
         </Box>
 
         <Box display="flex" gap={2} flexWrap="wrap" mb={3}>
           <Button
             variant="contained"
             color="primary"
+            size="large"
             startIcon={
               isDeploying
                 ? <CircularProgress size={20} color="inherit" />
@@ -298,17 +264,18 @@ function DeployControl({ apiUrl }) {
             onClick={handleDeploy}
             disabled={isDeploying || isDestroying}
           >
-            {cloudTarget === 'local' ? 'Connect Local Tunnel' : `Deploy Backend to ${cloudTarget === 'azure' ? 'Azure AKS' : 'AWS k3s'}`}
+            {cloudTarget === 'local' ? 'Connect Local Backend' : `Deploy Backend to ${cloudTarget === 'azure' ? 'Azure AKS' : 'AWS k3s'}`}
           </Button>
 
           <Button
             variant="outlined"
             color="error"
+            size="large"
             startIcon={isDestroying ? <CircularProgress size={20} color="inherit" /> : <DeleteOutlineIcon />}
             onClick={handleDestroy}
             disabled={isDeploying || isDestroying}
           >
-            {cloudTarget === 'local' ? 'Disconnect Tunnel' : 'Tear Down Backend (Destroy)'}
+            {cloudTarget === 'local' ? 'Disconnect Backend' : 'Tear Down Backend (Destroy)'}
           </Button>
         </Box>
 
@@ -321,15 +288,52 @@ function DeployControl({ apiUrl }) {
         </Stepper>
 
         {sessionStartTime && backendHealthy && (
-          <Box bgcolor="action.hover" p={2} borderRadius={2} display="flex" justifyContent="space-between" flexWrap="wrap" gap={2}>
+          <Box bgcolor="action.hover" p={2} borderRadius={2} display="flex" justifyContent="space-between" flexWrap="wrap" gap={2} mb={2}>
             <Typography variant="body2">
               <strong>Active Session Time:</strong> {formatElapsed(elapsedSeconds)}
             </Typography>
             <Typography variant="body2" color={cloudTarget === 'local' ? 'success.main' : 'warning.main'}>
-              <strong>Estimated Spend:</strong> {cloudTarget === 'local' ? '$0.00 (Local Free Tunnel)' : `~$${estimatedCost}`}
+              <strong>Estimated Spend:</strong> {cloudTarget === 'local' ? '$0.00 (Local Free Demo)' : `~$${estimatedCost}`}
             </Typography>
           </Box>
         )}
+
+        <Accordion sx={{ mt: 2, boxShadow: 'none', border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+            <Typography variant="body2" color="textSecondary">
+              Advanced Settings &amp; Token Overrides (Optional)
+            </Typography>
+          </AccordionSummary>
+          <AccordionDetails>
+            <Box display="flex" flexDirection="column" gap={2}>
+              <TextField
+                label="GitHub Personal Access Token (Override)"
+                type="password"
+                size="small"
+                value={githubToken}
+                onChange={(e) => {
+                  setGithubToken(e.target.value);
+                  localStorage.setItem('filmpire_gh_token', e.target.value);
+                }}
+                placeholder="ghp_..."
+                helperText="Optional: defaults to VITE_GITHUB_TOKEN environment variable."
+                fullWidth
+              />
+              <TextField
+                label="Custom API / Tunnel URL (Override)"
+                size="small"
+                value={customTunnelUrl}
+                onChange={(e) => {
+                  setCustomTunnelUrl(e.target.value);
+                  localStorage.setItem('filmpire_tunnel_url', e.target.value);
+                }}
+                placeholder="https://filmpire-api.duckdns.org"
+                helperText="Optional: defaults to VITE_API_URL or DuckDNS sync."
+                fullWidth
+              />
+            </Box>
+          </AccordionDetails>
+        </Accordion>
       </CardContent>
     </Card>
   );
