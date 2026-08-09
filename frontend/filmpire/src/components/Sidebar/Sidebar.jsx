@@ -59,7 +59,12 @@ const Sidebar = ({ setMobileOpen }) => {
       <List>
         <ListSubheader>Genres</ListSubheader>
         {isFetching ? (
-          <Box display="flex" justifyContent="center">
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'center',
+            }}
+          >
             <CircularProgress />
           </Box>
         ) : data?.genres?.map(({ name, id }) => {

@@ -85,9 +85,25 @@ const Profile = () => {
 
   return (
     <Box>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
-        <Box display="flex" alignItems="center" gap={3}>
-          <Box position="relative">
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          mb: 4,
+        }}
+      >
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 3,
+          }}
+        >
+          <Box sx={{
+            position: 'relative',
+          }}
+          >
             <Avatar
               data-testid="user-avatar"
               data-src={avatarUrl || ''}
@@ -134,12 +150,18 @@ const Profile = () => {
         </Button>
       </Box>
       {validationError && (
-        <Box mb={3}>
+        <Box sx={{
+          mb: 3,
+        }}
+        >
           <Alert severity="error" onClose={() => setValidationError('')}>{validationError}</Alert>
         </Box>
       )}
       {uploadSuccess && (
-        <Box mb={3}>
+        <Box sx={{
+          mb: 3,
+        }}
+        >
           <Alert severity="success" onClose={() => setUploadSuccess(false)}>Avatar updated successfully!</Alert>
         </Box>
       )}

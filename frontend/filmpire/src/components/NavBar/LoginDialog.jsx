@@ -60,7 +60,16 @@ const LoginDialog = ({ open, onClose }) => {
         <Tab label="Register" value="register" />
       </Tabs>
       <DialogContent>
-        <Box component="form" onSubmit={handleSubmit} display="flex" flexDirection="column" gap={2} pt={1}>
+        <Box
+          component="form"
+          onSubmit={handleSubmit}
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 2,
+            pt: 1,
+          }}
+        >
           {error && (
             <Alert severity="error">
               {error.data?.message || 'Something went wrong. Please try again.'}

@@ -80,7 +80,12 @@ const NavBar = () => {
                 Login &nbsp; <AccountCircle />
               </Button>
             ) : (
-              <Box display="flex" alignItems="center">
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+              >
                 {user?.role === 'ADMIN' && (
                   <Button
                     color="inherit"

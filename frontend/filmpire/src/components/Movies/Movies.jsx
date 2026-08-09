@@ -15,7 +15,12 @@ const Movies = () => {
 
   if (isFetching) {
     return (
-      <Box display="flex" justifyContent="center">
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+        }}
+      >
         <CircularProgress size="4rem" />
       </Box>
     );
@@ -23,7 +28,13 @@ const Movies = () => {
 
   if (error) {
     return (
-      <Box display="flex" alignItems="center" mt="20px">
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          mt: '20px',
+        }}
+      >
         <Typography variant="h4">An error has occurred.</Typography>
       </Box>
     );
@@ -31,7 +42,13 @@ const Movies = () => {
 
   if (!data?.results?.length) {
     return (
-      <Box display="flex" alignItems="center" mt="20px">
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          mt: '20px',
+        }}
+      >
         <Typography variant="h4">
           No movies that match that name.
           <br />
