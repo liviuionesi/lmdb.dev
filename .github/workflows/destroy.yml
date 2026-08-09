@@ -1,0 +1,98 @@
+name: Destroy
+
+# Manual-only cloud infra teardown (ARCHITECTURE.md §11.1 / issue #139).
+# Runs `terraform destroy` against Azure AKS or AWS k3s to cleanly release
+# all cloud resources back to $0 spend when a live demo concludes.
+on:
+  workflow_dispatch:
+    inputs:
+      cloud:
+        description: "Cloud target to destroy"
+        required: true
+        type: choice
+        options:
+          - azure
+          - aws
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  destroy-azure:
+    if: github.event.inputs.cloud == 'azure'
+    name: Destroy (azure)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infrastructure/terraform/azure
+    env:
+      ARM_USE_OIDC: "true"
+      ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+      ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: "~1.15"
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: terraform init
+        run: |
+          terraform init -input=false \
+            -backend-config="resource_group_name=${{ vars.TF_STATE_RESOURCE_GROUP }}" \
+            -backend-config="storage_account_name=${{ vars.TF_STATE_STORAGE_ACCOUNT }}" \
+            -backend-config="container_name=${{ vars.TF_STATE_CONTAINER }}"
+
+      - name: terraform destroy
+        run: |
+          terraform destroy -auto-approve -input=false \
+            -var="alert_emails=[\"${{ vars.ALERT_EMAIL }}\"]" \
+            -var="budget_start_date=$(date -u +%Y-%m-01T00:00:00Z)"
+
+  destroy-aws:
+    if: github.event.inputs.cloud == 'aws'
+    name: Destroy (aws)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infrastructure/terraform/aws
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: "~1.15"
+
+      - name: terraform init
+        run: |
+          terraform init -input=false \
+            -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
+            -backend-config="region=${{ vars.AWS_REGION }}" \
+            -backend-config="dynamodb_table=${{ vars.TF_STATE_TABLE }}"
+
+      - name: terraform destroy
+        run: |
+          terraform destroy -auto-approve -input=false \
+            -var="alert_emails=[\"${{ vars.ALERT_EMAIL }}\"]" \
+            -var="ssh_public_key=ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGhub2RldGVzdGtleWVwaGVtZXJhbGRlbW8K dummy"
