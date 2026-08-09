@@ -36,19 +36,21 @@ jobs:
       - name: Run linter
         run: npm run lint
 
-      - name: Dependency/security scan (#105)
-        run: npm audit --audit-level=high
+      - name: Dependency/security scan (#105, #131)
+        run: npm audit --audit-level=moderate
 
       # 80% line-coverage gate (#110) — same enterprise target as the
-      # backend's JaCoCo rule (#108). Config lives in package.json's "jest"
-      # key: collectCoverageFrom deliberately excludes src/index.js,
-      # src/app/store.js, src/assets/**, src/components/index.js,
-      # src/components/styles.js, and src/components/App.jsx — bootstrap
-      # wiring, static asset data, and a barrel re-export file with no
-      # branch logic worth gating on, mirroring the backend's config/DTO
-      # exclusions. `react-scripts test` fails the build below threshold.
+      # backend's JaCoCo rule (#108). Config lives in vite.config.mjs's
+      # `test.coverage` block (#131): exclude deliberately covers
+      # src/index.jsx, src/app/store.js, src/assets/**,
+      # src/components/index.js, src/components/styles.js, and
+      # src/components/App.jsx — bootstrap wiring, static asset data, and a
+      # barrel re-export file with no branch logic worth gating on,
+      # mirroring the backend's config/DTO exclusions. `vitest run
+      # --coverage` fails the build below threshold; `vitest run` is
+      # already non-watch by default, so no CRA-style --watchAll flag.
       - name: Run tests with coverage
-        run: npm test -- --coverage --watchAll=false
+        run: npm test -- --coverage
         env:
           CI: true
 

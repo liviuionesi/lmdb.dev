@@ -1565,12 +1565,12 @@ sonarqubePluginVersion=6.2.0.5505
 ```
 
 **Frontend: consumer app, own dependency set.** The Filmpire frontend lives at
-`frontend/filmpire/` in this repo (CRA + Redux Toolkit Query, see §1.2). Its `package.json`/`package-lock.json`
+`frontend/filmpire/` in this repo (Vite + Redux Toolkit Query, see §1.2). Its `package.json`/`package-lock.json`
 are its own lock files. 
 
 Automated checking and refactoring tools integrated in `frontend/filmpire/package.json`:
 - **Dependency Version Checker (`ncu`)**: `npm run deps:check` (inspects available package updates) and `npm run deps:update` (upgrades package versions).
-- **Automated JS/React Refactoring (`Codemod`)**: Installed via `@codemod/cli`. Run `npm run codemod` (interactive AST transformations), `npm run codemod:react18` (React 18 migration recipes), or `npm run codemod:mui` (Material UI codemods). Serves as the frontend equivalent to OpenRewrite.
+- **Automated JS/React Refactoring**: `npm run codemod:mui` runs `@mui/codemod` (Material UI codemods) via `npx`. Serves as the frontend equivalent to OpenRewrite. (The former `@codemod/cli` devDependency and its `codemod`/`codemod:react18` scripts were removed in #131 — unused, and pulled in a vulnerable transitive `got`; the standalone `codemod.com` CLI, registered separately in `.mcp.json`, is available for ad hoc AST transforms instead.)
 
 ### 8.2 Upgrade Strategy
 
