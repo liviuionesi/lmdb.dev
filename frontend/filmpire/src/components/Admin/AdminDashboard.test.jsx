@@ -2,39 +2,63 @@
 // users, a loading spinner while the session is being restored) and that the
 // four infrastructure StatusCards render once an ADMIN session is confirmed,
 // via both the already-hydrated Redux path and the profile-refetch-on-load
-// path. StatusCard itself renders a real <a> for its `url` prop, so asserting
-// on rendered links doubles as an assertion that AdminDashboard is passing
-// the right title/url pairs through.
+// path. `useServiceStatus` is mocked (same as StatusCard.test.jsx) so cards
+// render deterministically without real network probes to localhost:8761 etc.
 import React from 'react';
-import { screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
+import { Provider } from 'react-redux';
+import { MemoryRouter, Route, Switch } from 'react-router-dom';
+import { ThemeProvider } from '@mui/material/styles';
 import { configureStore } from '@reduxjs/toolkit';
 
 import AdminDashboard from './AdminDashboard';
 import authReducer from '../../features/auth';
-import { renderWithProviders } from '../../test-utils/render';
+import { theme } from '../../test-utils/render';
 import { useGetProfileQuery } from '../../services/user';
+import useServiceStatus from './useServiceStatus';
 
 vi.mock('../../services/user', () => ({
   useGetProfileQuery: vi.fn(),
 }));
+
+vi.mock('./useServiceStatus');
 
 const buildStore = (preloadedState) => configureStore({
   reducer: { user: authReducer },
   preloadedState,
 });
 
+/**
+ * Renders AdminDashboard at "/admin" alongside a sentinel "/" route, so a
+ * `<Redirect to="/">` is observable as "the Home sentinel replaced
+ * AdminDashboard" rather than inferred from AdminDashboard's absence (which
+ * would also be true if the component just crashed or rendered null).
+ */
+const renderAtAdminRoute = (store) => render(
+  <ThemeProvider theme={theme}>
+    <Provider store={store}>
+      <MemoryRouter initialEntries={['/admin']}>
+        <Switch>
+          <Route exact path="/">Home</Route>
+          <Route path="/admin"><AdminDashboard /></Route>
+        </Switch>
+      </MemoryRouter>
+    </Provider>
+  </ThemeProvider>,
+);
+
 describe('AdminDashboard', () => {
   beforeEach(() => {
     localStorage.clear();
     vi.clearAllMocks();
     useGetProfileQuery.mockReturnValue({ data: undefined, isLoading: false, isError: false });
+    useServiceStatus.mockReturnValue('up');
   });
 
   it('redirects to home when there is no stored session', () => {
-    renderWithProviders(<AdminDashboard />, { store: buildStore(), route: '/admin' });
+    renderAtAdminRoute(buildStore());
 
-    // MemoryRouter has no <Route path="/"> registered in this test, so a
-    // successful <Redirect to="/"> renders nothing rather than throwing.
+    expect(screen.getByText('Home')).toBeInTheDocument();
     expect(screen.queryByText('Admin Dashboard')).not.toBeInTheDocument();
   });
 
@@ -42,18 +66,21 @@ describe('AdminDashboard', () => {
     localStorage.setItem('access_token', 'stale-jwt');
     useGetProfileQuery.mockReturnValue({ data: undefined, isLoading: false, isError: true });
 
-    renderWithProviders(<AdminDashboard />, { store: buildStore(), route: '/admin' });
+    renderAtAdminRoute(buildStore());
 
-    expect(screen.queryByText('Admin Dashboard')).not.toBeInTheDocument();
+    expect(screen.getByText('Home')).toBeInTheDocument();
   });
 
   it('shows a spinner while the profile fetch is still loading and redux auth has not hydrated yet', () => {
     localStorage.setItem('access_token', 'jwt');
     useGetProfileQuery.mockReturnValue({ data: undefined, isLoading: true, isError: false });
 
-    renderWithProviders(<AdminDashboard />, { store: buildStore(), route: '/admin' });
+    renderAtAdminRoute(buildStore());
 
     expect(screen.getByRole('progressbar')).toBeInTheDocument();
+    // Loading, not yet redirected and not yet showing dashboard content.
+    expect(screen.queryByText('Home')).not.toBeInTheDocument();
+    expect(screen.queryByText('Admin Dashboard')).not.toBeInTheDocument();
   });
 
   it('redirects to home for an authenticated non-admin user', () => {
@@ -61,18 +88,19 @@ describe('AdminDashboard', () => {
     // than short-circuiting on the earlier hasStoredSession guard.
     localStorage.setItem('access_token', 'jwt');
     const store = buildStore({ user: { user: { id: 1, username: 'liviu', role: 'USER' }, isAuthenticated: true } });
-    renderWithProviders(<AdminDashboard />, { store, route: '/admin' });
 
-    expect(screen.queryByText('Admin Dashboard')).not.toBeInTheDocument();
+    renderAtAdminRoute(store);
+
+    expect(screen.getByText('Home')).toBeInTheDocument();
   });
 
   it('redirects to home for a stored-session non-admin profile that has not hydrated redux yet', () => {
     localStorage.setItem('access_token', 'jwt');
     useGetProfileQuery.mockReturnValue({ data: { id: 1, role: 'USER' }, isLoading: false, isError: false });
 
-    renderWithProviders(<AdminDashboard />, { store: buildStore(), route: '/admin' });
+    renderAtAdminRoute(buildStore());
 
-    expect(screen.queryByText('Admin Dashboard')).not.toBeInTheDocument();
+    expect(screen.getByText('Home')).toBeInTheDocument();
   });
 
   it('renders the dashboard and all four infrastructure cards for an already-authenticated ADMIN (redux path)', () => {
@@ -80,8 +108,10 @@ describe('AdminDashboard', () => {
     // a stored token is what proves this isn't a stale/local-only session.
     localStorage.setItem('access_token', 'jwt');
     const store = buildStore({ user: { user: { id: 1, username: 'liviu', role: 'ADMIN' }, isAuthenticated: true } });
-    renderWithProviders(<AdminDashboard />, { store, route: '/admin' });
 
+    renderAtAdminRoute(store);
+
+    expect(screen.queryByText('Home')).not.toBeInTheDocument();
     expect(screen.getByText('Admin Dashboard')).toBeInTheDocument();
     expect(screen.getByText('Discovery (Eureka)')).toBeInTheDocument();
     expect(screen.getByText('API Gateway')).toBeInTheDocument();
@@ -95,7 +125,7 @@ describe('AdminDashboard', () => {
     localStorage.setItem('access_token', 'jwt');
     useGetProfileQuery.mockReturnValue({ data: { id: 1, role: 'ADMIN' }, isLoading: false, isError: false });
 
-    renderWithProviders(<AdminDashboard />, { store: buildStore(), route: '/admin' });
+    renderAtAdminRoute(buildStore());
 
     expect(screen.getByText('Admin Dashboard')).toBeInTheDocument();
   });

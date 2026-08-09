@@ -65,6 +65,14 @@ describe('mediaApi endpoints', () => {
     expect(request.url).toBe(`${baseUrl}/media/upload`);
     expect(request.method).toBe('POST');
     const body = await request.formData();
+    // The file itself is the point of this endpoint — assert it's actually
+    // attached, not just the accompanying metadata fields. (jsdom's
+    // File/Blob polyfill doesn't survive a real multipart encode/decode
+    // round-trip intact here — content and filename come back mangled even
+    // though the same code runs correctly outside jsdom — so presence +
+    // MIME type is the reliable, environment-agnostic signal, not bytes.)
+    expect(body.get('file')).not.toBeNull();
+    expect(body.get('file').type).toBe('image/png');
     expect(body.get('entityId')).toBe('general');
     expect(body.get('entityType')).toBe('USER');
     expect(body.get('mediaType')).toBe('IMAGE');
@@ -86,6 +94,8 @@ describe('mediaApi endpoints', () => {
     }));
 
     const body = await fetchedRequest().formData();
+    expect(body.get('file')).not.toBeNull();
+    expect(body.get('file').type).toBe('image/png');
     expect(body.get('entityId')).toBe('123');
     expect(body.get('entityType')).toBe('REVIEW');
     expect(body.get('mediaType')).toBe('ATTACHMENT');
