@@ -18,7 +18,8 @@ import org.junit.jupiter.api.BeforeEach;
 public abstract class BaseContractTest {
 
   /**
-   * Sets up mock MVC controller environment with stubbed movie responses before each contract test execution.
+   * Sets up mock MVC controller environment with stubbed movie responses before each contract test
+   * execution.
    */
   @BeforeEach
   public void setup() {

@@ -1,13 +1,13 @@
 package com.filmpire.gateway.filter;
 
 import com.filmpire.gateway.util.JwtUtil;
+import jakarta.annotation.Nonnull;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
-import jakarta.annotation.Nonnull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -19,8 +19,8 @@ import org.springframework.web.server.WebFilterChain;
 import reactor.core.publisher.Mono;
 
 /**
- * Custom WebFilter for JWT authentication in API Gateway. Validates JWT tokens in incoming
- * request headers and populates reactive security context.
+ * Custom WebFilter for JWT authentication in API Gateway. Validates JWT tokens in incoming request
+ * headers and populates reactive security context.
  *
  * @author Filmpire Development Team
  * @version 1.0.0
@@ -95,10 +95,10 @@ public class JwtAuthenticationFilter implements WebFilter {
               .header("X-User-Id", userId != null ? userId : "")
               .header("X-Username", username != null ? username : "")
               .header("X-User-Roles", String.join(",", roles))
-
               .build();
 
-      log.debug("Successfully authenticated user: {} (ID: {}) for path: {}", username, userId, path);
+      log.debug(
+          "Successfully authenticated user: {} (ID: {}) for path: {}", username, userId, path);
 
       // Continue filter chain with mutated request and updated security context
       return chain

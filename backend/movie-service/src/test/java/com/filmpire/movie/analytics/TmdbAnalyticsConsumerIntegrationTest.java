@@ -139,7 +139,6 @@ class TmdbAnalyticsConsumerIntegrationTest extends AbstractMongoIntegrationTest 
     assertThat(count.count()).isEqualTo(1L);
   }
 
-
   /**
    * Verifies that multiple distinct keys each get their own counter and that the most-requested
    * ordering is correct.

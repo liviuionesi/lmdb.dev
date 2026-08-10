@@ -40,6 +40,11 @@ spring:
                   - "http://localhost:3001"
                   - "http://localhost:5173"
                   - "https://filmpire-microservices-tan.vercel.app"
+                allowed-origin-patterns:
+                  - "http://localhost:*"
+                  - "https://*.vercel.app"
+                  - "https://*.duckdns.org"
+                  - "https://*.trycloudflare.com"
                 allowed-methods:
                   - GET
                   - POST

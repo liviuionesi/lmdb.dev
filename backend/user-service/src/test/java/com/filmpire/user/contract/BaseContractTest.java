@@ -18,12 +18,14 @@ import org.springframework.security.core.Authentication;
 
 /**
  * Base setup class for Spring Cloud Contract generated producer tests in {@code user-service}.
- * Mocks {@link UserAccountService} responses and configures {@link RestAssuredMockMvc} with mock authentication.
+ * Mocks {@link UserAccountService} responses and configures {@link RestAssuredMockMvc} with mock
+ * authentication.
  */
 public abstract class BaseContractTest {
 
   /**
-   * Sets up mock MVC controller environment with stubbed user profiles and security principal before each contract test.
+   * Sets up mock MVC controller environment with stubbed user profiles and security principal
+   * before each contract test.
    */
   @BeforeEach
   public void setup() {
@@ -42,8 +44,7 @@ public abstract class BaseContractTest {
 
     UserController userController = new UserController(userAccountService);
 
-    Authentication auth =
-        new UsernamePasswordAuthenticationToken("liviu", null, List.of());
+    Authentication auth = new UsernamePasswordAuthenticationToken("liviu", null, List.of());
 
     RestAssuredMockMvc.standaloneSetup(userController);
     RestAssuredMockMvc.postProcessors(

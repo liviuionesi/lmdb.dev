@@ -29,8 +29,8 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
 /**
- * Consumer-side Spring Cloud Contract StubRunner test for the api-gateway -&gt; ai-service
- * boundary (ADR-008, Task #43).
+ * Consumer-side Spring Cloud Contract StubRunner test for the api-gateway -&gt; ai-service boundary
+ * (ADR-008, Task #43).
  *
  * <p>Uses StubRunner in LOCAL mode to consume the generated stub JAR published by ai-service.
  */
@@ -57,7 +57,8 @@ class AiServiceContractTest {
   private WebTestClient client;
 
   /**
-   * Registers dynamic properties for Redis container host/port and points ai-service gateway route to StubRunner.
+   * Registers dynamic properties for Redis container host/port and points ai-service gateway route
+   * to StubRunner.
    *
    * @param registry dynamic property registry
    */
@@ -68,9 +69,7 @@ class AiServiceContractTest {
     registry.add("ai-service.uri", () -> "http://localhost:9976");
   }
 
-  /**
-   * Initializes {@link WebTestClient} bound to the randomly assigned local server port.
-   */
+  /** Initializes {@link WebTestClient} bound to the randomly assigned local server port. */
   @BeforeEach
   void setUp() {
     client =
@@ -92,16 +91,20 @@ class AiServiceContractTest {
   }
 
   /**
-   * Verifies that the gateway routes POST /api/v1/ai/recommendations to the running StubRunner mock server.
+   * Verifies that the gateway routes POST /api/v1/ai/recommendations to the running StubRunner mock
+   * server.
    */
   @Test
   @DisplayName("Gateway routes POST /api/v1/ai/recommendations against published ai-service stubs")
   void routesAiRequestToContractStub() {
     Map<String, Object> request =
         Map.of(
-            "userId", "123e4567-e89b-12d3-a456-426614174000",
-            "recentMovies", List.of("Inception", "Interstellar"),
-            "count", 5);
+            "userId",
+            "123e4567-e89b-12d3-a456-426614174000",
+            "recentMovies",
+            List.of("Inception", "Interstellar"),
+            "count",
+            5);
 
     client
         .post()

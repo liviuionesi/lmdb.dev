@@ -142,12 +142,17 @@ public class SecurityConfig {
     // Allowed origins (frontend applications)
     configuration.setAllowedOrigins(
         Arrays.asList(
-            "http://localhost:3000", // React default
-            "http://localhost:3001", // Alternative React port
-            "http://localhost:5173", // Vite default
-            "http://localhost:5174", // Alternative Vite port
-            "https://filmpire-microservices-tan.vercel.app" // Deployed Vercel frontend (#151)
-            ));
+            "http://localhost:3000",
+            "http://localhost:3001",
+            "http://localhost:5173",
+            "http://localhost:5174",
+            "https://filmpire-microservices-tan.vercel.app"));
+    configuration.setAllowedOriginPatterns(
+        Arrays.asList(
+            "http://localhost:*",
+            "https://*.vercel.app",
+            "https://*.duckdns.org",
+            "https://*.trycloudflare.com"));
 
     // Allowed HTTP methods
     configuration.setAllowedMethods(

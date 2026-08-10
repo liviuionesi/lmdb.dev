@@ -17,13 +17,14 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 
 /**
- * Base setup class for Spring Cloud Contract generated producer tests in {@code ai-service}.
- * Mocks {@link RecommendationService} and other AI services and configures {@link RestAssuredMockMvc}.
+ * Base setup class for Spring Cloud Contract generated producer tests in {@code ai-service}. Mocks
+ * {@link RecommendationService} and other AI services and configures {@link RestAssuredMockMvc}.
  */
 public abstract class BaseContractTest {
 
   /**
-   * Sets up mock MVC controller environment with stubbed AI recommendations before each contract test execution.
+   * Sets up mock MVC controller environment with stubbed AI recommendations before each contract
+   * test execution.
    */
   @BeforeEach
   public void setup() {
@@ -36,8 +37,7 @@ public abstract class BaseContractTest {
         new MovieRecommendationDto(
             "550", 0.95, "Based on your preference for psychological thrillers.");
 
-    RecommendationResponseDto responseDto =
-        new RecommendationResponseDto(List.of(recommendation));
+    RecommendationResponseDto responseDto = new RecommendationResponseDto(List.of(recommendation));
 
     when(recommendationService.recommend(any(RecommendationRequestDto.class)))
         .thenReturn(responseDto);

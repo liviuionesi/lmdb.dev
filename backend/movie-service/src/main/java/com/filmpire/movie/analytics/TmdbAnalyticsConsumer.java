@@ -107,7 +107,6 @@ public class TmdbAnalyticsConsumer {
 
       log.debug("Upserted request count for key={}", event.key());
 
-
     } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
       log.warn(
           "Skipping malformed tmdb.document.saved event at offset {}: {}", offset, e.getMessage());

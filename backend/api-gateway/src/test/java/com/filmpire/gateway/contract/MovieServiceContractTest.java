@@ -46,7 +46,8 @@ class MovieServiceContractTest {
   private WebTestClient client;
 
   /**
-   * Registers dynamic properties for Redis container host/port and points movie-service gateway route to StubRunner.
+   * Registers dynamic properties for Redis container host/port and points movie-service gateway
+   * route to StubRunner.
    *
    * @param registry dynamic property registry
    */
@@ -55,12 +56,9 @@ class MovieServiceContractTest {
     registry.add("spring.data.redis.host", redis::getHost);
     registry.add("spring.data.redis.port", () -> redis.getMappedPort(6379));
     registry.add("movie-service.uri", () -> "http://localhost:9973");
-
   }
 
-  /**
-   * Initializes {@link WebTestClient} bound to the randomly assigned local server port.
-   */
+  /** Initializes {@link WebTestClient} bound to the randomly assigned local server port. */
   @BeforeEach
   void setUp() {
     client =

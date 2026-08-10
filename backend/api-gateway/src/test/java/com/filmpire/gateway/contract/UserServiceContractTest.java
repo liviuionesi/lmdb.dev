@@ -54,7 +54,8 @@ class UserServiceContractTest {
   private WebTestClient client;
 
   /**
-   * Registers dynamic properties for Redis container host/port and points user-service gateway route to StubRunner.
+   * Registers dynamic properties for Redis container host/port and points user-service gateway
+   * route to StubRunner.
    *
    * @param registry dynamic property registry
    */
@@ -63,12 +64,9 @@ class UserServiceContractTest {
     registry.add("spring.data.redis.host", redis::getHost);
     registry.add("spring.data.redis.port", () -> redis.getMappedPort(6379));
     registry.add("user-service.uri", () -> "http://localhost:9975");
-
   }
 
-  /**
-   * Initializes {@link WebTestClient} bound to the randomly assigned local server port.
-   */
+  /** Initializes {@link WebTestClient} bound to the randomly assigned local server port. */
   @BeforeEach
   void setUp() {
     client =
@@ -79,7 +77,8 @@ class UserServiceContractTest {
   }
 
   /**
-   * Generates a signed JWT bearer token using the test secret key to satisfy gateway security filters.
+   * Generates a signed JWT bearer token using the test secret key to satisfy gateway security
+   * filters.
    *
    * @return signed JWT string
    */
@@ -95,7 +94,8 @@ class UserServiceContractTest {
   }
 
   /**
-   * Verifies that the gateway routes GET /api/v1/users/profile to the running StubRunner mock server with valid Bearer token.
+   * Verifies that the gateway routes GET /api/v1/users/profile to the running StubRunner mock
+   * server with valid Bearer token.
    */
   @Test
   @DisplayName("Gateway routes GET /api/v1/users/profile against published user-service stubs")
