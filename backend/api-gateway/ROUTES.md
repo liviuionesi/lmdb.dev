@@ -13,11 +13,13 @@ Complete reference for all routes configured in the Filmpire API Gateway.
 |---------|--------------|------------|-----------|-----------------|----------|
 | Movie Service | `/api/v1/movies/**` | `lb://movie-service` | 10/sec (burst 20) | ✅ | `/fallback/movies` |
 | User Service | `/api/v1/users/**` | `lb://user-service` | 10/sec (burst 20) | ✅ | `/fallback/users` |
-| Auth Service | `/api/v1/auth/**` | `lb://user-service` | None | ✅ | `/fallback/auth` |
+| Auth Service | `/api/v1/auth/**` | `lb://user-service` | 5/sec (burst 10) 🔒 | ✅ | `/fallback/auth` |
 | Actor Service | `/api/v1/actors/**` | `lb://actor-service` | 10/sec (burst 20) | ✅ | `/fallback/actors` |
-| AI Service | `/api/v1/ai/**` | `lb://ai-service` | 5/sec (burst 10) | ✅ | `/fallback/ai` |
-| AI Service | `/api/v1/recommendations/**` | `lb://ai-service` | 5/sec (burst 10) | ✅ | `/fallback/ai` |
+| AI Service | `/api/v1/ai/**`, `/api/v1/recommendations/**` | `lb://ai-service` | 5/sec (burst 10) | ✅ | `/fallback/ai` |
 | Media Service | `/api/v1/media/**` | `lb://media-service` | 20/sec (burst 40) | ✅ | `/fallback/media` |
+| TMDB Movie Facade | `/movie/**`, `/genre/**`, `/discover/**`, `/search/**` | `lb://movie-service` | 10/sec (burst 20) | ✅ | `/fallback/movies` |
+| TMDB Actor Facade | `/person/**` | `lb://actor-service` | 10/sec (burst 20) | ✅ | `/fallback/actors` |
+| TMDB Auth Proxy | `/authentication/**`, `/account/**` | `https://api.themoviedb.org/3` | 5/sec (burst 10) | ✅ | `/fallback/auth` |
 
 ---
 
@@ -75,7 +77,7 @@ Complete reference for all routes configured in the Filmpire API Gateway.
 **URI Pattern:** `/api/v1/auth/**`  
 **Target Service:** `user-service` (via Eureka)  
 **Authentication:** Public  
-**Rate Limit:** None (authentication endpoints should not be rate-limited)
+**Rate Limit:** 5 requests/second, burst capacity 10 (strict limits to prevent brute-force attacks)
 
 **Endpoints:**
 - `POST /api/v1/auth/login` - User login
@@ -85,7 +87,7 @@ Complete reference for all routes configured in the Filmpire API Gateway.
 
 **Filters:**
 - Circuit Breaker (authServiceCircuitBreaker)
-- No rate limiting
+- Rate Limiter (5/sec, burst 10)
 
 **Fallback:** Returns HTTP 503 with error message when circuit is open
 

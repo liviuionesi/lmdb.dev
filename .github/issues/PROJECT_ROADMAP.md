@@ -16,10 +16,7 @@ persistence; TMDB auth/account endpoints are proxied to the real TMDB.
 
 Reference: [ARCHITECTURE.md v1.2.0](../../docs/architecture/ARCHITECTURE.md) §5.1.
 
-**Descoped (v1.2.0):** the dedicated Next.js web app and React Native mobile
-apps. The `frontend/` directories are legacy placeholders. The former
-PHASE5_WEB_FRONTEND.md and the mobile part of PHASES_6-8 are archived specs,
-not planned work.
+**Descoped (v1.2.0):** the separate Next.js web app and React Native mobile apps. The real frontend is the React 18 / Vite application merged directly into `frontend/filmpire/` ([ADR-013](../../docs/architecture/adr/013-frontend-merged-into-monorepo.md)), which consumes this backend as a drop-in TMDB replacement.
 
 **Budget:** cloud is strictly $0 — see ARCHITECTURE.md §11.1 (non-billable
 account types, ephemeral demo clusters, zero-spend alarms, local-first).

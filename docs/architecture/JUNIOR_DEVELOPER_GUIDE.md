@@ -67,7 +67,7 @@ When you have 8 different services, they need a way to talk to each other and be
 4. **Movie Service (8081)**: Uses MongoDB. Handles TMDB catalog data, movie search, and popular movies.
 5. **User Service (8082)**: Uses PostgreSQL. Handles JWT authentication, profiles, favorites, and watchlists.
 6. **Actor Service (8083)**: Uses PostgreSQL. Maintains structured actor profiles and filmography.
-7. **AI Service (8084)**: Uses PostgreSQL with the `pgvector` extension. Interfaces with Spring AI to provide Voice Recognition (Whisper), Movie Recommendations, and Semantic Search using AI embeddings.
+7. **AI Service (8084)**: Uses PostgreSQL with the `pgvector` extension. Interfaces with Spring AI & Ollama (LLaMA 3.2, nomic-embed-text) to provide Movie Recommendations, Semantic Search, Contextual Chat, and offline Voice Recognition via native Vosk.
 8. **Media Service (8085)**: Interfaces with MinIO to store raw files (like user avatars).
 
 ---

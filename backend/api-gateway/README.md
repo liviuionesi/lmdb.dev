@@ -184,10 +184,11 @@ The gateway validates JWT tokens and extracts user information:
 ### CORS Configuration
 
 Allowed origins:
-- `http://localhost:3000` (React)
-- `http://localhost:3001` (Alternative React port)
-- `http://localhost:5173` (Vite)
-- `http://localhost:5174` (Alternative Vite port)
+- `http://localhost:3000`, `http://localhost:3001` (React)
+- `http://localhost:5173`, `http://localhost:5174` (Vite)
+- `https://*.vercel.app` (Vercel Frontend)
+- `https://*.trycloudflare.com` (Cloudflare Tunnels)
+- `https://*.duckdns.org` (Dynamic DNS)
 
 Allowed methods: `GET`, `POST`, `PUT`, `DELETE`, `PATCH`, `OPTIONS`
 

@@ -10,18 +10,30 @@ Complete Docker Compose configuration for local development environment with all
 
 | Service | Image | Port | Purpose |
 |---------|-------|------|---------|
-| **PostgreSQL** | postgres:17-alpine | 5432 | User Service, Actor Service — and AI Service when built, which needs the image swapped to `pgvector/pgvector:pg17` (ADR-012) |
-| **MongoDB** | mongo:8.0 | 27017 | Movie Service, Media Service |
-| **Redis** | redis:7.4-alpine | 6379 | API Gateway (rate limiting, session) |
-| **MinIO** | minio/minio:RELEASE.2024-11-07T00-52-20Z | 9000, 9001 | Media Service (object storage) |
+| **PostgreSQL (pgvector)** | `pgvector/pgvector:pg17` | 5432 | User Service, Actor Service, AI Service (vector embeddings & RAG) |
+| **MongoDB** | `mongo:8.0` | 27017 | Movie Service catalog & Media Service metadata |
+| **Redis** | `redis:7.4-alpine` | 6379 | API Gateway rate limiting & distributed caching |
+| **MinIO** | `minio/minio:RELEASE.2024-11-07T00-52-20Z` | 9000, 9001 | Media Service S3-compatible object storage |
 
-### Management UIs (Optional)
+### Messaging, AI & Telemetry
 
 | Service | Image | Port | Purpose |
 |---------|-------|------|---------|
-| **Adminer** | adminer:latest | 9081 | PostgreSQL Web UI |
-| **Mongo Express** | mongo-express:latest | 9082 | MongoDB Web UI |
-| **Redis Commander** | rediscommander/redis-commander:latest | 9083 | Redis Web UI |
+| **Apache Kafka** | `confluentinc/cp-kafka:7.7.1` | 9092 | Asynchronous analytics event bus (local dev profile) |
+| **Ollama** | `ollama/ollama:latest` | 11434 | Local AI LLM inference (LLaMA 3.2, nomic-embed-text) |
+| **OpenZipkin** | `openzipkin/zipkin:3` | 9411 | Distributed trace collection & visualization |
+| **Elasticsearch** | `elasticsearch:8.15.3` | 9200 | Centralized log indexing |
+| **Logstash** | `logstash:8.15.3` | 5044, 9600 | Log pipeline parsing |
+| **Kibana** | `kibana:8.15.3` | 5601 | Log visualization & search dashboard |
+| **Filebeat** | `filebeat:8.15.3` | N/A | Container log shipper |
+
+### Management UIs
+
+| Service | Image | Port | Purpose |
+|---------|-------|------|---------|
+| **Adminer** | `adminer:latest` | 9081 | PostgreSQL Web UI |
+| **Mongo Express** | `mongo-express:latest` | 9082 | MongoDB Web UI |
+| **Redis Commander** | `rediscommander/redis-commander:latest` | 9083 | Redis Web UI |
 
 ## Quick Start
 

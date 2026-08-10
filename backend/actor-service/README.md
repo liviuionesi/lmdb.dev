@@ -15,7 +15,8 @@ Actor information and filmography management service.
 
 ## Technology Stack
 
-- Spring Boot 3.5.8
+- Java 25
+- Spring Boot 4.1.0
 - Spring Data JPA
 - PostgreSQL
 - Flyway (database migrations)

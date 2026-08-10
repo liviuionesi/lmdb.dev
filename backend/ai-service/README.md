@@ -12,7 +12,7 @@ AI-powered features: catalog-grounded movie recommendations, a chat assistant, a
 - Movie recommendations computed from Filmpire's own catalog (movie-service), never proxied from TMDB's own recommendation endpoint
 - Chat assistant with persisted conversation history
 - Semantic search: ANN query over user taste embeddings (pgvector `<=>` operator, HNSW index)
-- Voice recognition (Whisper) from the original architecture sketch is **not implemented** — it needs a paid OpenAI API key, which conflicts with the $0 budget, and isn't in #36's checklist
+- Offline Speech-to-Text Voice Recognition powered by self-hosted Vosk engine and embedded small English model (replacing cloud Whisper for $0 cost) (#68, #151)
 
 ## Why PostgreSQL, not MongoDB
 

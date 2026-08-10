@@ -28,32 +28,39 @@ filmpire-microservices/
 ### Versions (Managed in gradle.properties)
 **IMPORTANT:** All versions are centralized in `gradle.properties` at the root level for easy updates.
 
-- **Java**: 25 (via SDKMAN)
+- **Java**: 25 (via toolchain / SDKMAN)
 - **Gradle**: 9.2.0 (via Gradle Wrapper)
-- **Spring Boot**: 3.5.8-SNAPSHOT
-- **Spring Cloud**: 2025.0.0
-- **Spring AI**: 1.0.0-SNAPSHOT
+- **Spring Boot**: 4.1.0
+- **Spring Cloud**: 2025.1.2
+- **Spring AI**: 2.0.0
 - **Spring Dependency Management**: 1.1.7
 
 ### Key Dependencies (gradle.properties)
-- Lombok: 1.18.42
+- Lombok: 1.18.46
 - MapStruct: 1.6.3
 - JJWT: 0.13.0
 - gRPC: 1.76.0
-- Springdoc OpenAPI: 2.8.14
+- Springdoc OpenAPI: 3.1.0
 - MinIO: 8.5.7
+- Vosk: 0.3.45
+- Logstash Encoder: 8.1
 
-### Testing Dependencies (gradle.properties)
+### Testing & Quality Tooling (gradle.properties)
 - JUnit: 5.11.3 **(Jupiter ONLY - JUnit 4 FORBIDDEN)**
 - Mockito: 5.19.0
-- TestContainers: 1.21.2
+- Testcontainers: 2.0.5
 - JaCoCo: 0.8.14
+- WireMock: 3.9.1
+- Gatling: 3.13.3
+- OpenRewrite: 7.37.0
+- Spotless: 8.9.0
+- OWASP Dependency Check: 12.2.2
 
 ### Critical Testing Requirements
-- ✅ `testRuntimeOnly 'org.junit.platform:junit-platform-launcher'` - **REQUIRED for Cursor IDE Test Runner**
+- ✅ `testRuntimeOnly 'org.junit.platform:junit-platform-launcher'`
 - ✅ JUnit 5 (Jupiter) exclusively - NO JUnit 4
 - ✅ Testcontainers with `@ServiceConnection` - NO H2
-- ✅ Tests run via Cursor IDE (CodeLens "Run Test" buttons)
+- ✅ Spring Cloud Contract for consumer-driven API contracts
 
 ## Configuration Details
 
@@ -65,30 +72,48 @@ filmpire-microservices/
 ```properties
 # Java
 javaVersion=25
+projectVersion=1.0.0-SNAPSHOT
 
 # Spring Boot  
-springBootVersion=3.5.8-SNAPSHOT
+springBootVersion=4.1.0
 springDependencyManagementVersion=1.1.7
 
 # Spring Cloud
-springCloudVersion=2025.0.0
+springCloudVersion=2025.1.2
 
 # Spring AI
-springAiVersion=1.0.0-SNAPSHOT
+springAiVersion=2.0.0
+
+# gRPC codegen
+protobufPluginVersion=0.9.6
+protocVersion=4.29.3
 
 # Dependencies
-lombokVersion=1.18.42
+lombokVersion=1.18.46
 mapstructVersion=1.6.3
 jjwtVersion=0.13.0
 grpcVersion=1.76.0
-springdocVersion=2.8.14
+springdocVersion=3.1.0
 minioVersion=8.5.7
+voskVersion=0.3.45
+logstashEncoderVersion=8.1
 
 # Testing
 junitVersion=5.11.3
 mockitoVersion=5.19.0
-testcontainersVersion=1.21.2
+testcontainersVersion=2.0.5
 jacocoVersion=0.8.14
+wiremockVersion=3.9.1
+gatlingVersion=3.13.3
+bucket4jVersion=8.10.1
+redisTestcontainersVersion=2.2.2
+
+# Build tooling
+openRewriteVersion=7.37.0
+rewriteRecipeBomVersion=3.35.0
+sonarqubePluginVersion=6.2.0.5505
+spotlessVersion=8.9.0
+owaspDependencyCheckVersion=12.2.2
 
 # Build
 org.gradle.jvmargs=-Xmx2048m -XX:MaxMetaspaceSize=512m
@@ -204,7 +229,7 @@ org.gradle.configuration-cache=false
 ./gradlew tasks --all
 ```
 
-## Testing Configuration (Spring Boot 3.5.x Standards)
+## Testing Configuration (Spring Boot 4.x / JUnit 5 Standards)
 
 ### Test Framework Requirements
 **CRITICAL for Cursor IDE Test Runner compatibility:**
@@ -299,10 +324,9 @@ dependencies {
 - ✅ No version conflicts
 
 ### Version Notes
-⚠️ **Using SNAPSHOT versions:**
-- Spring Boot 3.5.8-SNAPSHOT (from Spring snapshot repository)
-- Spring AI 1.0.0-SNAPSHOT (from Spring snapshot repository)
-- Spring Cloud 2025.0.0 ✅ (stable release)
+- Spring Boot 4.1.0 ✅ (current GA release)
+- Spring AI 2.0.0 ✅ (tracks Spring Boot 4.x)
+- Spring Cloud 2025.1.2 ✅ (current release train)
 
 ### Java 25 Toolchain
 - Configured in root `build.gradle`
@@ -322,11 +346,10 @@ dependencies {
 - Must be built before services that depend on it
 
 ### TestContainers with @ServiceConnection
-- ✅ Modern approach (Spring Boot 3.1+): Use `@ServiceConnection`
+- ✅ Modern approach: Use `@ServiceConnection`
 - ❌ Old approach: `@DynamicPropertySource` not needed
 - Enabled for services with databases
-- PostgreSQL containers: user-service, actor-service (and ai-service when built —
-  `pgvector/pgvector:pg17`, not the stock image, per ADR-012)
+- PostgreSQL containers: user-service, actor-service, ai-service (`pgvector/pgvector:pg17`, per ADR-012)
 - MongoDB containers: movie-service, media-service
 - Automatic lifecycle management in tests
 
@@ -350,9 +373,9 @@ org.gradle.caching=true
 ✅ All 9 modules recognized  
 ✅ `./gradlew clean build` completes successfully  
 ✅ Java 25 toolchain configured  
-✅ Spring Boot 3.5.8-SNAPSHOT operational  
-✅ Spring Cloud 2025.0.0 operational  
-✅ TestContainers BOM configured (1.21.2)  
+✅ Spring Boot 4.1.0 operational  
+✅ Spring Cloud 2025.1.2 operational  
+✅ TestContainers BOM configured (2.0.5)  
 ✅ Shared library imports working  
 ✅ All service tasks available  
 
@@ -430,8 +453,8 @@ dependencyManagement {
 - ✅ `./gradlew build` runs successfully (1m 42s)
 - ✅ All 9 modules recognized by Gradle
 - ✅ Java 25 toolchain configured and active
-- ✅ Spring Boot 3.5.8-SNAPSHOT working
-- ✅ Spring Cloud 2025.0.0 working
+- ✅ Spring Boot 4.1.0 working
+- ✅ Spring Cloud 2025.1.2 working
 - ✅ Shared library imports functional (5 services using it)
 - ✅ Build completes without errors
 - ✅ Tasks visible via `./gradlew tasks`

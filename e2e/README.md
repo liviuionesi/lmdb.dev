@@ -15,9 +15,9 @@ Before running the Playwright tests locally, bring up both the backend services 
 2. **Start the React frontend application:**
    ```bash
    cd frontend/filmpire
-   npm run start
+   npm run dev
    ```
-   The frontend app should be live at `http://localhost:3000`.
+   The frontend app should be live at `http://localhost:5173` (or `http://localhost:3000`).
 
 ## Running the E2E Suite
 

@@ -260,7 +260,7 @@ The Config Service monitors:
 
 - [Spring Cloud Config](https://spring.io/projects/spring-cloud-config)
 - [Architecture Documentation](../../docs/architecture/ARCHITECTURE.md)
-- [Configuration Best Practices](../../docs/architecture/CONFIGURATION.md)
+- [Config Service Security Guide](SECURITY.md)
 
 ## Development Workflow
 
@@ -290,8 +290,8 @@ The Config Service monitors:
 - ✅ Production uses encrypted values or secret management
 
 **Required Environment Variables:**
-- `POSTGRES_PASSWORD` - PostgreSQL password (user/actor services)
-- `MONGODB_URI` - MongoDB connection string (movie/ai/media services)
+- `POSTGRES_PASSWORD` - PostgreSQL password (user/actor/ai services)
+- `MONGODB_URI` - MongoDB connection string (movie/media services)
 - `JWT_SECRET` - JWT signing key (min 64 chars, user service)
 - `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY` - Object storage (media service)
 

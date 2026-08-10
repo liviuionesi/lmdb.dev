@@ -304,7 +304,7 @@ Location: `backend/config-service/src/main/resources/config/movie-service.yml`
 ## Architecture
 
 ### Technology Stack
-- **Framework:** Spring Boot 3.5.8-SNAPSHOT
+- **Framework:** Spring Boot 4.1.0
 - **Language:** Java 25
 - **Build Tool:** Gradle 9.2.0
 - **Database:** MongoDB 8.0
@@ -322,7 +322,7 @@ See `build.gradle` for complete dependency list.
 - [Architecture Documentation](../../docs/architecture/ARCHITECTURE.md)
 - [API Gateway Documentation](../api-gateway/README.md)
 - [Config Service Documentation](../config-service/README.md)
-- [Docker Infrastructure](../../infrastructure/docker/README.md)
+- [Docker Infrastructure Setup](../../docs/architecture/DOCKER_INFRASTRUCTURE_SETUP.md)
 
 ## License
 

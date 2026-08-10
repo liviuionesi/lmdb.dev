@@ -16,11 +16,12 @@ User authentication, authorization, and profile management service.
 
 ## Technology Stack
 
-- Spring Boot 3.5.8
+- Java 25
+- Spring Boot 4.1.0
 - Spring Security
 - Spring Data JPA
 - PostgreSQL
-- JWT (jjwt)
+- JWT (jjwt 0.13.0)
 - Flyway (database migrations)
 - Eureka Client
 
