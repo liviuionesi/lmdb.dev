@@ -1,9 +1,9 @@
 # Filmpire — Enterprise Microservices Platform & Multi-Cloud Architecture
 
-[![Backend CI](https://github.com/pehlivanu/filmpire-microservices/actions/workflows/backend-ci.yml/badge.svg)](https://github.com/pehlivanu/filmpire-microservices/actions/workflows/backend-ci.yml)
-[![Frontend CI](https://github.com/pehlivanu/filmpire-microservices/actions/workflows/frontend-ci.yml/badge.svg)](https://github.com/pehlivanu/filmpire-microservices/actions/workflows/frontend-ci.yml)
-[![Docker Publish](https://github.com/pehlivanu/filmpire-microservices/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/pehlivanu/filmpire-microservices/actions/workflows/docker-publish.yml)
-[![Terraform Plan](https://github.com/pehlivanu/filmpire-microservices/actions/workflows/terraform-plan.yml/badge.svg)](https://github.com/pehlivanu/filmpire-microservices/actions/workflows/terraform-plan.yml)
+[![Backend CI](https://github.com/pehlivanu/filmpire-microservices/actions/workflows/backend-ci.yml/badge.svg?branch=main)](https://github.com/pehlivanu/filmpire-microservices/actions/workflows/backend-ci.yml)
+[![Frontend CI](https://github.com/pehlivanu/filmpire-microservices/actions/workflows/frontend-ci.yml/badge.svg?branch=main)](https://github.com/pehlivanu/filmpire-microservices/actions/workflows/frontend-ci.yml)
+[![Docker Publish](https://github.com/pehlivanu/filmpire-microservices/actions/workflows/docker-publish.yml/badge.svg?branch=main)](https://github.com/pehlivanu/filmpire-microservices/actions/workflows/docker-publish.yml)
+[![Terraform Plan](https://github.com/pehlivanu/filmpire-microservices/actions/workflows/terraform-plan.yml/badge.svg?branch=main)](https://github.com/pehlivanu/filmpire-microservices/actions/workflows/terraform-plan.yml)
 [![Java 25](https://img.shields.io/badge/Java-25-orange.svg)](https://openjdk.org/projects/jdk/25/)
 [![Spring Boot 4.1.0](https://img.shields.io/badge/Spring%20Boot-4.1.0-brightgreen.svg)](https://spring.io/projects/spring-boot)
 [![Spring Cloud 2025.1.2](https://img.shields.io/badge/Spring%20Cloud-2025.1.2-blue.svg)](https://spring.io/projects/spring-cloud)
