@@ -423,14 +423,14 @@ Visit **`http://localhost:5173`** (or `http://localhost:3000`) in your browser t
 
 ## 11. Master Documentation Index
 
-### Architecture & Engineering Decisions
-* [System Architecture Specification (ARCHITECTURE.md)](docs/architecture/ARCHITECTURE.md)
-* [Port & Network Mapping Guide](docs/architecture/PORT_MAPPING.md)
-* [Code Quality & Static Analysis Guidelines](docs/architecture/CODE_QUALITY.md)
-* [Gradle Multi-Module Build Architecture](docs/architecture/GRADLE_BUILD_SETUP.md)
-* [Docker & Local Infrastructure Guide](docs/architecture/DOCKER_INFRASTRUCTURE_SETUP.md)
-* [Integration Testing Strategy & Testcontainers](docs/architecture/INTEGRATION_TESTING.md)
-* [Junior Developer Onboarding Guide](docs/architecture/JUNIOR_DEVELOPER_GUIDE.md)
+### Architecture & Technical Guides
+* [System Architecture Specification (ARCHITECTURE.md)](docs/architecture/ARCHITECTURE.md) — Comprehensive 2,700+ line technical architecture
+* [Port & Network Mapping Guide](docs/architecture/PORT_MAPPING.md) — Service port allocation, databases, and mesh routing
+* [Code Quality & Static Analysis Guidelines](docs/architecture/CODE_QUALITY.md) — SonarQube, Checkstyle, Spotless standards
+* [Gradle Multi-Module Build Architecture](docs/architecture/GRADLE_BUILD_SETUP.md) — Multi-project dependency graphs & build lifecycle
+* [Docker & Local Infrastructure Guide](docs/architecture/DOCKER_INFRASTRUCTURE_SETUP.md) — Container topology and Compose wiring
+* [Integration Testing Strategy & Testcontainers](docs/architecture/INTEGRATION_TESTING.md) — Testcontainers, WireMock, and mock policies
+* [Junior Developer Onboarding Guide](docs/architecture/JUNIOR_DEVELOPER_GUIDE.md) — Development workflow, debugging, and setup
 
 ### Architectural Decision Records (ADRs)
 * [ADR-001: Microservices Architecture Selection](docs/architecture/adr/001-microservices-architecture.md)
@@ -452,33 +452,76 @@ Visit **`http://localhost:5173`** (or `http://localhost:3000`) in your browser t
 * [ADR-017: Full Service Cloud Parity](docs/architecture/adr/017-full-cloud-service-parity.md)
 
 ### Scrum Process & SDLC
-* [Product Goal & Vision](docs/process/PRODUCT_GOAL.md)
+* [Product Goal & Strategic Vision](docs/process/PRODUCT_GOAL.md)
 * [Agile Methodology & Scrum Process](docs/process/METHODOLOGY.md)
 * [Definition of Ready (DoR)](docs/process/DEFINITION_OF_READY.md)
 * [Definition of Done (DoD)](docs/process/DEFINITION_OF_DONE.md)
 * [Non-Functional Requirements (NFRs)](docs/process/NON_FUNCTIONAL_REQUIREMENTS.md)
 * [Scrum Events & Ceremony Protocol](docs/process/SCRUM_EVENTS.md)
 
-### Deployment, Operations & Security
-* [Multi-Cloud Deployment Runbook](docs/guides/DEPLOYMENT_GUIDE.md)
-* [Frontend Integration & Execution Guide](docs/guides/RUN_WITH_FILMPIRE_APP.md)
-* [Terraform Infrastructure Documentation](infrastructure/terraform/README.md)
-* [Docker Compose Testing Runbook](infrastructure/docker/TESTING_GUIDE.md)
-* [DDoS Mitigation & Rate Limiting Architecture](docs/security/DDOS_PROTECTION_IMPLEMENTED.md)
-* [Security Enhancements & Threat Model](docs/security/DDOS_PROTECTION_IMPROVEMENTS.md)
+### Deployment, Operations & Infrastructure
+* [Multi-Cloud Deployment Runbook](docs/guides/DEPLOYMENT_GUIDE.md) — Local, Azure AKS, AWS k3s, and Vercel setup
+* [Frontend Integration & Execution Guide](docs/guides/RUN_WITH_FILMPIRE_APP.md) — Frontend runtime configuration
+* [Terraform Multi-Cloud Infrastructure](infrastructure/terraform/README.md) — Azure AKS and AWS EC2 Terraform modules
+* [Docker Compose Testing Runbook](infrastructure/docker/TESTING_GUIDE.md) — Local Compose verification workflows
+* [Kubernetes Prometheus ServiceMonitors](infrastructure/kubernetes/monitoring/service-monitors/README.md) — Monitoring scrape configs
 
-### Microservice Subsystem Modules
+### Security Architecture & Threat Mitigation
+* [DDoS Mitigation & Rate Limiting Architecture](docs/security/DDOS_PROTECTION_IMPLEMENTED.md) — Redis rate limiter implementation
+* [Security Enhancements & Threat Model](docs/security/DDOS_PROTECTION_IMPROVEMENTS.md) — Defense-in-depth architecture
+* [Config Service Security Specification](backend/config-service/SECURITY.md) — Encryption and credential management
+
+### Microservice Subsystems & Module Documentation
 * [API Gateway Service](backend/api-gateway/README.md) · [Gateway Route Catalog](backend/api-gateway/ROUTES.md)
-* [Movie Catalog Service](backend/movie-service/README.md)
+* [Movie Catalog Service](backend/movie-service/README.md) · [Test Execution Results](backend/movie-service/TEST_EXECUTION_RESULTS.md) · [Test Summary](backend/movie-service/TEST_SUMMARY.md)
 * [User & Authentication Service](backend/user-service/README.md)
 * [Actor & Cast Service](backend/actor-service/README.md)
 * [AI Assistant & Vector Service](backend/ai-service/README.md)
 * [Media Asset Service](backend/media-service/README.md)
 * [Discovery Service (Eureka)](backend/discovery-service/README.md)
-* [Config Service](backend/config-service/README.md) · [Config Security](backend/config-service/SECURITY.md)
+* [Config Service](backend/config-service/README.md)
 * [Shared Java Library](backend/shared-library/README.md)
-* [Frontend Application](frontend/filmpire/README.md)
+* [Frontend Application](frontend/filmpire/README.md) · [Next.js Migration Notes](frontend/filmpire/nextjs.md)
 * [End-to-End Playwright Suite](e2e/README.md)
+
+### Project Roadmap & Sprint Backlogs
+* [Project Roadmap & Narrative](.github/issues/PROJECT_ROADMAP.md)
+* [Phase 1: Project Setup & Architecture Backlog](.github/issues/PHASE1_ISSUES.md)
+* [Phase 2: Infrastructure Services Backlog](.github/issues/PHASE2_INFRASTRUCTURE_SERVICES.md)
+* [Phase 3: Core Business Services Backlog](.github/issues/PHASE3_CORE_SERVICES.md)
+* [Phase 4: Advanced AI & Media Services Backlog](.github/issues/PHASE4_ADVANCED_SERVICES.md)
+* [Phase 5: Web Frontend Integration Backlog](.github/issues/PHASE5_WEB_FRONTEND.md)
+* [Phases 6–8: Mobile, Performance & Multi-Cloud Backlog](.github/issues/PHASES_6-8_MOBILE_TESTING_DEPLOYMENT.md)
+
+### GitHub Governance & Issue Templates
+* [Branch Protection Standards](.github/BRANCH_PROTECTION.md)
+* [Pull Request Template](.github/PULL_REQUEST_TEMPLATE.md)
+* [Epic Issue Template](.github/ISSUE_TEMPLATE/epic.md)
+* [User Story Issue Template](.github/ISSUE_TEMPLATE/user-story.md)
+* [Task Issue Template](.github/ISSUE_TEMPLATE/task.md)
+* [Bug Issue Template](.github/ISSUE_TEMPLATE/bug.md)
+
+### Developer Agent & Autonomous Workflow Contracts
+* [Autonomous Work Contract (CLAUDE.md)](CLAUDE.md) · [Sub-contract (.claude/CLAUDE.md)](.claude/CLAUDE.md)
+* [Codemod Command Guide](.claude/commands/codemod.md)
+* [Codemod Skill Specification](.claude/skills/codemod/SKILL.md)
+* [Javadoc Quality Skill Specification](.claude/skills/javadoc/SKILL.md)
+* [Task Resync Skill Specification](.claude/skills/resync-tasks/SKILL.md)
+
+### Architecture Knowledge Graph Reports (Graphify)
+* [Latest Knowledge Graph Report](graphify-out/GRAPH_REPORT.md)
+* [Snapshot: 2026-08-10 Architecture Report](graphify-out/2026-08-10/GRAPH_REPORT.md)
+* [Snapshot: 2026-08-05 Architecture Report](graphify-out/2026-08-05/GRAPH_REPORT.md)
+* [Snapshot: 2026-08-04 Architecture Report](graphify-out/2026-08-04/GRAPH_REPORT.md)
+
+### Historical Evolution & Archive
+* [Historical Architecture Archive](docs/archive/README.md)
+* [Legacy Agile Workflow Guide](docs/archive/AGILE_WORKFLOW_GUIDE.md)
+* [Legacy Project Setup Runbook](docs/archive/PROJECT_SETUP.md)
+* [Legacy GitHub Setup Guide](docs/archive/GITHUB_SETUP.md)
+* [Legacy GitHub Project Overview](docs/archive/GITHUB_PROJECT_README.md)
+* [Legacy SonarQube Configuration](docs/archive/SONAR_CONFIGURATION.md)
+* [Historical Cursor AI Prompts](docs/archive/CURSOR_PROMPTS.md)
 
 ---
 
