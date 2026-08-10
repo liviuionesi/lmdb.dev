@@ -33,6 +33,13 @@ const STATUS_COLOR = {
   unknown: 'default',
 };
 
+const STATUS_BADGE_TEXT = {
+  up: 'Online',
+  down: 'Offline',
+  checking: 'Standby',
+  unknown: 'Standby',
+};
+
 const getServiceMeta = (title) => {
   const t = title.toLowerCase();
   if (t.includes('discovery') || t.includes('eureka')) {
@@ -122,7 +129,7 @@ function StatusCard({ title, description, url, secondaryUrl, secondaryLabel }) {
               </Tooltip>
               <Chip
                 size="small"
-                label={status === 'up' ? 'Online' : (status === 'down' ? 'Offline' : 'Standby')}
+                label={STATUS_BADGE_TEXT[status] || 'Standby'}
                 color={STATUS_COLOR[status]}
                 variant={status === 'up' ? 'filled' : 'outlined'}
                 sx={{

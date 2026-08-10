@@ -78,7 +78,7 @@ data "azurerm_resources" "node_nsg" {
   # resource at all, even for unrelated drift, which forced a spurious
   # destroy+recreate of the security rule below on every apply.
   resource_group_name = azurerm_kubernetes_cluster.this.node_resource_group
-  type                 = "Microsoft.Network/networkSecurityGroups"
+  type                = "Microsoft.Network/networkSecurityGroups"
 }
 
 resource "azurerm_network_security_rule" "allow_gateway_nodeport_on_node_nsg" {
