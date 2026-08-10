@@ -144,6 +144,7 @@ filmpire-microservices/
 - [Postman Collection](./docs/api/) - All endpoints, incl. an auth pre-request script (per-service OpenAPI/Swagger UI is also available at runtime, `/swagger-ui.html`)
 - [Port Mapping](./docs/architecture/PORT_MAPPING.md) - Service ports reference
 - [Running the Frontend Against This Backend](./docs/guides/RUN_WITH_FILMPIRE_APP.md) - Runbook for `frontend/filmpire`
+- [Deployment Guide](./docs/guides/DEPLOYMENT_GUIDE.md) - Local, Azure, AWS, and binding the deployed frontend to whichever backend is up
 
 ## 🧪 Testing
 
