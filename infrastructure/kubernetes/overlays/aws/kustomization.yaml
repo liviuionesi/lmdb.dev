@@ -3,7 +3,7 @@ kind: Kustomization
 
 # Full local-parity service set (#151) — identical rationale to
 # overlays/azure; the AWS target is a self-managed k3s node instead of AKS,
-# bumped to t3.xlarge (infrastructure/terraform/aws/variables.tf) to fit the
+# bumped to m7i-flex.large (infrastructure/terraform/aws/variables.tf, the largest free-tier-eligible type this account allows) to fit the
 # same additions Azure needed. media-service and the Discovery/Config/
 # Kafka/Zipkin infra services stay out — see overlays/azure's comment for
 # why.
@@ -174,7 +174,7 @@ patches:
       # itself OOM-killed (exit 137) mid first-boot init before the root
       # user got created, leaving auth enabled with no valid user - a stuck
       # state needing a PVC wipe + clean re-init, not just a restart.
-      # t3.xlarge has 4 full vCPUs and ~15Gi allocatable; MongoDB gets a
+      # m7i-flex.large has 2 vCPUs and ~7.5Gi allocatable; MongoDB gets a
       # real share of both now.
       - op: replace
         path: /spec/template/spec/containers/0/resources

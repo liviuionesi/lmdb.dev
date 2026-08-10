@@ -32,9 +32,9 @@ variable "instance_name" {
 }
 
 variable "instance_type" {
-  description = "See modules/cluster-k3s/variables.tf — t3.micro OOM-thrashes under this app's real footprint (found live, #27); t3.small was the smallest size that stayed up for the movie-only slice. Bumped to t3.xlarge (#151) for the full local-parity service set (actor/user/ai-service + Postgres + Ollama) — Ollama alone requests 1Gi/up to 4Gi."
+  description = "See modules/cluster-k3s/variables.tf — t3.micro OOM-thrashes under this app's real footprint (found live, #27); t3.small was the smallest size that stayed up for the movie-only slice. t3.xlarge (tried for #151, the full local-parity service set incl. Ollama) was rejected outright: 'InvalidParameterCombination: not eligible for Free Tier' — this account only permits launching instance types in the free-tier-eligible list (a hard type-level gate, not a spend cap like Azure's). m7i-flex.large is the largest free-tier-eligible type available (8GiB/2vCPU, confirmed via `aws ec2 describe-instance-types --filters Name=free-tier-eligible,Values=true`) — re-check that list if this ever needs to change, it's account/region-specific."
   type        = string
-  default     = "t3.xlarge"
+  default     = "m7i-flex.large"
 }
 
 variable "root_volume_size" {

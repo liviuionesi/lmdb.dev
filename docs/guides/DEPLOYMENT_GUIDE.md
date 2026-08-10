@@ -202,7 +202,7 @@ Everything else that runs locally now runs identically in the cloud (#151).
 
 ## 6. Scenario: AWS EC2/k3s
 
-Same shape as Azure, self-managed k3s on a single `t3.xlarge` instead of a
+Same shape as Azure, self-managed k3s on a single `m7i-flex.large` instead of a
 managed control plane (bumped from `t3.small` alongside Azure's resize —
 Ollama alone needs up to 4Gi).
 
