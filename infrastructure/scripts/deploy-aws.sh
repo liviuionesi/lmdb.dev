@@ -43,10 +43,32 @@ echo -e "\n${BLUE}🚀 Deploying Kubernetes services (${K8S_OVERLAY})...${NC}"
 cd "$REPO_ROOT"
 kubectl apply -k "$K8S_OVERLAY"
 
+# Wait for rollouts (full local-parity service set, #151) - same set as
+# deploy-azure.sh.
+echo -e "\n${BLUE}⏳ Waiting for microservices rollout...${NC}"
+kubectl rollout status deployment/api-gateway --timeout=180s
+kubectl rollout status deployment/movie-service --timeout=180s
+kubectl rollout status deployment/actor-service --timeout=180s
+kubectl rollout status deployment/user-service --timeout=180s
+kubectl rollout status deployment/ai-service --timeout=180s
+kubectl rollout status statefulset/mongodb --timeout=180s
+kubectl rollout status statefulset/postgres --timeout=180s
+kubectl rollout status statefulset/redis --timeout=180s
+kubectl rollout status statefulset/ollama --timeout=180s
+
+# Pull Ollama's models - manual, same one-time step as local dev; see
+# deploy-azure.sh's identical comment for why this isn't automated.
+echo -e "\n${BLUE}🧠 Pulling Ollama models (llama3.2, nomic-embed-text) - this can take a few minutes on first deploy...${NC}"
+kubectl exec statefulset/ollama -- ollama pull llama3.2
+kubectl exec statefulset/ollama -- ollama pull nomic-embed-text
+
 echo -e "\n${GREEN}=====================================================${NC}"
 echo -e "${GREEN}  🎉 AWS k3s Backend Deployed Successfully!         ${NC}"
 echo -e "${GREEN}=====================================================${NC}"
 echo -e "  API Gateway:     http://${PUBLIC_IP}:${PORT}"
 echo -e "  Actuator Health: http://${PUBLIC_IP}:${PORT}/actuator/health"
+echo -e "  Register:        POST http://${PUBLIC_IP}:${PORT}/api/v1/auth/register"
+echo -e "  ${YELLOW}A browser on HTTPS can't call this http:// IP directly (mixed content) -${NC}"
+echo -e "  ${YELLOW}see docs/guides/DEPLOYMENT_GUIDE.md §5 for fronting it with a tunnel.${NC}"
 echo -e "  Teardown:        ./gradlew destroyAws (or ./infrastructure/scripts/destroy-aws.sh)"
 echo -e "${GREEN}=====================================================${NC}\n"

@@ -23,9 +23,9 @@ variable "cluster_name" {
 }
 
 variable "vm_size" {
-  description = "Node size for the single demo node — NOT free-tier B-series, see modules/cluster-aks/variables.tf for why (AKS's own 4GB minimum ruled out B2ats_v2, this subscription's region-level allow-list ruled out the whole B-series family, and F2as_v7's actual specs turned out to be 8GB not 4GB). Standard_D2ls_v7 is the confirmed-allowed size that lands exactly on AKS's 2vCPU/4GB minimum."
+  description = "Node size for the single demo node — NOT free-tier B-series, see modules/cluster-aks/variables.tf for why (AKS's own 4GB minimum ruled out B2ats_v2, this subscription's region-level allow-list ruled out the whole B-series family, and F2as_v7's actual specs turned out to be 8GB not 4GB). Standard_D2ls_v7 was the confirmed-allowed size for the movie-only slice; bumped to Standard_D4ls_v7 (#151) for the full local-parity service set (actor/user/ai-service + Postgres + Ollama) — confirmed within the subscription's 4-vCPU Dlsv7-family quota."
   type        = string
-  default     = "Standard_D2ls_v7"
+  default     = "Standard_D4ls_v7"
 }
 
 variable "node_count" {

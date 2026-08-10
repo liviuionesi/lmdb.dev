@@ -1,30 +1,49 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-# Core slice only — identical rationale and sizing to overlays/azure
-# (ARCHITECTURE.md §11.1); the AWS target is a t3.micro (1 vCPU / 1GB) k3s
-# node instead of an AKS B-series node, but the free-tier RAM ceiling and
-# therefore the JVM/container sizing are the same.
+# Full local-parity service set (#151) — identical rationale to
+# overlays/azure; the AWS target is a self-managed k3s node instead of AKS,
+# bumped to t3.xlarge (infrastructure/terraform/aws/variables.tf) to fit the
+# same additions Azure needed. media-service and the Discovery/Config/
+# Kafka/Zipkin infra services stay out — see overlays/azure's comment for
+# why.
 resources:
   - ../../base/api-gateway
   - ../../base/movie-service
+  - ../../base/actor-service
+  - ../../base/user-service
+  - ../../base/ai-service
   - ../../base/mongodb
+  - ../../base/postgres
   - ../../base/redis
+  - ../../base/ollama
 
 secretGenerator:
   - name: filmpire-secrets
     envs:
       - secrets.env
 
-# This overlay has no Kafka broker (unlike overlays/local) - without this,
-# movie-service's analytics @KafkaListener spins forever trying to reach
-# localhost:9092, wasting CPU/threads on a broker that will never exist
-# here (#151, found live on the Azure overlay's identical setup).
+# See overlays/azure's identical block for the reasoning (no Eureka, no
+# Kafka broker in this overlay; ai-service's MOVIE_SERVICE_BASE_URL needs
+# rewriting off the Eureka-resolved lb:// scheme).
 configMapGenerator:
   - name: movie-service-config
     behavior: merge
     literals:
       - SPRING_KAFKA_LISTENER_AUTO_STARTUP=false
+  - name: actor-service-config
+    behavior: merge
+    literals:
+      - EUREKA_CLIENT_ENABLED=false
+  - name: user-service-config
+    behavior: merge
+    literals:
+      - EUREKA_CLIENT_ENABLED=false
+  - name: ai-service-config
+    behavior: merge
+    literals:
+      - EUREKA_CLIENT_ENABLED=false
+      - MOVIE_SERVICE_BASE_URL=http://movie-service:8081
 
 images:
   - name: filmpire/api-gateway
@@ -32,6 +51,15 @@ images:
     newTag: latest # docker-publish.yml (#28) pushes both :latest and :${GIT_SHA}; deploy always rolls out :latest
   - name: filmpire/movie-service
     newName: ghcr.io/pehlivanu/filmpire-movie-service
+    newTag: latest
+  - name: filmpire/actor-service
+    newName: ghcr.io/pehlivanu/filmpire-actor-service
+    newTag: latest
+  - name: filmpire/user-service
+    newName: ghcr.io/pehlivanu/filmpire-user-service
+    newTag: latest
+  - name: filmpire/ai-service
+    newName: ghcr.io/pehlivanu/filmpire-ai-service
     newTag: latest
 
 patches:
@@ -103,25 +131,61 @@ patches:
       - op: replace
         path: /spec/template/spec/containers/0/imagePullPolicy
         value: Always
+  # actor/user/ai-service: see overlays/azure's identical patches for the
+  # reasoning (base JAVA_OPTS kept, IPv4-preference flag + forced fresh pulls added).
+  - target:
+      kind: Deployment
+      name: actor-service
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/env/0/value
+        value: "-Xms256m -Xmx512m -Djava.net.preferIPv4Stack=true"
+      - op: replace
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Always
+  - target:
+      kind: Deployment
+      name: user-service
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/env/0/value
+        value: "-Xms256m -Xmx512m -Djava.net.preferIPv4Stack=true"
+      - op: replace
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Always
+  - target:
+      kind: Deployment
+      name: ai-service
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/env/0/value
+        value: "-Xms256m -Xmx512m -Djava.net.preferIPv4Stack=true"
+      - op: replace
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Always
   - target:
       kind: StatefulSet
       name: mongodb
     patch: |-
-      # 300m/256Mi was too tight even in steady state, not just during
+      # 300m/384Mi was too tight even in steady state, not just during
       # first-boot init — found live on #27's apply: simple queries
-      # (listIndexes) took 2800ms+ under CPU starvation, and the slow
-      # first-boot createUser step was the direct cause of an auth-broken
-      # restart. t3.small has 2 full vCPUs; MongoDB gets a real share.
+      # (listIndexes) took 2800ms+ under CPU starvation. Also found live on
+      # the Azure overlay's identical setup (#151): the 384Mi memory limit
+      # itself OOM-killed (exit 137) mid first-boot init before the root
+      # user got created, leaving auth enabled with no valid user - a stuck
+      # state needing a PVC wipe + clean re-init, not just a restart.
+      # t3.xlarge has 4 full vCPUs and ~15Gi allocatable; MongoDB gets a
+      # real share of both now.
       - op: replace
         path: /spec/template/spec/containers/0/resources
         value:
           requests:
             cpu: 250m
-            memory: 128Mi
+            memory: 256Mi
             ephemeral-storage: 128Mi
           limits:
             cpu: 800m
-            memory: 384Mi
+            memory: 768Mi
             ephemeral-storage: 256Mi
   - target:
       kind: StatefulSet

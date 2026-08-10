@@ -32,9 +32,9 @@ variable "instance_name" {
 }
 
 variable "instance_type" {
-  description = "See modules/cluster-k3s/variables.tf — t3.micro OOM-thrashes under this app's real footprint (found live, #27); t3.small is the smallest size that actually stays up."
+  description = "See modules/cluster-k3s/variables.tf — t3.micro OOM-thrashes under this app's real footprint (found live, #27); t3.small was the smallest size that stayed up for the movie-only slice. Bumped to t3.xlarge (#151) for the full local-parity service set (actor/user/ai-service + Postgres + Ollama) — Ollama alone requests 1Gi/up to 4Gi."
   type        = string
-  default     = "t3.small"
+  default     = "t3.xlarge"
 }
 
 variable "root_volume_size" {

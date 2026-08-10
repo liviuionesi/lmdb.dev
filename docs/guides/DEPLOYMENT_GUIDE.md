@@ -127,12 +127,13 @@ Teardown:
 ./gradlew deployAzure          # infrastructure/scripts/deploy-azure.sh
 ```
 
-This single command: `terraform apply` (provisions AKS on the free
-spending-limit account, ~2 vCPU/4GB node) → `az aks get-credentials` →
-`kubectl apply -k infrastructure/kubernetes/overlays/azure` (gateway +
-movie-service + MongoDB + Redis — the "core slice", see
-`ARCHITECTURE.md §11.1` for why user/actor-service aren't here) → waits
-for rollout → prints the node's public IP.
+This single command: `terraform apply` (provisions AKS on
+`Standard_D4ls_v7`, 4 vCPU/8GB) → `az aks get-credentials` → `kubectl
+apply -k infrastructure/kubernetes/overlays/azure` (full local-parity
+service set — gateway, movie/actor/user/ai-service, MongoDB, Postgres,
+Redis, Ollama; see §6.1 for what's still missing and why) → waits for
+rollout → pulls Ollama's models (one-time, same manual step as local dev)
+→ prints the node's public IP.
 
 The gateway is exposed as a **NodePort** (`:30080`, no load balancer — see
 `infrastructure/terraform/README.md`) at that raw IP, over plain HTTP.
@@ -189,10 +190,21 @@ docker rm -f filmpire-azure-tunnel   # if you started the extra tunnel above
 ./gradlew destroyAzure                # infrastructure/scripts/destroy-azure.sh
 ```
 
+### 5.1 What's still not in either cloud overlay
+
+`media-service` (no Kubernetes manifests exist for it yet — it'd also need
+an object-storage decision, MinIO locally) and the observability-only
+services (`discovery-service`/Eureka, `config-service`, Kafka, Zipkin —
+ADR-005 keeps these out of every K8s overlay deliberately; K8s Services +
+cluster DNS already cover what Eureka/Config Server do locally, and
+Kafka/Zipkin are internal analytics/tracing, not a user-facing feature).
+Everything else that runs locally now runs identically in the cloud (#151).
+
 ## 6. Scenario: AWS EC2/k3s
 
-Same shape as Azure, self-managed k3s on a single `t3.small` instead of a
-managed control plane.
+Same shape as Azure, self-managed k3s on a single `t3.xlarge` instead of a
+managed control plane (bumped from `t3.small` alongside Azure's resize —
+Ollama alone needs up to 4Gi).
 
 ```bash
 ./gradlew deployAws            # infrastructure/scripts/deploy-aws.sh

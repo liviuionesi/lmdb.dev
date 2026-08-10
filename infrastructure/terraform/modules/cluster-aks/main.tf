@@ -13,6 +13,14 @@ resource "azurerm_kubernetes_cluster" "this" {
     vnet_subnet_id         = var.subnet_id
     node_public_ip_enabled = var.enable_node_public_ip
 
+    # Without this, changing vm_size forces recreation of the whole cluster
+    # (ForceNew on default_node_pool), destroying all live workloads/PVCs
+    # instead of just the node pool. This makes a vm_size change a graceful
+    # rotation instead: azurerm creates a temp pool under this name,
+    # migrates workloads, then deletes the old one (#151, found before
+    # applying the D2ls_v7 -> D4ls_v7 resize).
+    temporary_name_for_rotation = "temp"
+
     # AKS silently applies this default server-side even when omitted here,
     # which without an explicit block causes perpetual drift on every plan
     # (Terraform sees state -> null, AKS reports null -> populated) --

@@ -50,12 +50,31 @@ echo -e "\n${BLUE}🚀 Deploying Kubernetes services (${K8S_OVERLAY})...${NC}"
 cd "$REPO_ROOT"
 kubectl apply -k "$K8S_OVERLAY"
 
-# 6. Wait for Rollouts
+# 6. Wait for Rollouts (full local-parity service set, #151)
 echo -e "\n${BLUE}⏳ Waiting for microservices rollout...${NC}"
 kubectl rollout status deployment/api-gateway --timeout=180s
 kubectl rollout status deployment/movie-service --timeout=180s
+kubectl rollout status deployment/actor-service --timeout=180s
+kubectl rollout status deployment/user-service --timeout=180s
+kubectl rollout status deployment/ai-service --timeout=180s
 kubectl rollout status statefulset/mongodb --timeout=180s
+kubectl rollout status statefulset/postgres --timeout=180s
 kubectl rollout status statefulset/redis --timeout=180s
+# Ollama's image itself starts fine without a model pulled, but the
+# readiness/liveness probes run `ollama list` which only meaningfully
+# passes once the daemon is fully up - give it the same timeout, not a
+# rollout-status wait tied to actual model availability (that's the manual
+# step below, same as local dev).
+kubectl rollout status statefulset/ollama --timeout=180s
+
+# 6b. Pull Ollama's models (manual, same one-time step as local dev - see
+# docker-compose.yml's equivalent comment. Not automated: multi-GB
+# downloads on every fresh cluster would make first deploy slow and
+# failure-prone; the StatefulSet's PVC keeps them across pod restarts once
+# pulled, so this only needs to run again after a full destroy/recreate.)
+echo -e "\n${BLUE}🧠 Pulling Ollama models (llama3.2, nomic-embed-text) - this can take a few minutes on first deploy...${NC}"
+kubectl exec statefulset/ollama -- ollama pull llama3.2
+kubectl exec statefulset/ollama -- ollama pull nomic-embed-text
 
 # 7. Extract Node External IP
 echo -e "\n${BLUE}🌐 Discovering AKS Node Public IP...${NC}"
@@ -75,6 +94,9 @@ if [ -n "$NODE_IP" ]; then
   echo -e "  API Gateway:     http://${NODE_IP}:${PORT}"
   echo -e "  Actuator Health: http://${NODE_IP}:${PORT}/actuator/health"
   echo -e "  Popular Movies:  http://${NODE_IP}:${PORT}/movie/popular"
+  echo -e "  Register:        POST http://${NODE_IP}:${PORT}/api/v1/auth/register"
+  echo -e "  ${YELLOW}A browser on HTTPS can't call this http:// IP directly (mixed content) -${NC}"
+  echo -e "  ${YELLOW}see docs/guides/DEPLOYMENT_GUIDE.md §5 for fronting it with a tunnel.${NC}"
 else
   echo -e "  Node External IP could not be detected yet. Run 'kubectl get nodes -o wide'."
 fi

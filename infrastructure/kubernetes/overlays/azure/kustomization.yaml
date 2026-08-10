@@ -1,31 +1,57 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-# Core slice only (ARCHITECTURE.md §11.1): gateway, movie-service + MongoDB +
-# Redis. Discovery and Config are never part of any K8s overlay (ADR-005);
-# user-service/actor-service/Postgres are dropped here specifically because a
-# free-tier 1-2GB node can't fit the full 8-service stack — they still run in
-# the local overlay and the docker-compose profile.
+# Full local-parity service set (#151): gateway, movie/actor/user/ai-service +
+# MongoDB/Postgres/Redis/Ollama — everything that runs locally except
+# media-service (no k8s manifests exist for it yet) and the
+# Discovery/Config/Kafka/Zipkin infra services, which ADR-005 deliberately
+# never puts in any K8s overlay (K8s Services + cluster DNS take over
+# Eureka/Config Server's role; Kafka/Zipkin are internal observability, not
+# a user-facing feature). Needs Standard_D4ls_v7 (infrastructure/terraform/
+# azure/variables.tf) — the smaller D2ls_v7 only fit the movie-only slice.
 resources:
   - ../../base/api-gateway
   - ../../base/movie-service
+  - ../../base/actor-service
+  - ../../base/user-service
+  - ../../base/ai-service
   - ../../base/mongodb
+  - ../../base/postgres
   - ../../base/redis
+  - ../../base/ollama
 
 secretGenerator:
   - name: filmpire-secrets
     envs:
       - secrets.env
 
-# This overlay has no Kafka broker (unlike overlays/local) - without this,
-# movie-service's analytics @KafkaListener spins forever trying to reach
-# localhost:9092, wasting CPU/threads on a broker that will never exist
-# here (#151, found live: contributed to the OOM below).
+# This overlay has no Eureka (discovery-service) — without EUREKA_CLIENT_ENABLED=false
+# each service spins forever trying to register with/fetch from a server
+# that doesn't exist here. movie-service/api-gateway already set this via
+# their base ConfigMaps directly (base already assumes no Eureka for them);
+# actor/user/ai-service's base ConfigMaps default to Eureka-on (correct for
+# overlays/local, which does deploy it), so it's overridden here instead.
+# ai-service's MOVIE_SERVICE_BASE_URL also gets rewritten off the
+# Eureka-resolved lb:// scheme to plain cluster-DNS, same reasoning as the
+# gateway's own "kubernetes" Spring profile (application.yml).
 configMapGenerator:
   - name: movie-service-config
     behavior: merge
     literals:
       - SPRING_KAFKA_LISTENER_AUTO_STARTUP=false
+  - name: actor-service-config
+    behavior: merge
+    literals:
+      - EUREKA_CLIENT_ENABLED=false
+  - name: user-service-config
+    behavior: merge
+    literals:
+      - EUREKA_CLIENT_ENABLED=false
+  - name: ai-service-config
+    behavior: merge
+    literals:
+      - EUREKA_CLIENT_ENABLED=false
+      - MOVIE_SERVICE_BASE_URL=http://movie-service:8081
 
 images:
   - name: filmpire/api-gateway
@@ -33,6 +59,15 @@ images:
     newTag: latest # docker-publish.yml (#28) pushes both :latest and :${GIT_SHA}; deploy always rolls out :latest
   - name: filmpire/movie-service
     newName: ghcr.io/pehlivanu/filmpire-movie-service
+    newTag: latest
+  - name: filmpire/actor-service
+    newName: ghcr.io/pehlivanu/filmpire-actor-service
+    newTag: latest
+  - name: filmpire/user-service
+    newName: ghcr.io/pehlivanu/filmpire-user-service
+    newTag: latest
+  - name: filmpire/ai-service
+    newName: ghcr.io/pehlivanu/filmpire-ai-service
     newTag: latest
 
 patches:
@@ -100,7 +135,6 @@ patches:
           # movie-service's real footprint (MongoDB driver pool, WebClient,
           # Jackson, Kafka client buffers even with the listener disabled
           # below) doesn't fit a -XX:MaxRAMPercentage=60 heap that tight.
-          # Node (Standard_D2ls_v7, ~2.85Gi allocatable) has ample headroom.
           requests:
             cpu: 100m
             memory: 224Mi
@@ -112,25 +146,63 @@ patches:
       - op: replace
         path: /spec/template/spec/containers/0/imagePullPolicy
         value: Always
+  # actor/user/ai-service: base's fixed -Xms256m -Xmx512m JAVA_OPTS is kept
+  # as-is (already reasonable against their 768Mi limit) - just append the
+  # same IPv4-preference flag as api-gateway/movie-service (actor-service
+  # calls real TMDB for the person facade the same way movie-service does)
+  # and force fresh image pulls, same reasoning as above.
+  - target:
+      kind: Deployment
+      name: actor-service
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/env/0/value
+        value: "-Xms256m -Xmx512m -Djava.net.preferIPv4Stack=true"
+      - op: replace
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Always
+  - target:
+      kind: Deployment
+      name: user-service
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/env/0/value
+        value: "-Xms256m -Xmx512m -Djava.net.preferIPv4Stack=true"
+      - op: replace
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Always
+  - target:
+      kind: Deployment
+      name: ai-service
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/env/0/value
+        value: "-Xms256m -Xmx512m -Djava.net.preferIPv4Stack=true"
+      - op: replace
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Always
   - target:
       kind: StatefulSet
       name: mongodb
     patch: |-
-      # 300m was too tight even in steady state, not just during first-boot
-      # init -- same root cause as the AWS overlay's identical bug (#27's
-      # live-run findings): simple queries stall under CPU starvation, and
-      # a slow first-boot createUser can get killed by a probe before it
-      # commits. Standard_D2ls_v7 has 2 full vCPUs; MongoDB gets a real share.
+      # 300m/384Mi was too tight even in steady state, not just during
+      # first-boot init -- same root cause as the AWS overlay's identical
+      # bug (#27's live-run findings) plus a new one found live (#151): the
+      # 384Mi limit itself OOM-killed (exit 137) mid first-boot init, before
+      # the root user got created, leaving auth enabled with no valid user -
+      # a stuck state that needed a PVC wipe + clean re-init to recover
+      # from, not just a restart. Standard_D4ls_v7 has 4 full vCPUs and
+      # ~7.7Gi allocatable; MongoDB gets a real share of both now.
       - op: replace
         path: /spec/template/spec/containers/0/resources
         value:
           requests:
             cpu: 250m
-            memory: 128Mi
+            memory: 256Mi
             ephemeral-storage: 128Mi
           limits:
             cpu: 800m
-            memory: 384Mi
+            memory: 768Mi
             ephemeral-storage: 256Mi
   - target:
       kind: StatefulSet
