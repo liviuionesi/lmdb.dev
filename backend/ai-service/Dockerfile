@@ -35,14 +35,27 @@ RUN ./gradlew :backend:ai-service:bootJar --no-daemon -x test
 FROM docker.io/library/eclipse-temurin:25-jre
 
 # wget for the HEALTHCHECK below — unlike -alpine's busybox, this base image
-# doesn't bundle it. libstdc++6 (Vosk's dependency, see above) IS already
+# doesn't bundle it. curl/unzip are for the Vosk model download below.
+# libstdc++6 (Vosk's own native-library dependency, see above) IS already
 # present, so nothing to add for that. Non-root user in the same layer
 # (Debian-based image — no addgroup/adduser -S flags).
-RUN apt-get update && apt-get install -y --no-install-recommends wget \
+RUN apt-get update && apt-get install -y --no-install-recommends wget curl unzip \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd --system appgroup && useradd --system --gid appgroup appuser
 
 WORKDIR /app
+
+# Bake in the offline Vosk speech-to-text model (#151) - previously only a
+# manual local-dev step (infrastructure/scripts/download-vosk-model.sh),
+# meaning voice control silently had no model to load at all on either
+# cloud deploy (SpeechToTextService loads it lazily, so ai-service itself
+# starts fine and only fails once a request actually needs it). Baked in
+# here so it's present identically everywhere, matching VOSK_MODEL_PATH's
+# own default (./models/vosk-model-small-en-us-0.15, relative to this
+# WORKDIR) — same URL infrastructure/scripts/download-vosk-model.sh uses.
+RUN curl -L -o /tmp/vosk-model.zip https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip \
+    && unzip -q /tmp/vosk-model.zip -d models \
+    && rm /tmp/vosk-model.zip
 
 # Copy built JAR from build stage
 COPY --from=build /app/backend/ai-service/build/libs/*.jar app.jar
