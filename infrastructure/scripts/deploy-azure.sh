@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+# Deploys Filmpire backend to Azure AKS via Terraform and Kubernetes overlays.
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+TF_DIR="$REPO_ROOT/infrastructure/terraform/azure"
+K8S_OVERLAY="$REPO_ROOT/infrastructure/kubernetes/overlays/azure"
+
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+NC='\033[0m'
+
+echo -e "${BLUE}=====================================================${NC}"
+echo -e "${BLUE}  Filmpire — Deploy to Azure AKS (Terraform + K8s)  ${NC}"
+echo -e "${BLUE}=====================================================${NC}"
+
+# 1. Verify required CLI tools
+for cmd in az terraform kubectl; do
+  if ! command -v "$cmd" >/dev/null 2>&1; then
+    echo -e "${RED}❌ Required tool '$cmd' is not installed or not in PATH.${NC}" >&2
+    exit 1
+  fi
+done
+
+# 2. Verify Azure login
+if ! az account show >/dev/null 2>&1; then
+  echo -e "${YELLOW}⚠️ Azure CLI is not logged in. Running 'az login'...${NC}"
+  az login
+fi
+
+# 3. Terraform Init & Apply
+echo -e "\n${BLUE}📦 Initializing & Applying Terraform in ${TF_DIR}...${NC}"
+cd "$TF_DIR"
+terraform init -backend-config=backend.hcl -input=false
+terraform apply -auto-approve
+
+RG_NAME="$(terraform output -raw resource_group_name)"
+CLUSTER_NAME="$(terraform output -raw cluster_name)"
+PORT="$(terraform output -raw demo_inbound_port || echo 30080)"
+
+# 4. Fetch AKS Credentials
+echo -e "\n${BLUE}🔑 Fetching AKS cluster credentials...${NC}"
+az aks get-credentials --resource-group "$RG_NAME" --name "$CLUSTER_NAME" --overwrite-existing
+
+# 5. Apply Kubernetes Overlays
+echo -e "\n${BLUE}🚀 Deploying Kubernetes services (${K8S_OVERLAY})...${NC}"
+cd "$REPO_ROOT"
+kubectl apply -k "$K8S_OVERLAY"
+
+# 6. Wait for Rollouts
+echo -e "\n${BLUE}⏳ Waiting for microservices rollout...${NC}"
+kubectl rollout status deployment/api-gateway --timeout=180s
+kubectl rollout status deployment/movie-service --timeout=180s
+kubectl rollout status statefulset/mongodb --timeout=180s
+kubectl rollout status statefulset/redis --timeout=180s
+
+# 7. Extract Node External IP
+echo -e "\n${BLUE}🌐 Discovering AKS Node Public IP...${NC}"
+NODE_IP=""
+for i in {1..12}; do
+  NODE_IP="$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="ExternalIP")].address}' 2>/dev/null || true)"
+  if [ -n "$NODE_IP" ]; then
+    break
+  fi
+  sleep 2
+done
+
+echo -e "\n${GREEN}=====================================================${NC}"
+echo -e "${GREEN}  🎉 Azure Backend Deployed Successfully!            ${NC}"
+echo -e "${GREEN}=====================================================${NC}"
+if [ -n "$NODE_IP" ]; then
+  echo -e "  API Gateway:     http://${NODE_IP}:${PORT}"
+  echo -e "  Actuator Health: http://${NODE_IP}:${PORT}/actuator/health"
+  echo -e "  Popular Movies:  http://${NODE_IP}:${PORT}/movie/popular"
+else
+  echo -e "  Node External IP could not be detected yet. Run 'kubectl get nodes -o wide'."
+fi
+echo -e "  Teardown:        ./gradlew destroyAzure (or ./infrastructure/scripts/destroy-azure.sh)"
+echo -e "${GREEN}=====================================================${NC}\n"

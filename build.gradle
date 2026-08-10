@@ -357,10 +357,61 @@ subprojects {
     }
 }
 
-tasks.register('startInfrastructure', Exec) {
-    group = 'execution'
-    description = 'Starts the Movie Service infrastructure (Discovery, Config, Gateway, Movie Service)'
-    commandLine './start-all-services.sh'
+// ---------------------------------------------------------------------------
+// Infrastructure & Cloud Deployment Tasks (group: 'deployment')
+// ---------------------------------------------------------------------------
+tasks.register('deployAzure', Exec) {
+    group = 'deployment'
+    description = 'Provisions Azure AKS infrastructure with Terraform and rolls out all microservices'
+    commandLine './infrastructure/scripts/deploy-azure.sh'
+}
+
+tasks.register('destroyAzure', Exec) {
+    group = 'deployment'
+    description = 'Destroys Azure AKS infrastructure via Terraform to maintain $0 spend'
+    commandLine './infrastructure/scripts/destroy-azure.sh'
+}
+
+tasks.register('deployAws', Exec) {
+    group = 'deployment'
+    description = 'Provisions AWS EC2 k3s infrastructure with Terraform and rolls out microservices'
+    commandLine './infrastructure/scripts/deploy-aws.sh'
+}
+
+tasks.register('destroyAws', Exec) {
+    group = 'deployment'
+    description = 'Destroys AWS EC2 k3s infrastructure via Terraform to maintain $0 spend'
+    commandLine './infrastructure/scripts/destroy-aws.sh'
+}
+
+tasks.register('startTunnel', Exec) {
+    group = 'deployment'
+    description = 'Starts a secure public Cloudflare HTTPS tunnel for the active API gateway'
+    commandLine './infrastructure/scripts/start-tunnel.sh'
+}
+
+tasks.register('stopTunnel', Exec) {
+    group = 'deployment'
+    description = 'Stops the local Cloudflare tunnel container'
+    commandLine './infrastructure/scripts/stop-tunnel.sh'
+}
+
+tasks.register('deployLocal', Exec) {
+    group = 'deployment'
+    description = 'Starts local microservices infrastructure and databases via Docker/Podman Compose'
+    commandLine './infrastructure/scripts/start-infrastructure.sh'
+}
+
+tasks.register('stopLocal', Exec) {
+    group = 'deployment'
+    description = 'Stops all local microservices infrastructure and containers'
+    commandLine './infrastructure/scripts/stop-infrastructure.sh'
+}
+
+tasks.register('statusInfra', Exec) {
+    group = 'deployment'
+    description = 'Checks the health and status of local, tunnel, and cloud infrastructure'
+    commandLine './infrastructure/scripts/status-infra.sh'
 }
 
 // Automatically clear the STS workspace cache on clean builds to avoid stale IDE warnings

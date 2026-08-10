@@ -14,7 +14,6 @@ import { userSelector } from '../../features/auth';
 import { useGetProfileQuery } from '../../services/user';
 import { getApiUrl } from '../../utils/apiUrl';
 import StatusCard from './StatusCard';
-import DeployControl from './DeployControl';
 
 const discoveryUrl = import.meta.env.VITE_DISCOVERY_URL || 'http://localhost:8761';
 const kibanaUrl = import.meta.env.VITE_KIBANA_URL || 'http://localhost:5601';
@@ -70,14 +69,11 @@ function AdminDashboard() {
           Admin Dashboard
         </Typography>
         <Typography variant="body1" color="textSecondary">
-          Central operations center for cloud orchestration, microservice telemetry, and cluster observability.
+          Central operations center for microservice telemetry, service topology, and cluster observability.
         </Typography>
       </Box>
 
-      {/* 2. Full-Width Orchestrator Deck */}
-      <DeployControl apiUrl={filmpireApiUrl} />
-
-      {/* 3. Observability & Infrastructure Hub (2-Column Balanced Grid) */}
+      {/* 2. Observability & Infrastructure Hub (2-Column Balanced Grid) */}
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
         <Box>
           <Typography variant="h6" fontWeight={700} sx={{ mb: 0.5 }}>
