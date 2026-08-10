@@ -266,52 +266,80 @@ newman run docs/api/Filmpire_API.postman_collection.json -e docs/api/local_envir
 
 ## 7. Multi-Cloud Deployment & Infrastructure Topology
 
-Filmpire supports three fully-codified deployment targets with 100% feature and service parity:
+Filmpire supports four fully-codified deployment topologies with 100% feature and service parity:
 
 ```
-┌────────────────────────────────────────────────────────────────────────────────────────┐
-│                                DEPLOYMENT TARGETS                                      │
-├──────────────────────────┬─────────────────────────────┬───────────────────────────────┤
-│ 1. Local Compose         │ 2. Azure AKS (Terraform)    │ 3. AWS k3s (Terraform)        │
-├──────────────────────────┼─────────────────────────────┼───────────────────────────────┤
-│ • Full 15-container stack│ • Managed AKS Cluster       │ • Lightweight k3s on EC2      │
-│ • Docker / Podman        │ • Standard_D4ls_v7 node     │ • t3.xlarge instance          │
-│ • Eureka + Config Server │ • Native K8s DNS & Config   │ • Native K8s DNS & Config     │
-│ • Kafka + ELK + Zipkin   │ • Budget tripwire guard ($1)│ • Cloudflare HTTPS Tunnel     │
-│ • Command:               │ • Command:                  │ • Command:                    │
-│   ./gradlew deployLocal  │   ./gradlew deployAzure     │   ./gradlew deployAws         │
-└──────────────────────────┴─────────────────────────────┴───────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                                 DEPLOYMENT TOPOLOGIES                                                  │
+├────────────────────────────┬────────────────────────────┬─────────────────────────────┬────────────────────────────────┤
+│ 1. Local Dev Stack         │ 2. Local Stack + Tunnel    │ 3. Azure AKS (Terraform)    │ 4. AWS k3s (Terraform)         │
+├────────────────────────────┼────────────────────────────┼─────────────────────────────┼────────────────────────────────┤
+│ • Full 15-container stack  │ • Local stack / Minikube   │ • Managed AKS Cluster       │ • Lightweight k3s on EC2       │
+│ • Docker / Podman Compose  │ • Cloudflare HTTPS Tunnel  │ • Standard_D4ls_v7 node     │ • t3.xlarge instance           │
+│ • Minikube local overlay   │ • Powers deployed Vercel FE│ • Native K8s DNS & Config   │ • Native K8s DNS & Config      │
+│ • Eureka + Config Server   │ • Auto-published pointer   │ • Budget tripwire guard ($1)│ • Zero-spend teardown          │
+│ • Command:                 │ • Command:                 │ • Command:                  │ • Command:                     │
+│   ./gradlew deployLocal    │   ./gradlew startTunnel    │   ./gradlew deployAzure     │   ./gradlew deployAws          │
+└────────────────────────────┴────────────────────────────┴─────────────────────────────┴────────────────────────────────┘
 ```
+
+### Topology Breakdown
+
+1. **Local Development (Compose & Minikube):**
+   * Runs the complete 15-container stack locally via Docker Compose, Podman Compose, or the local Kubernetes overlay ([`infrastructure/kubernetes/overlays/local`](infrastructure/kubernetes/overlays/local)).
+   * Includes internal infrastructure helpers: Eureka (`discovery-service`), Config Server, Kafka, Zipkin, MinIO, and database UIs (Adminer, Mongo-Express, Redis-Commander).
+   * Used for daily offline development against `localhost:5173` / `localhost:3000`.
+
+2. **Local Machine / Minikube + Live Cloudflare Tunnel (Powers Vercel FE):**
+   * Allows the public **Vercel frontend** (`https://filmpire-microservices-tan.vercel.app`) to communicate directly with your local developer machine or Minikube cluster with $0 cloud spend.
+   * `start-tunnel.sh` launches a secure, encrypted Cloudflare quick tunnel (`https://*.trycloudflare.com`) pointing to your local Gateway (`:8080`), automatically captures the generated HTTPS hostname, commits and pushes it to [`infrastructure/tunnel-url.txt`](infrastructure/tunnel-url.txt) on GitHub `develop`.
+   * The Vercel frontend automatically discovers the updated tunnel pointer via GitHub raw URL within seconds without requiring frontend rebuilds or manual environment variable updates.
+
+3. **Azure AKS Managed Kubernetes:**
+   * Automated provisioning via Terraform ([`infrastructure/terraform/azure`](infrastructure/terraform/azure)) on a single `Standard_D4ls_v7` node with Azure CNI and NSG NodePort `30080`.
+   * Deployed via Kustomize overlay ([`infrastructure/kubernetes/overlays/azure`](infrastructure/kubernetes/overlays/azure)). Protected by a strict $1 budget guard tripwire.
+
+4. **AWS k3s on EC2:**
+   * Automated provisioning via Terraform ([`infrastructure/terraform/aws`](infrastructure/terraform/aws)) standing up a lightweight k3s cluster on a `t3.xlarge` EC2 instance.
+   * Deployed via Kustomize overlay ([`infrastructure/kubernetes/overlays/aws`](infrastructure/kubernetes/overlays/aws)).
 
 ### One-Command Deployment Automation
 
 All infrastructure actions are wrapped into unified Gradle tasks and shell automation:
 
 ```bash
-# Deploy full stack locally with Podman/Docker Compose
+# 1. Local Compose / Minikube development
 ./gradlew deployLocal
 
-# Check status of local containers or cloud cluster
+# 2. Expose local backend to the deployed Vercel frontend via Cloudflare Tunnel
+./gradlew startTunnel
+# ...or start local stack and tunnel together:
+./gradlew deployLocal --args='--tunnel'
+
+# Stop the active Cloudflare tunnel
+./gradlew stopTunnel
+
+# 3. Check status of local containers, active tunnel, or cloud cluster
 ./gradlew statusInfra
 
-# Deploy full production stack to Azure AKS via Terraform
+# 4. Deploy full production stack to Azure AKS via Terraform
 ./gradlew deployAzure
 
-# Deploy full production stack to AWS EC2 k3s via Terraform
+# 5. Deploy full production stack to AWS EC2 k3s via Terraform
 ./gradlew deployAws
 
-# Teardown cloud environments immediately to guarantee $0 spend
+# 6. Teardown cloud environments immediately to guarantee $0 spend
 ./gradlew destroyAzure
 ./gradlew destroyAws
 ```
 
 ### Dynamic Runtime Frontend-to-Backend Binding
-The frontend on Vercel resolves its active backend dynamically at runtime ([`apiUrl.js`](frontend/filmpire/src/utils/apiUrl.js)):
-1. Checks for manual override in `localStorage` (`filmpire_api_url`).
-2. Checks for build-time `VITE_API_URL`.
+The frontend on Vercel resolves its active backend dynamically at request time ([`apiUrl.js`](frontend/filmpire/src/utils/apiUrl.js)):
+1. Checks for a manual override in `localStorage` (`filmpire_api_url`).
+2. Checks for a build-time `VITE_API_URL`.
 3. Resolves the live Cloudflare HTTPS tunnel pointer from GitHub ([`infrastructure/tunnel-url.txt`](infrastructure/tunnel-url.txt)).
 4. Verifies candidate reachability via `/actuator/health`.
-5. Automatically routes all RTK Query requests to the live backend.
+5. Automatically routes all RTK Query requests to the reachable backend with zero manual Vercel dashboard steps.
 
 ---
 
