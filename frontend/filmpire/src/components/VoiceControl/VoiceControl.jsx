@@ -7,13 +7,11 @@ import { useNavigate } from 'react-router-dom';
 import { ColorModeContext } from '../../utils/ToggleColorMode';
 import { selectGenreOrCategory, searchMovie } from '../../features/currentGenreOrCategory';
 import { clearUser } from '../../features/auth';
-import { getApiUrl } from '../../utils/apiUrl';
+import { resolveApiUrl } from '../../utils/apiUrl';
 import { clearAuthTokens } from '../../utils';
 import { encodeToWav } from '../../utils/wavEncoder';
 import { parseVoiceCommand } from '../../utils/voiceCommands';
 import { useGetGenresQuery } from '../../services/TMDB';
-
-const getAiServiceUrl = () => getApiUrl();
 
 /**
  * Click-to-talk voice control (#68): records a
@@ -59,7 +57,14 @@ function VoiceControl() {
       const formData = new FormData();
       formData.append('audio', wavBlob, 'command.wav');
 
-      const response = await fetch(`${getAiServiceUrl()}/api/v1/ai/speech-to-text`, {
+      // Must await the health-checked resolver here rather than the
+      // synchronous getApiUrl() - on a cold cache (e.g. this is the first
+      // request of the session) that sync fallback returns the cloud
+      // default without waiting to confirm anything is actually up there,
+      // silently hitting a dead backend when cloud is down and only the
+      // tunnel is reachable.
+      const baseUrl = await resolveApiUrl();
+      const response = await fetch(`${baseUrl}/api/v1/ai/speech-to-text`, {
         method: 'POST',
         body: formData,
       });
