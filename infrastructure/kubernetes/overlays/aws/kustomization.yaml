@@ -16,6 +16,16 @@ secretGenerator:
     envs:
       - secrets.env
 
+# This overlay has no Kafka broker (unlike overlays/local) - without this,
+# movie-service's analytics @KafkaListener spins forever trying to reach
+# localhost:9092, wasting CPU/threads on a broker that will never exist
+# here (#151, found live on the Azure overlay's identical setup).
+configMapGenerator:
+  - name: movie-service-config
+    behavior: merge
+    literals:
+      - SPRING_KAFKA_LISTENER_AUTO_STARTUP=false
+
 images:
   - name: filmpire/api-gateway
     newName: ghcr.io/pehlivanu/filmpire-api-gateway
@@ -60,11 +70,11 @@ patches:
         value:
           requests:
             cpu: 100m
-            memory: 160Mi
+            memory: 224Mi
             ephemeral-storage: 128Mi
           limits:
             cpu: 500m
-            memory: 300Mi
+            memory: 512Mi
             ephemeral-storage: 256Mi
       - op: replace
         path: /spec/template/spec/containers/0/imagePullPolicy
@@ -76,16 +86,19 @@ patches:
       - op: replace
         path: /spec/template/spec/containers/0/env/0/value
         value: "-XX:MaxRAMPercentage=60 -Xss256k -Djava.net.preferIPv4Stack=true"
+      # 300Mi OOM-killed this container repeatedly on the Azure overlay's
+      # identical limits (#151, live) -- same fix mirrored here since the
+      # cause (real footprint too big for the old ceiling) isn't cloud-specific.
       - op: replace
         path: /spec/template/spec/containers/0/resources
         value:
           requests:
             cpu: 100m
-            memory: 160Mi
+            memory: 224Mi
             ephemeral-storage: 128Mi
           limits:
             cpu: 500m
-            memory: 300Mi
+            memory: 512Mi
             ephemeral-storage: 256Mi
       - op: replace
         path: /spec/template/spec/containers/0/imagePullPolicy
