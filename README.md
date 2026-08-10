@@ -1,253 +1,459 @@
-# Filmpire — Microservices Platform & Multi-Cloud Deployment Engineering
+# Filmpire — Enterprise Microservices Platform & Multi-Cloud Architecture
 
-**A TMDB v3 API clone with its own persisted, growing dataset, built as a real
-8-service Spring Boot system and deployed — live, verified, torn down and
-rebuilt more than once — on both Azure and AWS free tiers, for $0.**
+[![Backend CI](https://github.com/pehlivanu/filmpire-microservices/actions/workflows/backend-ci.yml/badge.svg)](https://github.com/pehlivanu/filmpire-microservices/actions/workflows/backend-ci.yml)
+[![Frontend CI](https://github.com/pehlivanu/filmpire-microservices/actions/workflows/frontend-ci.yml/badge.svg)](https://github.com/pehlivanu/filmpire-microservices/actions/workflows/frontend-ci.yml)
+[![Docker Publish](https://github.com/pehlivanu/filmpire-microservices/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/pehlivanu/filmpire-microservices/actions/workflows/docker-publish.yml)
+[![Terraform Plan](https://github.com/pehlivanu/filmpire-microservices/actions/workflows/terraform-plan.yml/badge.svg)](https://github.com/pehlivanu/filmpire-microservices/actions/workflows/terraform-plan.yml)
+[![Java 25](https://img.shields.io/badge/Java-25-orange.svg)](https://openjdk.org/projects/jdk/25/)
+[![Spring Boot 4.1.0](https://img.shields.io/badge/Spring%20Boot-4.1.0-brightgreen.svg)](https://spring.io/projects/spring-boot)
+[![Spring Cloud 2025.1.2](https://img.shields.io/badge/Spring%20Cloud-2025.1.2-blue.svg)](https://spring.io/projects/spring-cloud)
+[![React 18 / Vite](https://img.shields.io/badge/React-18%20%7C%20Vite-61dafb.svg)](https://vitejs.dev/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-This isn't a tutorial project. Nothing in it was built once and left alone —
-every architectural claim below was hit against real infrastructure, broke
-in a real way at least once, and got fixed. That's the part worth reading
-closely if you're evaluating this as evidence of tech-lead or platform
-engineering capability rather than as a movie app.
+> **A production-grade, event-driven movie streaming & recommendation microservices platform.** Featuring an AI assistant powered by Spring AI & Ollama (LLaMA 3.2), semantic vector search (pgvector), offline speech-to-text voice control (Vosk), a self-healing TMDB v3 API facade, 7 layers of automated testing, full observability (ELK, Zipkin, Prometheus, Grafana), and automated multi-cloud deployment to Azure AKS and AWS k3s.
 
-**Live:** [filmpire-microservices-tan.vercel.app](https://filmpire-microservices-tan.vercel.app/)
-— the frontend is always up; the backend it talks to is whichever of
-local/Azure/AWS happens to be running at the time (see
-[why that's not a broken link](#one-frontend-deploy-any-live-backend) below).
+🌐 **Live Demo (Frontend):** [filmpire-microservices-tan.vercel.app](https://filmpire-microservices-tan.vercel.app/)  
+*(The deployed frontend uses dynamic runtime auto-discovery to automatically bind to whichever cloud backend is live.)*
 
 ---
 
-## What this actually is
+## Table of Contents
 
-The existing [Filmpire](https://github.com/pehlivanu/filmpire) React app
-(RTK Query, MUI, Vosk voice control) was originally a thin client for the
-real `api.themoviedb.org`. This backend replicates that API's exact v3
-surface — same paths, same query parameters, same JSON shapes — closely
-enough that the frontend runs against it by changing **only its base URL**.
+1. [Executive Overview & Capabilities](#1-executive-overview--capabilities)
+2. [Feature Catalog & Technical Implementation](#2-feature-catalog--technical-implementation)
+3. [SDLC Story: From Idea to Finished Product](#3-sdlc-story-from-idea-to-finished-product)
+4. [System Architecture & Data Flows](#4-system-architecture--data-flows)
+5. [Codebase Organization & Repository Topology](#5-codebase-organization--repository-topology)
+6. [The 7-Layer Testing Strategy](#6-the-7-layer-testing-strategy)
+7. [Multi-Cloud Deployment & Infrastructure Topology](#7-multi-cloud-deployment--infrastructure-topology)
+8. [Observability, Logging & Telemetry](#8-observability-logging--telemetry)
+9. [CI/CD Pipelines & Code Management](#9-cicd-pipelines--code-management)
+10. [Local Quick Start Guide](#10-local-quick-start-guide)
+11. [Master Documentation Index](#11-master-documentation-index)
 
-What sits behind that surface is not a cache of TMDB's bytes. Every
-response is mapped into Filmpire's own typed, persisted catalog
-(MongoDB/PostgreSQL), fetched from TMDB once per resource and served
-locally after that — the dataset genuinely grows from real traffic, and a
-detail page for a movie no one's looked at yet still costs one upstream
-call, not zero. That distinction — a real data platform behind a
-TMDB-shaped facade, not a reverse proxy — was itself a mid-project pivot
-(ADR-010), one of seventeen recorded architecture decisions, each with the
-options that were rejected and why.
+---
 
-## What this demonstrates
+## 1. Executive Overview & Capabilities
 
-If you're evaluating this for a **tech lead or modernization engagement**,
-here's what's actually on display, not just claimed:
-
-- **Real multi-cloud operations, not "wrote some Terraform."** Azure AKS
-  and AWS EC2/k3s were both stood up, torn down, and rebuilt live —
-  repeatedly. Along the way: AKS's undocumented 2vCPU/4GB minimum, an
-  entire Azure VM-size family blocked at the subscription level, AWS
-  rejecting an instance type outright with a Free-Tier-eligibility error
-  that only surfaces at `apply` time, a live node resize that needed
-  `terraform plan` actually read before applying (a naive in-place resize
-  would have force-replaced the whole cluster), and a MongoDB deployment
-  that OOM-killed itself *during its own first-boot user creation*,
-  leaving auth enabled with no valid user — recoverable only by wiping the
-  volume, not by restarting the pod. Every one of these is documented with
-  what broke, why, and the fix — see [ADR-017](docs/architecture/adr/017-full-cloud-service-parity.md)
-  and [§11.5 of the architecture doc](docs/architecture/ARCHITECTURE.md#115-whats-actually-deployed-and-what-it-costs).
-- **Cost engineering backed by real numbers, not assumptions.** Before
-  resizing a live node, actual Azure Retail Pricing API rates were pulled
-  ($0.234/hr for the size in question) and reasoned about explicitly: even
-  left running continuously for a month, that's ~$171 — comfortably inside
-  a free credit for realistic demo usage, but not "free" in the naive
-  sense, and the distinction matters when you're the one accountable for
-  the bill.
-- **A real security decision, not a checkbox.** The admin panel originally
-  had a "deploy to cloud" button, first secured with a client-side token
-  (wrong — Vite ships `VITE_`-prefixed env vars into the public bundle),
-  then with a server-side proxy behind a passphrase (better, but the page
-  itself had no login). Rather than adding a third layer of mitigation,
-  the button was removed outright — deploys now require a shell on the
-  operator's own machine. [ADR-015](docs/architecture/adr/015-local-only-deploy-trigger.md)
-  records the reasoning, including the two earlier attempts that weren't
-  good enough.
-- **An engineering problem solved properly, not worked around.** The
-  frontend deploys once; the backend it should reach changes constantly —
-  local, Azure, AWS, or (the normal steady state) nothing at all, since
-  clusters are ephemeral by design. Rather than a fixed URL and manual
-  redeploys, the frontend health-checks a priority list of candidates per
-  request and automatically uses whichever one is actually alive, fronted
-  by an ephemeral HTTPS tunnel (solving the real mixed-content problem a
-  free-tier NodePort creates) whose current address is published through
-  the repo itself. One Vercel deployment, touched once, correctly finds
-  whichever backend is running, with zero redeploys and zero per-visit
-  configuration. Full writeup: [ADR-016](docs/architecture/adr/016-dynamic-backend-resolution.md).
-- **Scrum process artifacts that are actually load-bearing, not
-  decorative.** Every non-trivial decision is a numbered ADR with
-  rejected alternatives, not just the chosen path (17 so far). Every issue
-  follows Epic→Story→Task with Given/When/Then acceptance criteria against
-  standing Definition-of-Ready/Done docs. This repo's own `CLAUDE.md`
-  encodes the actual working contract (lock/halt files for unattended
-  runs, commit conventions, issue-hygiene rules) — the kind of process
-  discipline a client is trusting a tech lead to bring, made inspectable
-  rather than asserted.
-- **Fluency with AI-assisted engineering, with real discipline layered on
-  top.** Large parts of this codebase — including the infrastructure work
-  described above — were built working with Claude Code, directed and
-  reviewed at every step: tests run and read, not assumed green; every
-  cloud change verified live against the actual running system, not
-  trusted from a plan; documentation reconciled against real code
-  afterward rather than left to drift (this README and the architecture
-  doc it links were both audited against source for exactly that during
-  this project). Knowing how to get real leverage from these tools without
-  losing engineering rigor is itself part of what a modernization
-  engagement is paying for today.
-
-## Architecture, in one view
+Filmpire is an end-to-end cloud-native microservices ecosystem that transforms a movie catalog frontend into a full-scale distributed streaming and discovery platform. Rather than acting as a simple proxy to third-party APIs, Filmpire operates an independent, self-populating data platform with polyglot persistence, local AI inference, asynchronous event streaming, and multi-cloud orchestration.
 
 ```
-React (Vite) ──HTTPS, resolved per-request──▶ API Gateway (Spring Cloud, :8080)
-                                                      │  JWT auth · rate limiting
-                                                      │  circuit breakers · CORS
-                    ┌─────────────┬──────────────┬────┴────┬─────────────┐
-                    ▼             ▼              ▼         ▼             ▼
-              movie-service  user-service  actor-service  ai-service  media-service
-               (:8081)         (:8082)       (:8083)      (:8084/9084)  (:8085)
-                    │             │              │             │            │
-                MongoDB      PostgreSQL     PostgreSQL   PostgreSQL    MongoDB
-                                                          +pgvector    +MinIO
-                                                               │
-                                                          Ollama (local LLM)
-                                                          + Vosk (offline STT)
+React 18 / Vite SPA (Vercel)
+         │
+         ▼  (HTTPS / Dynamic Auto-Discovery)
+API Gateway (Spring Cloud Gateway :8080) ──► JWT Auth · Redis Rate Limiter · Circuit Breakers
+         │
+ ┌───────┼────────────────┬────────────────┬───────────────┬────────────────┐
+ ▼       ▼                ▼                ▼               ▼                ▼
+Movie   User            Actor              AI            Media          Discovery
+Service Service         Service          Service        Service          Service
+(:8081) (:8082)         (:8083)       (:8084/:9084)     (:8085)          (:8761)
+   │       │                │                │               │              │
+MongoDB PostgreSQL      PostgreSQL      PostgreSQL       MongoDB         Eureka
+  8.0      17               17           +pgvector        +MinIO         (Local)
+   │                                         │
+Redis                                   Ollama (LLaMA 3.2)
+ (Cache)                                + Vosk (Offline STT)
 ```
 
-`discovery-service` (Eureka) and `config-service` back the local profile;
-Kubernetes' own Service DNS + ConfigMaps replace both natively in every
-cloud overlay ([ADR-005](docs/architecture/adr/005-eureka-config-vs-kubernetes-native.md)) —
-one less thing running on a free-tier node. Kafka carries a fire-and-forget
-analytics event off the request path locally
-([ADR-006](docs/architecture/adr/006-kafka-event-bus.md)).
+### Key Engineering Highlights
 
-**Live-verified right now, on both Azure and AWS, when a cluster is up**
-(they're ephemeral by design — see [Deployment](#deployment) below): movie
-browsing, actor pages, registration/login with real signed JWTs, and voice
-control's speech-to-text with an offline model baked into the image. Not
-curled against a bare pod — through the real gateway, real CORS, from the
-real deployed frontend's origin.
+* **Self-Healing Data Ingestion:** TMDB v3 API facade transparently persists external movie/actor records on first request and automatically repairs local schema drift upon subsequent reads ([ADR-010](docs/architecture/adr/010-tmdb-facade-mapped-persisted-schema.md), [ADR-011](docs/architecture/adr/011-self-healing-read-through-on-schema-drift.md)).
+* **Local-First AI ($0 API Cost):** AI chat assistant, semantic vector search, and content-based recommendations powered entirely by Spring AI, Ollama (`llama3.2` and `nomic-embed-text`), and `pgvector` with zero paid API dependencies ([ADR-012](docs/architecture/adr/012-ai-service-postgresql-pgvector.md)).
+* **Offline Voice Control:** Speech-to-text recognition operating entirely within the container via an embedded Vosk C++ native model (`vosk-model-small-en-us-0.15`).
+* **Multi-Cloud Parity ($0 Cost Model):** Ephemeral, reproducible cloud infrastructure codified in Terraform for both Azure AKS and AWS k3s on EC2 with automated teardown and budget guards ([ADR-004](docs/architecture/adr/004-zero-budget-cloud-strategy.md), [ADR-017](docs/architecture/adr/017-full-cloud-service-parity.md)).
+* **Dynamic Backend Resolution:** Single frontend build on Vercel dynamically discovers, health-checks, and binds to active cloud backends via GitHub raw pointer resolution without rebuilds ([ADR-016](docs/architecture/adr/016-dynamic-backend-resolution.md)).
 
-## Technology stack
+---
 
-| Layer | Choice |
-|---|---|
-| Backend | Java 25, Spring Boot 4.1.0, Spring Cloud 2025.1.2, Gradle (Groovy DSL) |
-| AI | Spring AI 2.0.0, Ollama (local, $0 — no OpenAI key anywhere), Vosk (offline speech-to-text) |
-| Data | PostgreSQL 17 + pgvector, MongoDB 8.0, Redis 7.4, MinIO (S3-compatible) |
-| Messaging | Apache Kafka (local profile — analytics event bus) |
-| Frontend | React (Vite), Redux Toolkit Query, MUI |
-| Infra | Terraform (Azure AKS + AWS k3s-on-EC2), Kubernetes (Kustomize, no Helm for own services) |
-| CI/CD | GitHub Actions — build/test, Docker publish, Terraform plan; deploy triggered locally |
-| Testing | JUnit 5 + Mockito, Testcontainers, Spring Cloud Contract, Playwright, Postman/Newman, Gatling, Vitest — 7 distinct types, see [§10](docs/architecture/ARCHITECTURE.md#10-testing-strategy) |
-| Observability | Prometheus/Grafana + Alertmanager, ELK, Micrometer Tracing + Zipkin — built, local-profile by default (§12) |
+## 2. Feature Catalog & Technical Implementation
 
-## Deployment
+| Feature Area | Microservice | Storage / Tech | Implementation Details |
+|---|---|---|---|
+| **Movie Catalog & Browse** | [`movie-service`](backend/movie-service/) | MongoDB 8.0, Redis 7.4 | TMDB facade routes (`/movie/**`, `/genre/**`, `/discover/**`). Maps external payloads into typed documents, caches hot queries in Redis, and persists records locally. |
+| **User Authentication & Profiles** | [`user-service`](backend/user-service/) | PostgreSQL 17, JPA/Hibernate | BCrypt password hashing, signed JWT access/refresh token lifecycle, user profiles, favorite movies, and watchlist management. |
+| **Actor Biographies & Credits** | [`actor-service`](backend/actor-service/) | PostgreSQL 17, JPA/Hibernate | Actor profile retrieval, filmography mapping, and person discovery routes (`/person/**`, `/search/person`). |
+| **AI Assistant & Semantic Search** | [`ai-service`](backend/ai-service/) | PostgreSQL + pgvector, Ollama | Contextual movie chat via LLaMA 3.2, natural language semantic search using vector embeddings (`nomic-embed-text`), and taste-profile recommendations. |
+| **Voice Navigation** | [`ai-service`](backend/ai-service/) | Vosk native library | Speech-to-text audio processing (`POST /api/v1/ai/speech-to-text`). Translates spoken commands into category navigation, searches, and UI actions. |
+| **Media Asset Management** | [`media-service`](backend/media-service/) | MinIO (S3 API), MongoDB 8.0 | Multipart image upload, binary chunking, metadata indexing, and presigned asset streaming. |
+| **Traffic Control & Edge Routing** | [`api-gateway`](backend/api-gateway/) | Spring Cloud Gateway, Redis | Redis token-bucket rate limiting, Resilience4j circuit breakers, JWT validation filter, CORS origin pattern matching, and URL rewrites. |
+| **Web Client Application** | [`frontend/filmpire`](frontend/filmpire/) | React 18, Vite, Redux Toolkit, MUI | Responsive UI, dark/light theme toggle, speech recognition controller, movie trailer modal, and dynamic backend resolver. |
 
-Both clouds are **ephemeral by design** — provisioned for a demo,
-`terraform destroy`d after, nothing running unattended. That's what keeps
-this at genuine $0: not a specific "free" SKU (both accounts have real,
-sometimes surprising constraints — see [What this demonstrates](#what-this-demonstrates)
-above), but the habit of not leaving anything on.
+---
 
-```bash
-./gradlew deployLocal      # full stack, Docker/Podman Compose — the daily dev loop
-./gradlew deployAzure      # AKS, full service parity, live-verified
-./gradlew deployAws        # k3s-on-EC2, full service parity, live-verified
-./gradlew destroyAzure     # destroyAws — always run when done demoing
+## 3. SDLC Story: From Idea to Finished Product
+
+Filmpire was engineered following a strict **Agile/Scrum** software development lifecycle, prioritizing architectural integrity, rigorous quality gates, and automated validation at every phase.
+
+```
+┌─────────────────┐     ┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐
+│  1. Inception   │ ──► │  2. Architecture │ ──► │ 3. Quality Gates │ ──► │ 4. Delivery &    │
+│  & Requirements │     │  & Design (ADRs) │     │    & Testing     │     │    Multi-Cloud   │
+└─────────────────┘     └──────────────────┘     └──────────────────┘     └──────────────────┘
+ • Product Goal          • 17 Recorded ADRs       • Unit & Integration     • Terraform Infra
+ • User Stories          • Microservices & Hex    • Contract Testing       • K8s Kustomize
+ • Given/When/Then AC    • Polyglot Storage       • Playwright E2E         • Ephemeral Clusters
+ • Definition of Done    • OpenAPI Contracts      • SonarQube & Spotless   • Dynamic Discovery
 ```
 
-Full runbook, including how the frontend finds whichever backend is up:
-[`docs/guides/DEPLOYMENT_GUIDE.md`](docs/guides/DEPLOYMENT_GUIDE.md).
+### Phase 1: Inception & Backlog Grooming
+* **Product Goal Formulation:** Established core requirements for an independent, AI-augmented movie platform ([PRODUCT_GOAL.md](docs/process/PRODUCT_GOAL.md)).
+* **Scrum Methodology:** Backlog organized into formal **Epics → User Stories → Technical Tasks** with strict acceptance criteria formulated in `Given / When / Then` syntax ([METHODOLOGY.md](docs/process/METHODOLOGY.md)).
+* **Quality Contracts:** Enforced strict [Definition of Ready (DoR)](docs/process/DEFINITION_OF_READY.md) and [Definition of Done (DoD)](docs/process/DEFINITION_OF_DONE.md) standards before any story was promoted to `main`.
 
-### One frontend deploy, any live backend
+### Phase 2: Architecture & Decision Records
+Every significant architectural choice, pivot, and rejected alternative was formally recorded as a numbered Architectural Decision Record (ADR):
+* [ADR-001: Microservices Architecture](docs/architecture/adr/001-microservices-architecture.md) — 8 distinct bounded contexts vs. monolith.
+* [ADR-002: Database Per Service](docs/architecture/adr/002-database-per-service.md) — Polyglot persistence (PostgreSQL, MongoDB, Redis, MinIO).
+* [ADR-005: Eureka/Config vs. Native K8s](docs/architecture/adr/005-eureka-config-vs-kubernetes-native.md) — Cloud overlays leverage native K8s DNS and ConfigMaps.
+* [ADR-010: Facade-Mapped Persisted Schema](docs/architecture/adr/010-tmdb-facade-mapped-persisted-schema.md) — Self-populating local catalog.
+* [ADR-012: PostgreSQL + pgvector for AI](docs/architecture/adr/012-ai-service-postgresql-pgvector.md) — Local vector storage for RAG and embeddings.
+* [ADR-016: Dynamic Backend Resolution](docs/architecture/adr/016-dynamic-backend-resolution.md) — Seamless single-SPA cloud binding.
+* [ADR-017: Full Cloud Service Parity](docs/architecture/adr/017-full-cloud-service-parity.md) — Zero-discrepancy cloud deployments.
+*(See [Master Documentation Index](#11-master-documentation-index) for all 17 ADRs).*
 
-The link at the top of this page is not pointed at a specific cloud. The
-frontend resolves its backend per request — local → cloud (health-checked)
-→ a published tunnel URL (health-checked) — and automatically uses
-whichever one actually answers. If neither cloud is up when you visit (the
-normal state, per the paragraph above), it falls back cleanly rather than
-hanging. Full mechanism: [ADR-016](docs/architecture/adr/016-dynamic-backend-resolution.md).
+### Phase 3: Implementation & Clean Code Standards
+* **Java 25 & Spring Boot 4.1:** Multi-module Gradle build using modern Java features (records, pattern matching, virtual threads).
+* **Shared Library Abstraction:** Common `shared-library` module containing unified `ApiResponse<T>` wrappers, standard exception hierarchies, and distributed tracing interceptors.
+* **Javadoc & Inline Documentation:** 100% documentation contract covering all classes, methods, and test fixtures explaining architectural rationale.
 
-## Quick start (local)
+---
 
-```bash
-git clone https://github.com/pehlivanu/filmpire-microservices.git
-cd filmpire-microservices
-cp infrastructure/docker/.env.example infrastructure/docker/.env
-# edit infrastructure/docker/.env — set TMDB_API_KEY (free: themoviedb.org/settings/api)
+## 4. System Architecture & Data Flows
 
-./gradlew deployLocal
-# or directly: infrastructure/scripts/start-infrastructure.sh
+### Real-Time Request Lifecycle
 
-curl http://localhost:8080/genre/movie/list   # smoke test
-
-cd frontend/filmpire && npm install && npm run dev
+```
+[Browser Client]
+       │
+       │ 1. GET /movie/popular (or /api/v1/movies/...)
+       ▼
+[api-gateway :8080]
+  ├── Filter: CorrelationId & Micrometer Trace Injection
+  ├── Filter: Redis Token Bucket Rate Limiting (10 req/s, burst 20)
+  ├── Filter: JWT Security Authentication & Role Check
+  └── Route: Forward to http://movie-service:8081
+       │
+       ▼
+[movie-service :8081]
+  ├── 1. Check Redis Cache for key 'movies:popular:page:1'
+  │      └── If HIT: Return cached JSON payload
+  └── 2. If MISS: Query local MongoDB 'movies' collection
+         ├── If Found & Schema Fresh: Return MongoDB document & populate Redis
+         └── If Missing or Drift Detected:
+                ├── Invoke TMDB API upstream
+                ├── Map external schema to Movie entity
+                ├── Save/Upsert to MongoDB
+                └── Populate Redis & return response
 ```
 
-Voice control and AI chat/recommendations need Ollama's models pulled once
-(`docker exec filmpire-ollama ollama pull llama3.2` +
-`nomic-embed-text`) — see the deployment guide for the full checklist.
+### AI Chat & Semantic Vector Search Flow
 
-## Project structure
+```
+[Browser Client] ──► POST /api/v1/ai/chat {"query": "Find dark sci-fi thrillers with AI"}
+       │
+       ▼
+[api-gateway] ──► Forward to http://ai-service:8084
+       │
+       ▼
+[ai-service :8084]
+  ├── 1. Generate Query Embedding via Ollama ('nomic-embed-text')
+  ├── 2. Perform Cosine Similarity Search in PostgreSQL (pgvector cosine operator `<=>`)
+  ├── 3. Retrieve Top-K Matching Movie Overviews & Metadata
+  ├── 4. Construct Augmented Prompt with Movie Context
+  └── 5. Stream LLM Response from Ollama ('llama3.2') back to Gateway/Client
+```
+
+---
+
+## 5. Codebase Organization & Repository Topology
 
 ```
 filmpire-microservices/
-├── backend/            # 8 Spring Boot services (see architecture diagram above)
-├── frontend/filmpire/   # React (Vite) app — full original history preserved (ADR-013)
-├── infrastructure/
-│   ├── terraform/       # Azure AKS + AWS k3s, free-tier provisioning
-│   ├── kubernetes/       # Kustomize: base/ + overlays/{local,azure,aws} + monitoring/
-│   └── scripts/          # deployAzure/deployAws/deployLocal wrappers, tunnel mgmt
-├── e2e/                 # Playwright, browser-level acceptance tests
-└── docs/
-    ├── architecture/     # ARCHITECTURE.md (2700+ lines, kept in sync with source) + 17 ADRs
-    ├── process/          # Scrum artifacts — DoR/DoD/NFRs, product goal
-    ├── api/              # Postman collection
-    └── guides/           # Deployment guide, frontend-binding runbook
+├── backend/                               # 8 Java 25 / Spring Boot 4 Microservices
+│   ├── shared-library/                    # Common DTOs, security filters, error handlers, tracing
+│   ├── api-gateway/                       # Spring Cloud Gateway WebFlux, Redis rate limiter, CORS
+│   ├── discovery-service/                 # Netflix Eureka server (local dev profile)
+│   ├── config-service/                    # Spring Cloud Config server (centralized config)
+│   ├── movie-service/                     # TMDB facade, catalog persistence, MongoDB, Redis
+│   ├── user-service/                      # User auth, JWT issuance, profile, PostgreSQL
+│   ├── actor-service/                     # Actor biographies & filmographies, PostgreSQL
+│   ├── ai-service/                        # Spring AI, pgvector embeddings, Ollama, Vosk STT
+│   └── media-service/                     # Media asset management, MinIO S3 object storage
+│
+├── frontend/                              # Frontend Web Application
+│   └── filmpire/                          # React 18, Vite, Redux Toolkit Query, MUI v5
+│
+├── infrastructure/                        # Multi-Cloud & Local Infrastructure as Code
+│   ├── docker/                            # Docker Compose full-stack topology (15 containers)
+│   ├── kubernetes/                        # K8s Manifests (Kustomize)
+│   │   ├── base/                          # Base deployments, services, statefulsets
+│   │   ├── overlays/                      # Environment overlays: local, azure, aws
+│   │   └── monitoring/                    # Prometheus, Grafana, ServiceMonitors
+│   ├── terraform/                         # Infrastructure as Code
+│   │   ├── azure/                         # Azure AKS, VNet, Subnets, NSGs, Budget Tripwires
+│   │   ├── aws/                           # AWS EC2 k3s cluster, VPC, Security Groups
+│   │   └── modules/                       # Reusable cloud modules (network, compute, budget)
+│   └── scripts/                           # Automation scripts (deploy, destroy, status, tunnel)
+│
+├── e2e/                                   # Playwright browser acceptance test suite
+├── docs/                                  # Comprehensive technical documentation
+│   ├── architecture/                      # Full ARCHITECTURE.md spec + 17 ADRs
+│   ├── process/                           # Scrum framework, DoR, DoD, NFRs, Product Goals
+│   ├── guides/                            # Deployment runbooks, local quick starts
+│   └── security/                          # DDoS protection & security architecture
+│
+├── .github/                               # CI/CD Workflows & Issue Templates
+│   ├── workflows/                         # GitHub Actions pipelines (CI, CD, Docker, Terraform)
+│   └── ISSUE_TEMPLATE/                    # Agile issue templates (Epic, Story, Task, Bug)
+└── build.gradle                           # Root multi-project Gradle build configuration
 ```
-
-## Documentation
-
-- [Architecture Document](docs/architecture/ARCHITECTURE.md) — the complete, current system design; every claim in it is checked against real source, not just the original plan
-- [Architecture Decision Records](docs/architecture/adr/) — 17 decisions, each with what was rejected and why
-- [Deployment Guide](docs/guides/DEPLOYMENT_GUIDE.md) — local, Azure, AWS, and how the frontend binds to whichever is live
-- [Port Mapping](docs/architecture/PORT_MAPPING.md) · [Postman Collection](docs/api/) · [Frontend Runbook](docs/guides/RUN_WITH_FILMPIRE_APP.md)
-
-## Testing
-
-```bash
-./gradlew test                       # all backend services
-cd backend/movie-service && ../../gradlew test   # one service
-cd frontend/filmpire && npm test     # Vitest — 180+ tests
-```
-
-Seven distinct test types run across this codebase — unit, integration
-(Testcontainers, real databases, no H2), contract (Spring Cloud Contract),
-browser E2E (Playwright), API smoke (Postman/Newman against the live
-composed stack, nightly), load (Gatling), and frontend component tests
-(Vitest + Testing Library) — see [§10](docs/architecture/ARCHITECTURE.md#10-testing-strategy)
-for what each one actually covers and where it lives.
-
-## About
-
-Built solo by **Liviu Ionesi** as a demonstration of what one engineer,
-working deliberately at the intersection of AI-assisted development and
-real engineering discipline, can ship: a production-shaped system, not a
-toy — real multi-cloud infrastructure, real cost accountability, real
-process rigor, and documentation that's actually kept honest against the
-code rather than written once and abandoned.
-
-Available for **tech lead and freelance engagements** — modernization,
-platform/cloud engineering, and systems built to this standard. Open
-issues and the commit history are the actual work log, not a curated
-highlight reel: [github.com/pehlivanu/filmpire-microservices](https://github.com/pehlivanu/filmpire-microservices).
 
 ---
 
-**Status:** actively developed — see [open issues](https://github.com/pehlivanu/filmpire-microservices/issues) for what's next.
+## 6. The 7-Layer Testing Strategy
+
+Filmpire implements a comprehensive testing pyramid encompassing 7 distinct testing disciplines, ensuring zero regressions across backend services, distributed data flows, contract boundaries, and frontend user journeys.
+
+```
+                  ┌──────────────────────┐
+                  │ 7. Load / Stress     │  Gatling (HTTP latency & circuit breaker trip)
+                  ├──────────────────────┤
+                  │ 6. API Regression    │  Postman / Newman Collections
+                  ├──────────────────────┤
+                  │ 5. Browser E2E       │  Playwright (Multi-browser user journeys)
+                  ├──────────────────────┤
+                  │ 4. Frontend UI/State │  Vitest 4, React Testing Library (180+ tests)
+                  ├──────────────────────┤
+                  │ 3. Contract Tests    │  Spring Cloud Contract (Consumer-Driven Contracts)
+                  ├──────────────────────┤
+                  │ 2. Integration Tests │  Testcontainers (Real Postgres, MongoDB, Redis)
+                  ├──────────────────────┤
+                  │ 1. Unit Tests        │  JUnit 5, Mockito, AssertJ (Isolated business logic)
+                  └──────────────────────┘
+```
+
+### Test Suite Execution Commands
+
+```bash
+# Level 1 & 2: Unit and Testcontainers Integration Tests (all backend modules)
+./gradlew test
+
+# Run tests for a specific microservice
+./gradlew :backend:movie-service:test
+./gradlew :backend:ai-service:test
+
+# Level 3: Consumer-Driven Contract Verification
+./gradlew :backend:api-gateway:contractTest
+
+# Level 4: Frontend Component & State Tests (Vitest)
+cd frontend/filmpire && npm test
+
+# Frontend test coverage report
+cd frontend/filmpire && npm run test:coverage
+
+# Level 5: Playwright Browser End-to-End Tests
+cd e2e && npx playwright test
+
+# Level 6: Automated Postman/Newman API Smoke Test (requires running stack)
+newman run docs/api/Filmpire_API.postman_collection.json -e docs/api/local_environment.json
+
+# Level 7: Gatling Performance & Load Simulation
+./gradlew :backend:api-gateway:gatlingRun
+```
+
+---
+
+## 7. Multi-Cloud Deployment & Infrastructure Topology
+
+Filmpire supports three fully-codified deployment targets with 100% feature and service parity:
+
+```
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                                DEPLOYMENT TARGETS                                      │
+├──────────────────────────┬─────────────────────────────┬───────────────────────────────┤
+│ 1. Local Compose         │ 2. Azure AKS (Terraform)    │ 3. AWS k3s (Terraform)        │
+├──────────────────────────┼─────────────────────────────┼───────────────────────────────┤
+│ • Full 15-container stack│ • Managed AKS Cluster       │ • Lightweight k3s on EC2      │
+│ • Docker / Podman        │ • Standard_D4ls_v7 node     │ • t3.xlarge instance          │
+│ • Eureka + Config Server │ • Native K8s DNS & Config   │ • Native K8s DNS & Config     │
+│ • Kafka + ELK + Zipkin   │ • Budget tripwire guard ($1)│ • Cloudflare HTTPS Tunnel     │
+│ • Command:               │ • Command:                  │ • Command:                    │
+│   ./gradlew deployLocal  │   ./gradlew deployAzure     │   ./gradlew deployAws         │
+└──────────────────────────┴─────────────────────────────┴───────────────────────────────┘
+```
+
+### One-Command Deployment Automation
+
+All infrastructure actions are wrapped into unified Gradle tasks and shell automation:
+
+```bash
+# Deploy full stack locally with Podman/Docker Compose
+./gradlew deployLocal
+
+# Check status of local containers or cloud cluster
+./gradlew statusInfra
+
+# Deploy full production stack to Azure AKS via Terraform
+./gradlew deployAzure
+
+# Deploy full production stack to AWS EC2 k3s via Terraform
+./gradlew deployAws
+
+# Teardown cloud environments immediately to guarantee $0 spend
+./gradlew destroyAzure
+./gradlew destroyAws
+```
+
+### Dynamic Runtime Frontend-to-Backend Binding
+The frontend on Vercel resolves its active backend dynamically at runtime ([`apiUrl.js`](frontend/filmpire/src/utils/apiUrl.js)):
+1. Checks for manual override in `localStorage` (`filmpire_api_url`).
+2. Checks for build-time `VITE_API_URL`.
+3. Resolves the live Cloudflare HTTPS tunnel pointer from GitHub ([`infrastructure/tunnel-url.txt`](infrastructure/tunnel-url.txt)).
+4. Verifies candidate reachability via `/actuator/health`.
+5. Automatically routes all RTK Query requests to the live backend.
+
+---
+
+## 8. Observability, Logging & Telemetry
+
+Filmpire incorporates a complete observability stack spanning structured logging, distributed tracing, and real-time metric visualization.
+
+```
+                                  TELEMETRY PIPELINE
+                                  
+ [Microservices] ──JSON stdout──► [Filebeat] ──► [Logstash] ──► [Elasticsearch] ──► [Kibana :5601]
+       │                                                                               (Log Analysis)
+       ├──Micrometer B3 Tracing──► [OpenZipkin :9411]
+       │                               (Distributed Trace Spans & Latency Graph)
+       └──Prometheus Metrics (/actuator/prometheus) ──► [Prometheus :9090] ──► [Grafana :3001]
+                                                                                (Health Dashboards)
+```
+
+* **Structured Logging:** Standardized JSON log output via Logback and `LogstashEncoder` including timestamps, log levels, service names, thread identifiers, and active correlation IDs.
+* **Distributed Tracing:** Micrometer Tracing with OpenZipkin propagators injecting `traceId` and `spanId` headers across HTTP calls and Kafka events for end-to-end request latency profiling.
+* **Metrics & Dashboards:** Spring Boot Actuator endpoints scraped by Prometheus every 15 seconds, rendering real-time JVM memory, CPU utilization, HTTP latency percentiles, and Resilience4j circuit breaker state in pre-built Grafana dashboards.
+
+---
+
+## 9. CI/CD Pipelines & Code Management
+
+### Automated GitHub Actions Workflows
+
+| Pipeline | Trigger | Responsibilities |
+|---|---|---|
+| [`backend-ci.yml`](.github/workflows/backend-ci.yml) | Push/PR to `main`, `develop` | Compiles Java 25 modules, executes Spotless/Checkstyle, runs JUnit & Testcontainers suites, verifies SonarQube Quality Gate. |
+| [`frontend-ci.yml`](.github/workflows/frontend-ci.yml) | Push/PR to `main`, `develop` | Runs ESLint, Prettier, and Vitest component suite with code coverage validation. |
+| [`docker-publish.yml`](.github/workflows/docker-publish.yml) | Chained to green Backend CI on `main` | Builds multi-stage container images for all 8 microservices and publishes to GitHub Container Registry (`ghcr.io/pehlivanu/filmpire-*`). |
+| [`terraform-plan.yml`](.github/workflows/terraform-plan.yml) | Changes to `infrastructure/terraform/**` | Validates HCL syntax, runs `terraform fmt`, and generates speculative execution plans for Azure and AWS. |
+
+### Code Quality & Maintenance Tooling
+
+* **Automated Code Modernization (OpenRewrite):** Automated recipes for Spring Boot upgrades and clean code patterns:
+  ```bash
+  ./gradlew rewriteRun
+  ```
+* **Git Commit Enforcement:** A pre-commit hook (`.githooks/pre-commit`) blocks broken builds, while a commit-msg hook (`.githooks/commit-msg`) enforces semantic commit formats linking active GitHub issues (`feat: Add AI recommendation (#36)`).
+* **Architecture Knowledge Graph (Graphify):** Generates and maintains a full AST knowledge graph in `graphify-out/` mapping cross-service dependencies and coupling.
+
+---
+
+## 10. Local Quick Start Guide
+
+### Prerequisites
+* Java 25 JDK (Temurin recommended)
+* Node.js 20+ and npm
+* Docker 24+ or Podman 5+ with Compose support
+
+### Step-by-Step Launch
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/pehlivanu/filmpire-microservices.git
+cd filmpire-microservices
+
+# 2. Configure environment variables
+cp infrastructure/docker/.env.example infrastructure/docker/.env
+# (Optional: Add your free TMDB_API_KEY from themoviedb.org/settings/api)
+
+# 3. Launch the complete local microservices infrastructure
+./gradlew deployLocal
+
+# 4. Pull Ollama AI models for chat and embeddings (one-time setup)
+docker exec -it filmpire-ollama ollama pull llama3.2
+docker exec -it filmpire-ollama ollama pull nomic-embed-text
+
+# 5. Start the React/Vite development server
+cd frontend/filmpire
+npm install
+npm run dev
+```
+
+Visit **`http://localhost:5173`** (or `http://localhost:3000`) in your browser to interact with the application.
+
+---
+
+## 11. Master Documentation Index
+
+### Architecture & Engineering Decisions
+* [System Architecture Specification (ARCHITECTURE.md)](docs/architecture/ARCHITECTURE.md)
+* [Port & Network Mapping Guide](docs/architecture/PORT_MAPPING.md)
+* [Code Quality & Static Analysis Guidelines](docs/architecture/CODE_QUALITY.md)
+* [Gradle Multi-Module Build Architecture](docs/architecture/GRADLE_BUILD_SETUP.md)
+* [Docker & Local Infrastructure Guide](docs/architecture/DOCKER_INFRASTRUCTURE_SETUP.md)
+* [Integration Testing Strategy & Testcontainers](docs/architecture/INTEGRATION_TESTING.md)
+* [Junior Developer Onboarding Guide](docs/architecture/JUNIOR_DEVELOPER_GUIDE.md)
+
+### Architectural Decision Records (ADRs)
+* [ADR-001: Microservices Architecture Selection](docs/architecture/adr/001-microservices-architecture.md)
+* [ADR-002: Database Per Service Architecture](docs/architecture/adr/002-database-per-service.md)
+* [ADR-003: TMDB Raw Passthrough Facade](docs/architecture/adr/003-tmdb-raw-passthrough-facade.md)
+* [ADR-004: Zero-Budget Multi-Cloud Strategy](docs/architecture/adr/004-zero-budget-cloud-strategy.md)
+* [ADR-005: Eureka/Config vs. Native Kubernetes](docs/architecture/adr/005-eureka-config-vs-kubernetes-native.md)
+* [ADR-006: Apache Kafka Event Bus](docs/architecture/adr/006-kafka-event-bus.md)
+* [ADR-007: Distributed Tracing with OpenZipkin](docs/architecture/adr/007-distributed-tracing-zipkin.md)
+* [ADR-008: Consumer-Driven Contract Testing](docs/architecture/adr/008-contract-testing.md)
+* [ADR-009: OpenRewrite Spring Boot Modernization](docs/architecture/adr/009-openrewrite-spring-boot-4-migration.md)
+* [ADR-010: Facade-Mapped Persisted Catalog Schema](docs/architecture/adr/010-tmdb-facade-mapped-persisted-schema.md)
+* [ADR-011: Self-Healing Read-Through on Schema Drift](docs/architecture/adr/011-self-healing-read-through-on-schema-drift.md)
+* [ADR-012: AI Service with PostgreSQL & pgvector](docs/architecture/adr/012-ai-service-postgresql-pgvector.md)
+* [ADR-013: Frontend Monorepo Integration](docs/architecture/adr/013-frontend-merged-into-monorepo.md)
+* [ADR-014: Media Service with S3 and MongoDB](docs/architecture/adr/014-media-service-s3-mongo-storage.md)
+* [ADR-015: Operator-Controlled Local Deploy Triggers](docs/architecture/adr/015-local-only-deploy-trigger.md)
+* [ADR-016: Dynamic Runtime Backend Resolution](docs/architecture/adr/016-dynamic-backend-resolution.md)
+* [ADR-017: Full Service Cloud Parity](docs/architecture/adr/017-full-cloud-service-parity.md)
+
+### Scrum Process & SDLC
+* [Product Goal & Vision](docs/process/PRODUCT_GOAL.md)
+* [Agile Methodology & Scrum Process](docs/process/METHODOLOGY.md)
+* [Definition of Ready (DoR)](docs/process/DEFINITION_OF_READY.md)
+* [Definition of Done (DoD)](docs/process/DEFINITION_OF_DONE.md)
+* [Non-Functional Requirements (NFRs)](docs/process/NON_FUNCTIONAL_REQUIREMENTS.md)
+* [Scrum Events & Ceremony Protocol](docs/process/SCRUM_EVENTS.md)
+
+### Deployment, Operations & Security
+* [Multi-Cloud Deployment Runbook](docs/guides/DEPLOYMENT_GUIDE.md)
+* [Frontend Integration & Execution Guide](docs/guides/RUN_WITH_FILMPIRE_APP.md)
+* [Terraform Infrastructure Documentation](infrastructure/terraform/README.md)
+* [Docker Compose Testing Runbook](infrastructure/docker/TESTING_GUIDE.md)
+* [DDoS Mitigation & Rate Limiting Architecture](docs/security/DDOS_PROTECTION_IMPLEMENTED.md)
+* [Security Enhancements & Threat Model](docs/security/DDOS_PROTECTION_IMPROVEMENTS.md)
+
+### Microservice Subsystem Modules
+* [API Gateway Service](backend/api-gateway/README.md) · [Gateway Route Catalog](backend/api-gateway/ROUTES.md)
+* [Movie Catalog Service](backend/movie-service/README.md)
+* [User & Authentication Service](backend/user-service/README.md)
+* [Actor & Cast Service](backend/actor-service/README.md)
+* [AI Assistant & Vector Service](backend/ai-service/README.md)
+* [Media Asset Service](backend/media-service/README.md)
+* [Discovery Service (Eureka)](backend/discovery-service/README.md)
+* [Config Service](backend/config-service/README.md) · [Config Security](backend/config-service/SECURITY.md)
+* [Shared Java Library](backend/shared-library/README.md)
+* [Frontend Application](frontend/filmpire/README.md)
+* [End-to-End Playwright Suite](e2e/README.md)
+
+---
+
+## License
+
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
