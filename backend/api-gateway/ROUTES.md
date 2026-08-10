@@ -246,6 +246,15 @@ When rate limit is exceeded:
 - `http://localhost:3001` (Alternative React port)
 - `http://localhost:5173` (Vite default)
 - `http://localhost:5174` (Alternative Vite port)
+- `https://filmpire-microservices-tan.vercel.app` (deployed frontend)
+
+Plus origin **patterns** (`setAllowedOriginPatterns`, not the exact-match
+list above) for `http://localhost:*`, `https://*.vercel.app`,
+`https://*.duckdns.org`, and `https://*.trycloudflare.com` — the last one
+matters most in practice: the local dev tunnel and both cloud targets are
+all fronted by ephemeral Cloudflare quick-tunnel hostnames (see
+ARCHITECTURE.md §11.6), so an exact-match list would need editing every
+time one restarts.
 
 ### Allowed Methods
 

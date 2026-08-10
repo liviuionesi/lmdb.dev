@@ -135,9 +135,9 @@ backend without frontend logic changes beyond configuration — see
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│              Filmpire React App (existing, CRA)             │
-│     RTK Query + axios, TMDB v3 contract, Vosk AI voice      │
-│     baseURL: http://localhost:8080  (was api.themoviedb.org)│
+│         Filmpire React App (now Vite, frontend/filmpire)    │
+│    RTK Query, TMDB v3 contract, Vosk AI voice via ai-service │
+│  baseURL: resolved per-request (local/cloud/tunnel — ADR-016)│
 └──────────────────────────────┬──────────────────────────────┘
                                │  TMDB v3-shaped requests
                                ▼
@@ -176,7 +176,11 @@ backend without frontend logic changes beyond configuration — see
 ### 2.2 Communication Patterns
 
 - **Synchronous**: REST APIs (JSON) between clients and services
-- **Asynchronous**: gRPC for AI Service internal communication
+- **Asynchronous**: gRPC — `ai-service` exposes a gRPC server (port 9084,
+  `ai-service.proto`), but no other service currently calls it as a
+  client; all real ai-service traffic today goes through its REST API via
+  the gateway (§3.7). The gRPC surface is available for a future
+  backend-to-backend caller, not load-bearing yet.
 - **Event-Driven**: Kafka (ADR-006, local profiles only) — the TMDB facade
   publishes a `tmdb.document.saved` event (key: canonical request key;
   payload: endpoint type, path, timestamp) on every save-through; an
@@ -204,6 +208,10 @@ Significant decisions are recorded in [`adr/`](adr/):
 | [011](adr/011-self-healing-read-through-on-schema-drift.md) | Read-through treats a schema-drifted MongoDB document as a cache miss: evict + re-fetch instead of a permanent 500 |
 | [012](adr/012-ai-service-postgresql-pgvector.md) | ai-service stores conversations in PostgreSQL + pgvector, not MongoDB — amends ADR-002's AI row, since user-owned data can't be self-healed |
 | [013](adr/013-frontend-merged-into-monorepo.md) | Filmpire React frontend merged into this repo at `frontend/filmpire/` with full history preserved — this is now a monorepo |
+| [014](adr/014-media-service-s3-mongo-storage.md) | media-service: dual-tier storage — MinIO/S3-compatible object storage for user-uploaded binaries, MongoDB for their metadata; TMDB's own media stays on TMDB's CDN, never proxied |
+| [015](adr/015-local-only-deploy-trigger.md) | Deploy/destroy triggered only from a local shell (`./gradlew deploy*`) — the web-triggered `/admin` button and its serverless token proxy were removed outright, not just secured further, once found to have no authentication of its own |
+| [016](adr/016-dynamic-backend-resolution.md) | Frontend resolves its backend per-request (local → cloud → published tunnel fallback, health-checked), fronted by an ephemeral Cloudflare tunnel for HTTPS — one Vercel deploy works against any live backend, no redeploy needed |
+| [017](adr/017-full-cloud-service-parity.md) | Cloud overlays deploy the full local application service set (incl. Ollama), not a movie-only slice — re-sized nodes once verified live pricing showed the cost difference was negligible for ephemeral demo usage |
 
 ### 2.4 Failure-Mode Matrix
 
@@ -224,6 +232,15 @@ enforced by code and, where marked ✓, by an automated test):
 ---
 
 ## 3. Microservices Design
+
+> **Reading note:** the code blocks in this section illustrate each
+> service's real *pattern* (persistence strategy, layering, DI style) —
+> they're not always a byte-for-byte mirror of current source (class/method
+> names drift as the code evolves faster than this doc). Where a claim is
+> about **what exists or its status** — a feature, a technology choice, a
+> "planned"/"not implemented" note — that's been verified against running
+> code and kept accurate; treat those as load-bearing. For exact
+> implementation, the linked source file is always the source of truth.
 
 ### 3.1 Discovery Service (Eureka Server)
 
@@ -678,15 +695,17 @@ format): `/person/{id}`, `/person/{id}/movie_credits`, `/person/{id}/images`,
 
 ### 3.7 AI Service (Advanced)
 
-**Status: implemented (#36).** Built as specced below with two deliberate
-deviations: **Spring AI 2.0.0** (not the 1.0.0-SNAPSHOT this doc originally
-named — 2.x is what tracks Spring Boot 4.x), and **Ollama only, no OpenAI
-starter on the classpath at all** (not "OpenAI/Ollama" — ADR-004's $0 budget
-rules out a paid provider outright, so there's nothing to switch between).
-Voice recognition (Whisper) from the feature list below is **not
-implemented** — it needs a paid OpenAI key and isn't in #36's checklist.
-Semantic search is nearest-neighbour search over `user_taste_profiles`
-embeddings specifically (no separate per-movie embedding store exists), see
+**Status: implemented and live-verified (#36, #68, #151)** — all four
+features below are real, tested against the running service on Azure and
+AWS, not aspirational. Two deliberate deviations from the original spec:
+**Spring AI 2.0.0** (not the 1.0.0-SNAPSHOT this doc originally named —
+2.x is what tracks Spring Boot 4.x), and **Ollama only, no OpenAI starter on
+the classpath at all** (not "OpenAI/Ollama" — ADR-004's $0 budget rules out
+a paid provider outright, so there's nothing to switch between). Voice
+recognition uses **Vosk** (offline, local, no API key — see below), not
+Whisper, which needs a paid OpenAI key ADR-004 rules out. Semantic search is
+nearest-neighbour search over `user_taste_profiles` embeddings specifically
+(no separate per-movie embedding store exists), see
 `backend/ai-service/README.md` for the exact API surface.
 
 **Port:** 8084 (REST), 9084 (gRPC)  
@@ -713,11 +732,11 @@ embeddings specifically (no separate per-movie embedding store exists), see
 > rather than stock `postgres:17-alpine`) — a real change to `docker-compose.yml`
 > and the K8s overlays, and the main implementation cost of ADR-012.
 
-**Features:**
-1. **Voice Recognition** (Whisper API)
-2. **Movie Recommendations** (OpenAI/Ollama)
-3. **Chat Assistant**
-4. **Semantic Search**
+**Features (all live, REST via the gateway at `/api/v1/ai/**`):**
+1. **Speech-to-text** (`POST /speech-to-text`) — offline, Vosk, no cloud API
+2. **Movie recommendations** (`POST /recommendations`) — Ollama, grounded in movie-service's real catalog, never invents titles
+3. **Chat assistant** (`POST /chat`) — Ollama, persisted conversation history
+4. **Semantic search** (`GET /search/semantic`) — pgvector ANN query over taste-profile embeddings
 
 **Domain Model (JPA entities on PostgreSQL — ADR-012):**
 
@@ -797,96 +816,69 @@ Semantic search is an ANN query against the `vector` column, e.g.
 `ORDER BY embedding <=> :query LIMIT :k` with an HNSW or IVFFlat index —
 no separate vector database (ADR-004, ADR-012).
 
-**gRPC Service Definition (ai-service.proto):**
-```protobuf
-syntax = "proto3";
+**gRPC: exposed, not yet consumed.** `AiGrpcService` genuinely runs (port
+9084, `ai-service.proto` defines `GetRecommendations`/`TranscribeVoice`/
+`ChatWithAssistant`) — but no other service in this codebase calls it as a
+client today. All real traffic to ai-service, from the frontend and in every
+live test, goes through the REST API via the gateway. The gRPC surface is
+available for a future backend-to-backend caller (e.g. if movie-service ever
+wanted recommendations server-side) but isn't load-bearing yet — don't
+describe it as the primary integration path.
 
-package com.filmpire.ai;
+**Real implementation shape** (Spring AI 2.0's fluent `ChatClient` API, not
+the 1.0 `chatClient.call(new Prompt(...))` style):
 
-service AIService {
-  rpc GetRecommendations(RecommendationRequest) returns (RecommendationResponse);
-  rpc TranscribeVoice(VoiceRequest) returns (TranscriptionResponse);
-  rpc ChatWithAssistant(ChatRequest) returns (ChatResponse);
-}
-
-message RecommendationRequest {
-  string user_id = 1;
-  repeated string recent_movies = 2;
-  int32 count = 3;
-}
-
-message RecommendationResponse {
-  repeated MovieRecommendation recommendations = 1;
-}
-
-message MovieRecommendation {
-  string movie_id = 1;
-  double score = 2;
-  string reason = 3;
-}
-```
-
-**Spring AI Integration (Constructor Injection):**
 ```java
+// RecommendationService — grounds every recommendation in movie-service's
+// real catalog (via MovieCatalogClient) rather than letting the model
+// invent titles; the system prompt explicitly forbids that.
 @Service
-@Slf4j
-public class AIRecommendationService {
-    
-    private final ChatClient chatClient;
-    private final EmbeddingClient embeddingClient;
-    
-    // Constructor injection - NO @Autowired on fields
-    public AIRecommendationService(ChatClient chatClient, EmbeddingClient embeddingClient) {
-        this.chatClient = chatClient;
-        this.embeddingClient = embeddingClient;
+public class RecommendationService {
+  private final ChatClient chatClient;
+  private final EmbeddingModel embeddingModel;
+  private final MovieCatalogClient movieCatalogClient;
+  private final UserTasteProfileRepository tasteProfileRepository;
+
+  @Transactional
+  public RecommendationResponseDto recommend(RecommendationRequestDto request) {
+    List<CandidateMovie> candidates =
+        movieCatalogClient.fetchCandidates(request.countOrDefault() * 3);
+    refreshTasteProfile(request); // embeds recentMovies -> UserTasteProfile (pgvector)
+
+    return new RecommendationResponseDto(
+        chatClient.prompt()
+            .system(SYSTEM_PROMPT) // "pick from CANDIDATES ONLY, never invent"
+            .user(buildUserPrompt(request, candidates))
+            .call()
+            .entity(new ParameterizedTypeReference<List<MovieRecommendationDto>>() {}));
+  }
+}
+
+// SpeechToTextService — fully offline: Vosk model loaded lazily (first
+// request, not startup — a missing/undownloaded model shouldn't block
+// ai-service's other features), a fresh Recognizer per request (Vosk's
+// Recognizer isn't thread-safe), audio resampled to 16kHz mono PCM16
+// regardless of what the browser sent.
+@Service
+public class SpeechToTextService implements DisposableBean {
+  public String transcribe(MultipartFile audioFile) {
+    byte[] pcm = toPcm16Mono16kHz(audioFile);
+    try (Recognizer recognizer = new Recognizer(getOrLoadModel(), SAMPLE_RATE_HZ)) {
+      recognizer.acceptWaveForm(pcm, pcm.length);
+      return extractText(recognizer.getFinalResult());
     }
-    
-    /**
-     * Generates personalized movie recommendations using AI.
-     */
-    public List<MovieRecommendation> generateRecommendations(
-            String userId, 
-            List<String> recentMovies
-    ) {
-        // Build context from user's movie history
-        String context = buildUserContext(userId, recentMovies);
-        
-        // Create prompt
-        String prompt = """
-            Based on the user's movie watching history:
-            %s
-            
-            Recommend 10 similar movies they might enjoy.
-            For each recommendation, provide:
-            1. Movie title
-            2. Similarity score (0-1)
-            3. Brief explanation why they'd like it
-            
-            Format as JSON.
-            """.formatted(context);
-        
-        // Call AI model
-        ChatResponse response = chatClient.call(
-            new Prompt(prompt, 
-                OpenAiChatOptions.builder()
-                    .withModel("gpt-4")
-                    .withTemperature(0.7)
-                    .build()
-            )
-        );
-        
-        return parseRecommendations(response);
-    }
-    
-    /**
-     * Transcribes voice input to text using Whisper API.
-     */
-    public String transcribeVoice(byte[] audioData) {
-        // Implementation using Spring AI + Whisper
-        return whisperClient.transcribe(audioData);
-    }
+  }
 }
 ```
+
+**Deployment note (found live, #151):** the Vosk model (~40MB, small
+English) isn't downloaded by `docker-compose`/Terraform automatically — it's
+baked directly into the ai-service Docker image at build time so it's
+present identically on every deploy target (local, Azure, AWS), matching
+`VOSK_MODEL_PATH`'s default. `SpeechToTextService` loads it lazily, so a
+missing model previously meant ai-service *started* fine and only failed
+once a real transcription request needed it — a silent gap until it was
+actually exercised.
 
 ---
 
@@ -1125,11 +1117,11 @@ self-heals. Only mapping/conversion failures are absorbed this way —
 outage as a miss would stampede TMDB. This is safe **only** because the catalog
 is re-derivable from TMDB; user-owned data (favorites, watchlists, accounts)
 lives in PostgreSQL under Flyway and must never adopt this pattern.
-| 10 | Login | Gateway → user-service | **planned: Filmpire JWT, not TMDB session proxy — see below** |
-| 11 | Register | Gateway → user-service | **planned: Filmpire JWT, not TMDB session proxy — see below** |
-| 12 | Profile | Gateway → user-service | **planned: Filmpire JWT, not TMDB session proxy — see below** |
-| 13 | Favorites / watchlist lists | Gateway → user-service | **planned: Filmpire JWT, not TMDB session proxy — see below** |
-| 14 | Favorites / watchlist toggle | Gateway → user-service | **planned: Filmpire JWT, not TMDB session proxy — see below** |
+| 10 | Login | Gateway → user-service | **Filmpire JWT, not TMDB session proxy — implemented, see below** |
+| 11 | Register | Gateway → user-service | **Filmpire JWT, not TMDB session proxy — implemented, see below** |
+| 12 | Profile | Gateway → user-service | **Filmpire JWT, not TMDB session proxy — implemented, see below** |
+| 13 | Favorites / watchlist lists | Gateway → user-service | **Filmpire JWT, not TMDB session proxy — implemented, see below** |
+| 14 | Favorites / watchlist toggle | Gateway → user-service | **Filmpire JWT, not TMDB session proxy — implemented, see below** |
 
 **Read-through / save-through flow (endpoints 5, 8 — near-immutable detail
 resources):**
@@ -1160,15 +1152,21 @@ the rest (progressive enrichment).
   images stay on TMDB's CDN (no proxying; media-service stores/serves only
   those URLs, never the binaries — see §3.8).
 
-**Auth/account (endpoints 10–14) — planned change, not yet implemented:**
-these were originally a transparent pass-through to `api.themoviedb.org/3`
-(TMDB's own request-token/session-id flow). The product decision is now to
-retarget them at Filmpire's own user-service JWT auth (register/login,
-favorites, watchlist — already implemented and tested, see §3.5) instead,
-so the account features the showcase highlights are backed by Filmpire's own
-data, not TMDB's. This requires editing the React app's auth code
-(`src/services/TMDB.js`, `src/utils/index.js`, `NavBar`, `Profile`), not
-just its base URL — tracked as a follow-up to issue #33/#34.
+**Auth/account (endpoints 10–14) — implemented end-to-end, not a TMDB
+proxy:** these were originally speced as a transparent pass-through to
+`api.themoviedb.org/3` (TMDB's own request-token/session-id flow). That plan
+changed during implementation: they're retargeted at Filmpire's own
+user-service JWT auth instead (register/login, favorites, watchlist — see
+§3.5), so the account features are backed by Filmpire's own data, not
+TMDB's. This was a real, non-trivial deviation from the original spec — it
+required editing the React app's auth code, not just its base URL — and is
+fully done on both sides: `frontend/filmpire/src/components/NavBar/
+LoginDialog.jsx` calls `useLoginMutation`/`useRegisterMutation`
+(`src/services/user.js`, RTK Query against `/api/v1/auth/**`), storing the
+returned JWT and dispatching it into Redux auth state. No TMDB
+session_id/request_token code remains in the app. Live-verified repeatedly
+against both cloud deploys (#151): `POST /api/v1/auth/register` and
+`/login` return real signed JWTs, validated end-to-end through the gateway.
 
 ### 5.1b Secondary API: Native `/api/v1`
 
@@ -1768,6 +1766,24 @@ Closes #123
    /---------------\
 ```
 
+The pyramid above is the backend's own unit/integration/E2E split by test
+*count*. It doesn't capture the full picture: **seven distinct test types
+run across this codebase**, four of which are cross-cutting concerns
+rather than points on that pyramid (they don't have a "% of total tests"
+in the same sense — contract/performance/smoke tests each run once per
+service or endpoint set, not scaled by class count like unit tests are).
+All seven, with where each actually lives:
+
+| # | Type | Tool | Scope | Where |
+|---|------|------|-------|-------|
+| 1 | Unit | JUnit 5 + Mockito | §10.2 | `<service>/src/test/` |
+| 2 | Integration | Testcontainers + `@ServiceConnection` | §10.3 | `<service>/src/test/` |
+| 3 | E2E (browser) | Playwright | §10.4 | `e2e/` (repo root) |
+| 4 | API smoke | Postman/Newman | §10.5 | `docs/api/Filmpire-API.postman_collection.json`, `.github/workflows/e2e-smoke.yml` |
+| 5 | Performance | Gatling (Java DSL) | §10.6 | `movie-service/src/test/.../performance/` |
+| 6 | Contract | Spring Cloud Contract (ADR-008) | §10.7 | `<service>/src/contractTest/` — movie, user, actor, ai-service |
+| 7 | Frontend unit/component | Vitest + Testing Library | §10.8 | `frontend/filmpire/src/**/*.test.{js,jsx}` |
+
 ### 10.2 Unit Testing (60% of tests)
 
 **Tools:** JUnit 5 (Jupiter) ONLY, Mockito 5.19.0, AssertJ
@@ -1918,116 +1934,110 @@ class MovieServiceIntegrationTest {
 }
 ```
 
-### 10.4 End-to-End Testing (10% of tests)
+### 10.4 End-to-End Testing (browser, Playwright)
 
-**Tools:** Playwright, run against the existing Filmpire React app pointed at
-the local backend stack (the true acceptance test for the TMDB facade)
+**Location:** `e2e/` (repo root, its own `package.json`/`playwright.config.js`
+— not nested under `frontend/filmpire/`). Drives the real React app against
+the real local backend stack (`start-infrastructure.sh` + `npm run start`),
+not mocks throughout — this is the true acceptance test for the TMDB
+facade's drop-in compatibility, and the one layer that would catch a
+regression none of the backend's own tests could see (a facade response
+shape change that the real app can't actually render, for instance).
 
-**Example (Playwright):**
-```typescript
-import { test, expect } from '@playwright/test';
+**Three spec files, three different verification styles — not all mock the
+network:**
+- `user-journeys.spec.js` — full real-network flows against the live stack.
+- `auth-flow.spec.js` — session-state and redirect behavior, with the
+  backend mocked via `page.route()` (deliberately isolating DOM-layer
+  behavior from live token exchange, which #33 already verifies at the API
+  level — see the file's own header comment).
+- `cache-metrics.spec.js` — asserts *backend* caching behavior (a repeated
+  view doesn't re-hit TMDB) by reading Spring Boot Actuator metrics
+  through Playwright's API request context, not just DOM assertions —
+  blurring E2E and integration-level verification in one browser-driven test.
 
-test.describe('Movie Discovery Flow', () => {
-  test('User can search and view movie details', async ({ page }) => {
-    // Given - User is on home page
-    await page.goto('http://localhost:3000');
-    
-    // When - User searches for a movie
-    await page.fill('[data-testid="search-input"]', 'Inception');
-    await page.click('[data-testid="search-button"]');
-    
-    // Then - Search results are displayed
-    await expect(page.locator('[data-testid="movie-card"]')).toHaveCount(1, { timeout: 5000 });
-    await expect(page.locator('text=Inception')).toBeVisible();
-    
-    // When - User clicks on movie
-    await page.click('[data-testid="movie-card"]:first-child');
-    
-    // Then - Movie details page is shown
-    await expect(page).toHaveURL(/\/movie\/\d+/);
-    await expect(page.locator('h1')).toContainText('Inception');
-    await expect(page.locator('[data-testid="movie-rating"]')).toBeVisible();
-    await expect(page.locator('[data-testid="movie-overview"]')).toBeVisible();
-  });
-  
-  test('User can add movie to favorites', async ({ page }) => {
-    // Given - User is logged in and on movie details page
-    await page.goto('http://localhost:3000/login');
-    await page.fill('[name="email"]', 'test@example.com');
-    await page.fill('[name="password"]', 'password123');
-    await page.click('button[type="submit"]');
-    
-    await page.goto('http://localhost:3000/movie/123');
-    
-    // When - User clicks favorite button
-    await page.click('[data-testid="favorite-button"]');
-    
-    // Then - Success message is shown
-    await expect(page.locator('text=Added to favorites')).toBeVisible();
-    
-    // When - User navigates to profile
-    await page.click('[data-testid="user-menu"]');
-    await page.click('text=My Favorites');
-    
-    // Then - Movie appears in favorites
-    await expect(page.locator('[data-testid="movie-card"]')).toContainText('Inception');
+**Real example (`auth-flow.spec.js`, redirect behavior):**
+```javascript
+test.describe('Authentication & Session Flow (Mocked & Redirect)', () => {
+  test('Given an unauthenticated user, when navigating to the profile page, then browser redirects directly to the home page (/)', async ({ page }) => {
+    await page.addInitScript(() => localStorage.clear());
+    await page.goto('/profile/123');
+    await expect(page).toHaveURL(/.*(\/)$/);
   });
 });
 ```
 
-### 10.5 Performance Testing
+### 10.5 API Smoke Testing (Postman/Newman)
 
-**Tools:** Gatling, JMeter
+**Location:** `docs/api/Filmpire-API.postman_collection.json`, run via
+`newman` in `.github/workflows/e2e-smoke.yml` — the same collection is also
+usable directly in Postman for manual/exploratory API work, with an
+auth pre-request script that handles the JWT login flow automatically.
 
-**Example (Gatling):**
-```scala
-class MovieServiceSimulation extends Simulation {
-  
-  val httpProtocol = http
-    .baseUrl("http://localhost:8080")
-    .acceptHeader("application/json")
-  
-  val scn = scenario("Movie Service Load Test")
-    .exec(http("Get Popular Movies")
-      .get("/api/v1/movies/popular?page=1")
-      .check(status.is(200))
-      .check(jsonPath("$.content").exists)
-    )
-    .pause(1)
-    .exec(http("Search Movies")
-      .get("/api/v1/movies/search?query=inception")
-      .check(status.is(200))
-    )
-    .pause(1)
-    .exec(http("Get Movie Details")
-      .get("/api/v1/movies/123")
-      .check(status.is(200))
-      .check(jsonPath("$.title").exists)
-    )
-  
-  setUp(
-    scn.inject(
-      rampUsers(100) during (30 seconds),
-      constantUsersPerSec(50) during (2 minutes)
-    )
-  ).protocols(httpProtocol)
-   .assertions(
-     global.responseTime.max.lt(2000),
-     global.successfulRequests.percent.gt(95)
-   )
+**What it answers that the other six test types don't:** "does the live,
+fully-composed stack actually work end to end," automatically, without a
+human clicking through Postman — brings up the full stack with Docker
+Compose, waits for it to be healthy, then runs the whole collection
+against it. Triggers are nightly (03:00 UTC) + manual, not per-push —
+building every service image and the full stack is heavy and needs a real
+`TMDB_API_KEY` repo secret, so this is deliberately not in the per-commit
+fast-feedback loop.
+
+### 10.6 Performance Testing
+
+**Tool:** Gatling, **Java DSL** (not Scala — this project is Java-only end
+to end, no Scala toolchain).
+
+**Real simulation** (`movie-service/src/test/java/.../performance/
+MovieFacadeGatlingSimulation.java`, task #45) — targets the TMDB facade
+paths directly (not the native `/api/v1` API), matching the SLOs this
+simulation's own results feed into (§12.4):
+
+```java
+public class MovieFacadeGatlingSimulation extends Simulation {
+  private final String baseUrl =
+      System.getProperty("gatling.baseUrl", "http://localhost:8081");
+
+  private final HttpProtocolBuilder httpProtocol =
+      http.baseUrl(baseUrl).acceptHeader("application/json");
+
+  // Cache-served reads (SLO: P95 < 200ms, §12.4)
+  private final ScenarioBuilder cacheServedScenario =
+      scenario("Cache-Served Reads")
+          .exec(http("GET /movie/popular (Cache Hit)")
+              .get("/movie/popular").queryParam("page", "1")
+              .check(status().is(200)))
+          .pause(Duration.ofMillis(100));
+  // ... a second scenario covers TMDB-fallback reads (SLO: P95 < 800ms)
 }
 ```
 
-### 10.6 Contract Testing (ADR-008)
+### 10.7 Contract Testing (ADR-008)
 
 - **Spring Cloud Contract** protects internal service boundaries: producer
-  contracts live in movie-service (and later actor-service) for the facade
-  endpoints; the build publishes stub jars; api-gateway tests consume them
-  via StubRunner instead of hand-written mocks.
+  contracts live in each service's own `src/contractTest/` — now
+  `movie-service`, `user-service`, `actor-service`, and `ai-service` all
+  have one; the build publishes stub jars; api-gateway's contract tests
+  consume them via StubRunner instead of hand-written mocks.
 - The TMDB-side contract stays fixture-based (recorded real responses) — we
   cannot impose contracts on a third party; that split is deliberate.
 
-### 10.7 Test Coverage Requirements
+### 10.8 Frontend Testing (Vitest + Testing Library)
+
+**Location:** `frontend/filmpire/src/**/*.test.{js,jsx}`, run via
+`npm test` (`vitest run`) — component and service-layer unit tests for the
+React app itself, not covered by any backend test type above and easy to
+forget precisely because it lives in a different toolchain (JS/Vitest vs.
+Java/JUnit). Covers RTK Query service definitions (endpoint URL/method/body
+construction, exercised by actually dispatching against a mocked `fetch`
+rather than introspecting the query function — RTK Query doesn't expose
+`query` as a directly callable function), component rendering/interaction
+(React Testing Library), and the dynamic backend-resolution logic itself
+(`apiUrl.test.js` — the health-check waterfall, ADR-016). Coverage
+threshold enforced separately from the backend's JaCoCo gate (§10.9): 80%
+across branches/functions/lines/statements (`vite.config.mjs`).
+
+### 10.9 Test Coverage Requirements
 
 **Minimum Coverage:**
 - Overall: 85%
@@ -2114,48 +2124,54 @@ that. Verification is layered, not assumed:
    hourly (expose via NodePort/hostPort on the node's public IP for demos);
    avoid NAT gateways entirely.
 
-**Free-tier sizing reality (drives all sizing decisions):**
-- **Node size/cost is not a fixed fact — verify live, every time, on the
-  actual subscription.** A live #26 apply on 2026-07-29 found two things
-  this section originally got wrong: (1) AKS enforces a hard minimum of 2
-  vCPU **and** 4GB memory for whatever SKU runs the system pool — smaller
-  burstable sizes like B1s/B2ats_v2 are rejected outright
-  (`SystemPoolSkuTooLow`), so "1 vCPU / 1-2GB" was never actually
-  achievable on AKS specifically, whatever the general B-series free-tier
-  hours suggest. (2) Even B-series sizes that DO clear that minimum
-  (Standard_B2s, 2 vCPU/4GB) can be entirely absent from a given
-  subscription's allowed-SKU list in a given region — brand-new free-trial
-  subscriptions can have the whole burstable family blocked as an
-  anti-abuse measure. Neither failure mode shows up in `terraform plan`;
-  both only surface on a live `apply`. Practical effect: budget roughly 2
-  vCPU/4GB for the node, expect it may not be a "free-tier" SKU in the
-  strict sense (small nonzero hourly cost), and treat the zero-spend
-  budget-guard tripwire — not a specific SKU name — as the actual cost
-  control. See `infrastructure/terraform/modules/cluster-aks/variables.tf`
-  for the specific size that worked and how it was found.
-- A full 8-service Spring Boot deployment does not fit on a node this
-  small regardless of which SKU it ends up being. The cloud profile
-  deploys the **core slice** only: gateway, movie-service + MongoDB +
-  Redis, with JVM flags `-XX:MaxRAMPercentage=60 -Xss256k` and single
-  replicas. Discovery and Config are NOT part of the cloud slice —
-  Kubernetes supplies both natively (ADR-005), which conveniently also
-  frees up headroom on a memory-constrained node.
-- Everything else (user/actor/ai/media services, full ELK) runs in the
-  **local** profile; the manifests are identical, only Kustomize overlays and
-  replica counts differ.
+**Free-tier sizing reality (drives all sizing decisions) — three distinct
+failure modes found live, none visible in `terraform plan`:**
+- **Azure: AKS enforces a hard minimum of 2 vCPU and 4GB memory** for
+  whatever SKU runs the system pool (`SystemPoolSkuTooLow` on anything
+  smaller). Separately, **a whole VM-size family can be blocked outright**
+  for a given subscription/region as an anti-abuse measure, independent of
+  whether it clears that minimum (found live: the entire B-series family
+  was blocked on this subscription in `eastus`). Confirmed working:
+  `Standard_D2ls_v7` (2vCPU/4GB, the movie-only slice) and, once full
+  local-parity landed (#151, below), `Standard_D4ls_v7` (4vCPU/8GB).
+- **AWS is a harder gate: only Free Tier-*eligible instance types* can be
+  launched at all**, on this account — not a spend cap like Azure's, an
+  outright `RunInstances` rejection (`InvalidParameterCombination: ... not
+  eligible for Free Tier`) for anything not on that list, found live when
+  `t3.xlarge` was rejected outright while standing up the full-parity
+  set. Check `aws ec2 describe-instance-types --filters
+  Name=free-tier-eligible,Values=true` for the actual current list before
+  picking a size — it includes more than the classic t2/t3.micro (e.g.
+  `m7i-flex.large`, 8GiB/2vCPU, is what full local-parity actually runs on
+  today).
+- Neither cost model means "free" in the everyday sense — both are
+  "verified to not silently overrun," not "$0 no matter what." See §11.5
+  for what deliberately keeping something running would actually cost.
+- Resizing a **live** node (not a fresh apply) has its own trap: changing
+  `vm_size` in-place needs `temporary_name_for_rotation` set on the AKS
+  module (added #151) or Terraform force-replaces the *entire cluster*.
+  Even with that set, a graceful resize briefly needs old+new node
+  capacity simultaneously — found live to exceed a tight regional vCPU
+  quota, meaning the only working path was destroy → apply fresh at the
+  new size, not an in-place bump. Always `terraform plan` a resize and
+  actually read what it proposes before applying.
 - Infrastructure MUST be destroyable with a single `terraform destroy` and
   rebuildable with a single `terraform apply` (no manual console changes,
-  ever) — this is what makes the ephemeral-cluster model workable.
+  ever) — this is what makes the ephemeral-cluster model workable, and
+  what makes a destroy-then-reapply resize an acceptable answer rather
+  than a special case to avoid.
 
 ### 11.2 Terraform Layout
 
 ```
 infrastructure/terraform/
 ├── modules/
-│   ├── network/          # VPC/VNet, subnets, security groups/NSGs
+│   ├── network/          # Azure: resource group, VNet, subnet, NSG
+│   ├── network-aws/      # AWS: VPC, public subnet, security group
 │   ├── cluster-aks/      # AKS cluster (free control plane, 1 node pool)
-│   ├── cluster-k3s/      # EC2 t3.micro + k3s bootstrap (user_data)
-│   └── budget-guard/     # zero-spend budget + alert (FIRST resource applied)
+│   ├── cluster-k3s/      # EC2 (m7i-flex.large) + k3s bootstrap (user_data)
+│   ├── budget-guard/     # Azure: zero-spend budget + alert (FIRST resource applied)
+│   └── budget-guard-aws/ # AWS: zero-spend Budgets alert (FIRST resource applied)
 ├── azure/
 │   ├── main.tf           # composes budget-guard + network + cluster-aks
 │   ├── variables.tf
@@ -2229,16 +2245,26 @@ has the full story and whatever size actually worked most recently.
 ```hcl
 resource "aws_instance" "k3s_server" {
   ami           = data.aws_ami.al2023.id
-  instance_type = "t3.micro"            # free tier: 750 h/month
+  instance_type = var.instance_type     # see below — NOT a literal
   user_data     = <<-EOF
     #!/bin/bash
     curl -sfL https://get.k3s.io | sh -s - \
       --disable traefik --write-kubeconfig-mode 644
   EOF
-  root_block_device { volume_size = 20 }  # within 30 GB free EBS
+  root_block_device { volume_size = 30 }
   tags = { Name = "filmpire-k3s", project = "filmpire" }
 }
 ```
+`instance_type` is a variable for the same reason `vm_size` is on the Azure
+side (§11.1): `t3.micro` OOM-thrashes under this app's real footprint
+(found live, #27), and this account only permits launching **Free
+Tier-eligible instance types at all** — `t3.xlarge` was rejected outright
+mid-deploy when the full local-parity set (#151, actor/user/ai-service +
+Postgres + Ollama) needed more headroom than `t3.small` could give.
+`m7i-flex.large` (8GiB/2vCPU) is the largest free-tier-eligible type this
+account currently allows — check `aws ec2 describe-instance-types
+--filters Name=free-tier-eligible,Values=true` before assuming any size,
+this list is account/region-specific and changes.
 
 ### 11.3 Kubernetes Layout
 
@@ -2259,7 +2285,7 @@ infrastructure/kubernetes/
 │   ├── movie-service/
 │   ├── user-service/
 │   ├── actor-service/
-│   ├── ai-service/            # REST (8084) + gRPC (9084) — #36
+│   ├── ai-service/            # REST (8084) + gRPC (9084, exposed not yet consumed) — #36
 │   ├── ollama/                # StatefulSet + PVC — local model server for ai-service
 │   ├── postgres/              # StatefulSet + PVC (pgvector/pgvector:pg17, ADR-012) —
 │   │                          #   user-service (filmpire), actor-service (filmpire_actor),
@@ -2268,12 +2294,29 @@ infrastructure/kubernetes/
 │   ├── redis/
 │   └── kustomization.yaml
 ├── overlays/
-│   ├── local/                 # all services, generous resources
-│   ├── azure/                 # core slice, B-series sizing, ghcr.io images
-│   └── aws/                   # core slice, t3.micro sizing, ghcr.io images
-├── monitoring/                # see section 12
-└── logging/                   # see section 12
+│   ├── local/                 # everything: all 8 app services + Kafka + Zipkin, generous resources
+│   ├── azure/                 # full app-service parity (#151, see below) minus media-service; ghcr.io images
+│   └── aws/                   # same as azure, m7i-flex.large sizing
+└── monitoring/                # kube-prometheus-stack values + ServiceMonitors — see §12, not wired into any overlay
 ```
+
+**Cloud overlays reached full local-parity in #151** — a real, deliberate
+scope change from the original "core slice" plan (gateway + movie-service
+only), made once the node-size constraints in §11.1 were re-examined and
+found to have real headroom. `overlays/azure` and `overlays/aws` now both
+deploy: `api-gateway`, `movie-service`, `actor-service`, `user-service`,
+`ai-service`, MongoDB, Postgres, Redis, and Ollama — everything that runs
+locally **except** `media-service` (no Kubernetes manifests exist for it
+yet — it would also need an object-storage decision, MinIO locally) and
+the observability-only services (`discovery-service`/Eureka,
+`config-service`, Kafka, Zipkin — ADR-005 keeps these out of every K8s
+overlay deliberately regardless of node size: Kubernetes Services +
+cluster DNS already cover what Eureka/Config Server do locally, and
+Kafka/Zipkin are internal analytics/tracing, not a user-facing feature).
+Each app-service Deployment overrides `EUREKA_CLIENT_ENABLED=false` in its
+overlay-level ConfigMap for exactly this reason. Live-verified end-to-end
+on both clouds (movies, actors, register/login, voice control's
+speech-to-text) — see §11.5.
 
 **Deployment conventions:**
 - Every service: readiness probe on `/actuator/health/readiness`, liveness on
@@ -2283,51 +2326,171 @@ infrastructure/kubernetes/
   out-of-band by Terraform — never plaintext in the repo).
 - Images built by CI, tagged with the git SHA, pushed to ghcr.io (free for public repos).
 
-### 11.4 CI/CD Pipeline (GitHub Actions)
+### 11.4 CI/CD Pipeline (GitHub Actions) and the Local Deploy Trigger
+
+**Deploys are triggered locally (`./gradlew deployAzure` / `deployAws` /
+`deployLocal`), not from CI or the web — a deliberate redesign (#151).**
+`/admin` originally had a "Launch/Destroy" button calling a Vercel
+serverless function that held a GitHub PAT server-side and dispatched
+`deploy.yml`. That button and its proxy were **removed outright**, not
+just secured further, once it became clear `/admin` had no
+authentication of its own: a public URL with no login that can trigger
+real cloud spend is a bad shape regardless of how well the trigger itself
+is locked down. Only someone with a shell on the deploying machine (and
+real cloud credentials) can provision or destroy anything now.
 
 ```
 push to main
-  ├─► backend-ci.yml        build + test (existing)
-  │     └─► docker-publish.yml   build images, tag ${GIT_SHA} + latest, push ghcr.io (#28, built)
-  │           (deploy.yml is NOT chained after this — see below)
-  └─► terraform-plan.yml    plan only — paths: infrastructure/terraform/** (#26, built)
+  ├─► backend-ci.yml        build + test
+  │     └─► docker-publish.yml   build images, tag ${GIT_SHA} + latest, push ghcr.io
+  └─► terraform-plan.yml    plan only — paths: infrastructure/terraform/**
 
-workflow_dispatch (manual, human-triggered)
-  └─► deploy.yml (cloud: azure|aws)          (#28, built)
-        └─ kubectl apply -k overlays/<cloud> onto an already-applied cluster
+./gradlew deployAzure | deployAws | deployLocal   (local shell, human-run)
+  └─ terraform apply → fetch cluster credentials → kubectl apply -k
+       overlays/<target> → wait for rollout → (cloud only) front the
+       gateway with a Cloudflare quick tunnel for HTTPS → publish the
+       tunnel URL (§11.6)
 ```
 
 - `terraform-plan.yml` runs on every push to `main` that touches
   `infrastructure/terraform/` — not PRs (see §11.2's Terraform rules for
-  why) and independent of the backend-ci/docker-publish/deploy chain
-  above. Auth is GitHub OIDC, no stored secret. It only ever computes and
+  why). Auth is GitHub OIDC, no stored secret. It only ever computes and
   displays a plan; it never runs `apply`.
 - `docker-publish.yml` triggers on `workflow_run` of Backend CI completing
-  with `conclusion: success` on `main` — a red build/test run never
-  produces an image. It builds all six backend services (`api-gateway`,
-  `discovery-service`, `config-service`, `movie-service`, `user-service`,
-  `actor-service`) from the repo root as build context (every Dockerfile
-  does `COPY backend backend` for the multi-module Gradle build) and
-  pushes each to `ghcr.io/pehlivanu/filmpire-<service>` tagged both
-  `${GIT_SHA}` and `latest`.
-- Deploys are explicit (`workflow_dispatch` with cloud choice) — never
-  automatic on merge, to protect the free-tier hour budget. `deploy.yml`
-  deliberately does NOT run `terraform apply`: infra provisioning stays the
-  manual, human-run step described in
-  `infrastructure/terraform/README.md` (ephemeral apply → demo → destroy).
-  `deploy.yml` only reads existing Terraform state (same state-read
-  permission level `terraform-plan.yml` already uses) to locate the
-  cluster, then fetches credentials (`az aks get-credentials` for Azure;
-  SSH + `cat /etc/rancher/k3s/k3s.yaml` for AWS, matching the README's
-  manual steps exactly) and runs `kubectl apply -k`. The AWS path additionally
-  needs an `AWS_ROLE_ARN` OIDC trust and an `AWS_K3S_SSH_PRIVATE_KEY` secret
-  that don't exist yet — out of scope for #28, tracked under #27.
+  with `conclusion: success` on `main` — **a red build/test run never
+  produces an image, which found a real gap live (#151)**: Backend CI was
+  red for days on a pre-existing Spotless formatting violation unrelated
+  to any actual feature work, silently blocking every image rebuild in
+  that window — a cloud deploy during that time would have looked
+  successful while quietly running stale code. It builds all seven backend
+  services (`api-gateway`, `discovery-service`, `config-service`,
+  `movie-service`, `user-service`, `actor-service`, `ai-service`) from the
+  repo root as build context (every Dockerfile does `COPY backend backend`
+  for the multi-module Gradle build) and pushes each to
+  `ghcr.io/pehlivanu/filmpire-<service>` tagged both `${GIT_SHA}` and
+  `latest`. Check `gh run list --workflow="Backend CI"` before assuming a
+  fresh deploy actually has your latest changes.
+- `deploy.yml`/`destroy.yml` (`workflow_dispatch`, cloud picker) still
+  exist as an alternate CI-driven path — useful if deploys ever need to
+  run somewhere other than the operator's own machine — but the Gradle
+  tasks above are primary now. Both paths converge on the same
+  `kubectl apply -k overlays/<cloud>`. The secrets this path needs
+  (`DUCKDNS_TOKEN`, `AWS_K3S_SSH_PRIVATE_KEY`) are configured as of #151 —
+  they weren't when this doc originally scoped this workflow as
+  out-of-scope/#27.
 - Rollback = `kubectl rollout undo` (images are SHA-tagged and kept in the
   registry).
+
+### 11.5 What's Actually Deployed, and What It Costs
+
+Both clouds are ephemeral by design (§11.1) — neither is meant to be "up"
+by default. As of the last verification pass, both were torn down
+(`terraform destroy`, $0). When one *is* up, it's been live-verified:
+movies, actors, register/login, and voice control's speech-to-text all
+return correct data end-to-end through a real gateway, real CORS, real
+JWTs — not curled against a bare pod bypassing the actual routing layer.
+
+**What leaving one running would actually cost** (real Azure Retail
+Pricing, `eastus`, checked live rather than assumed):
+
+| Node | Spec | Rate | If left running 24/7 for a month |
+|---|---|---|---|
+| `Standard_D2ls_v7` (movie-only slice, retired) | 2vCPU/4GB | $0.117/hr | ~$85 |
+| `Standard_D4ls_v7` (full parity, current Azure size) | 4vCPU/8GB | $0.234/hr | ~$171 |
+
+Burning a full $200 free credit at the higher rate needs **~854 hours
+(~35 days) of continuous, unattended runtime** — a realistic demo session
+costs cents, not dollars. The actual budget risk was never node size; it's
+leaving something running unattended for weeks, which the
+destroy-after-demo habit (§11.1) exists specifically to prevent.
+
+**Two real production-shaped bugs were found and fixed live** while
+standing this up, both worth noting as they're the kind of thing that
+would otherwise ship silently:
+- MongoDB's original 384Mi memory limit OOM-killed it *during first-boot
+  initialization* — before the root user got created — leaving the
+  database with authorization enabled and no valid user at all. Recovering
+  required a full PVC wipe (a plain restart replays the same corrupted
+  state), not just restarting the pod. Fixed by raising the limit to 768Mi
+  on both cloud overlays.
+- `movie-service`'s Kafka analytics consumer retried a broker that will
+  never exist on either cloud overlay (Kafka is local-profile-only,
+  ADR-006) forever in the background, wasting CPU/threads and
+  contributing to the same OOM pressure. Disabled via
+  `SPRING_KAFKA_LISTENER_AUTO_STARTUP=false` on those overlays specifically
+  — `overlays/local`, which *does* run Kafka, is unaffected.
+
+### 11.6 Dynamic Backend Resolution: One Frontend Deploy, Any Live Backend
+
+The frontend is deployed to Vercel exactly once and never redeployed just
+to change which backend it talks to. Instead,
+[`frontend/filmpire/src/utils/apiUrl.js`](../../frontend/filmpire/src/utils/apiUrl.js)
+resolves the backend URL **per request**, in priority order:
+
+1. A manual `localStorage` override (devtools-only escape hatch; nothing
+   sets this automatically).
+2. `VITE_API_URL`, if fixed at build time (intentionally unset in Vercel —
+   setting it would disable everything below).
+3. `http://localhost:8080`, if the code itself is running on `localhost`.
+4. The default cloud target (`filmpire-api.duckdns.org`), **only if it
+   passes a live health check** — not assumed reachable just because it's
+   configured.
+5. Whichever URL is currently published in `infrastructure/tunnel-url.txt`
+   — **also only if it passes a health check.**
+6. The cloud default anyway, as a last resort, so failure is visible
+   rather than silent.
+
+Resolved results are cached 30s per browser tab so this isn't a network
+round-trip on every single request, and re-checked automatically once that
+expires — so bringing a backend up or down doesn't require any frontend
+action, just time for the next health check to notice.
+
+**Why a tunnel, not just the cloud node's IP:** a Kubernetes `Service` of
+type `NodePort` on the raw node IP is plain HTTP, with no load balancer
+(§11.1's cost rules rule that out). The Vercel frontend is HTTPS; browsers
+block "mixed content" (an HTTPS page fetching a plain `http://` resource)
+outright, no override available to the user. A Cloudflare quick tunnel
+(`cloudflared`, `docker run ... tunnel --url http://<node-ip>:30080`) gives
+a real HTTPS endpoint with no certificate to provision and no Cloudflare
+account needed — the same mechanism fronts whichever backend is currently
+live, local machine or either cloud.
+
+**Why a published pointer file, not a fixed hostname:** a quick tunnel's
+hostname is randomly regenerated on every restart — there is no stable
+address to hardcode. `infrastructure/scripts/start-tunnel.sh` (local) and
+the equivalent manual step for a cloud target both write the current URL
+to `infrastructure/tunnel-url.txt` and `git push` it. The frontend reads
+that file from `raw.githubusercontent.com` (a plain public GET, no auth,
+effectively free) rather than the repo's own API, so a fresh tunnel is
+discoverable by *any* visitor within moments of the push — this is,
+functionally, git-backed service discovery for a demo environment that
+can't justify a real service registry.
+
+**CORS is a separate concern from routing, and was found live to be the
+actual root cause of an outage that looked like a routing problem:** the
+gateway's `SecurityConfig` allow-list has to include the frontend's real
+origin (`https://filmpire-microservices-tan.vercel.app`, plus origin
+*patterns* for `*.vercel.app`/`*.trycloudflare.com`/`*.duckdns.org`) or
+every request — including the health check in step 4/5 above — gets a
+403 invisible to a plain `curl` test that omits the `Origin` header. A
+successful `curl` against a backend is not proof a browser can use it;
+verifying this properly means sending the real `Origin` header and
+checking for `access-control-allow-origin` in the response.
 
 ---
 
 ## 12. Monitoring & Observability
+
+**Current deployment status (as of #151):** everything below is real,
+built, and applies cleanly — but it's a separate, manual apply step
+(`kubectl apply -f infrastructure/kubernetes/monitoring/service-monitors/`
+after the kube-prometheus-stack Helm release), not wired into any
+overlay's `kustomization.yaml`. Neither cloud target currently running
+(Azure/AWS, §11) has monitoring or ELK deployed — the free-tier node
+budget goes entirely to the application services (§11.5). ELK/Zipkin are
+local-profile-only (`overlays/local` includes `zipkin.yaml`; ELK via
+`docker-compose.elk.yml`) by design, not an oversight — see the
+"Free-tier reality" table in §12.2.
 
 ### 12.1 Metrics — Prometheus + Grafana
 
@@ -2436,7 +2599,9 @@ window):
    no infra needed, verifiable with curl.
 2. Local: docker-compose.elk.yml + kube-prometheus-stack on minikube.
 3. Terraform: Azure AKS first (free control plane), then AWS k3s.
-4. Cloud deploy of core slice + monitoring; ELK stays local.
+4. Cloud deploy of the full application service set (§11.1) — as of #151,
+   monitoring/ELK have not been extended to either cloud target; the
+   free-tier node budget goes to the app services themselves.
 
 ---
 
@@ -2531,51 +2696,42 @@ filmpire-microservices/
 │   ├── settings.gradle.kts
 │   └── gradle.properties
 ├── frontend/
-│   └── filmpire/            # Existing CRA app, merged in as a monorepo
-│       │                    # 2026-07-30 (full original history preserved)
+│   └── filmpire/            # Vite app (migrated from CRA, #125-127), merged
+│       │                    # in as a monorepo 2026-07-30, full history preserved
 │       ├── src/
-│       │   ├── components/  # App shell, NavBar, Movies, MovieInformation,
-│       │   │                # Actors, Profile, Search, Sidebar, Pagination
-│       │   ├── services/
-│       │   │   └── TMDB.js  # RTK Query — baseUrl from REACT_APP_API_URL
-│       │   ├── features/    # Redux slices (auth, genre/category)
-│       │   └── utils/       # axios client (auth), theme toggle
+│       │   ├── components/  # App shell, NavBar (+LoginDialog), Movies,
+│       │   │                # MovieInformation, Actors, Profile, Search,
+│       │   │                # Sidebar, VoiceControl, Admin (StatusCard)
+│       │   ├── services/    # RTK Query: TMDB.js, user.js, media.js
+│       │   ├── utils/
+│       │   │   └── apiUrl.js  # dynamic backend resolution — ADR-016
+│       │   └── features/    # Redux slices (auth, genre/category)
 │       ├── public/
 │       ├── package.json
 │       └── README.md
 ├── infrastructure/
 │   ├── docker/
-│   │   ├── docker-compose.yml
+│   │   ├── docker-compose.yml       # full local stack, all 8 app services
+│   │   ├── docker-compose.elk.yml   # local-only ELK stack — §12.2
 │   │   └── docker-compose.prod.yml
+│   ├── terraform/            # see §11.2 for the real module layout
 │   ├── kubernetes/
-│   │   ├── deployments/
-│   │   ├── services/
-│   │   ├── configmaps/
-│   │   └── secrets/
-│   └── scripts/
-│       ├── setup-dev-env.sh
-│       ├── deploy.sh
-│       └── rollback.sh
+│   │   ├── base/              # cloud-agnostic manifests, one dir per service
+│   │   ├── overlays/          # local/ (everything), azure/, aws/ — §11.3
+│   │   └── monitoring/        # kube-prometheus-stack values + ServiceMonitors, §12
+│   ├── tunnel-url.txt         # published live-tunnel pointer — ADR-016
+│   └── scripts/               # deployAzure/deployAws/deployLocal + destroy*,
+│                               # startTunnel/stopTunnel, statusInfra — §11.4
 ├── docs/
 │   ├── architecture/
 │   │   ├── ARCHITECTURE.md
-│   │   ├── adr/
-│   │   │   ├── 001-microservices-architecture.md
-│   │   │   ├── 002-database-choices.md
-│   │   │   └── ...
-│   │   └── diagrams/
-│   ├── api/
-│   │   ├── openapi.yml
-│   │   └── postman/
+│   │   ├── adr/                 # 001-017, see §2.3 for the full index
+│   │   └── PORT_MAPPING.md
+│   ├── process/                 # Scrum artifacts — DoR/DoD/NFRs, product goal, methodology
+│   ├── api/                     # Postman collection
 │   └── guides/
-│       ├── SETUP.md
-│       ├── DEPLOYMENT.md
-│       └── TROUBLESHOOTING.md
-├── tools/
-│   └── tmdb-importer/
-│       ├── src/
-│       ├── build.gradle.kts
-│       └── README.md
+│       ├── RUN_WITH_FILMPIRE_APP.md  # pointing the frontend at this backend
+│       └── DEPLOYMENT_GUIDE.md       # local/Azure/AWS deploy + FE-binding runbook
 ├── .github/
 │   ├── workflows/
 │   │   ├── backend-ci-cd.yml
@@ -2698,6 +2854,7 @@ public class MovieService {
         }
     }
 }
+```
 
 ### RestClient (NO RestTemplate)
 ```java
