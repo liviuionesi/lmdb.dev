@@ -74,7 +74,7 @@ dependencies {
     testImplementation "org.wiremock:wiremock-standalone:${wiremockVersion}"
     testImplementation "io.gatling.highcharts:gatling-charts-highcharts:${gatlingVersion}"
     testImplementation "io.gatling:gatling-app:${gatlingVersion}"
-    testImplementation 'org.awaitility:awaitility:4.2.2'
+    testImplementation 'org.awaitility:awaitility:4.3.0'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
