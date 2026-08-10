@@ -9,6 +9,7 @@ configMapGenerator:
   - name: movie-service-config
     literals:
       - SPRING_APPLICATION_NAME=movie-service
-      - SPRING_PROFILES_ACTIVE=prod
+      - SPRING_PROFILES_ACTIVE=prod,kubernetes
+      - EUREKA_CLIENT_ENABLED=false
       - REDIS_HOST=redis
       - REDIS_PORT=6379
