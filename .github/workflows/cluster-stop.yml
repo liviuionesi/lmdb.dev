@@ -6,7 +6,7 @@ name: Cluster Stop / Start
 # It does NOT destroy infrastructure — data on PVCs is preserved.
 #
 # Related: deploy.yml (deploy workloads), destroy.yml (full terraform destroy)
-# See: docs/architecture/adr/016-cloud-lifecycle-stop-not-destroy.md
+# See: docs/architecture/adr/018-cloud-lifecycle-stop-not-destroy.md
 
 on:
   workflow_dispatch:
