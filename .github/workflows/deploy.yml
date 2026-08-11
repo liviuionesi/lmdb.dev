@@ -48,8 +48,11 @@ jobs:
           INPUT_PASSPHRASE: ${{ github.event.inputs.passphrase }}
           SECRET_PASSPHRASE: ${{ secrets.DEPLOY_PASSPHRASE }}
         run: |
-          TARGET_PASSPHRASE="${SECRET_PASSPHRASE:-filmpire-secure-2026}"
-          if [ "$INPUT_PASSPHRASE" != "$TARGET_PASSPHRASE" ]; then
+          if [ -z "$SECRET_PASSPHRASE" ]; then
+            echo "::error::❌ Repository secret DEPLOY_PASSPHRASE is not configured in GitHub Secrets. Action blocked."
+            exit 1
+          fi
+          if [ -z "$INPUT_PASSPHRASE" ] || [ "$INPUT_PASSPHRASE" != "$SECRET_PASSPHRASE" ]; then
             echo "::error::❌ Invalid deployment authorization passphrase provided. Deployment aborted."
             exit 1
           fi
@@ -135,8 +138,11 @@ jobs:
           INPUT_PASSPHRASE: ${{ github.event.inputs.passphrase }}
           SECRET_PASSPHRASE: ${{ secrets.DEPLOY_PASSPHRASE }}
         run: |
-          TARGET_PASSPHRASE="${SECRET_PASSPHRASE:-filmpire-secure-2026}"
-          if [ "$INPUT_PASSPHRASE" != "$TARGET_PASSPHRASE" ]; then
+          if [ -z "$SECRET_PASSPHRASE" ]; then
+            echo "::error::❌ Repository secret DEPLOY_PASSPHRASE is not configured in GitHub Secrets. Action blocked."
+            exit 1
+          fi
+          if [ -z "$INPUT_PASSPHRASE" ] || [ "$INPUT_PASSPHRASE" != "$SECRET_PASSPHRASE" ]; then
             echo "::error::❌ Invalid deployment authorization passphrase provided. Deployment aborted."
             exit 1
           fi
