@@ -1,0 +1,50 @@
+name: Project Metrics Auto-Update
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+      - 'infrastructure/**'
+      - 'docs/**'
+      - 'build.gradle'
+      - 'gradle.properties'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-metrics:
+    runs-on: ubuntu-24.04
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    steps:
+      - name: Checkout repository (full history for git stats)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python 3
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Generate dynamic project metrics
+        run: |
+          chmod +x ./infrastructure/scripts/generate-project-stats.py
+          python3 ./infrastructure/scripts/generate-project-stats.py
+
+      - name: Commit and push updated metrics
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [[ -n $(git status --porcelain docs/PROJECT_METRICS.md docs/project-metrics.json) ]]; then
+            git add docs/PROJECT_METRICS.md docs/project-metrics.json
+            git commit -m "docs: Auto-update project metrics and statistics report [skip ci]"
+            git push origin HEAD:${{ github.ref_name }}
+          else
+            echo "Project metrics are already up to date."
+          fi

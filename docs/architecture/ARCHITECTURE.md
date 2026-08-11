@@ -29,10 +29,13 @@ free-tier cloud deployment, and full observability. A dedicated Next.js web
 app and React Native mobile apps were considered and **descoped** (v1.2.0) —
 the existing Filmpire React app is the only frontend.
 
+📊 **Live Project Metrics & Code Analytics:** See [`docs/PROJECT_METRICS.md`](../PROJECT_METRICS.md) for real-time dynamically computed codebase statistics (git churn, LOC, test suites, architecture topology, and documentation coverage).
+
 ---
 
 ## Table of Contents
 
+- [📊 Project Metrics & Analytics Report](../PROJECT_METRICS.md)
 - [1. Technology Stack](#1-technology-stack)
 - [2. System Architecture](#2-system-architecture)
 - [3. Microservices Design](#3-microservices-design)

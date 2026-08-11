@@ -450,6 +450,12 @@ tasks.register('statusInfra', Exec) {
     commandLine './infrastructure/scripts/status-infra.sh'
 }
 
+tasks.register('projectStats', Exec) {
+    group = 'documentation'
+    description = 'Dynamically analyzes and generates project metrics & analytics report in docs/PROJECT_METRICS.md'
+    commandLine './infrastructure/scripts/generate-project-stats.sh'
+}
+
 // Automatically clear the STS workspace cache on clean builds to avoid stale IDE warnings
 def cleanStsCacheTask = tasks.register('cleanStsCache', Delete) {
     group = 'build setup'
