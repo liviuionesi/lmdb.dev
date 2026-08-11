@@ -21,20 +21,20 @@ describe('trailer utilities', () => {
 
   describe('extractYouTubeId', () => {
     it('returns raw 11-char ID unchanged', () => {
-      expect(extractYouTubeId('h2QJMfXJZaY')).toBe('h2QJMfXJZaY');
+      expect(extractYouTubeId('W8yHZXircp8')).toBe('W8yHZXircp8');
     });
 
     it('extracts ID from standard youtube.com/watch?v= URLs', () => {
-      expect(extractYouTubeId('https://www.youtube.com/watch?v=h2QJMfXJZaY')).toBe('h2QJMfXJZaY');
-      expect(extractYouTubeId('https://www.youtube.com/watch?v=zSWdZVtXT7E&t=10s')).toBe('zSWdZVtXT7E');
+      expect(extractYouTubeId('https://www.youtube.com/watch?v=k6U-i4gX7kQ')).toBe('k6U-i4gX7kQ');
+      expect(extractYouTubeId('https://www.youtube.com/watch?v=NLUj9lFPU6s&t=10s')).toBe('NLUj9lFPU6s');
     });
 
     it('extracts ID from short youtu.be URLs', () => {
-      expect(extractYouTubeId('https://youtu.be/uYPbbksJxIg')).toBe('uYPbbksJxIg');
+      expect(extractYouTubeId('https://youtu.be/GuDF9CEtFwE')).toBe('GuDF9CEtFwE');
     });
 
     it('extracts ID from embed URLs', () => {
-      expect(extractYouTubeId('https://www.youtube.com/embed/YoHD9XEInc0')).toBe('YoHD9XEInc0');
+      expect(extractYouTubeId('https://www.youtube.com/embed/nGrW-OR2uDk')).toBe('nGrW-OR2uDk');
     });
 
     it('falls back to DEFAULT_TRAILER_ID for invalid inputs', () => {
@@ -59,14 +59,14 @@ describe('trailer utilities', () => {
     });
 
     it('reads VITE_STANDBY_TRAILER_ID environment variable', () => {
-      vi.stubEnv('VITE_STANDBY_TRAILER_ID', 'zSWdZVtXT7E');
-      expect(getStandbyTrailerId()).toBe('zSWdZVtXT7E');
+      vi.stubEnv('VITE_STANDBY_TRAILER_ID', 'k6U-i4gX7kQ');
+      expect(getStandbyTrailerId()).toBe('k6U-i4gX7kQ');
     });
 
     it('prefers localStorage over environment variable unless forceRandom is true', () => {
-      vi.stubEnv('VITE_STANDBY_TRAILER_ID', 'zSWdZVtXT7E');
-      setStandbyTrailerId('https://youtu.be/EXeTwQWrcwY');
-      expect(getStandbyTrailerId()).toBe('EXeTwQWrcwY');
+      vi.stubEnv('VITE_STANDBY_TRAILER_ID', 'W8yHZXircp8');
+      setStandbyTrailerId('https://youtu.be/k6U-i4gX7kQ');
+      expect(getStandbyTrailerId()).toBe('k6U-i4gX7kQ');
 
       // forceRandom picks a random curated trailer
       const validIds = CURATED_TRAILERS.map((t) => t.id);

@@ -1,6 +1,9 @@
-export const DEFAULT_TRAILER_ID = 'h2QJMfXJZaY';
+export const DEFAULT_TRAILER_ID = 'W8yHZXircp8'; // Machete
 
 export const CURATED_TRAILERS = [
+  { id: 'W8yHZXircp8', title: 'Machete', tag: 'Action • 2010' },
+  { id: 'k6U-i4gX7kQ', title: 'The Terminator', tag: 'Sci-Fi • 1984' },
+  { id: 'NLUj9lFPU6s', title: 'Sin City', tag: 'Crime • 2005' },
   { id: 'h2QJMfXJZaY', title: 'Dune: Part Two', tag: 'Sci-Fi • 2024' },
   { id: 'GuDF9CEtFwE', title: 'Blade Runner 2049', tag: 'Sci-Fi • 2017' },
   { id: 'nGrW-OR2uDk', title: 'Gladiator II', tag: 'Action • 2024' },
@@ -33,7 +36,7 @@ export function extractYouTubeId(input) {
 }
 
 /**
- * Picks a random trailer ID from the curated playlist of user favorite trailers.
+ * Picks a random trailer ID from the curated playlist.
  *
  * @returns {string} YouTube video ID
  */
@@ -44,14 +47,17 @@ export function getRandomCuratedTrailerId() {
 
 /**
  * Resolves the configured standby trailer ID.
- * If VITE_STANDBY_TRAILER_ID is explicitly provided (or stored in localStorage), uses it.
- * Otherwise, randomly selects one of the favorite trailers (Dune 2, Blade Runner 2049, Gladiator II).
+ * If forceRandom is true, selects a new random trailer from the playlist.
+ * Otherwise priority is: localStorage -> import.meta.env.VITE_STANDBY_TRAILER_ID -> random curated trailer.
  *
  * @param {boolean} [forceRandom=false] - If true, ignores stored preference and selects a new random trailer
  * @returns {string} YouTube video ID
  */
 export function getStandbyTrailerId(forceRandom = false) {
-  if (!forceRandom && typeof window !== 'undefined') {
+  if (forceRandom) {
+    return getRandomCuratedTrailerId();
+  }
+  if (typeof window !== 'undefined') {
     const saved = localStorage.getItem('filmpire_standby_trailer');
     if (saved) {
       return extractYouTubeId(saved);
