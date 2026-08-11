@@ -1,4 +1,5 @@
 import { renderHook, act } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { useBackendWakeup } from './useBackendWakeup';
 import * as apiUrlModule from '../../utils/apiUrl';
 
@@ -7,6 +8,8 @@ vi.mock('../../utils/apiUrl', () => ({
   triggerBackendWakeup: vi.fn().mockResolvedValue({ status: 'WAKING_UP' }),
   invalidateResolutionCache: vi.fn(),
   subscribeBackendStatus: vi.fn(() => () => {}),
+  getBackendTarget: vi.fn(() => 'azure'),
+  setBackendTarget: vi.fn(),
 }));
 
 describe('useBackendWakeup hook', () => {
