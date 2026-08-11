@@ -227,12 +227,12 @@ function BackendStandbyModal({ onBackendReady }) {
               </Box>
             )}
 
-            {/* Embedded 16:9 YouTube Trailer with seamless loop */}
+            {/* Embedded 16:9 YouTube Trailer with seamless autoplay and loop */}
             <iframe
               data-testid="trailer-iframe"
               width="100%"
               height="100%"
-              src={`https://www.youtube-nocookie.com/embed/${trailerId}?autoplay=1&mute=0&controls=1&rel=0&modestbranding=1&loop=1&playlist=${trailerId}`}
+              src={`https://www.youtube.com/embed/${trailerId}?autoplay=1&mute=1&controls=1&rel=0&modestbranding=1&loop=1&playlist=${trailerId}&enablejsapi=1`}
               title="Filmpire Pre-Show Trailer"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
               allowFullScreen

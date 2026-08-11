@@ -36,7 +36,7 @@ describe('BackendStandbyModal User-Oriented Subtitles & Pure Trailer', () => {
 
     const iframe = screen.getByTestId('trailer-iframe');
     expect(iframe).toBeInTheDocument();
-    expect(iframe.getAttribute('src')).toContain('https://www.youtube-nocookie.com/embed/');
+    expect(iframe.getAttribute('src')).toContain('https://www.youtube.com/embed/');
 
     const subtitle = screen.getByTestId('standby-subtitle');
     expect(subtitle).toBeInTheDocument();
