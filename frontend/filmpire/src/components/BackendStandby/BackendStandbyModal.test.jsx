@@ -7,7 +7,7 @@ import { useBackendWakeup } from './useBackendWakeup';
 
 vi.mock('./useBackendWakeup');
 
-describe('BackendStandbyModal 50% Transparent Top Subtitles & Pure Trailer', () => {
+describe('BackendStandbyModal User-Oriented Subtitles & Pure Trailer', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
@@ -27,7 +27,7 @@ describe('BackendStandbyModal 50% Transparent Top Subtitles & Pure Trailer', () 
     expect(screen.queryByTestId('trailer-iframe')).not.toBeInTheDocument();
   });
 
-  it('renders clean YouTube trailer and initial top subtitle without border or background', () => {
+  it('renders clean YouTube trailer and initial user-friendly subtitle', () => {
     useBackendWakeup.mockReturnValue({
       status: 'WAKING_UP',
     });
@@ -40,35 +40,35 @@ describe('BackendStandbyModal 50% Transparent Top Subtitles & Pure Trailer', () 
 
     const subtitle = screen.getByTestId('standby-subtitle');
     expect(subtitle).toBeInTheDocument();
-    expect(screen.getByText('Welcome to Filmpire Theaters. Starting cloud backend...')).toBeInTheDocument();
+    expect(screen.getByText('Welcome to Filmpire Theaters. Getting your movie experience ready...')).toBeInTheDocument();
   });
 
-  it('advances subtitle every 5 seconds and disappears after all finish', () => {
+  it('advances user-friendly subtitles every 5 seconds and disappears after all finish', () => {
     useBackendWakeup.mockReturnValue({
       status: 'WAKING_UP',
     });
 
     renderWithProviders(<BackendStandbyModal />);
 
-    expect(screen.getByText('Welcome to Filmpire Theaters. Starting cloud backend...')).toBeInTheDocument();
+    expect(screen.getByText('Welcome to Filmpire Theaters. Getting your movie experience ready...')).toBeInTheDocument();
 
     // Advance 5 seconds
     act(() => {
       vi.advanceTimersByTime(5000);
     });
-    expect(screen.getByText('Allocating microservices and high-speed API routes...')).toBeInTheDocument();
+    expect(screen.getByText('Preparing top blockbuster trailers and theater collections...')).toBeInTheDocument();
 
     // Advance another 5 seconds
     act(() => {
       vi.advanceTimersByTime(5000);
     });
-    expect(screen.getByText('Connecting to movie catalog and reviews database...')).toBeInTheDocument();
+    expect(screen.getByText('Bringing together thousands of movies, cast spotlights, and reviews...')).toBeInTheDocument();
 
     // Advance another 5 seconds
     act(() => {
       vi.advanceTimersByTime(5000);
     });
-    expect(screen.getByText('Finalizing health checks. Almost ready...')).toBeInTheDocument();
+    expect(screen.getByText('Dimming the lights. Enjoy the show...')).toBeInTheDocument();
 
     // Advance another 5 seconds -> subtitles disappear
     act(() => {
@@ -97,7 +97,7 @@ describe('BackendStandbyModal 50% Transparent Top Subtitles & Pure Trailer', () 
     });
 
     expect(screen.getByTestId('filmpire-logo-reveal')).toBeInTheDocument();
-    expect(screen.getByText(/Backend Online • Rolling Feature/)).toBeInTheDocument();
+    expect(screen.getByText(/Now Showing/)).toBeInTheDocument();
     expect(onBackendReadyMock).toHaveBeenCalled();
   });
 

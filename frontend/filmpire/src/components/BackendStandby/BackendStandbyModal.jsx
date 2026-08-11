@@ -8,7 +8,6 @@ import {
   keyframes,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 
 import { useBackendWakeup } from './useBackendWakeup';
 import { getStandbyTrailerId } from '../../utils/trailer';
@@ -36,16 +35,16 @@ const subtitleFade = keyframes`
 `;
 
 const SUBTITLES = [
-  'Welcome to Filmpire Theaters. Starting cloud backend...',
-  'Allocating microservices and high-speed API routes...',
-  'Connecting to movie catalog and reviews database...',
-  'Finalizing health checks. Almost ready...',
+  'Welcome to Filmpire Theaters. Getting your movie experience ready...',
+  'Preparing top blockbuster trailers and theater collections...',
+  'Bringing together thousands of movies, cast spotlights, and reviews...',
+  'Dimming the lights. Enjoy the show...',
 ];
 
 /**
  * Pure Cinematic Movie Trailer Standby Experience.
- * Subtitles are 50% transparent, positioned at top with no border, no background, no icons,
- * and disappear after 5 seconds each.
+ * User-oriented announcements with 50% transparency, positioned at the top of the trailer,
+ * with no border, no background, and no icons, disappearing after 5 seconds each.
  *
  * @param {Object} props
  * @param {Function} [props.onBackendReady] - Callback triggered when the backend is live
@@ -169,21 +168,19 @@ function BackendStandbyModal({ onBackendReady }) {
                 animation: `${logoGlow} 2s infinite ease-in-out`,
               }}
             />
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
-              <CheckCircleIcon sx={{ color: '#4caf50', fontSize: 24 }} />
-              <Typography
-                variant="subtitle1"
-                sx={{
-                  fontWeight: 800,
-                  letterSpacing: 2,
-                  color: '#f5c518',
-                  textTransform: 'uppercase',
-                  textShadow: '0 2px 10px rgba(0,0,0,0.8)',
-                }}
-              >
-                Backend Online • Rolling Feature
-              </Typography>
-            </Box>
+            <Typography
+              variant="subtitle1"
+              sx={{
+                fontWeight: 800,
+                letterSpacing: 3,
+                color: '#f5c518',
+                textTransform: 'uppercase',
+                textShadow: '0 2px 10px rgba(0,0,0,0.8)',
+                mt: 1,
+              }}
+            >
+              Now Showing
+            </Typography>
           </Box>
         ) : (
           <Box
@@ -195,7 +192,7 @@ function BackendStandbyModal({ onBackendReady }) {
               overflow: 'hidden',
             }}
           >
-            {/* 50% Transparent Subtitles at Top with No Border, No Background, No Icons */}
+            {/* 50% Transparent User-Oriented Subtitles at Top with No Border, No Background, No Icons */}
             {currentSubtitle && (
               <Box
                 data-testid="standby-subtitle"
