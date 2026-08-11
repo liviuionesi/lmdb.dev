@@ -408,6 +408,36 @@ tasks.register('stopLocal', Exec) {
     commandLine './infrastructure/scripts/stop-infrastructure.sh'
 }
 
+tasks.register('startAzure', Exec) {
+    group = 'deployment'
+    description = 'Starts stopped Azure AKS cluster compute nodes'
+    commandLine './infrastructure/scripts/start-azure.sh'
+}
+
+tasks.register('stopAzure', Exec) {
+    group = 'deployment'
+    description = 'Stops active Azure AKS cluster compute nodes to reduce compute cost to $0'
+    commandLine './infrastructure/scripts/stop-azure.sh'
+}
+
+tasks.register('startAws', Exec) {
+    group = 'deployment'
+    description = 'Starts stopped AWS EC2 k3s instance'
+    commandLine './infrastructure/scripts/start-aws.sh'
+}
+
+tasks.register('stopAws', Exec) {
+    group = 'deployment'
+    description = 'Stops active AWS EC2 k3s instance to reduce compute cost to $0'
+    commandLine './infrastructure/scripts/stop-aws.sh'
+}
+
+tasks.register('autoStopWatchdog', Exec) {
+    group = 'deployment'
+    description = 'Checks 1-hour backend activity and shuts down cloud compute if idle'
+    commandLine './infrastructure/scripts/auto-stop-watchdog.sh'
+}
+
 tasks.register('statusInfra', Exec) {
     group = 'deployment'
     description = 'Checks the health and status of local, tunnel, and cloud infrastructure'
