@@ -1,0 +1,66 @@
+export const DEFAULT_TRAILER_ID = 'h2QJMfXJZaY';
+
+export const CURATED_TRAILERS = [
+  { id: 'h2QJMfXJZaY', title: 'Dune: Part Two', tag: 'Sci-Fi • 2024' },
+  { id: 'uYPbbksJxIg', title: 'Oppenheimer', tag: 'Drama • 2023' },
+  { id: 'zSWdZVtXT7E', title: 'Interstellar', tag: 'Sci-Fi • 2014' },
+  { id: 'YoHD9XEInc0', title: 'Inception', tag: 'Action • 2010' },
+  { id: 'EXeTwQWrcwY', title: 'The Dark Knight', tag: 'Hero • 2008' },
+];
+
+/**
+ * Extracts a valid 11-character YouTube video ID from a URL, embed link, or raw ID.
+ *
+ * @param {string} input - YouTube URL or ID
+ * @returns {string} YouTube video ID or DEFAULT_TRAILER_ID if invalid
+ */
+export function extractYouTubeId(input) {
+  if (!input || typeof input !== 'string') {
+    return DEFAULT_TRAILER_ID;
+  }
+  const trimmed = input.trim();
+
+  // If already an 11-character alphanumeric ID
+  if (/^[a-zA-Z0-9_-]{11}$/.test(trimmed)) {
+    return trimmed;
+  }
+
+  // Handle standard watch?v=, youtu.be, or embed URLs
+  const urlMatch = trimmed.match(/(?:youtube\.com\/(?:[^\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/i);
+  if (urlMatch && urlMatch[1]) {
+    return urlMatch[1];
+  }
+
+  return DEFAULT_TRAILER_ID;
+}
+
+/**
+ * Resolves the configured standby trailer ID.
+ * Priority: localStorage -> import.meta.env.VITE_STANDBY_TRAILER_ID -> DEFAULT_TRAILER_ID
+ *
+ * @returns {string} YouTube video ID
+ */
+export function getStandbyTrailerId() {
+  if (typeof window !== 'undefined') {
+    const saved = localStorage.getItem('filmpire_standby_trailer');
+    if (saved) {
+      return extractYouTubeId(saved);
+    }
+  }
+  const envId = import.meta.env?.VITE_STANDBY_TRAILER_ID;
+  if (envId) {
+    return extractYouTubeId(envId);
+  }
+  return DEFAULT_TRAILER_ID;
+}
+
+/**
+ * Persists the selected standby trailer ID to localStorage.
+ *
+ * @param {string} trailerId - YouTube video ID or URL
+ */
+export function setStandbyTrailerId(trailerId) {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('filmpire_standby_trailer', extractYouTubeId(trailerId));
+  }
+}

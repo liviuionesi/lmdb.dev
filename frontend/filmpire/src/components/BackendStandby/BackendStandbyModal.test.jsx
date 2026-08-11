@@ -1,143 +1,135 @@
 import React from 'react';
-import { screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
+import { screen, fireEvent, act } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import BackendStandbyModal from './BackendStandbyModal';
 import { renderWithProviders } from '../../test-utils/render';
 import { useBackendWakeup } from './useBackendWakeup';
-import { useCinemaAudio } from './useCinemaAudio';
 
 vi.mock('./useBackendWakeup');
-vi.mock('./useCinemaAudio');
 
-// Mock HTML5 Canvas getContext
-beforeAll(() => {
-  HTMLCanvasElement.prototype.getContext = vi.fn(() => ({
-    clearRect: vi.fn(),
-    createRadialGradient: vi.fn(() => ({
-      addColorStop: vi.fn(),
-    })),
-    beginPath: vi.fn(),
-    moveTo: vi.fn(),
-    lineTo: vi.fn(),
-    closePath: vi.fn(),
-    fill: vi.fn(),
-    arc: vi.fn(),
-    stroke: vi.fn(),
-    save: vi.fn(),
-    restore: vi.fn(),
-    setLineDash: vi.fn(),
-  }));
-});
-
-describe('BackendStandbyModal Cinematic Film Leader Experience', () => {
+describe('BackendStandbyModal Cinematic Trailer & Logo Reveal', () => {
   beforeEach(() => {
-    useCinemaAudio.mockReturnValue({
-      isPlaying: false,
-      toggleAudio: vi.fn(),
-      stopAudio: vi.fn(),
-    });
+    vi.clearAllMocks();
+    localStorage.clear();
   });
 
   it('does not open when backend status is ONLINE', () => {
     useBackendWakeup.mockReturnValue({
       status: 'ONLINE',
       secondsRemaining: 0,
-      progressPercentage: 100,
       targetCloud: 'azure',
-      currentStep: 3,
       wakeUp: vi.fn(),
     });
 
     renderWithProviders(<BackendStandbyModal />);
-    expect(screen.queryByText('Feature Presentation')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('trailer-iframe')).not.toBeInTheDocument();
   });
 
-  it('renders cinematic 35mm film leader with countdown, clapperboard, and all 3 screen choices', () => {
+  it('renders YouTube trailer iframe with default video and announcer subtitles', () => {
     const wakeUpMock = vi.fn();
     useBackendWakeup.mockReturnValue({
       status: 'WAKING_UP',
       secondsRemaining: 75,
-      progressPercentage: 20,
       targetCloud: 'azure',
-      currentStep: 1,
       wakeUp: wakeUpMock,
     });
 
     renderWithProviders(<BackendStandbyModal />);
 
-    expect(screen.getByText('Feature Presentation')).toBeInTheDocument();
-    expect(screen.getByText('★ FILMPIRE STUDIOS PRESENTS ★')).toBeInTheDocument();
-    expect(screen.getByText('75')).toBeInTheDocument();
-    expect(screen.getByText(/ACT I \/\/ SCENE 01/)).toBeInTheDocument();
-    expect(screen.getByText(/THE PROJECTION BOOTH/)).toBeInTheDocument();
-    expect(screen.getByText(/Dimming the House Lights/)).toBeInTheDocument();
+    const iframe = screen.getByTestId('trailer-iframe');
+    expect(iframe).toBeInTheDocument();
+    expect(iframe.getAttribute('src')).toContain('h2QJMfXJZaY');
 
-    // 3 Screen choices: Azure AKS, AWS EC2, Minikube Tunnel
+    // Announcer subtitle
+    expect(screen.getByText(/Welcome to Filmpire Theaters! Starting the cloud backend for you/)).toBeInTheDocument();
+
+    // Soundstage choices
     expect(screen.getByText('Screen 1: Azure AKS')).toBeInTheDocument();
     expect(screen.getByText('Screen 2: AWS EC2')).toBeInTheDocument();
     expect(screen.getByText('Screen 3: Minikube Tunnel')).toBeInTheDocument();
 
-    // Click minikube tunnel
-    fireEvent.click(screen.getByText('Screen 3: Minikube Tunnel'));
-    expect(wakeUpMock).toHaveBeenCalledWith('minikube');
-
-    // Click AWS EC2
+    // Click cloud switch button
     fireEvent.click(screen.getByText('Screen 2: AWS EC2'));
     expect(wakeUpMock).toHaveBeenCalledWith('aws');
   });
 
-  it('toggles cinema synthesizer audio on click', () => {
-    const toggleAudioMock = vi.fn();
-    useCinemaAudio.mockReturnValue({
-      isPlaying: false,
-      toggleAudio: toggleAudioMock,
-      stopAudio: vi.fn(),
-    });
-
+  it('allows switching trailer preset from the curated playlist', () => {
     useBackendWakeup.mockReturnValue({
       status: 'WAKING_UP',
-      secondsRemaining: 60,
-      progressPercentage: 30,
+      secondsRemaining: 50,
       targetCloud: 'azure',
-      currentStep: 2,
       wakeUp: vi.fn(),
     });
 
     renderWithProviders(<BackendStandbyModal />);
 
-    const audioButton = screen.getByTitle('Play 35mm Projector Sound');
-    fireEvent.click(audioButton);
-    expect(toggleAudioMock).toHaveBeenCalled();
+    // Click Oppenheimer chip
+    fireEvent.click(screen.getByText('Oppenheimer'));
+
+    const iframe = screen.getByTestId('trailer-iframe');
+    expect(iframe.getAttribute('src')).toContain('uYPbbksJxIg');
   });
 
-  it('removes modal immediately when status transitions to READY or ONLINE', () => {
+  it('allows searching and loading custom trailer via YouTube URL', () => {
     useBackendWakeup.mockReturnValue({
-      status: 'READY',
-      secondsRemaining: 0,
-      progressPercentage: 100,
+      status: 'WAKING_UP',
+      secondsRemaining: 50,
       targetCloud: 'azure',
-      currentStep: 3,
       wakeUp: vi.fn(),
     });
 
     renderWithProviders(<BackendStandbyModal />);
-    expect(screen.queryByText('Feature Presentation')).not.toBeInTheDocument();
+
+    // Open search bar
+    fireEvent.click(screen.getByText('Custom Trailer URL / ID'));
+
+    const input = screen.getByPlaceholderText(/Paste YouTube Video Link/);
+    fireEvent.change(input, { target: { value: 'https://youtu.be/zSWdZVtXT7E' } });
+    fireEvent.click(screen.getByText('Load'));
+
+    const iframe = screen.getByTestId('trailer-iframe');
+    expect(iframe.getAttribute('src')).toContain('zSWdZVtXT7E');
   });
 
-  it('allows dismissing the pre-show via close button', () => {
+  it('displays Filmpire logo reveal when onReady callback is invoked', () => {
+    let capturedOnReady;
+    useBackendWakeup.mockImplementation(({ onReady }) => {
+      capturedOnReady = onReady;
+      return {
+        status: 'WAKING_UP',
+        secondsRemaining: 5,
+        targetCloud: 'azure',
+        wakeUp: vi.fn(),
+      };
+    });
+
+    const onBackendReadyMock = vi.fn();
+    renderWithProviders(<BackendStandbyModal onBackendReady={onBackendReadyMock} />);
+
+    expect(screen.getByTestId('trailer-iframe')).toBeInTheDocument();
+
+    // Simulate backend reaching healthy state inside act()
+    act(() => {
+      capturedOnReady();
+    });
+
+    expect(screen.getByTestId('filmpire-logo-reveal')).toBeInTheDocument();
+    expect(screen.getByText(/Backend Online • Rolling Feature/)).toBeInTheDocument();
+    expect(onBackendReadyMock).toHaveBeenCalled();
+  });
+
+  it('allows dismissing the trailer modal via close button', () => {
     useBackendWakeup.mockReturnValue({
       status: 'WAKING_UP',
       secondsRemaining: 80,
-      progressPercentage: 10,
       targetCloud: 'azure',
-      currentStep: 1,
       wakeUp: vi.fn(),
     });
 
     renderWithProviders(<BackendStandbyModal />);
-    expect(screen.getByText('Feature Presentation')).toBeInTheDocument();
+    expect(screen.getByTestId('trailer-iframe')).toBeInTheDocument();
 
     fireEvent.click(screen.getByLabelText('close'));
-    expect(screen.queryByText('Feature Presentation')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('trailer-iframe')).not.toBeInTheDocument();
   });
 });
