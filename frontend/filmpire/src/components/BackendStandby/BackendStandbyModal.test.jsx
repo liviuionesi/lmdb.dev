@@ -7,7 +7,7 @@ import { useBackendWakeup } from './useBackendWakeup';
 
 vi.mock('./useBackendWakeup');
 
-describe('BackendStandbyModal Cinematic Trailer & Logo Reveal', () => {
+describe('BackendStandbyModal Minimal Cinematic Trailer & Top Subtitles', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
@@ -17,21 +17,16 @@ describe('BackendStandbyModal Cinematic Trailer & Logo Reveal', () => {
     useBackendWakeup.mockReturnValue({
       status: 'ONLINE',
       secondsRemaining: 0,
-      targetCloud: 'azure',
-      wakeUp: vi.fn(),
     });
 
     renderWithProviders(<BackendStandbyModal />);
     expect(screen.queryByTestId('trailer-iframe')).not.toBeInTheDocument();
   });
 
-  it('renders YouTube trailer iframe with a curated video and announcer subtitles', () => {
-    const wakeUpMock = vi.fn();
+  it('renders YouTube trailer iframe and top announcer subtitles', () => {
     useBackendWakeup.mockReturnValue({
       status: 'WAKING_UP',
       secondsRemaining: 75,
-      targetCloud: 'azure',
-      wakeUp: wakeUpMock,
     });
 
     renderWithProviders(<BackendStandbyModal />);
@@ -40,70 +35,18 @@ describe('BackendStandbyModal Cinematic Trailer & Logo Reveal', () => {
     expect(iframe).toBeInTheDocument();
     expect(iframe.getAttribute('src')).toContain('https://www.youtube-nocookie.com/embed/');
 
-    // Announcer subtitle
+    // Announcer subtitle at top
     expect(screen.getByText(/Welcome to Filmpire Theaters! Starting the cloud backend for you/)).toBeInTheDocument();
-
-    // Soundstage choices
-    expect(screen.getByText('Screen 1: Azure AKS')).toBeInTheDocument();
-    expect(screen.getByText('Screen 2: AWS EC2')).toBeInTheDocument();
-    expect(screen.getByText('Screen 3: Minikube Tunnel')).toBeInTheDocument();
-
-    // Click cloud switch button
-    fireEvent.click(screen.getByText('Screen 2: AWS EC2'));
-    expect(wakeUpMock).toHaveBeenCalledWith('aws');
   });
 
-  it('allows switching trailer preset from the curated playlist', () => {
+  it('updates announcer subtitles as countdown progresses', () => {
     useBackendWakeup.mockReturnValue({
       status: 'WAKING_UP',
-      secondsRemaining: 50,
-      targetCloud: 'azure',
-      wakeUp: vi.fn(),
+      secondsRemaining: 30,
     });
 
     renderWithProviders(<BackendStandbyModal />);
-
-    // Click Gladiator II chip
-    fireEvent.click(screen.getByText('Gladiator II'));
-
-    const iframe = screen.getByTestId('trailer-iframe');
-    expect(iframe.getAttribute('src')).toContain('nGrW-OR2uDk');
-  });
-
-  it('allows shuffling to a random trailer via the Shuffle button', () => {
-    useBackendWakeup.mockReturnValue({
-      status: 'WAKING_UP',
-      secondsRemaining: 50,
-      targetCloud: 'azure',
-      wakeUp: vi.fn(),
-    });
-
-    renderWithProviders(<BackendStandbyModal />);
-
-    fireEvent.click(screen.getByText('Shuffle'));
-    const iframe = screen.getByTestId('trailer-iframe');
-    expect(iframe.getAttribute('src')).toMatch(/https:\/\/www\.youtube-nocookie\.com\/embed\/[a-zA-Z0-9_-]{11}/);
-  });
-
-  it('allows searching and loading custom trailer via YouTube URL', () => {
-    useBackendWakeup.mockReturnValue({
-      status: 'WAKING_UP',
-      secondsRemaining: 50,
-      targetCloud: 'azure',
-      wakeUp: vi.fn(),
-    });
-
-    renderWithProviders(<BackendStandbyModal />);
-
-    // Open search bar
-    fireEvent.click(screen.getByText('Custom Trailer'));
-
-    const input = screen.getByPlaceholderText(/Paste YouTube Video Link/);
-    fireEvent.change(input, { target: { value: 'https://youtu.be/zSWdZVtXT7E' } });
-    fireEvent.click(screen.getByText('Load'));
-
-    const iframe = screen.getByTestId('trailer-iframe');
-    expect(iframe.getAttribute('src')).toContain('zSWdZVtXT7E');
+    expect(screen.getByText(/Loading 10,000\+ movie titles, cast profiles/)).toBeInTheDocument();
   });
 
   it('displays Filmpire logo reveal when onReady callback is invoked', () => {
@@ -113,8 +56,6 @@ describe('BackendStandbyModal Cinematic Trailer & Logo Reveal', () => {
       return {
         status: 'WAKING_UP',
         secondsRemaining: 5,
-        targetCloud: 'azure',
-        wakeUp: vi.fn(),
       };
     });
 
@@ -137,8 +78,6 @@ describe('BackendStandbyModal Cinematic Trailer & Logo Reveal', () => {
     useBackendWakeup.mockReturnValue({
       status: 'WAKING_UP',
       secondsRemaining: 80,
-      targetCloud: 'azure',
-      wakeUp: vi.fn(),
     });
 
     renderWithProviders(<BackendStandbyModal />);
