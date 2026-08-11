@@ -6,9 +6,12 @@ import { configureStore } from '@reduxjs/toolkit';
 import { tmdbApi } from './TMDB';
 
 const apiKey = import.meta.env.VITE_TMDB_KEY;
-// createDynamicBaseQuery resolves to this under jsdom's default
-// `window.location.hostname` ('localhost') without any network health
-// checks - see apiUrl.js's getStaticOverride().
+// createDynamicBaseQuery resolves the backend through apiUrl.js's async,
+// health-checked waterfall (see apiUrl.test.js) - left to run on its own it
+// would issue a real fetch() health probe before the endpoint request,
+// stealing mock.calls[0] out from under fetchedUrl() below. Pinning the
+// manual localStorage override short-circuits that waterfall synchronously
+// so the endpoint request is always the only fetch call.
 const baseUrl = 'http://localhost:8080';
 
 const buildStore = () => configureStore({
@@ -29,6 +32,7 @@ describe('tmdbApi endpoint query builders', () => {
   let store;
 
   beforeEach(() => {
+    localStorage.setItem('filmpire_api_url', baseUrl);
     store = buildStore();
     global.fetch = vi.fn().mockResolvedValue(jsonResponse({ ok: true }));
   });

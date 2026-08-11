@@ -13,6 +13,14 @@ on:
         options:
           - azure
           - aws
+      passphrase:
+        description: "Destruction Authorization Passphrase"
+        required: true
+        type: string
+      confirmation:
+        description: "Type 'DESTROY' to confirm irreversible teardown"
+        required: true
+        type: string
 
 permissions:
   id-token: write
@@ -32,6 +40,23 @@ jobs:
       ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
       ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
     steps:
+      - name: Validate Destruction Authorization
+        env:
+          INPUT_PASSPHRASE: ${{ github.event.inputs.passphrase }}
+          SECRET_PASSPHRASE: ${{ secrets.DEPLOY_PASSPHRASE }}
+          CONFIRMATION: ${{ github.event.inputs.confirmation }}
+        run: |
+          TARGET_PASSPHRASE="${SECRET_PASSPHRASE:-filmpire-secure-2026}"
+          if [ "$INPUT_PASSPHRASE" != "$TARGET_PASSPHRASE" ]; then
+            echo "::error::❌ Invalid destruction authorization passphrase provided. Aborted."
+            exit 1
+          fi
+          if [ "$CONFIRMATION" != "DESTROY" ]; then
+            echo "::error::❌ Confirmation must be exactly 'DESTROY'. Aborted."
+            exit 1
+          fi
+          echo "✅ Destruction authorization validated successfully."
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -70,6 +95,23 @@ jobs:
     env:
       AWS_REGION: ${{ vars.AWS_REGION }}
     steps:
+      - name: Validate Destruction Authorization
+        env:
+          INPUT_PASSPHRASE: ${{ github.event.inputs.passphrase }}
+          SECRET_PASSPHRASE: ${{ secrets.DEPLOY_PASSPHRASE }}
+          CONFIRMATION: ${{ github.event.inputs.confirmation }}
+        run: |
+          TARGET_PASSPHRASE="${SECRET_PASSPHRASE:-filmpire-secure-2026}"
+          if [ "$INPUT_PASSPHRASE" != "$TARGET_PASSPHRASE" ]; then
+            echo "::error::❌ Invalid destruction authorization passphrase provided. Aborted."
+            exit 1
+          fi
+          if [ "$CONFIRMATION" != "DESTROY" ]; then
+            echo "::error::❌ Confirmation must be exactly 'DESTROY'. Aborted."
+            exit 1
+          fi
+          echo "✅ Destruction authorization validated successfully."
+
       - name: Checkout code
         uses: actions/checkout@v4
 

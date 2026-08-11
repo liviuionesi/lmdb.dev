@@ -47,10 +47,7 @@ export function useBackendWakeup({ autoWakeup = true, onReady } = {}) {
     setCurrentStep(1);
 
     try {
-      const res = triggerBackendWakeup(cloud);
-      if (res && typeof res.catch === 'function') {
-        res.catch(() => {});
-      }
+      await triggerBackendWakeup(cloud);
     } catch {
       // Ignored: health polling will still continue
     }
@@ -74,10 +71,7 @@ export function useBackendWakeup({ autoWakeup = true, onReady } = {}) {
         setSecondsRemaining(ESTIMATED_WAKEUP_SECONDS);
         setCurrentStep(1);
         try {
-          const res = triggerBackendWakeup(targetCloud);
-          if (res && typeof res.catch === 'function') {
-            res.catch(() => {});
-          }
+          await triggerBackendWakeup(targetCloud);
         } catch {
           // Ignored
         }

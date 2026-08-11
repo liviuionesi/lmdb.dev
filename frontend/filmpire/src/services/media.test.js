@@ -10,6 +10,13 @@ import { configureStore } from '@reduxjs/toolkit';
 import { mediaApi, getMediaUrl, buildUploadMediaQuery } from './media';
 
 const baseUrl = 'http://localhost:8080/api/v1';
+// createDynamicBaseQuery resolves the backend through apiUrl.js's async,
+// health-checked waterfall (see apiUrl.test.js) - left to run on its own it
+// would issue a real fetch() health probe before the endpoint request,
+// stealing mock.calls[0] out from under fetchedRequest() below. Pinning the
+// manual localStorage override short-circuits that waterfall synchronously
+// so the endpoint request is always the only fetch call.
+const pinStaticApiUrl = () => localStorage.setItem('filmpire_api_url', 'http://localhost:8080');
 
 const buildStore = () => configureStore({
   reducer: { [mediaApi.reducerPath]: mediaApi.reducer },
@@ -29,6 +36,7 @@ describe('mediaApi endpoints', () => {
   let store;
 
   beforeEach(() => {
+    pinStaticApiUrl();
     store = buildStore();
     global.fetch = vi.fn().mockResolvedValue(jsonResponse({ data: {} }));
   });
@@ -133,6 +141,7 @@ describe('mediaApi baseQuery Authorization header injection', () => {
   });
 
   it('attaches a Bearer Authorization header when an access token is stored', async () => {
+    pinStaticApiUrl();
     localStorage.setItem('access_token', 'my-jwt');
     global.fetch = vi.fn().mockResolvedValue(jsonResponse({ data: {} }));
 
@@ -143,6 +152,7 @@ describe('mediaApi baseQuery Authorization header injection', () => {
   });
 
   it('omits the Authorization header when no access token is stored', async () => {
+    pinStaticApiUrl();
     global.fetch = vi.fn().mockResolvedValue(jsonResponse({ data: {} }));
 
     await buildAuthStore().dispatch(mediaApi.endpoints.getMediaForEntity.initiate('42'));

@@ -108,15 +108,17 @@ function BackendStandbyModal({ onBackendReady }) {
       onClose={handleClose}
       fullWidth
       maxWidth="md"
-      PaperProps={{
-        sx: {
-          bgcolor: '#000000',
-          color: '#ffffff',
-          borderRadius: 3,
-          border: '1px solid rgba(245, 197, 24, 0.25)',
-          overflow: 'hidden',
-          boxShadow: '0 25px 90px rgba(0, 0, 0, 0.98), 0 0 60px rgba(229, 9, 20, 0.35)',
-          position: 'relative',
+      slotProps={{
+        paper: {
+          sx: {
+            bgcolor: '#000000',
+            color: '#ffffff',
+            borderRadius: 3,
+            border: '1px solid rgba(245, 197, 24, 0.25)',
+            overflow: 'hidden',
+            boxShadow: '0 25px 90px rgba(0, 0, 0, 0.98), 0 0 60px rgba(229, 9, 20, 0.35)',
+            position: 'relative',
+          },
         },
       }}
     >

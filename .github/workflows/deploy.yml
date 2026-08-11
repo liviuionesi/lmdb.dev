@@ -20,6 +20,10 @@ on:
         options:
           - azure
           - aws
+      passphrase:
+        description: "Deployment Authorization Passphrase"
+        required: true
+        type: string
 
 permissions:
   id-token: write
@@ -39,6 +43,18 @@ jobs:
       ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
       ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
     steps:
+      - name: Validate Deployment Passphrase
+        env:
+          INPUT_PASSPHRASE: ${{ github.event.inputs.passphrase }}
+          SECRET_PASSPHRASE: ${{ secrets.DEPLOY_PASSPHRASE }}
+        run: |
+          TARGET_PASSPHRASE="${SECRET_PASSPHRASE:-filmpire-secure-2026}"
+          if [ "$INPUT_PASSPHRASE" != "$TARGET_PASSPHRASE" ]; then
+            echo "::error::❌ Invalid deployment authorization passphrase provided. Deployment aborted."
+            exit 1
+          fi
+          echo "✅ Passphrase validated successfully."
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -80,10 +96,19 @@ jobs:
       - name: kubectl apply -k overlays/azure
         run: kubectl apply -k ../../kubernetes/overlays/azure
 
-      - name: Wait for rollout
+      - name: Wait for full workload rollout (9 services)
         run: |
+          echo "⏳ Verifying application deployments..."
           kubectl rollout status deployment/api-gateway --timeout=180s
           kubectl rollout status deployment/movie-service --timeout=180s
+          kubectl rollout status deployment/actor-service --timeout=180s
+          kubectl rollout status deployment/user-service --timeout=180s
+          kubectl rollout status deployment/ai-service --timeout=180s
+          echo "⏳ Verifying database statefulsets..."
+          kubectl rollout status statefulset/postgres --timeout=180s
+          kubectl rollout status statefulset/mongodb --timeout=180s
+          kubectl rollout status statefulset/redis --timeout=180s
+          kubectl rollout status statefulset/ollama --timeout=180s
 
       - name: Update Dynamic DNS
         env:
@@ -105,6 +130,18 @@ jobs:
     env:
       AWS_REGION: ${{ vars.AWS_REGION }}
     steps:
+      - name: Validate Deployment Passphrase
+        env:
+          INPUT_PASSPHRASE: ${{ github.event.inputs.passphrase }}
+          SECRET_PASSPHRASE: ${{ secrets.DEPLOY_PASSPHRASE }}
+        run: |
+          TARGET_PASSPHRASE="${SECRET_PASSPHRASE:-filmpire-secure-2026}"
+          if [ "$INPUT_PASSPHRASE" != "$TARGET_PASSPHRASE" ]; then
+            echo "::error::❌ Invalid deployment authorization passphrase provided. Deployment aborted."
+            exit 1
+          fi
+          echo "✅ Passphrase validated successfully."
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -151,10 +188,19 @@ jobs:
       - name: kubectl apply -k overlays/aws
         run: kubectl apply -k ../../kubernetes/overlays/aws
 
-      - name: Wait for rollout
+      - name: Wait for full workload rollout (9 services)
         run: |
+          echo "⏳ Verifying application deployments..."
           kubectl rollout status deployment/api-gateway --timeout=180s
           kubectl rollout status deployment/movie-service --timeout=180s
+          kubectl rollout status deployment/actor-service --timeout=180s
+          kubectl rollout status deployment/user-service --timeout=180s
+          kubectl rollout status deployment/ai-service --timeout=180s
+          echo "⏳ Verifying database statefulsets..."
+          kubectl rollout status statefulset/postgres --timeout=180s
+          kubectl rollout status statefulset/mongodb --timeout=180s
+          kubectl rollout status statefulset/redis --timeout=180s
+          kubectl rollout status statefulset/ollama --timeout=180s
 
       - name: Update Dynamic DNS
         env:

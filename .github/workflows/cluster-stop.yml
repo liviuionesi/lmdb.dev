@@ -26,6 +26,10 @@ on:
         options:
           - stop
           - start
+      passphrase:
+        description: "Lifecycle Authorization Passphrase"
+        required: true
+        type: string
 
 permissions:
   id-token: write
@@ -47,6 +51,18 @@ jobs:
       ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
     steps:
+      - name: Validate Lifecycle Passphrase
+        env:
+          INPUT_PASSPHRASE: ${{ github.event.inputs.passphrase }}
+          SECRET_PASSPHRASE: ${{ secrets.DEPLOY_PASSPHRASE }}
+        run: |
+          TARGET_PASSPHRASE="${SECRET_PASSPHRASE:-filmpire-secure-2026}"
+          if [ "$INPUT_PASSPHRASE" != "$TARGET_PASSPHRASE" ]; then
+            echo "::error::❌ Invalid authorization passphrase provided. Aborted."
+            exit 1
+          fi
+          echo "✅ Authorization passphrase validated."
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -146,6 +162,18 @@ jobs:
       AWS_REGION: ${{ vars.AWS_REGION }}
 
     steps:
+      - name: Validate Lifecycle Passphrase
+        env:
+          INPUT_PASSPHRASE: ${{ github.event.inputs.passphrase }}
+          SECRET_PASSPHRASE: ${{ secrets.DEPLOY_PASSPHRASE }}
+        run: |
+          TARGET_PASSPHRASE="${SECRET_PASSPHRASE:-filmpire-secure-2026}"
+          if [ "$INPUT_PASSPHRASE" != "$TARGET_PASSPHRASE" ]; then
+            echo "::error::❌ Invalid authorization passphrase provided. Aborted."
+            exit 1
+          fi
+          echo "✅ Authorization passphrase validated."
+
       - name: Checkout code
         uses: actions/checkout@v4
 

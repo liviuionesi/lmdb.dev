@@ -27,8 +27,8 @@ export function extractYouTubeId(input) {
   }
 
   // Handle standard watch?v=, youtu.be, or embed URLs
-  const urlMatch = trimmed.match(/(?:youtube\.com\/(?:[^\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/i);
-  if (urlMatch && urlMatch[1]) {
+  const urlMatch = /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/i.exec(trimmed);
+  if (urlMatch?.[1]) {
     return urlMatch[1];
   }
 
@@ -41,8 +41,15 @@ export function extractYouTubeId(input) {
  * @returns {string} YouTube video ID
  */
 export function getRandomCuratedTrailerId() {
-  const randomIndex = Math.floor(Math.random() * CURATED_TRAILERS.length);
-  return CURATED_TRAILERS[randomIndex].id;
+  const cryptoObj = typeof window !== 'undefined' && window.crypto ? window.crypto : null;
+  if (cryptoObj && typeof cryptoObj.getRandomValues === 'function') {
+    const randomBuffer = new Uint32Array(1);
+    cryptoObj.getRandomValues(randomBuffer);
+    const randomIndex = randomBuffer[0] % CURATED_TRAILERS.length;
+    return CURATED_TRAILERS[randomIndex].id;
+  }
+  const timestampIndex = Date.now() % CURATED_TRAILERS.length;
+  return CURATED_TRAILERS[timestampIndex].id;
 }
 
 /**
