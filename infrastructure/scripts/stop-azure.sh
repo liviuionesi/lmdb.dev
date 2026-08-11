@@ -80,8 +80,7 @@ fi
 # 5. Print cost summary
 echo -e "\n${CYAN}💰 Cost Summary (approximate):${NC}"
 echo -e "  ${GREEN}VM Compute (Standard_D4ls_v7): \$0.00/hr  ← saved!${NC}"
-echo -e "  ${YELLOW}Azure Disk PVCs (~16 GiB):     ~\$0.01/hr (~\$0.25/day)${NC}"
-echo -e "  ${YELLOW}OS Disk (128 GiB):             ~\$0.01/hr${NC}"
+echo -e "  ${YELLOW}Azure Disk PVCs (~16 GiB):     ~\$0.01/hr${NC}"
 echo -e "  ${YELLOW}Static Public IP:              ~\$0.004/hr${NC}"
 echo -e "  ─────────────────────────────────────────"
 echo -e "  ${YELLOW}Total idle cost:               ~\$0.25/day  (vs ~\$5.06/day running)${NC}"

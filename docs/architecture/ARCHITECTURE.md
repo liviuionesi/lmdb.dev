@@ -212,6 +212,7 @@ Significant decisions are recorded in [`adr/`](adr/):
 | [015](adr/015-local-only-deploy-trigger.md) | Deploy/destroy triggered only from a local shell (`./gradlew deploy*`) — the web-triggered `/admin` button and its serverless token proxy were removed outright, not just secured further, once found to have no authentication of its own |
 | [016](adr/016-dynamic-backend-resolution.md) | Frontend resolves its backend per-request (local → cloud → published tunnel fallback, health-checked), fronted by an ephemeral Cloudflare tunnel for HTTPS — one Vercel deploy works against any live backend, no redeploy needed |
 | [017](adr/017-full-cloud-service-parity.md) | Cloud overlays deploy the full local application service set (incl. Ollama), not a movie-only slice — re-sized nodes once verified live pricing showed the cost difference was negligible for ephemeral demo usage |
+| [018](adr/018-cloud-lifecycle-stop-not-destroy.md) | Stop cloud compute (not destroy) between demo sessions — de-allocate the VM to zero the dominant compute charge while PVCs/EBS preserve all database state; `terraform destroy` reserved for long breaks or state rebuilds |
 
 ### 2.4 Failure-Mode Matrix
 

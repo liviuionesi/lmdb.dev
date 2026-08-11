@@ -50,7 +50,7 @@ model weights). This costs ~$0.25/day for Azure (~$7.50/month if idle all month)
 |---|---|
 | `infrastructure/scripts/stop-azure.sh` | Stops AKS, waits for full de-allocation, prints cost summary |
 | `infrastructure/scripts/start-azure.sh` | Starts AKS, waits all 9 pods Ready, auto-updates DuckDNS |
-| `infrastructure/scripts/stop-azure.sh` | Stops AKS cluster (AWS equivalent: stop-aws.sh) |
+| `infrastructure/scripts/stop-aws.sh` | Stops AWS k3s EC2 instance (AWS equivalent of stop-azure.sh) |
 | `infrastructure/scripts/stop-all-clouds.sh` | Detects and stops all running clouds in one command |
 | `.github/workflows/cluster-stop.yml` | Remote start/stop from GitHub UI (when no local machine) |
 | `.github/workflows/destroy.yml` | Full `terraform destroy` — manual only, irreversible |

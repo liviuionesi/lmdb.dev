@@ -72,10 +72,15 @@ jobs:
       - name: Resolve cluster coordinates from state
         id: tf
         run: |
-          echo "rg=$(terraform output -raw resource_group_name)" >> "$GITHUB_OUTPUT"
-          echo "cluster=$(terraform output -raw cluster_name)" >> "$GITHUB_OUTPUT"
+          echo "rg=$(terraform output -raw resource_group_name 2>/dev/null || echo '')" >> "$GITHUB_OUTPUT"
+          echo "cluster=$(terraform output -raw cluster_name 2>/dev/null || echo '')" >> "$GITHUB_OUTPUT"
+
+      - name: Cluster not provisioned
+        if: steps.tf.outputs.rg == '' || steps.tf.outputs.cluster == ''
+        run: echo "⚠️ No AKS cluster found in Terraform state — not provisioned."
 
       - name: Check current power state
+        if: steps.tf.outputs.rg != '' && steps.tf.outputs.cluster != ''
         id: power
         run: |
           STATE=$(az aks show \
@@ -86,7 +91,7 @@ jobs:
           echo "state=$STATE" >> "$GITHUB_OUTPUT"
 
       - name: Stop AKS cluster
-        if: github.event.inputs.action == 'stop' && steps.power.outputs.state != 'Stopped'
+        if: github.event.inputs.action == 'stop' && steps.power.outputs.state != '' && steps.power.outputs.state != 'Stopped'
         run: |
           az aks stop \
             --resource-group "${{ steps.tf.outputs.rg }}" \
@@ -98,7 +103,7 @@ jobs:
         run: echo "ℹ️ Cluster is already stopped — no action taken."
 
       - name: Start AKS cluster
-        if: github.event.inputs.action == 'start' && steps.power.outputs.state != 'Running'
+        if: github.event.inputs.action == 'start' && steps.power.outputs.state != '' && steps.power.outputs.state != 'Running'
         run: |
           az aks start \
             --resource-group "${{ steps.tf.outputs.rg }}" \
@@ -106,7 +111,7 @@ jobs:
           echo "✅ Cluster started."
 
       - name: Update DuckDNS after start
-        if: github.event.inputs.action == 'start'
+        if: github.event.inputs.action == 'start' && steps.power.outputs.state != ''
         env:
           DUCKDNS_DOMAIN: ${{ vars.DUCKDNS_DOMAIN }}
           DUCKDNS_TOKEN: ${{ secrets.DUCKDNS_TOKEN }}
