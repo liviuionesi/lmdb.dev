@@ -12,6 +12,41 @@ const RESOLUTION_TTL_MS = 30000;
 // Module-level so repeated calls within the TTL window (e.g. one per RTK
 // Query request) don't re-probe the network every time.
 let resolutionCache = { url: null, expiresAt: 0 };
+const backendStatusListeners = new Set();
+
+/**
+ * Subscribes a listener to backend status changes (e.g., 'STANDBY', 'WAKING_UP', 'READY').
+ *
+ * @param {Function} listener - Callback receiving (status, details)
+ * @returns {Function} Unsubscribe function
+ */
+export function subscribeBackendStatus(listener) {
+  backendStatusListeners.add(listener);
+  return () => backendStatusListeners.delete(listener);
+}
+
+/**
+ * Emits a backend status update to all registered subscribers.
+ *
+ * @param {string} status - New backend status ('STANDBY' | 'WAKING_UP' | 'READY')
+ * @param {Object} [details] - Optional payload details
+ */
+export function notifyBackendStatus(status, details = {}) {
+  backendStatusListeners.forEach((listener) => {
+    try {
+      listener(status, details);
+    } catch {
+      // Ignore listener errors
+    }
+  });
+}
+
+/**
+ * Invalidate cached backend resolution to force a fresh network probe.
+ */
+export function invalidateResolutionCache() {
+  resolutionCache = { url: null, expiresAt: 0 };
+}
 
 /**
  * Returns the backend URL fixed by configuration or environment, bypassing
@@ -41,10 +76,10 @@ function getStaticOverride() {
  * Probes `${url}/actuator/health` with a short timeout, so an unreachable
  * candidate backend can't stall URL resolution.
  *
- * @param {string} url - Candidate backend base URL.
+ * @param {string} [url=CLOUD_API_URL] - Candidate backend base URL.
  * @returns {Promise<boolean>} True if the backend responded with an ok status.
  */
-async function isHealthy(url) {
+export async function checkBackendHealth(url = CLOUD_API_URL) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), HEALTH_CHECK_TIMEOUT_MS);
   try {
@@ -54,6 +89,30 @@ async function isHealthy(url) {
     return false;
   } finally {
     clearTimeout(timer);
+  }
+}
+
+/**
+ * Dispatches an automated wake-up signal via the serverless /api/wakeup endpoint.
+ *
+ * @param {string} [cloud='azure'] - Target cloud provider ('azure' or 'aws')
+ * @returns {Promise<Object>} The response from the serverless wakeup handler
+ */
+export async function triggerBackendWakeup(cloud = 'azure') {
+  try {
+    const res = await fetch('/api/wakeup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cloud }),
+    });
+    if (!res.ok) {
+      return { status: 'ERROR', message: 'Failed to dispatch wakeup signal.' };
+    }
+    const data = await res.json();
+    notifyBackendStatus(data.status || 'WAKING_UP', data);
+    return data;
+  } catch {
+    return { status: 'ERROR', message: 'Network error contacting wakeup endpoint.' };
   }
 }
 
@@ -109,11 +168,14 @@ export async function resolveApiUrl() {
 
   // 1. Prefer the cloud backend if it's actually up.
   let resolved = CLOUD_API_URL;
-  if (!(await isHealthy(CLOUD_API_URL))) {
+  if (!(await checkBackendHealth(CLOUD_API_URL))) {
     // 2. Cloud is down - fall back to whichever local tunnel is currently published, if reachable.
     const tunnelUrl = await fetchPublishedTunnelUrl();
-    if (tunnelUrl && await isHealthy(tunnelUrl)) {
+    if (tunnelUrl && await checkBackendHealth(tunnelUrl)) {
       resolved = tunnelUrl;
+    } else {
+      // Both cloud and tunnel are down; notify subscribers that backend is in standby
+      notifyBackendStatus('STANDBY', { cloudUrl: CLOUD_API_URL });
     }
   }
 

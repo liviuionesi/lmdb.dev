@@ -1,14 +1,30 @@
 import React from 'react';
 import { CssBaseline } from '@mui/material';
 import { Route, Routes } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
 
 import useStyles from './styles';
 import VoiceControl from './VoiceControl/VoiceControl';
+import { tmdbApi } from '../services/TMDB';
 
-import { Actors, AdminDashboard, MovieInformation, Movies, NavBar, Profile } from '.';
+import {
+  Actors,
+  AdminDashboard,
+  BackendStandbyModal,
+  MovieInformation,
+  Movies,
+  NavBar,
+  Profile,
+} from '.';
 
 function App() {
   const { classes } = useStyles();
+  const dispatch = useDispatch();
+
+  const handleBackendReady = () => {
+    // Automatically re-fetch all active movie/user queries once backend goes live
+    dispatch(tmdbApi.util.resetApiState());
+  };
 
   return (
     <div className={classes.root}>
@@ -24,6 +40,7 @@ function App() {
           <Route path="/profile/:id" element={<Profile />} />
         </Routes>
       </main>
+      <BackendStandbyModal onBackendReady={handleBackendReady} />
       <VoiceControl />
     </div>
   );
