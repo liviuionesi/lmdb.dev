@@ -61,6 +61,24 @@ All `./gradlew` tasks below just shell out to a script in
 `infrastructure/scripts/` — run the script directly if you want to skip
 Gradle's daemon startup overhead.
 
+### Complete Gradle Deployment Command Reference
+
+| Task | Command | What It Does |
+|---|---|---|
+| **`statusInfra`** | `./gradlew statusInfra` | Health check for Local, Tunnel, Azure, and AWS |
+| **`deployLocal`** | `./gradlew deployLocal` | Starts local Docker/Podman microservices & databases |
+| **`stopLocal`** | `./gradlew stopLocal` | Stops local Compose, Minikube, Vite, and Tunnel |
+| **`startTunnel`** | `./gradlew startTunnel` | Starts public Cloudflare HTTPS tunnel for local/Minikube gateway |
+| **`stopTunnel`** | `./gradlew stopTunnel` | Stops the Cloudflare tunnel container |
+| **`startAzure`** | `./gradlew startAzure` | Starts stopped Azure AKS cluster compute nodes & updates DuckDNS |
+| **`stopAzure`** | `./gradlew stopAzure` | Stops AKS cluster compute nodes ($0 compute spend, preserves disks) |
+| **`startAws`** | `./gradlew startAws` | Starts stopped AWS EC2 k3s instance & updates DuckDNS |
+| **`stopAws`** | `./gradlew stopAws` | Stops AWS EC2 k3s instance ($0 compute spend, preserves EBS) |
+| **`stopAllClouds`** | `./gradlew stopAllClouds` | Detects and stops all running clouds (Azure, AWS, Minikube) at once |
+| **`autoStopWatchdog`** | `./gradlew autoStopWatchdog` | Shuts down cloud compute if idle for > 1 hour |
+
+---
+
 ## 3. Scenario: local only
 
 For local development against `localhost:3000`/`5173`. No frontend binding
@@ -124,6 +142,8 @@ Teardown:
 ## 5. Scenario: Azure AKS
 
 ```bash
+./gradlew startAzure           # resumes stopped AKS compute nodes (~2 min)
+# OR for full initial provisioning:
 ./gradlew deployAzure          # infrastructure/scripts/deploy-azure.sh
 ```
 
@@ -131,9 +151,8 @@ This single command: `terraform apply` (provisions AKS on
 `Standard_D4ls_v7`, 4 vCPU/8GB) → `az aks get-credentials` → `kubectl
 apply -k infrastructure/kubernetes/overlays/azure` (full local-parity
 service set — gateway, movie/actor/user/ai-service, MongoDB, Postgres,
-Redis, Ollama; see §6.1 for what's still missing and why) → waits for
-rollout → pulls Ollama's models (one-time, same manual step as local dev)
-→ prints the node's public IP.
+Redis, Ollama) → waits for full 9-workload rollout → auto-updates DuckDNS
+(`filmpire-api.duckdns.org`).
 
 The gateway is exposed as a **NodePort** (`:30080`, no load balancer — see
 `infrastructure/terraform/README.md`) at that raw IP, over plain HTTP.
@@ -207,6 +226,8 @@ managed control plane (bumped from `t3.small` alongside Azure's resize —
 Ollama alone needs up to 4Gi).
 
 ```bash
+./gradlew startAws             # resumes stopped EC2 k3s instance (~1-2 min)
+# OR for full initial provisioning:
 ./gradlew deployAws            # infrastructure/scripts/deploy-aws.sh
 ```
 
@@ -223,26 +244,31 @@ image-freshness notes as §5 all apply identically.
 Teardown:
 
 ```bash
+./gradlew stopAws              # stops instance ($0 compute, preserves EBS volume)
+# OR full permanent destruction:
 ./gradlew destroyAws
 ```
 
-### If you use the GitHub Actions path instead
+### 6.1 Smart Cloud Deploy in GitHub Actions (Self-Healing & Password-Protected)
 
-`.github/workflows/deploy.yml`/`destroy.yml` (`workflow_dispatch`, cloud
-picker) are still in the repo as an alternate CI-driven path — useful if
-you want deploys to run somewhere other than your own machine. They need
-these repo secrets/vars (already configured as of 2026-08-10):
+`.github/workflows/deploy.yml`, `cluster-stop.yml`, and `destroy.yml` are
+automated CI-driven paths. They are **password-protected** to prevent
+accidental cloud charges:
 
-| Name | Kind | Used for |
+| Secret / Variable | Kind | Purpose |
 |---|---|---|
-| `AZURE_CLIENT_ID`/`AZURE_TENANT_ID`/`AZURE_SUBSCRIPTION_ID` | vars | Azure OIDC login |
-| `AWS_ROLE_ARN`, `AWS_REGION` | vars | AWS OIDC login |
-| `TF_STATE_*` (bucket/container/resource group/storage account/table) | vars | Terraform remote state |
-| `DUCKDNS_TOKEN` | secret | Points `filmpire-api.duckdns.org` at whichever cloud IP just deployed |
-| `AWS_K3S_SSH_PRIVATE_KEY` | secret | AWS-only — fetches kubeconfig over SSH |
+| `DEPLOY_PASSPHRASE` | **Secret** | **Mandatory authorization passphrase** required to trigger deploy, stop, or destroy |
+| `AZURE_CLIENT_ID`/`AZURE_TENANT_ID`/`AZURE_SUBSCRIPTION_ID` | Variable | Azure OIDC login |
+| `AWS_ROLE_ARN`, `AWS_REGION` | Variable | AWS OIDC login |
+| `TF_STATE_*` | Variable | Terraform remote state backend |
+| `DUCKDNS_TOKEN` | Secret | Updates `filmpire-api.duckdns.org` with live node IP |
+| `AWS_K3S_SSH_PRIVATE_KEY` | Secret | Fetches kubeconfig over SSH from AWS k3s nodes |
 
-The Gradle tasks in §5/§6 are the primary path now; this table is here so
-the CI path doesn't bit-rot silently if picked back up later.
+#### Smart Self-Healing Behavior in `deploy.yml`:
+- **If the cluster is Stopped** (e.g. from 1-hour auto-stop) → Automatically starts it.
+- **If the cluster was Destroyed** (no Terraform state) → Automatically provisions it with Terraform.
+- **Full Rollout Check**: Verifies all 9 workloads before completing.
+- **GitHub Deployment Environment**: Badges and logs live status under the repo's **Deployments** tab.
 
 ## 7. Deploying the frontend itself
 

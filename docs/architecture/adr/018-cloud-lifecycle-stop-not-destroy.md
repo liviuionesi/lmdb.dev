@@ -46,23 +46,33 @@ model weights). This costs ~$0.25/day for Azure (~$7.50/month if idle all month)
 
 ## Implementation
 
-| Script / Workflow | Purpose |
+| Script / Gradle Task / Workflow | Purpose |
 |---|---|
-| `infrastructure/scripts/stop-azure.sh` | Stops AKS, waits for full de-allocation, prints cost summary |
-| `infrastructure/scripts/start-azure.sh` | Starts AKS, waits all 9 pods Ready, auto-updates DuckDNS |
-| `infrastructure/scripts/stop-aws.sh` | Stops AWS k3s EC2 instance (AWS equivalent of stop-azure.sh) |
-| `infrastructure/scripts/stop-all-clouds.sh` | Detects and stops all running clouds in one command |
-| `.github/workflows/cluster-stop.yml` | Remote start/stop from GitHub UI (when no local machine) |
-| `.github/workflows/destroy.yml` | Full `terraform destroy` — manual only, irreversible |
+| `./gradlew startAzure` (`start-azure.sh`) | Starts AKS, waits all 9 workloads Ready, auto-updates DuckDNS (~2m) |
+| `./gradlew stopAzure` (`stop-azure.sh`) | Stops AKS compute, waits for full de-allocation, prints cost summary ($0 compute) |
+| `./gradlew startAws` (`start-aws.sh`) | Starts AWS k3s EC2 instance, updates DuckDNS (~1m) |
+| `./gradlew stopAws` (`stop-aws.sh`) | Stops AWS k3s EC2 instance ($0 compute, EBS preserved) |
+| `./gradlew stopAllClouds` (`stop-all-clouds.sh`) | Detects and stops all running clouds (Azure, AWS, Minikube) in one command |
+| `./gradlew statusInfra` (`status-infra.sh`) | Health check for Local, Tunnel, Azure, and AWS endpoints |
+| `.github/workflows/deploy.yml` | **Smart Deploy**: Auto-wakes stopped clusters or auto-provisions if destroyed, password-gated |
+| `.github/workflows/cluster-stop.yml` | Remote start/stop from GitHub Actions UI (protected by `DEPLOY_PASSPHRASE`) |
+| `.github/workflows/destroy.yml` | Full `terraform destroy` — password-gated, requires confirmation `DESTROY` |
 
 ### Lifecycle for a typical demo day
 
-```
-Morning:    ./infrastructure/scripts/start-azure.sh   # ~2 min, data intact
-            (or trigger cluster-stop.yml action=start from GitHub UI)
-Demo:       https://filmpire-microservices-tan.vercel.app/
-Evening:    ./infrastructure/scripts/stop-azure.sh    # compute → $0
-            (or trigger cluster-stop.yml action=stop from GitHub UI)
+```bash
+# Morning: Resume cloud compute (~1-2 min, database data intact)
+./gradlew startAzure
+# OR:
+./gradlew startAws
+
+# Demo:
+# https://filmpire-microservices-tan.vercel.app/
+
+# Evening: Stop cloud compute to bring compute spend to $0
+./gradlew stopAzure
+# OR stop everything:
+./gradlew stopAllClouds
 ```
 
 ---

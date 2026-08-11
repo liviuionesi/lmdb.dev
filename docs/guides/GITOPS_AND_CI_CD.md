@@ -53,8 +53,9 @@ flowchart TD
 | [`.github/workflows/frontend-ci.yml`](../../.github/workflows/frontend-ci.yml) | `push`, `pull_request` (`frontend/**`) | Installs Node.js 22, executes `npm run test` (Vitest), `npm run lint`, and `npm run build`. | CI Runner (Ubuntu 24.04) |
 | [`.github/workflows/docker-publish.yml`](../../.github/workflows/docker-publish.yml) | `push` to `main` | Builds Docker images for all 8 microservices and publishes them to GitHub Packages (`ghcr.io/pehlivanu/filmpire-*:latest`). | GitHub Container Registry (GHCR) |
 | [`.github/workflows/terraform-plan.yml`](../../.github/workflows/terraform-plan.yml) | `push` to `main` (`infrastructure/terraform/**`) | Authenticates to Azure via GitHub OIDC federation (no stored secrets) and verifies Terraform plan syntax. | Azure Resource Manager |
-| [`.github/workflows/deploy.yml`](../../.github/workflows/deploy.yml) | `workflow_dispatch` (Choice: `azure` / `aws`) | Provisions Terraform infrastructure, applies Kubernetes Kustomize manifests, updates DuckDNS records, and launches smoke tests. | Azure AKS / AWS EC2 k3s |
-| [`.github/workflows/destroy.yml`](../../.github/workflows/destroy.yml) | `workflow_dispatch` (Choice: `azure` / `aws`) | Destroys cloud infrastructure via Terraform to maintain $0 spend. | Cloud Providers |
+| [`.github/workflows/deploy.yml`](../../.github/workflows/deploy.yml) | `workflow_dispatch` (Choice: `azure` / `aws` + `passphrase`) | **Smart Deploy**: Authenticates with passphrase, auto-wakes stopped clusters or auto-provisions if destroyed, applies K8s manifests, checks all 9 workloads, and updates DuckDNS. | Azure AKS / AWS EC2 k3s |
+| [`.github/workflows/cluster-stop.yml`](../../.github/workflows/cluster-stop.yml) | `workflow_dispatch` (Choice: `azure` / `aws`, Action: `stop`/`start` + `passphrase`) | Remotely starts or stops cloud compute nodes to save credits while preserving PVC data on disk. | Azure AKS / AWS EC2 k3s |
+| [`.github/workflows/destroy.yml`](../../.github/workflows/destroy.yml) | `workflow_dispatch` (Choice: `azure` / `aws` + `passphrase` + `confirmation: DESTROY`) | Destroys cloud infrastructure via Terraform to maintain $0 spend. | Cloud Providers |
 | [`.github/workflows/e2e-smoke.yml`](../../.github/workflows/e2e-smoke.yml) | Nightly cron / `workflow_dispatch` | Spawns complete stack and executes Newman collection (`Filmpire-API.postman_collection.json`). | CI Runner |
 
 ---
@@ -72,6 +73,7 @@ flowchart TD
 - `ALERT_EMAIL`: Email recipient for zero-spend tripwire alerts.
 
 ### 3.2 GitHub Repository Secrets (Sensitive Credentials)
+- `DEPLOY_PASSPHRASE`: **Mandatory authorization secret** required to trigger deployment, cluster start/stop, or teardown.
 - `TMDB_API_KEY`: API key for upstream TMDB v3 data hydration.
 - `DUCKDNS_TOKEN`: Token for updating `filmpire-api.duckdns.org`.
 - `AWS_K3S_SSH_PRIVATE_KEY`: Private SSH key for fetching `kubeconfig` over SSH from AWS k3s nodes.
@@ -83,19 +85,24 @@ flowchart TD
 For quick local developer operations without opening the GitHub Actions UI:
 
 ```bash
-# Infrastructure Lifecycle
-./gradlew deployLocal        # Boots local Docker Compose (15 services)
-./gradlew stopLocal          # Stops local Docker Compose
-./gradlew statusInfra        # Checks health of all running containers
+# Infrastructure Health
+./gradlew statusInfra        # Checks health of Local, Tunnel, Azure, and AWS
+
+# Local Lifecycle
+./gradlew deployLocal        # Boots local Docker Compose (all microservices & DBs)
+./gradlew stopLocal          # Stops local Compose, Minikube, Vite, and Tunnel
 
 # Cloud Lifecycle
-./gradlew deployAzure        # Runs infrastructure/scripts/deploy-azure.sh
-./gradlew destroyAzure       # Runs infrastructure/scripts/destroy-azure.sh
-./gradlew deployAws          # Runs infrastructure/scripts/deploy-aws.sh
-./gradlew destroyAws         # Runs infrastructure/scripts/destroy-aws.sh
+./gradlew startAzure         # Starts stopped Azure AKS cluster nodes (~2m)
+./gradlew stopAzure          # Stops Azure AKS cluster compute ($0 compute spend)
+./gradlew startAws           # Starts stopped AWS EC2 k3s instance (~1m)
+./gradlew stopAws            # Stops AWS EC2 k3s instance ($0 compute spend)
+./gradlew stopAllClouds      # Detects and stops all active clouds in one command
+./gradlew autoStopWatchdog   # Auto-stops compute after 1 hour of backend inactivity
 
 # Tunneling
-./gradlew startTunnel        # Spawns Cloudflare Tunnel & updates tunnel-url.txt
+./gradlew startTunnel        # Spawns Cloudflare HTTPS Tunnel & updates tunnel-url.txt
+./gradlew stopTunnel         # Stops Cloudflare Tunnel container
 ```
 
 ---
@@ -104,5 +111,6 @@ For quick local developer operations without opening the GitHub Actions UI:
 
 To prevent unexpected billing on cloud accounts:
 1. **$1 Budget Alarm**: Applied before any compute resources are provisioned (`budget-guard` and `budget-guard-aws` Terraform modules).
-2. **Standard Load Balancer & NAT Gateway Avoidance**: Direct node public IP routing via NodePort `30080`.
-3. **Prompt Destroy Policy**: Cloud clusters are ephemeral and torn down immediately after testing sessions.
+2. **Stop-Not-Destroy Strategy (ADR-018)**: Compute is stopped (`az aks stop` / `ec2 stop`) between demo sessions, reducing idle spend by 95% while keeping databases intact.
+3. **1-Hour Inactivity Auto-Stop**: `auto-stop-watchdog.sh` monitors `/actuator/activity` and scales compute to zero when idle.
+4. **Mandatory Passphrase Gate**: `deploy.yml`, `cluster-stop.yml`, and `destroy.yml` are protected by `DEPLOY_PASSPHRASE`.

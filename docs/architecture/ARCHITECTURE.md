@@ -2496,36 +2496,41 @@ checking for `access-control-allow-origin` in the response.
 
 ### 11.7 Cloud Lifecycle Management
 
-Lifecycle is managed via scripts in `infrastructure/scripts/` and a GitHub
-Actions workflow — no manual Azure Portal clicks required.
+Lifecycle is managed via scripts in `infrastructure/scripts/`, Gradle tasks,
+and GitHub Actions workflows — no manual cloud portal clicks required.
 
-| Tool | What it does |
+| Tool / Gradle Task | What it does |
 |---|---|
-| `start-azure.sh` | Starts (or provisions) AKS, waits all 9 pods Ready, auto-updates DuckDNS |
-| `stop-azure.sh` | Stops AKS, waits for full de-allocation, prints cost summary |
-| `stop-all-clouds.sh` | Detects and stops whichever cloud(s) are running (Azure, AWS, Minikube) |
-| `stop-all-clouds.sh --dry-run` | Print what would be stopped without acting |
-| `auto-stop-watchdog.sh` | Checks inactivity via `/actuator/activity`; stops cluster if idle > 1h |
-| `.github/workflows/cluster-stop.yml` | Remote start/stop from GitHub UI when no local machine available |
-| `.github/workflows/deploy.yml` | Deploy workloads to a running cluster (does not provision) |
-| `.github/workflows/destroy.yml` | Full `terraform destroy` — manual only, irreversible |
+| `./gradlew startAzure` (`start-azure.sh`) | Resumes stopped AKS cluster, waits for all 9 workloads Ready, auto-updates DuckDNS (~2m) |
+| `./gradlew stopAzure` (`stop-azure.sh`) | Stops AKS compute nodes ($0 compute spend, preserves disk data), waits for full de-allocation |
+| `./gradlew startAws` (`start-aws.sh`) | Resumes stopped AWS EC2 k3s instance (~1m), updates DuckDNS |
+| `./gradlew stopAws` (`stop-aws.sh`) | Stops AWS EC2 k3s instance ($0 compute spend, preserves EBS volume data) |
+| `./gradlew stopAllClouds` (`stop-all-clouds.sh`) | Detects and stops whichever cloud(s) are running (Azure, AWS, Minikube) |
+| `stop-all-clouds.sh --dry-run` | Prints what would be stopped without acting |
+| `./gradlew autoStopWatchdog` (`auto-stop-watchdog.sh`) | Checks inactivity via `/actuator/activity`; stops compute if idle > 1h |
+| `./gradlew statusInfra` (`status-infra.sh`) | Health check across Local, Tunnel, Azure, and AWS endpoints |
+| `.github/workflows/deploy.yml` | **Smart Deploy**: Password-gated, auto-wakes stopped clusters or auto-provisions if destroyed, verifies 9 workloads |
+| `.github/workflows/cluster-stop.yml` | Remote start/stop from GitHub Actions UI (protected by `DEPLOY_PASSPHRASE`) |
+| `.github/workflows/destroy.yml` | Full `terraform destroy` — password-gated, requires confirmation `DESTROY` |
 
 **Typical day lifecycle:**
 
 ```bash
-# Morning — resume
-./infrastructure/scripts/start-azure.sh          # ~2-3 min, data intact
+# Morning — resume Azure AKS or AWS
+./gradlew startAzure          # ~2-3 min, data intact
+# OR:
+./gradlew startAws            # ~1-2 min, data intact
 
 # Optional: start HTTPS tunnel (bypasses DNS TTL)
-./infrastructure/scripts/start-tunnel.sh
+./gradlew startTunnel
 
-# Evening — stop to save ~$5/day
-./infrastructure/scripts/stop-azure.sh           # wait for full stop
-# OR: stop everything
-./infrastructure/scripts/stop-all-clouds.sh
+# Evening — stop to save compute spend
+./gradlew stopAzure           # wait for full stop ($0 compute, preserves disks)
+# OR: stop everything across all clouds and local
+./gradlew stopAllClouds
 
-# From GitHub UI (no local machine needed)
-# → Actions → Cluster Stop / Start → Run workflow → cloud: azure, action: stop
+# Check status anytime:
+./gradlew statusInfra
 ```
 
 See [ADR-018](adr/018-cloud-lifecycle-stop-not-destroy.md) for the
