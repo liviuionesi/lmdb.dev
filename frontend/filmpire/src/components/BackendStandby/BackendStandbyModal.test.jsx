@@ -6,7 +6,7 @@ import { useBackendWakeup } from './useBackendWakeup';
 
 vi.mock('./useBackendWakeup');
 
-describe('BackendStandbyModal', () => {
+describe('BackendStandbyModal Cinematic Pre-Show', () => {
   it('does not open when backend status is ONLINE', () => {
     useBackendWakeup.mockReturnValue({
       status: 'ONLINE',
@@ -18,10 +18,10 @@ describe('BackendStandbyModal', () => {
     });
 
     renderWithProviders(<BackendStandbyModal />);
-    expect(screen.queryByText('Backend standby')).not.toBeInTheDocument();
+    expect(screen.queryByText('Feature Presentation')).not.toBeInTheDocument();
   });
 
-  it('renders modal with countdown and step progression when status is WAKING_UP', () => {
+  it('renders cinematic pre-show with countdown and act 1 progression when waking up', () => {
     const wakeUpMock = vi.fn();
     useBackendWakeup.mockReturnValue({
       status: 'WAKING_UP',
@@ -34,18 +34,37 @@ describe('BackendStandbyModal', () => {
 
     renderWithProviders(<BackendStandbyModal />);
 
-    expect(screen.getByText('Backend standby')).toBeInTheDocument();
-    expect(screen.getByText('75s remaining')).toBeInTheDocument();
-    expect(screen.getByText(/1. Initializing compute nodes \(AZURE\)/)).toBeInTheDocument();
-    expect(screen.getAllByText('Azure AKS')).toHaveLength(2);
-    expect(screen.getByText('AWS EC2 (k3s)')).toBeInTheDocument();
+    expect(screen.getByText('Feature Presentation')).toBeInTheDocument();
+    expect(screen.getByText('75s until showtime')).toBeInTheDocument();
+    expect(screen.getByText('ACT I: SCENE SETUP')).toBeInTheDocument();
+    expect(screen.getByText('Dimming the House Lights')).toBeInTheDocument();
+    expect(screen.getByText(/Powering up the cloud projector/)).toBeInTheDocument();
+    expect(screen.getByText('Screen 1: Azure AKS')).toBeInTheDocument();
+    expect(screen.getByText('Screen 2: AWS EC2')).toBeInTheDocument();
 
     // Click cloud switch button
-    fireEvent.click(screen.getByText('AWS EC2 (k3s)'));
+    fireEvent.click(screen.getByText('Screen 2: AWS EC2'));
     expect(wakeUpMock).toHaveBeenCalledWith('aws');
   });
 
-  it('removes modal immediately when status transitions to READY', () => {
+  it('renders act 2 details when currentStep is 2', () => {
+    useBackendWakeup.mockReturnValue({
+      status: 'WAKING_UP',
+      secondsRemaining: 45,
+      progressPercentage: 50,
+      targetCloud: 'azure',
+      currentStep: 2,
+      wakeUp: vi.fn(),
+    });
+
+    renderWithProviders(<BackendStandbyModal />);
+
+    expect(screen.getByText('ACT II: COMING ATTRACTIONS')).toBeInTheDocument();
+    expect(screen.getByText('Rolling the Film Reels')).toBeInTheDocument();
+    expect(screen.getByText(/Loading thousands of movies, cast details/)).toBeInTheDocument();
+  });
+
+  it('removes modal immediately when status is READY or ONLINE', () => {
     useBackendWakeup.mockReturnValue({
       status: 'READY',
       secondsRemaining: 0,
@@ -56,10 +75,10 @@ describe('BackendStandbyModal', () => {
     });
 
     renderWithProviders(<BackendStandbyModal />);
-    expect(screen.queryByText('Backend standby')).not.toBeInTheDocument();
+    expect(screen.queryByText('Feature Presentation')).not.toBeInTheDocument();
   });
 
-  it('allows dismissing the modal via close button', () => {
+  it('allows dismissing the pre-show via close button', () => {
     useBackendWakeup.mockReturnValue({
       status: 'WAKING_UP',
       secondsRemaining: 80,
@@ -70,9 +89,9 @@ describe('BackendStandbyModal', () => {
     });
 
     renderWithProviders(<BackendStandbyModal />);
-    expect(screen.getByText('Backend standby')).toBeInTheDocument();
+    expect(screen.getByText('Feature Presentation')).toBeInTheDocument();
 
     fireEvent.click(screen.getByLabelText('close'));
-    expect(screen.queryByText('Backend standby')).not.toBeInTheDocument();
+    expect(screen.queryByText('Feature Presentation')).not.toBeInTheDocument();
   });
 });
