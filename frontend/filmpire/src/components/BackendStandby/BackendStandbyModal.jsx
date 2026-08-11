@@ -1,53 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
   Box,
   Typography,
-  CircularProgress,
   Button,
   Chip,
   LinearProgress,
   IconButton,
 } from '@mui/material';
-import CloudQueueIcon from '@mui/icons-material/CloudQueue';
-import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CloseIcon from '@mui/icons-material/Close';
-import DnsIcon from '@mui/icons-material/Dns';
 
 import { useBackendWakeup } from './useBackendWakeup';
-import useStyles from './styles';
 
 /**
- * Returns class string for a step item based on step progress.
+ * Backend Standby & Auto-Wakeup Modal matching Filmpire's exact MUI Dialog design system.
  *
- * @param {number} stepIndex - The step's index (1, 2, or 3)
- * @param {number} currentStep - The currently active step
- * @param {Object} classes - Style classes
- * @returns {string} Combined class names
- */
-function getStepItemClass(stepIndex, currentStep, classes) {
-  if (currentStep > stepIndex) {
-    return `${classes.stepItem} ${classes.stepCompleted}`;
-  }
-  if (currentStep === stepIndex) {
-    return `${classes.stepItem} ${classes.stepActive}`;
-  }
-  return classes.stepItem;
-}
-
-/**
- * Modern Glassmorphic Backend Standby & Auto-Wakeup Modal.
- *
- * <p>Greets visitors when the cloud cluster is in Eco-Sleep mode, displays a dynamic ~90s
- * countdown with multi-step progression, polls backend health, and auto-dismisses once the
- * backend responds 200 OK.
+ * <p>Notifies visitors when the backend is in standby mode, displays the ~90s countdown,
+ * step progress, and auto-dismisses once the cluster is live.
  *
  * @param {Object} props
  * @param {Function} [props.onBackendReady] - Optional callback triggered when backend goes live
  */
 function BackendStandbyModal({ onBackendReady }) {
-  const { classes } = useStyles();
   const [open, setOpen] = useState(false);
   const [dismissed, setDismissed] = useState(false);
 
@@ -64,7 +41,6 @@ function BackendStandbyModal({ onBackendReady }) {
       if (onBackendReady) {
         onBackendReady();
       }
-      // Auto-dismiss after 1.5s celebration
       setTimeout(() => {
         setOpen(false);
       }, 1500);
@@ -95,176 +71,166 @@ function BackendStandbyModal({ onBackendReady }) {
   }
 
   return (
-    <Dialog
-      open={open}
-      onClose={handleClose}
-      slotProps={{
-        backdrop: { className: classes.modalBackdrop },
-      }}
-      PaperProps={{
-        className: classes.glassCard,
-        elevation: 0,
-      }}
-    >
-      <Box position="relative">
+    <Dialog open={open} onClose={handleClose} fullWidth maxWidth="xs">
+      <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1 }}>
+        <Typography variant="h6" fontWeight={700}>
+          {isReady ? 'Backend online' : 'Backend standby'}
+        </Typography>
         <IconButton
           aria-label="close"
           onClick={handleClose}
-          sx={{
-            position: 'absolute',
-            right: -10,
-            top: -10,
-            color: 'text.secondary',
-          }}
           size="small"
+          sx={{ color: 'text.secondary' }}
         >
           <CloseIcon fontSize="small" />
         </IconButton>
+      </DialogTitle>
 
-        {/* Header Icon / Progress Ring */}
-        <Box className={classes.pulseCircle}>
-          {isReady ? (
-            <CheckCircleIcon sx={{ fontSize: 72, color: '#10b981' }} />
-          ) : (
-            <Box position="relative" display="inline-flex">
-              <CircularProgress
-                variant="determinate"
-                value={100}
-                size={84}
-                thickness={3.5}
-                sx={{ color: (theme) => (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)') }}
-              />
-              <CircularProgress
-                variant="determinate"
-                value={progressPercentage}
-                size={84}
-                thickness={3.5}
-                sx={{
-                  color: '#3b82f6',
-                  position: 'absolute',
-                  left: 0,
-                  strokeLinecap: 'round',
-                  transition: 'all 0.5s ease',
-                }}
-              />
-              <Box
-                sx={{
-                  top: 0,
-                  left: 0,
-                  bottom: 0,
-                  right: 0,
-                  position: 'absolute',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexDirection: 'column',
-                }}
-              >
-                <Typography variant="h6" component="div" fontWeight={800} color="primary">
-                  {secondsRemaining}s
-                </Typography>
-              </Box>
-            </Box>
-          )}
+      <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+        {/* Status and Countdown Header Box */}
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            bgcolor: 'action.hover',
+            p: 1.5,
+            borderRadius: 2,
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Chip
+              size="small"
+              label={isReady ? 'Online' : 'Waking up'}
+              color={isReady ? 'success' : 'primary'}
+              variant={isReady ? 'filled' : 'outlined'}
+              sx={{ fontWeight: 700, height: 22, fontSize: '0.75rem' }}
+            />
+            <Typography variant="body2" color="text.secondary">
+              {targetCloud === 'azure' ? 'Azure AKS' : 'AWS EC2 (k3s)'}
+            </Typography>
+          </Box>
+          <Typography variant="subtitle2" fontWeight={700} color="primary">
+            {isReady ? 'Ready' : `${secondsRemaining}s remaining`}
+          </Typography>
         </Box>
 
-        {/* Title and Tagline */}
-        <Typography variant="h5" fontWeight={800} gutterBottom>
-          {isReady ? 'Backend Online!' : 'Waking Up Cloud Cluster'}
-        </Typography>
+        {/* Progress Bar */}
+        <LinearProgress
+          variant="determinate"
+          value={progressPercentage}
+          color={isReady ? 'success' : 'primary'}
+          sx={{ height: 6, borderRadius: 3 }}
+        />
 
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2, px: 2 }}>
+        <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>
           {isReady
-            ? 'Services are fully initialized. Enjoy streaming on Filmpire!'
-            : 'To save energy & cloud costs, the backend auto-sleeps after 1 hour of idle time. It is now spinning up on-demand.'}
+            ? 'Microservices and database caches are online. Happy streaming!'
+            : 'To save energy and cloud costs, the backend enters standby after 1 hour of inactivity. Booting up now...'}
         </Typography>
 
-        {/* Cloud Switcher Buttons */}
+        {/* Cloud Switcher Chips */}
         {!isReady && (
-          <Box display="flex" justifyContent="center" gap={1} mb={2}>
+          <Box sx={{ display: 'flex', gap: 1 }}>
             <Chip
-              icon={<CloudQueueIcon />}
               label="Azure AKS"
               color={targetCloud === 'azure' ? 'primary' : 'default'}
               variant={targetCloud === 'azure' ? 'filled' : 'outlined'}
               onClick={() => handleSwitchCloud('azure')}
               clickable
-              sx={{ fontWeight: 600 }}
+              size="small"
+              sx={{ flex: 1, fontWeight: 600 }}
             />
             <Chip
-              icon={<DnsIcon />}
               label="AWS EC2 (k3s)"
               color={targetCloud === 'aws' ? 'primary' : 'default'}
               variant={targetCloud === 'aws' ? 'filled' : 'outlined'}
               onClick={() => handleSwitchCloud('aws')}
               clickable
-              sx={{ fontWeight: 600 }}
+              size="small"
+              sx={{ flex: 1, fontWeight: 600 }}
             />
           </Box>
         )}
 
-        {/* Linear Progress Bar */}
+        {/* Step Indicators */}
         {!isReady && (
-          <LinearProgress
-            variant="determinate"
-            value={progressPercentage}
-            sx={{
-              height: 6,
-              borderRadius: 3,
-              mb: 2,
-              bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'),
-            }}
-          />
-        )}
-
-        {/* Step Progress Tracker */}
-        {!isReady && (
-          <Box className={classes.stepContainer}>
-            <Box className={getStepItemClass(1, currentStep, classes)}>
-              <RocketLaunchIcon sx={{ fontSize: 18, color: currentStep >= 1 ? '#3b82f6' : 'text.disabled' }} />
-              <Typography variant="caption" fontWeight={currentStep === 1 ? 700 : 500}>
-                1. Initializing {targetCloud.toUpperCase()} compute nodes
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, pt: 0.5 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <Box
+                sx={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: '50%',
+                  bgcolor: currentStep >= 1 ? 'primary.main' : 'text.disabled',
+                  flexShrink: 0,
+                }}
+              />
+              <Typography
+                variant="caption"
+                color={currentStep === 1 ? 'text.primary' : 'text.secondary'}
+                fontWeight={currentStep === 1 ? 700 : 400}
+              >
+                1. Initializing compute nodes ({targetCloud.toUpperCase()})
               </Typography>
             </Box>
 
-            <Box className={getStepItemClass(2, currentStep, classes)}>
-              <CloudQueueIcon sx={{ fontSize: 18, color: currentStep >= 2 ? '#3b82f6' : 'text.disabled' }} />
-              <Typography variant="caption" fontWeight={currentStep === 2 ? 700 : 500}>
-                2. Booting Gateway, Movies & AI microservices
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <Box
+                sx={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: '50%',
+                  bgcolor: currentStep >= 2 ? 'primary.main' : 'text.disabled',
+                  flexShrink: 0,
+                }}
+              />
+              <Typography
+                variant="caption"
+                color={currentStep === 2 ? 'text.primary' : 'text.secondary'}
+                fontWeight={currentStep === 2 ? 700 : 400}
+              >
+                2. Rolling out API Gateway & microservices
               </Typography>
             </Box>
 
-            <Box className={getStepItemClass(3, currentStep, classes)}>
-              <CheckCircleIcon sx={{ fontSize: 18, color: currentStep >= 3 ? '#10b981' : 'text.disabled' }} />
-              <Typography variant="caption" fontWeight={currentStep >= 3 ? 700 : 500}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <Box
+                sx={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: '50%',
+                  bgcolor: currentStep >= 3 ? 'success.main' : 'text.disabled',
+                  flexShrink: 0,
+                }}
+              />
+              <Typography
+                variant="caption"
+                color={currentStep >= 3 ? 'text.primary' : 'text.secondary'}
+                fontWeight={currentStep >= 3 ? 700 : 400}
+              >
                 3. Warming up MongoDB, Redis & TMDB cache
               </Typography>
             </Box>
           </Box>
         )}
+      </DialogContent>
 
-        {/* Bottom Actions */}
-        <Box mt={3} display="flex" justifyContent="center" gap={1.5}>
+      <DialogActions sx={{ px: 3, pb: 2 }}>
+        <Button onClick={handleClose} color="inherit" size="small">
+          Browse offline
+        </Button>
+        {!isReady && (
           <Button
-            variant="text"
+            onClick={() => wakeUp(targetCloud)}
+            variant="contained"
+            color="primary"
             size="small"
-            onClick={handleClose}
-            sx={{ textTransform: 'none', color: 'text.secondary', fontWeight: 600 }}
           >
-            Browse Offline Mode
+            Retry wake-up
           </Button>
-          {!isReady && (
-            <Button
-              variant="outlined"
-              size="small"
-              onClick={() => wakeUp(targetCloud)}
-              sx={{ textTransform: 'none', fontWeight: 600 }}
-            >
-              Retry Wake-Up
-            </Button>
-          )}
-        </Box>
-      </Box>
+        )}
+      </DialogActions>
     </Dialog>
   );
 }

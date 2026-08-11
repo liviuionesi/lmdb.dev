@@ -23,7 +23,6 @@ export function useBackendWakeup({ autoWakeup = true, onReady } = {}) {
   const [secondsRemaining, setSecondsRemaining] = useState(ESTIMATED_WAKEUP_SECONDS);
   const [targetCloud, setTargetCloud] = useState('azure');
   const [currentStep, setCurrentStep] = useState(1);
-  const hasTriggeredRef = useRef(false);
   const onReadyRef = useRef(onReady);
   onReadyRef.current = onReady;
 
@@ -44,54 +43,75 @@ export function useBackendWakeup({ autoWakeup = true, onReady } = {}) {
     setTargetCloud(cloud);
     setCurrentStep(1);
 
-    await triggerBackendWakeup(cloud);
+    try {
+      const res = triggerBackendWakeup(cloud);
+      if (res && typeof res.catch === 'function') {
+        res.catch(() => {});
+      }
+    } catch {
+      // Ignored: health polling will still continue
+    }
   }, [targetCloud]);
 
-  // Initial check and auto-wakeup
+  // Initial check and auto-wakeup on mount
   useEffect(() => {
-    let cancelled = false;
+    let isMounted = true;
 
-    async function initialCheck() {
+    async function initialize() {
       setStatus('CHECKING');
-      const isUp = await checkHealth();
-      if (!cancelled && !isUp) {
-        setStatus('STANDBY');
-        if (autoWakeup && !hasTriggeredRef.current) {
-          hasTriggeredRef.current = true;
-          wakeUp(targetCloud);
+      const isUp = await checkBackendHealth();
+      if (!isMounted) return;
+
+      if (isUp) {
+        setStatus('ONLINE');
+      } else if (autoWakeup) {
+        setStatus('WAKING_UP');
+        setSecondsRemaining(ESTIMATED_WAKEUP_SECONDS);
+        setCurrentStep(1);
+        try {
+          const res = triggerBackendWakeup(targetCloud);
+          if (res && typeof res.catch === 'function') {
+            res.catch(() => {});
+          }
+        } catch {
+          // Ignored
         }
+      } else {
+        setStatus('STANDBY');
       }
     }
 
-    initialCheck();
+    initialize();
 
     const unsubscribe = subscribeBackendStatus((newStatus, details) => {
-      if (cancelled) return;
-      if (newStatus === 'STANDBY' && status === 'ONLINE') {
-        setStatus('STANDBY');
-      } else if (newStatus === 'WAKING_UP') {
+      if (!isMounted) return;
+      if (newStatus === 'WAKING_UP') {
         setStatus('WAKING_UP');
         if (details?.targetCloud) setTargetCloud(details.targetCloud);
+      } else if (newStatus === 'READY') {
+        setStatus('READY');
+      } else if (newStatus === 'STANDBY') {
+        setStatus((prev) => (prev === 'ONLINE' ? 'STANDBY' : prev));
       }
     });
 
     return () => {
-      cancelled = true;
+      isMounted = false;
       unsubscribe();
     };
-  }, [autoWakeup, checkHealth, status, targetCloud, wakeUp]);
+  }, [autoWakeup, targetCloud]);
 
-  // 3. Countdown timer when waking up
+  // 3. Countdown timer when waking up or in standby
   useEffect(() => {
-    if (status !== 'WAKING_UP') return undefined;
+    if (status !== 'WAKING_UP' && status !== 'STANDBY') return undefined;
 
     const timer = setInterval(() => {
       setSecondsRemaining((prev) => {
         if (prev <= 1) return 0;
         const next = prev - 1;
-        if (next < 30) {
+        if (next <= 30) {
           setCurrentStep(3); // Warming up services
-        } else if (next < 60) {
+        } else if (next <= 60) {
           setCurrentStep(2); // Starting pods
         }
         return next;
@@ -105,10 +125,11 @@ export function useBackendWakeup({ autoWakeup = true, onReady } = {}) {
   useEffect(() => {
     if (status !== 'WAKING_UP' && status !== 'STANDBY') return undefined;
 
-    let cancelled = false;
+    let isMounted = true;
     const pollTimer = setInterval(async () => {
       const isUp = await checkBackendHealth();
-      if (!cancelled && isUp) {
+      if (!isMounted) return;
+      if (isUp) {
         invalidateResolutionCache();
         setStatus('READY');
         clearInterval(pollTimer);
@@ -119,7 +140,7 @@ export function useBackendWakeup({ autoWakeup = true, onReady } = {}) {
     }, POLL_INTERVAL_MS);
 
     return () => {
-      cancelled = true;
+      isMounted = false;
       clearInterval(pollTimer);
     };
   }, [status]);
@@ -128,7 +149,10 @@ export function useBackendWakeup({ autoWakeup = true, onReady } = {}) {
     status,
     secondsRemaining,
     totalSeconds: ESTIMATED_WAKEUP_SECONDS,
-    progressPercentage: Math.min(100, Math.round(((ESTIMATED_WAKEUP_SECONDS - secondsRemaining) / ESTIMATED_WAKEUP_SECONDS) * 100)),
+    progressPercentage: Math.min(
+      100,
+      Math.round(((ESTIMATED_WAKEUP_SECONDS - secondsRemaining) / ESTIMATED_WAKEUP_SECONDS) * 100),
+    ),
     targetCloud,
     currentStep,
     wakeUp,

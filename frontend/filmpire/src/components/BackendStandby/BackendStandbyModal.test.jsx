@@ -18,7 +18,7 @@ describe('BackendStandbyModal', () => {
     });
 
     renderWithProviders(<BackendStandbyModal />);
-    expect(screen.queryByText('Waking Up Cloud Cluster')).not.toBeInTheDocument();
+    expect(screen.queryByText('Backend standby')).not.toBeInTheDocument();
   });
 
   it('renders modal with countdown and step progression when status is WAKING_UP', () => {
@@ -34,9 +34,9 @@ describe('BackendStandbyModal', () => {
 
     renderWithProviders(<BackendStandbyModal />);
 
-    expect(screen.getByText('Waking Up Cloud Cluster')).toBeInTheDocument();
-    expect(screen.getByText('75s')).toBeInTheDocument();
-    expect(screen.getByText(/1. Initializing AZURE compute nodes/)).toBeInTheDocument();
+    expect(screen.getByText('Backend standby')).toBeInTheDocument();
+    expect(screen.getByText('75s remaining')).toBeInTheDocument();
+    expect(screen.getByText(/1. Initializing compute nodes \(AZURE\)/)).toBeInTheDocument();
     expect(screen.getByText('Azure AKS')).toBeInTheDocument();
     expect(screen.getByText('AWS EC2 (k3s)')).toBeInTheDocument();
 
@@ -45,7 +45,7 @@ describe('BackendStandbyModal', () => {
     expect(wakeUpMock).toHaveBeenCalledWith('aws');
   });
 
-  it('displays Backend Online! when status is READY', () => {
+  it('displays Backend online when status is READY', () => {
     useBackendWakeup.mockReturnValue({
       status: 'READY',
       secondsRemaining: 0,
@@ -56,8 +56,8 @@ describe('BackendStandbyModal', () => {
     });
 
     renderWithProviders(<BackendStandbyModal />);
-    expect(screen.getByText('Backend Online!')).toBeInTheDocument();
-    expect(screen.getByText(/Services are fully initialized/)).toBeInTheDocument();
+    expect(screen.getByText('Backend online')).toBeInTheDocument();
+    expect(screen.getByText(/Microservices and database caches are online/)).toBeInTheDocument();
   });
 
   it('allows dismissing the modal via close button', () => {
@@ -71,9 +71,9 @@ describe('BackendStandbyModal', () => {
     });
 
     renderWithProviders(<BackendStandbyModal />);
-    expect(screen.getByText('Waking Up Cloud Cluster')).toBeInTheDocument();
+    expect(screen.getByText('Backend standby')).toBeInTheDocument();
 
     fireEvent.click(screen.getByLabelText('close'));
-    expect(screen.queryByText('Waking Up Cloud Cluster')).not.toBeInTheDocument();
+    expect(screen.queryByText('Backend standby')).not.toBeInTheDocument();
   });
 });

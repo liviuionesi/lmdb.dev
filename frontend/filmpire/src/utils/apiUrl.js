@@ -79,11 +79,12 @@ function getStaticOverride() {
  * @param {string} [url=CLOUD_API_URL] - Candidate backend base URL.
  * @returns {Promise<boolean>} True if the backend responded with an ok status.
  */
-export async function checkBackendHealth(url = CLOUD_API_URL) {
+export async function checkBackendHealth(url) {
+  const targetUrl = url || (typeof window !== 'undefined' && window.location.hostname === 'localhost' ? LOCAL_API_URL : CLOUD_API_URL);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), HEALTH_CHECK_TIMEOUT_MS);
   try {
-    const res = await fetch(`${url}/actuator/health`, { method: 'GET', mode: 'cors', signal: controller.signal });
+    const res = await fetch(`${targetUrl}/actuator/health`, { method: 'GET', mode: 'cors', signal: controller.signal });
     return res.ok;
   } catch {
     return false;
