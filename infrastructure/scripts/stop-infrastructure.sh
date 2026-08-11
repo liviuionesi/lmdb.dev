@@ -59,7 +59,7 @@ fi
 
 # Parse command line arguments
 REMOVE_VOLUMES=false
-if [ "$1" == "--volumes" ] || [ "$1" == "-v" ]; then
+if [ "${1:-}" == "--volumes" ] || [ "${1:-}" == "-v" ]; then
     REMOVE_VOLUMES=true
     echo -e "${YELLOW}⚠  Warning: This will remove all data volumes!${NC}"
     echo -e "${YELLOW}   All database data will be permanently deleted.${NC}"
@@ -72,23 +72,35 @@ if [ "$1" == "--volumes" ] || [ "$1" == "-v" ]; then
     fi
 fi
 
-# Stop services
-echo -e "${BLUE}🛑 Stopping services...${NC}"
-$COMPOSE_CMD $COMPOSE_FILES --profile dev-tools down
+# Stop services (Docker/Podman Compose)
+echo -e "${BLUE}🛑 Stopping Compose services...${NC}"
+$COMPOSE_CMD $COMPOSE_FILES --profile dev-tools down 2>&1 | grep -v "no container" | grep -v "no such container" || true
 
 if [ "$REMOVE_VOLUMES" = true ]; then
     echo ""
     echo -e "${BLUE}🗑  Removing volumes...${NC}"
-    $COMPOSE_CMD $COMPOSE_FILES --profile dev-tools down -v
+    $COMPOSE_CMD $COMPOSE_FILES --profile dev-tools down -v 2>&1 | grep -v "no container" || true
     echo -e "${GREEN}✅ Services stopped and volumes removed${NC}"
 else
-    echo -e "${GREEN}✅ Services stopped (data preserved)${NC}"
+    echo -e "${GREEN}✅ Compose services stopped (data preserved)${NC}"
+fi
+
+# Stop Minikube if running locally
+if command -v minikube >/dev/null 2>&1; then
+    MK_STATUS="$(minikube status --format='{{.Host}}' 2>/dev/null || echo "Stopped")"
+    if [ "$MK_STATUS" == "Running" ]; then
+        echo ""
+        echo -e "${BLUE}🛑 Stopping Minikube local Kubernetes cluster...${NC}"
+        minikube stop
+        echo -e "${GREEN}✓ Minikube stopped (cluster data preserved)${NC}"
+    fi
 fi
 
 echo ""
 echo -e "${BLUE}================================================${NC}"
-echo -e "${YELLOW}Note: To remove all data, run:${NC}"
-echo "  ./stop-infrastructure.sh --volumes"
+echo -e "${GREEN}  All local infrastructure stopped successfully.${NC}"
+echo -e "${YELLOW}Note: To remove all database volumes, run:${NC}"
+echo "  ./infrastructure/scripts/stop-infrastructure.sh --volumes"
 echo -e "${BLUE}================================================${NC}"
 echo ""
 
