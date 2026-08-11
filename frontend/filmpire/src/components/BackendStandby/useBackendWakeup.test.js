@@ -4,6 +4,7 @@ import { useBackendWakeup } from './useBackendWakeup';
 import * as apiUrlModule from '../../utils/apiUrl';
 
 vi.mock('../../utils/apiUrl', () => ({
+  resolveApiUrl: vi.fn().mockResolvedValue('https://filmpire-api.duckdns.org'),
   checkBackendHealth: vi.fn(),
   triggerBackendWakeup: vi.fn().mockResolvedValue({ status: 'WAKING_UP' }),
   invalidateResolutionCache: vi.fn(),

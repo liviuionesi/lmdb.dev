@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
+  resolveApiUrl,
   checkBackendHealth,
   triggerBackendWakeup,
   invalidateResolutionCache,
@@ -30,7 +31,8 @@ export function useBackendWakeup({ autoWakeup = true, onReady } = {}) {
 
   // 1. Initial health probe
   const checkHealth = useCallback(async () => {
-    const isUp = await checkBackendHealth();
+    const activeUrl = await resolveApiUrl();
+    const isUp = await checkBackendHealth(activeUrl);
     if (isUp) {
       setStatus('ONLINE');
       return true;
@@ -62,7 +64,8 @@ export function useBackendWakeup({ autoWakeup = true, onReady } = {}) {
 
     async function initialize() {
       setStatus('CHECKING');
-      const isUp = await checkBackendHealth();
+      const activeUrl = await resolveApiUrl();
+      const isUp = await checkBackendHealth(activeUrl);
       if (!isMounted) return;
 
       if (isUp) {
@@ -130,7 +133,8 @@ export function useBackendWakeup({ autoWakeup = true, onReady } = {}) {
 
     let isMounted = true;
     const pollTimer = setInterval(async () => {
-      const isUp = await checkBackendHealth();
+      const activeUrl = await resolveApiUrl();
+      const isUp = await checkBackendHealth(activeUrl);
       if (!isMounted) return;
       if (isUp) {
         invalidateResolutionCache();
