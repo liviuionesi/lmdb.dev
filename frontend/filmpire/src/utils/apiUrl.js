@@ -2,20 +2,18 @@ import { fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 
 const CLOUD_API_URL = 'https://filmpire-api.duckdns.org';
 const LOCAL_API_URL = 'http://localhost:8080';
-// Published by infrastructure/scripts/start-tunnel.sh on every restart -
-// cloudflared quick tunnels mint a new random hostname each time, so this
-// pointer is the only way a deployed frontend can find the *current* one.
+// Published by infrastructure/scripts/start-tunnel.sh or cloud deployment -
+// provides instant HTTPS endpoint bypassing any ISP DNS caching.
 const TUNNEL_POINTER_URL = 'https://raw.githubusercontent.com/pehlivanu/filmpire-microservices/develop/infrastructure/tunnel-url.txt';
 const HEALTH_CHECK_TIMEOUT_MS = 2500;
 const RESOLUTION_TTL_MS = 30000;
 
-// Module-level so repeated calls within the TTL window (e.g. one per RTK
-// Query request) don't re-probe the network every time.
+// Module-level cache so repeated calls within the TTL window don't re-probe the network
 let resolutionCache = { url: null, expiresAt: 0 };
 const backendStatusListeners = new Set();
 
 /**
- * Subscribes a listener to backend status changes (e.g., 'STANDBY', 'WAKING_UP', 'READY').
+ * Subscribes a listener to backend status changes.
  *
  * @param {Function} listener - Callback receiving (status, details)
  * @returns {Function} Unsubscribe function
@@ -28,7 +26,7 @@ export function subscribeBackendStatus(listener) {
 /**
  * Emits a backend status update to all registered subscribers.
  *
- * @param {string} status - New backend status ('STANDBY' | 'WAKING_UP' | 'READY')
+ * @param {string} status - New backend status ('STANDBY' | 'WAKING_UP' | 'ONLINE')
  * @param {Object} [details] - Optional payload details
  */
 export function notifyBackendStatus(status, details = {}) {
@@ -43,10 +41,6 @@ export function notifyBackendStatus(status, details = {}) {
 
 /**
  * Resolves the configured backend target provider: 'azure' | 'aws' | 'minikube'.
- * Priority:
- * 1. localStorage.getItem('filmpire_backend_target')
- * 2. import.meta.env.VITE_BACKEND_TARGET
- * 3. Default: 'azure'
  *
  * @returns {string} The active backend provider ('azure', 'aws', or 'minikube')
  */
@@ -83,11 +77,9 @@ export function invalidateResolutionCache() {
 }
 
 /**
- * Returns the backend URL fixed by configuration or environment, bypassing
- * any network health checks - a manually-set override, a build-time
- * VITE_API_URL, or this code itself running on localhost.
+ * Returns manual override URL if explicitly configured.
  *
- * @returns {string|null} The fixed override URL, or null if none applies (health-checked resolution is needed).
+ * @returns {string|null}
  */
 function getStaticOverride() {
   if (typeof window === 'undefined') {
@@ -100,25 +92,21 @@ function getStaticOverride() {
   if (import.meta.env.VITE_API_URL) {
     return import.meta.env.VITE_API_URL;
   }
-  if (window.location.hostname === 'localhost') {
-    return LOCAL_API_URL;
-  }
   return null;
 }
 
 /**
- * Probes `${url}/actuator/health` with a short timeout, so an unreachable
- * candidate backend can't stall URL resolution.
+ * Probes `${url}/actuator/health` with a short timeout.
  *
- * @param {string} [url=CLOUD_API_URL] - Candidate backend base URL.
+ * @param {string} url - Candidate backend base URL.
  * @returns {Promise<boolean>} True if the backend responded with an ok status.
  */
 export async function checkBackendHealth(url) {
-  const targetUrl = url || (typeof window !== 'undefined' && window.location.hostname === 'localhost' ? LOCAL_API_URL : CLOUD_API_URL);
+  if (!url) return false;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), HEALTH_CHECK_TIMEOUT_MS);
   try {
-    const res = await fetch(`${targetUrl}/actuator/health`, { method: 'GET', mode: 'cors', signal: controller.signal });
+    const res = await fetch(`${url}/actuator/health`, { method: 'GET', mode: 'cors', signal: controller.signal });
     return res.ok;
   } catch {
     return false;
@@ -152,16 +140,14 @@ export async function triggerBackendWakeup(cloud = 'azure') {
 }
 
 /**
- * Fetches the local dev tunnel's currently-published public URL.
+ * Fetches the currently-published HTTPS tunnel URL.
  *
- * @returns {Promise<string|null>} The published tunnel URL, or null if it's unavailable or malformed.
+ * @returns {Promise<string|null>} The published tunnel URL, or null if unavailable.
  */
 export async function fetchPublishedTunnelUrl() {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), HEALTH_CHECK_TIMEOUT_MS);
   try {
-    // Cache-bust: raw.githubusercontent.com fronts a CDN that would
-    // otherwise happily serve a stale URL for several minutes.
     const res = await fetch(`${TUNNEL_POINTER_URL}?cb=${Date.now()}`, { signal: controller.signal });
     if (!res.ok) {
       return null;
@@ -176,17 +162,12 @@ export async function fetchPublishedTunnelUrl() {
 }
 
 /**
- * Resolves the backend base URL to actually use, from highest to lowest
- * priority:
- * 1. A manual override saved by the Admin dashboard (localStorage).
- * 2. VITE_API_URL, if fixed at build time.
- * 3. `http://localhost:8080`, when this code itself runs on localhost.
- * 4. The default cloud target, if it passes a health check.
- * 5. The local dev tunnel published by start-tunnel.sh, if it passes a health check.
- * 6. The cloud target anyway, as a last-resort default.
- *
- * Health-checked results are cached for RESOLUTION_TTL_MS so this doesn't
- * re-probe the network on every single request.
+ * Resolves the backend base URL dynamically with multi-tier fallback:
+ * 1. Manual override (localStorage or VITE_API_URL)
+ * 2. Localhost:8080 (if running on localhost AND healthy)
+ * 3. Default Cloud URL (https://filmpire-api.duckdns.org if healthy)
+ * 4. Published HTTPS Tunnel URL (if healthy)
+ * 5. Standby fallback
  *
  * @returns {Promise<string>} The backend base URL to use.
  */
@@ -201,31 +182,38 @@ export async function resolveApiUrl() {
     return resolutionCache.url;
   }
 
-  // 1. Prefer the cloud backend if it's actually up.
-  let resolved = CLOUD_API_URL;
-  if (!(await checkBackendHealth(CLOUD_API_URL))) {
-    // 2. Cloud is down - fall back to whichever local tunnel is currently published, if reachable.
-    const tunnelUrl = await fetchPublishedTunnelUrl();
-    if (tunnelUrl && await checkBackendHealth(tunnelUrl)) {
-      resolved = tunnelUrl;
-    } else {
-      // Both cloud and tunnel are down; notify subscribers that backend is in standby
-      notifyBackendStatus('STANDBY', { cloudUrl: CLOUD_API_URL });
+  // If on localhost and local backend is alive, use it
+  if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+    if (await checkBackendHealth(LOCAL_API_URL)) {
+      resolutionCache = { url: LOCAL_API_URL, expiresAt: now + RESOLUTION_TTL_MS };
+      return LOCAL_API_URL;
     }
   }
 
+  // Try cloud backend
+  if (await checkBackendHealth(CLOUD_API_URL)) {
+    resolutionCache = { url: CLOUD_API_URL, expiresAt: now + RESOLUTION_TTL_MS };
+    return CLOUD_API_URL;
+  }
+
+  // Fallback to published HTTPS tunnel
+  const tunnelUrl = await fetchPublishedTunnelUrl();
+  if (tunnelUrl && await checkBackendHealth(tunnelUrl)) {
+    resolutionCache = { url: tunnelUrl, expiresAt: now + RESOLUTION_TTL_MS };
+    return tunnelUrl;
+  }
+
+  // Standby state
+  notifyBackendStatus('STANDBY', { cloudUrl: CLOUD_API_URL });
+  const resolved = tunnelUrl || CLOUD_API_URL;
   resolutionCache = { url: resolved, expiresAt: now + RESOLUTION_TTL_MS };
   return resolved;
 }
 
 /**
- * Synchronous best-effort variant of resolveApiUrl(), for call sites that
- * can't await (e.g. render-time reads). Returns the last health-checked
- * result if one is cached, otherwise a static override or the cloud
- * default, and kicks off a background resolution so the next call benefits
- * from an up-to-date, health-checked value.
+ * Synchronous variant of resolveApiUrl().
  *
- * @returns {string} The best currently-known backend base URL.
+ * @returns {string}
  */
 export const getApiUrl = () => {
   const staticOverride = getStaticOverride();
@@ -242,13 +230,11 @@ export const getApiUrl = () => {
 };
 
 /**
- * Joins a base URL and a path with exactly one `/` between them, regardless
- * of whether either side already has a leading/trailing slash - endpoint
- * `query` builders across services are inconsistent about this.
+ * Joins base URL and path.
  *
- * @param {string} base - The left-hand side (a base URL or already-joined prefix).
- * @param {string} path - The right-hand side to append.
- * @returns {string} The joined URL.
+ * @param {string} base
+ * @param {string} path
+ * @returns {string}
  */
 function joinUrl(base, path) {
   if (!path) {
@@ -260,12 +246,10 @@ function joinUrl(base, path) {
 }
 
 /**
- * Creates a dynamic RTK Query baseQuery that resolves the backend URL at
- * request time (so it always targets whichever backend is currently up) and
- * automatically attaches an Authorization header when a JWT is present.
+ * Creates dynamic RTK Query baseQuery.
  *
- * @param {string} [pathPrefix] - Path segment inserted between the resolved backend URL and each endpoint's own path (e.g. '/api/v1'); pass '' for endpoints that already include the full path, like the TMDB-shaped facade routes.
- * @returns {Function} An RTK Query baseQuery function.
+ * @param {string} [pathPrefix]
+ * @returns {Function}
  */
 export const createDynamicBaseQuery = (pathPrefix = '/api/v1') => {
   const rawBaseQuery = fetchBaseQuery({

@@ -45,15 +45,7 @@ describe('apiUrl static overrides (no network involved)', () => {
     await expect(resolveApiUrl()).resolves.toBe('https://manually-pinned.example.com');
   });
 
-  it('falls back to localhost:8080 when running on localhost, without any fetch calls', async () => {
-    global.fetch = vi.fn();
-
-    expect(getApiUrl()).toBe('http://localhost:8080');
-    await expect(resolveApiUrl()).resolves.toBe('http://localhost:8080');
-    expect(global.fetch).not.toHaveBeenCalled();
-  });
-
-  it('prefers VITE_API_URL when set at build time, over the localhost default', async () => {
+  it('prefers VITE_API_URL when set at build time', async () => {
     vi.stubEnv('VITE_API_URL', 'https://pinned-build-target.example.com');
     ({ getApiUrl, resolveApiUrl } = await import('./apiUrl'));
 
