@@ -181,7 +181,8 @@ describe('createDynamicBaseQuery URL joining', () => {
     await baseQuery('/media/upload', {}, {});
 
     const request = global.fetch.mock.calls[0][0];
-    expect(request.url).toBe('http://localhost:8080/api/v1/media/upload');
+    const requestUrl = typeof request === 'string' ? request : request?.url;
+    expect(requestUrl).toBe('http://localhost:8080/api/v1/media/upload');
   });
 
   it('treats an empty prefix as pass-through, for endpoints whose query already includes the full path', async () => {
@@ -199,6 +200,7 @@ describe('createDynamicBaseQuery URL joining', () => {
     await baseQuery('genre/movie/list?api_key=abc', {}, {});
 
     const request = global.fetch.mock.calls[0][0];
-    expect(request.url).toBe('http://localhost:8080/genre/movie/list?api_key=abc');
+    const requestUrl = typeof request === 'string' ? request : request?.url;
+    expect(requestUrl).toBe('http://localhost:8080/genre/movie/list?api_key=abc');
   });
 });
