@@ -37,7 +37,7 @@ describe('BackendStandbyModal', () => {
     expect(screen.getByText('Backend standby')).toBeInTheDocument();
     expect(screen.getByText('75s remaining')).toBeInTheDocument();
     expect(screen.getByText(/1. Initializing compute nodes \(AZURE\)/)).toBeInTheDocument();
-    expect(screen.getByText('Azure AKS')).toBeInTheDocument();
+    expect(screen.getAllByText('Azure AKS')).toHaveLength(2);
     expect(screen.getByText('AWS EC2 (k3s)')).toBeInTheDocument();
 
     // Click cloud switch button
