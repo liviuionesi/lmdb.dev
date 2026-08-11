@@ -2,6 +2,7 @@ export const DEFAULT_TRAILER_ID = 'h2QJMfXJZaY';
 
 export const CURATED_TRAILERS = [
   { id: 'h2QJMfXJZaY', title: 'Dune: Part Two', tag: 'Sci-Fi • 2024' },
+  { id: 'GuDF9CEtFwE', title: 'Blade Runner 2049', tag: 'Sci-Fi • 2017' },
   { id: 'uYPbbksJxIg', title: 'Oppenheimer', tag: 'Drama • 2023' },
   { id: 'zSWdZVtXT7E', title: 'Interstellar', tag: 'Sci-Fi • 2014' },
   { id: 'YoHD9XEInc0', title: 'Inception', tag: 'Action • 2010' },
