@@ -4,6 +4,8 @@ import {
   triggerBackendWakeup,
   invalidateResolutionCache,
   subscribeBackendStatus,
+  getBackendTarget,
+  setBackendTarget,
 } from '../../utils/apiUrl';
 
 const ESTIMATED_WAKEUP_SECONDS = 90;
@@ -21,7 +23,7 @@ const POLL_INTERVAL_MS = 4000;
 export function useBackendWakeup({ autoWakeup = true, onReady } = {}) {
   const [status, setStatus] = useState('CHECKING'); // 'CHECKING' | 'ONLINE' | 'STANDBY' | 'WAKING_UP' | 'READY'
   const [secondsRemaining, setSecondsRemaining] = useState(ESTIMATED_WAKEUP_SECONDS);
-  const [targetCloud, setTargetCloud] = useState('azure');
+  const [targetCloud, setTargetCloud] = useState(() => getBackendTarget());
   const [currentStep, setCurrentStep] = useState(1);
   const onReadyRef = useRef(onReady);
   onReadyRef.current = onReady;
@@ -41,6 +43,7 @@ export function useBackendWakeup({ autoWakeup = true, onReady } = {}) {
     setStatus('WAKING_UP');
     setSecondsRemaining(ESTIMATED_WAKEUP_SECONDS);
     setTargetCloud(cloud);
+    setBackendTarget(cloud);
     setCurrentStep(1);
 
     try {

@@ -62,6 +62,42 @@ describe('apiUrl static overrides (no network involved)', () => {
   });
 });
 
+describe('getBackendTarget and setBackendTarget resolution', () => {
+  beforeEach(() => {
+    vi.resetModules();
+    localStorage.clear();
+  });
+
+  afterEach(() => {
+    localStorage.clear();
+    vi.unstubAllEnvs();
+  });
+
+  it('defaults to azure when no env or localStorage is configured', async () => {
+    const { getBackendTarget } = await import('./apiUrl');
+    expect(getBackendTarget()).toBe('azure');
+  });
+
+  it('respects VITE_BACKEND_TARGET environment variable', async () => {
+    vi.stubEnv('VITE_BACKEND_TARGET', 'aws');
+    const { getBackendTarget } = await import('./apiUrl');
+    expect(getBackendTarget()).toBe('aws');
+  });
+
+  it('normalizes tunnel to minikube', async () => {
+    vi.stubEnv('VITE_BACKEND_TARGET', 'tunnel');
+    const { getBackendTarget } = await import('./apiUrl');
+    expect(getBackendTarget()).toBe('minikube');
+  });
+
+  it('prefers localStorage override over env variable', async () => {
+    vi.stubEnv('VITE_BACKEND_TARGET', 'aws');
+    const { getBackendTarget, setBackendTarget } = await import('./apiUrl');
+    setBackendTarget('minikube');
+    expect(getBackendTarget()).toBe('minikube');
+  });
+});
+
 describe('apiUrl health-checked waterfall (non-localhost)', () => {
   beforeEach(() => {
     vi.resetModules();

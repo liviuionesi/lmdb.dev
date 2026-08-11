@@ -42,6 +42,40 @@ export function notifyBackendStatus(status, details = {}) {
 }
 
 /**
+ * Resolves the configured backend target provider: 'azure' | 'aws' | 'minikube'.
+ * Priority:
+ * 1. localStorage.getItem('filmpire_backend_target')
+ * 2. import.meta.env.VITE_BACKEND_TARGET
+ * 3. Default: 'azure'
+ *
+ * @returns {string} The active backend provider ('azure', 'aws', or 'minikube')
+ */
+export function getBackendTarget() {
+  if (typeof window !== 'undefined') {
+    const saved = localStorage.getItem('filmpire_backend_target');
+    if (saved && ['azure', 'aws', 'minikube', 'tunnel'].includes(saved)) {
+      return saved === 'tunnel' ? 'minikube' : saved;
+    }
+  }
+  const envTarget = import.meta.env?.VITE_BACKEND_TARGET?.toLowerCase();
+  if (envTarget && ['azure', 'aws', 'minikube', 'tunnel'].includes(envTarget)) {
+    return envTarget === 'tunnel' ? 'minikube' : envTarget;
+  }
+  return 'azure';
+}
+
+/**
+ * Saves the selected backend target provider to local storage.
+ *
+ * @param {string} target - 'azure' | 'aws' | 'minikube'
+ */
+export function setBackendTarget(target) {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('filmpire_backend_target', target);
+  }
+}
+
+/**
  * Invalidate cached backend resolution to force a fresh network probe.
  */
 export function invalidateResolutionCache() {

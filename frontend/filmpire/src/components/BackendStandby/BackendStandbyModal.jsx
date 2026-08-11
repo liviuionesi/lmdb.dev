@@ -484,9 +484,9 @@ function BackendStandbyModal({ onBackendReady }) {
             Soundstage:
           </Typography>
 
-          <Box sx={{ display: 'flex', gap: 1 }}>
+          <Box sx={{ display: 'flex', gap: 0.8, flexWrap: 'wrap' }}>
             <Chip
-              label="IMAX Screen 1: Azure AKS"
+              label="Screen 1: Azure AKS"
               onClick={() => handleSwitchCloud('azure')}
               clickable
               size="small"
@@ -495,12 +495,12 @@ function BackendStandbyModal({ onBackendReady }) {
                 color: targetCloud === 'azure' ? '#f5c518' : 'rgba(255,255,255,0.6)',
                 border: targetCloud === 'azure' ? '1px solid #f5c518' : '1px solid rgba(255,255,255,0.1)',
                 fontWeight: 700,
-                fontSize: '0.75rem',
+                fontSize: '0.72rem',
                 '&:hover': { bgcolor: 'rgba(245, 197, 24, 0.35)' },
               }}
             />
             <Chip
-              label="Dolby Screen 2: AWS EC2"
+              label="Screen 2: AWS EC2"
               onClick={() => handleSwitchCloud('aws')}
               clickable
               size="small"
@@ -509,8 +509,22 @@ function BackendStandbyModal({ onBackendReady }) {
                 color: targetCloud === 'aws' ? '#ff4d58' : 'rgba(255,255,255,0.6)',
                 border: targetCloud === 'aws' ? '1px solid #e50914' : '1px solid rgba(255,255,255,0.1)',
                 fontWeight: 700,
-                fontSize: '0.75rem',
+                fontSize: '0.72rem',
                 '&:hover': { bgcolor: 'rgba(229, 9, 20, 0.35)' },
+              }}
+            />
+            <Chip
+              label="Screen 3: Minikube Tunnel"
+              onClick={() => handleSwitchCloud('minikube')}
+              clickable
+              size="small"
+              sx={{
+                bgcolor: targetCloud === 'minikube' || targetCloud === 'tunnel' ? 'rgba(33, 150, 243, 0.25)' : 'rgba(255,255,255,0.05)',
+                color: targetCloud === 'minikube' || targetCloud === 'tunnel' ? '#64b5f6' : 'rgba(255,255,255,0.6)',
+                border: targetCloud === 'minikube' || targetCloud === 'tunnel' ? '1px solid #2196f3' : '1px solid rgba(255,255,255,0.1)',
+                fontWeight: 700,
+                fontSize: '0.72rem',
+                '&:hover': { bgcolor: 'rgba(33, 150, 243, 0.35)' },
               }}
             />
           </Box>
@@ -545,7 +559,7 @@ function BackendStandbyModal({ onBackendReady }) {
             variant="caption"
             sx={{ fontFamily: 'monospace', color: '#ff4d58', fontSize: '0.68rem', fontWeight: 600 }}
           >
-            {targetCloud.toUpperCase()}_CLUSTER
+            {targetCloud === 'minikube' || targetCloud === 'tunnel' ? 'LOCAL_MINIKUBE_TUNNEL' : `${targetCloud.toUpperCase()}_CLUSTER`}
           </Typography>
         </Box>
 

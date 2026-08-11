@@ -52,7 +52,7 @@ describe('BackendStandbyModal Cinematic Film Leader Experience', () => {
     expect(screen.queryByText('Feature Presentation')).not.toBeInTheDocument();
   });
 
-  it('renders cinematic 35mm film leader with countdown, clapperboard, and act 1', () => {
+  it('renders cinematic 35mm film leader with countdown, clapperboard, and all 3 screen choices', () => {
     const wakeUpMock = vi.fn();
     useBackendWakeup.mockReturnValue({
       status: 'WAKING_UP',
@@ -71,11 +71,18 @@ describe('BackendStandbyModal Cinematic Film Leader Experience', () => {
     expect(screen.getByText(/ACT I \/\/ SCENE 01/)).toBeInTheDocument();
     expect(screen.getByText(/THE PROJECTION BOOTH/)).toBeInTheDocument();
     expect(screen.getByText(/Dimming the House Lights/)).toBeInTheDocument();
-    expect(screen.getByText('IMAX Screen 1: Azure AKS')).toBeInTheDocument();
-    expect(screen.getByText('Dolby Screen 2: AWS EC2')).toBeInTheDocument();
 
-    // Click cloud switch button
-    fireEvent.click(screen.getByText('Dolby Screen 2: AWS EC2'));
+    // 3 Screen choices: Azure AKS, AWS EC2, Minikube Tunnel
+    expect(screen.getByText('Screen 1: Azure AKS')).toBeInTheDocument();
+    expect(screen.getByText('Screen 2: AWS EC2')).toBeInTheDocument();
+    expect(screen.getByText('Screen 3: Minikube Tunnel')).toBeInTheDocument();
+
+    // Click minikube tunnel
+    fireEvent.click(screen.getByText('Screen 3: Minikube Tunnel'));
+    expect(wakeUpMock).toHaveBeenCalledWith('minikube');
+
+    // Click AWS EC2
+    fireEvent.click(screen.getByText('Screen 2: AWS EC2'));
     expect(wakeUpMock).toHaveBeenCalledWith('aws');
   });
 

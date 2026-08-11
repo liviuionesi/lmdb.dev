@@ -73,11 +73,11 @@ export default async function handler(req, res) {
       });
     }
 
-    const targetCloud = (req.body && req.body.cloud) || 'azure';
+    const targetCloud = (req.body && req.body.cloud) || process.env.BACKEND_TARGET || 'azure';
     lastWakeupTimestamp = now;
 
-    // If GITHUB_TOKEN is configured, dispatch the workflow to ensure rollout
-    if (GITHUB_TOKEN) {
+    // If GITHUB_TOKEN is configured and targeting a cloud provider, dispatch the workflow
+    if (GITHUB_TOKEN && (targetCloud === 'azure' || targetCloud === 'aws')) {
       try {
         await fetch(`https://api.github.com/repos/${GITHUB_REPO}/actions/workflows/deploy.yml/dispatches`, {
           method: 'POST',
@@ -96,11 +96,13 @@ export default async function handler(req, res) {
       }
     }
 
+    const clusterLabel = targetCloud === 'minikube' || targetCloud === 'tunnel' ? 'LOCAL MINIKUBE TUNNEL' : `${targetCloud.toUpperCase()} CLUSTER`;
+
     return res.status(200).json({
       status: 'WAKING_UP',
       targetCloud,
       estimatedSeconds: 90,
-      message: `Wake-up signal dispatched for ${targetCloud.toUpperCase()} cluster. Initializing compute...`,
+      message: `Wake-up signal dispatched for ${clusterLabel}. Initializing compute...`,
     });
   }
 
