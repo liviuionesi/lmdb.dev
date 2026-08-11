@@ -45,7 +45,7 @@ describe('BackendStandbyModal', () => {
     expect(wakeUpMock).toHaveBeenCalledWith('aws');
   });
 
-  it('displays Backend online when status is READY', () => {
+  it('removes modal immediately when status transitions to READY', () => {
     useBackendWakeup.mockReturnValue({
       status: 'READY',
       secondsRemaining: 0,
@@ -56,8 +56,7 @@ describe('BackendStandbyModal', () => {
     });
 
     renderWithProviders(<BackendStandbyModal />);
-    expect(screen.getByText('Backend online')).toBeInTheDocument();
-    expect(screen.getByText(/Microservices and database caches are online/)).toBeInTheDocument();
+    expect(screen.queryByText('Backend standby')).not.toBeInTheDocument();
   });
 
   it('allows dismissing the modal via close button', () => {

@@ -19,7 +19,7 @@ import { useBackendWakeup } from './useBackendWakeup';
  * Backend Standby & Auto-Wakeup Modal matching Filmpire's exact MUI Dialog design system.
  *
  * <p>Notifies visitors when the backend is in standby mode, displays the ~90s countdown,
- * step progress, and auto-dismisses once the cluster is live.
+ * step progress, and automatically dismisses as soon as the backend is online/ready.
  *
  * @param {Object} props
  * @param {Function} [props.onBackendReady] - Optional callback triggered when backend goes live
@@ -38,19 +38,17 @@ function BackendStandbyModal({ onBackendReady }) {
   } = useBackendWakeup({
     autoWakeup: true,
     onReady: () => {
+      setOpen(false);
       if (onBackendReady) {
         onBackendReady();
       }
-      setTimeout(() => {
-        setOpen(false);
-      }, 1500);
     },
   });
 
   useEffect(() => {
-    if ((status === 'STANDBY' || status === 'WAKING_UP' || status === 'READY') && !dismissed) {
+    if ((status === 'STANDBY' || status === 'WAKING_UP') && !dismissed) {
       setOpen(true);
-    } else if (status === 'ONLINE') {
+    } else if (status === 'ONLINE' || status === 'READY') {
       setOpen(false);
     }
   }, [status, dismissed]);
@@ -64,8 +62,6 @@ function BackendStandbyModal({ onBackendReady }) {
     wakeUp(cloud);
   };
 
-  const isReady = status === 'READY';
-
   if (!open) {
     return null;
   }
@@ -74,7 +70,7 @@ function BackendStandbyModal({ onBackendReady }) {
     <Dialog open={open} onClose={handleClose} fullWidth maxWidth="xs">
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1 }}>
         <Typography variant="h6" fontWeight={700}>
-          {isReady ? 'Backend online' : 'Backend standby'}
+          Backend standby
         </Typography>
         <IconButton
           aria-label="close"
@@ -101,9 +97,9 @@ function BackendStandbyModal({ onBackendReady }) {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Chip
               size="small"
-              label={isReady ? 'Online' : 'Waking up'}
-              color={isReady ? 'success' : 'primary'}
-              variant={isReady ? 'filled' : 'outlined'}
+              label="Waking up"
+              color="primary"
+              variant="outlined"
               sx={{ fontWeight: 700, height: 22, fontSize: '0.75rem' }}
             />
             <Typography variant="body2" color="text.secondary">
@@ -111,7 +107,7 @@ function BackendStandbyModal({ onBackendReady }) {
             </Typography>
           </Box>
           <Typography variant="subtitle2" fontWeight={700} color="primary">
-            {isReady ? 'Ready' : `${secondsRemaining}s remaining`}
+            {`${secondsRemaining}s remaining`}
           </Typography>
         </Box>
 
@@ -119,117 +115,109 @@ function BackendStandbyModal({ onBackendReady }) {
         <LinearProgress
           variant="determinate"
           value={progressPercentage}
-          color={isReady ? 'success' : 'primary'}
+          color="primary"
           sx={{ height: 6, borderRadius: 3 }}
         />
 
         <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>
-          {isReady
-            ? 'Microservices and database caches are online. Happy streaming!'
-            : 'To save energy and cloud costs, the backend enters standby after 1 hour of inactivity. Booting up now...'}
+          To save energy and cloud costs, the backend enters standby after 1 hour of inactivity. Booting up now...
         </Typography>
 
         {/* Cloud Switcher Chips */}
-        {!isReady && (
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <Chip
-              label="Azure AKS"
-              color={targetCloud === 'azure' ? 'primary' : 'default'}
-              variant={targetCloud === 'azure' ? 'filled' : 'outlined'}
-              onClick={() => handleSwitchCloud('azure')}
-              clickable
-              size="small"
-              sx={{ flex: 1, fontWeight: 600 }}
-            />
-            <Chip
-              label="AWS EC2 (k3s)"
-              color={targetCloud === 'aws' ? 'primary' : 'default'}
-              variant={targetCloud === 'aws' ? 'filled' : 'outlined'}
-              onClick={() => handleSwitchCloud('aws')}
-              clickable
-              size="small"
-              sx={{ flex: 1, fontWeight: 600 }}
-            />
-          </Box>
-        )}
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Chip
+            label="Azure AKS"
+            color={targetCloud === 'azure' ? 'primary' : 'default'}
+            variant={targetCloud === 'azure' ? 'filled' : 'outlined'}
+            onClick={() => handleSwitchCloud('azure')}
+            clickable
+            size="small"
+            sx={{ flex: 1, fontWeight: 600 }}
+          />
+          <Chip
+            label="AWS EC2 (k3s)"
+            color={targetCloud === 'aws' ? 'primary' : 'default'}
+            variant={targetCloud === 'aws' ? 'filled' : 'outlined'}
+            onClick={() => handleSwitchCloud('aws')}
+            clickable
+            size="small"
+            sx={{ flex: 1, fontWeight: 600 }}
+          />
+        </Box>
 
         {/* Step Indicators */}
-        {!isReady && (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, pt: 0.5 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-              <Box
-                sx={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: '50%',
-                  bgcolor: currentStep >= 1 ? 'primary.main' : 'text.disabled',
-                  flexShrink: 0,
-                }}
-              />
-              <Typography
-                variant="caption"
-                color={currentStep === 1 ? 'text.primary' : 'text.secondary'}
-                fontWeight={currentStep === 1 ? 700 : 400}
-              >
-                1. Initializing compute nodes ({targetCloud.toUpperCase()})
-              </Typography>
-            </Box>
-
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-              <Box
-                sx={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: '50%',
-                  bgcolor: currentStep >= 2 ? 'primary.main' : 'text.disabled',
-                  flexShrink: 0,
-                }}
-              />
-              <Typography
-                variant="caption"
-                color={currentStep === 2 ? 'text.primary' : 'text.secondary'}
-                fontWeight={currentStep === 2 ? 700 : 400}
-              >
-                2. Rolling out API Gateway & microservices
-              </Typography>
-            </Box>
-
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-              <Box
-                sx={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: '50%',
-                  bgcolor: currentStep >= 3 ? 'success.main' : 'text.disabled',
-                  flexShrink: 0,
-                }}
-              />
-              <Typography
-                variant="caption"
-                color={currentStep >= 3 ? 'text.primary' : 'text.secondary'}
-                fontWeight={currentStep >= 3 ? 700 : 400}
-              >
-                3. Warming up MongoDB, Redis & TMDB cache
-              </Typography>
-            </Box>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, pt: 0.5 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Box
+              sx={{
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                bgcolor: currentStep >= 1 ? 'primary.main' : 'text.disabled',
+                flexShrink: 0,
+              }}
+            />
+            <Typography
+              variant="caption"
+              color={currentStep === 1 ? 'text.primary' : 'text.secondary'}
+              fontWeight={currentStep === 1 ? 700 : 400}
+            >
+              1. Initializing compute nodes ({targetCloud.toUpperCase()})
+            </Typography>
           </Box>
-        )}
+
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Box
+              sx={{
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                bgcolor: currentStep >= 2 ? 'primary.main' : 'text.disabled',
+                flexShrink: 0,
+              }}
+            />
+            <Typography
+              variant="caption"
+              color={currentStep === 2 ? 'text.primary' : 'text.secondary'}
+              fontWeight={currentStep === 2 ? 700 : 400}
+            >
+              2. Rolling out API Gateway & microservices
+            </Typography>
+          </Box>
+
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Box
+              sx={{
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                bgcolor: currentStep >= 3 ? 'success.main' : 'text.disabled',
+                flexShrink: 0,
+              }}
+            />
+            <Typography
+              variant="caption"
+              color={currentStep >= 3 ? 'text.primary' : 'text.secondary'}
+              fontWeight={currentStep >= 3 ? 700 : 400}
+            >
+              3. Warming up MongoDB, Redis & TMDB cache
+            </Typography>
+          </Box>
+        </Box>
       </DialogContent>
 
       <DialogActions sx={{ px: 3, pb: 2 }}>
         <Button onClick={handleClose} color="inherit" size="small">
           Browse offline
         </Button>
-        {!isReady && (
-          <Button
-            onClick={() => wakeUp(targetCloud)}
-            variant="contained"
-            color="primary"
-            size="small"
-          >
-            Retry wake-up
-          </Button>
-        )}
+        <Button
+          onClick={() => wakeUp(targetCloud)}
+          variant="contained"
+          color="primary"
+          size="small"
+        >
+          Retry wake-up
+        </Button>
       </DialogActions>
     </Dialog>
   );
