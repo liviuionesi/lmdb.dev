@@ -7,7 +7,7 @@ import { useBackendWakeup } from './useBackendWakeup';
 
 vi.mock('./useBackendWakeup');
 
-describe('BackendStandbyModal Minimal Cinematic Trailer & Top Subtitles', () => {
+describe('BackendStandbyModal Pure Cinema Trailer & Logo Reveal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
@@ -16,17 +16,15 @@ describe('BackendStandbyModal Minimal Cinematic Trailer & Top Subtitles', () => 
   it('does not open when backend status is ONLINE', () => {
     useBackendWakeup.mockReturnValue({
       status: 'ONLINE',
-      secondsRemaining: 0,
     });
 
     renderWithProviders(<BackendStandbyModal />);
     expect(screen.queryByTestId('trailer-iframe')).not.toBeInTheDocument();
   });
 
-  it('renders YouTube trailer iframe and top announcer subtitles', () => {
+  it('renders clean YouTube trailer iframe without text overlay distractions', () => {
     useBackendWakeup.mockReturnValue({
       status: 'WAKING_UP',
-      secondsRemaining: 75,
     });
 
     renderWithProviders(<BackendStandbyModal />);
@@ -34,19 +32,6 @@ describe('BackendStandbyModal Minimal Cinematic Trailer & Top Subtitles', () => 
     const iframe = screen.getByTestId('trailer-iframe');
     expect(iframe).toBeInTheDocument();
     expect(iframe.getAttribute('src')).toContain('https://www.youtube-nocookie.com/embed/');
-
-    // Announcer subtitle at top
-    expect(screen.getByText(/Welcome to Filmpire Theaters! Starting the cloud backend for you/)).toBeInTheDocument();
-  });
-
-  it('updates announcer subtitles as countdown progresses', () => {
-    useBackendWakeup.mockReturnValue({
-      status: 'WAKING_UP',
-      secondsRemaining: 30,
-    });
-
-    renderWithProviders(<BackendStandbyModal />);
-    expect(screen.getByText(/Loading 10,000\+ movie titles, cast profiles/)).toBeInTheDocument();
   });
 
   it('displays Filmpire logo reveal when onReady callback is invoked', () => {
@@ -55,7 +40,6 @@ describe('BackendStandbyModal Minimal Cinematic Trailer & Top Subtitles', () => 
       capturedOnReady = onReady;
       return {
         status: 'WAKING_UP',
-        secondsRemaining: 5,
       };
     });
 
@@ -77,7 +61,6 @@ describe('BackendStandbyModal Minimal Cinematic Trailer & Top Subtitles', () => 
   it('allows dismissing the trailer modal via close button', () => {
     useBackendWakeup.mockReturnValue({
       status: 'WAKING_UP',
-      secondsRemaining: 80,
     });
 
     renderWithProviders(<BackendStandbyModal />);
