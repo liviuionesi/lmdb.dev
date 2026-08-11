@@ -432,6 +432,12 @@ tasks.register('stopAws', Exec) {
     commandLine './infrastructure/scripts/stop-aws.sh'
 }
 
+tasks.register('stopAllClouds', Exec) {
+    group = 'deployment'
+    description = 'Detects and stops all running cloud backends (Azure, AWS, Minikube) to minimize idle spend'
+    commandLine './infrastructure/scripts/stop-all-clouds.sh'
+}
+
 tasks.register('autoStopWatchdog', Exec) {
     group = 'deployment'
     description = 'Checks 1-hour backend activity and shuts down cloud compute if idle'
