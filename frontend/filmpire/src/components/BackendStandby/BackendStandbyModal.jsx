@@ -26,10 +26,26 @@ const logoGlow = keyframes`
   }
 `;
 
+const subtitleFade = keyframes`
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 0.5;
+  }
+`;
+
+const SUBTITLES = [
+  'Welcome to Filmpire Theaters. Starting cloud backend...',
+  'Allocating microservices and high-speed API routes...',
+  'Connecting to movie catalog and reviews database...',
+  'Finalizing health checks. Almost ready...',
+];
+
 /**
  * Pure Cinematic Movie Trailer Standby Experience.
- * Zero overlays or messages — just pure movie trailer playback,
- * seamlessly transitioning to the Filmpire studio logo reveal once the backend is live.
+ * Subtitles are 50% transparent, positioned at top with no border, no background, no icons,
+ * and disappear after 5 seconds each.
  *
  * @param {Object} props
  * @param {Function} [props.onBackendReady] - Callback triggered when the backend is live
@@ -39,6 +55,7 @@ function BackendStandbyModal({ onBackendReady }) {
   const [dismissed, setDismissed] = useState(false);
   const [showLogoReveal, setShowLogoReveal] = useState(false);
   const [trailerId] = useState(() => getStandbyTrailerId());
+  const [subtitleIndex, setSubtitleIndex] = useState(0);
 
   const { status } = useBackendWakeup({
     autoWakeup: true,
@@ -63,6 +80,17 @@ function BackendStandbyModal({ onBackendReady }) {
     }
   }, [status, dismissed]);
 
+  // Advance each subtitle every 5 seconds, disappearing once all have played
+  useEffect(() => {
+    if (!open || subtitleIndex >= SUBTITLES.length) return undefined;
+
+    const timer = setTimeout(() => {
+      setSubtitleIndex((prev) => prev + 1);
+    }, 5000);
+
+    return () => clearTimeout(timer);
+  }, [open, subtitleIndex]);
+
   const handleClose = () => {
     setDismissed(true);
     setOpen(false);
@@ -72,6 +100,8 @@ function BackendStandbyModal({ onBackendReady }) {
   if (!open) {
     return null;
   }
+
+  const currentSubtitle = subtitleIndex < SUBTITLES.length ? SUBTITLES[subtitleIndex] : null;
 
   return (
     <Dialog
@@ -165,6 +195,41 @@ function BackendStandbyModal({ onBackendReady }) {
               overflow: 'hidden',
             }}
           >
+            {/* 50% Transparent Subtitles at Top with No Border, No Background, No Icons */}
+            {currentSubtitle && (
+              <Box
+                data-testid="standby-subtitle"
+                sx={{
+                  position: 'absolute',
+                  top: 16,
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  maxWidth: '90%',
+                  bgcolor: 'transparent',
+                  border: 'none',
+                  p: 0,
+                  textAlign: 'center',
+                  pointerEvents: 'none',
+                  zIndex: 5,
+                  animation: `${subtitleFade} 0.5s ease-in forwards`,
+                }}
+              >
+                <Typography
+                  variant="body1"
+                  sx={{
+                    color: '#ffffff',
+                    opacity: 0.5,
+                    fontWeight: 600,
+                    fontSize: { xs: '0.85rem', sm: '1.05rem' },
+                    textShadow: '0 2px 6px rgba(0, 0, 0, 0.95)',
+                    letterSpacing: 0.5,
+                  }}
+                >
+                  {currentSubtitle}
+                </Typography>
+              </Box>
+            )}
+
             {/* Embedded 16:9 YouTube Trailer with seamless loop */}
             <iframe
               data-testid="trailer-iframe"

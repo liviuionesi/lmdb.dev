@@ -28,8 +28,8 @@ if [ ! -d ".terraform" ]; then
   terraform init -backend-config=backend.hcl -input=false
 fi
 
-RG_NAME="${AZURE_RESOURCE_GROUP:-rg-filmpire-demo}"
-CLUSTER_NAME="${AZURE_CLUSTER_NAME:-aks-filmpire-demo}"
+RG_NAME="${AZURE_RESOURCE_GROUP:-$(terraform output -raw resource_group_name 2>/dev/null || echo "filmpire-demo")}"
+CLUSTER_NAME="${AZURE_CLUSTER_NAME:-$(terraform output -raw cluster_name 2>/dev/null || echo "filmpire-aks")}"
 
 echo -e "\n${BLUE}🔍 Checking current AKS cluster power state for ${CLUSTER_NAME}...${NC}"
 CURRENT_STATE="$(az aks show --resource-group "$RG_NAME" --name "$CLUSTER_NAME" --query "powerState.code" -o tsv 2>/dev/null || echo "NotFound")"
