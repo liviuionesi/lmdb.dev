@@ -203,11 +203,8 @@ export async function resolveApiUrl() {
     return tunnelUrl;
   }
 
-  // Standby state
-  notifyBackendStatus('STANDBY', { cloudUrl: CLOUD_API_URL });
-  const resolved = tunnelUrl || CLOUD_API_URL;
-  resolutionCache = { url: resolved, expiresAt: now + RESOLUTION_TTL_MS };
-  return resolved;
+  // All tiers exhausted — return null so callers know nothing is reachable
+  return null;
 }
 
 /**
@@ -263,7 +260,7 @@ export const createDynamicBaseQuery = (pathPrefix = '/api/v1') => {
   });
 
   return async (args, api, extraOptions) => {
-    const baseUrl = await resolveApiUrl();
+    const baseUrl = (await resolveApiUrl()) || CLOUD_API_URL;
     const path = typeof args === 'string' ? args : args.url;
     const url = joinUrl(joinUrl(baseUrl, pathPrefix), path);
 

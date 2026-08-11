@@ -134,11 +134,11 @@ describe('apiUrl health-checked waterfall (non-localhost)', () => {
     await expect(resolveApiUrl()).resolves.toBe('https://current-tunnel.trycloudflare.com');
   });
 
-  it('falls back to the cloud URL as a last resort when both cloud and tunnel are unreachable', async () => {
+  it('returns null when both cloud and tunnel are unreachable', async () => {
     global.fetch = vi.fn().mockRejectedValue(new Error('unreachable'));
     const { resolveApiUrl } = await import('./apiUrl');
 
-    await expect(resolveApiUrl()).resolves.toBe('https://filmpire-api.duckdns.org');
+    await expect(resolveApiUrl()).resolves.toBeNull();
   });
 
   it('caches a health-checked resolution instead of re-probing on every call', async () => {

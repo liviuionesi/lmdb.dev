@@ -4,8 +4,7 @@ import { useBackendWakeup } from './useBackendWakeup';
 import * as apiUrlModule from '../../utils/apiUrl';
 
 vi.mock('../../utils/apiUrl', () => ({
-  resolveApiUrl: vi.fn().mockResolvedValue('https://filmpire-api.duckdns.org'),
-  checkBackendHealth: vi.fn(),
+  resolveApiUrl: vi.fn(),
   triggerBackendWakeup: vi.fn().mockResolvedValue({ status: 'WAKING_UP' }),
   invalidateResolutionCache: vi.fn(),
   subscribeBackendStatus: vi.fn(() => () => {}),
@@ -24,7 +23,7 @@ describe('useBackendWakeup hook', () => {
   });
 
   it('sets status to ONLINE if backend is already healthy on mount', async () => {
-    apiUrlModule.checkBackendHealth.mockResolvedValue(true);
+    apiUrlModule.resolveApiUrl.mockResolvedValue('https://filmpire-api.duckdns.org');
 
     const { result } = renderHook(() => useBackendWakeup({ autoWakeup: false }));
 
@@ -36,7 +35,7 @@ describe('useBackendWakeup hook', () => {
   });
 
   it('triggers auto-wakeup and counts down seconds when backend is down on mount', async () => {
-    apiUrlModule.checkBackendHealth.mockResolvedValue(false);
+    apiUrlModule.resolveApiUrl.mockResolvedValue(null);
 
     const { result } = renderHook(() => useBackendWakeup({ autoWakeup: true }));
 
@@ -57,9 +56,9 @@ describe('useBackendWakeup hook', () => {
 
   it('transitions to READY when health check succeeds during polling', async () => {
     // Initially down, then becomes healthy on second poll
-    apiUrlModule.checkBackendHealth
-      .mockResolvedValueOnce(false)
-      .mockResolvedValueOnce(true);
+    apiUrlModule.resolveApiUrl
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce('https://filmpire-api.duckdns.org');
 
     const onReadyMock = vi.fn();
     const { result } = renderHook(() => useBackendWakeup({ autoWakeup: true, onReady: onReadyMock }));

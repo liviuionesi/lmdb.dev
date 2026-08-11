@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   resolveApiUrl,
-  checkBackendHealth,
   triggerBackendWakeup,
   invalidateResolutionCache,
   subscribeBackendStatus,
@@ -29,11 +28,10 @@ export function useBackendWakeup({ autoWakeup = true, onReady } = {}) {
   const onReadyRef = useRef(onReady);
   onReadyRef.current = onReady;
 
-  // 1. Initial health probe
+  // 1. Initial health probe — resolveApiUrl() returns non-null only when a tier is healthy
   const checkHealth = useCallback(async () => {
     const activeUrl = await resolveApiUrl();
-    const isUp = await checkBackendHealth(activeUrl);
-    if (isUp) {
+    if (activeUrl) {
       setStatus('ONLINE');
       return true;
     }
@@ -64,11 +62,12 @@ export function useBackendWakeup({ autoWakeup = true, onReady } = {}) {
 
     async function initialize() {
       setStatus('CHECKING');
+      // resolveApiUrl() walks localhost → cloud → tunnel and returns the first live URL,
+      // or null if every tier timed out / refused.
       const activeUrl = await resolveApiUrl();
-      const isUp = await checkBackendHealth(activeUrl);
       if (!isMounted) return;
 
-      if (isUp) {
+      if (activeUrl) {
         setStatus('ONLINE');
       } else if (autoWakeup) {
         setStatus('WAKING_UP');
@@ -92,13 +91,13 @@ export function useBackendWakeup({ autoWakeup = true, onReady } = {}) {
     const unsubscribe = subscribeBackendStatus((newStatus, details) => {
       if (!isMounted) return;
       if (newStatus === 'WAKING_UP') {
-        setStatus('WAKING_UP');
+        // Only accept external WAKING_UP if we already left CHECKING
+        setStatus((prev) => (prev !== 'CHECKING' ? 'WAKING_UP' : prev));
         if (details?.targetCloud) setTargetCloud(details.targetCloud);
       } else if (newStatus === 'READY') {
         setStatus('READY');
-      } else if (newStatus === 'STANDBY') {
-        setStatus((prev) => (prev === 'ONLINE' ? 'STANDBY' : prev));
       }
+      // Ignore external STANDBY — hook owns that determination via checkBackendHealth
     });
 
     return () => {
@@ -134,9 +133,8 @@ export function useBackendWakeup({ autoWakeup = true, onReady } = {}) {
     let isMounted = true;
     const pollTimer = setInterval(async () => {
       const activeUrl = await resolveApiUrl();
-      const isUp = await checkBackendHealth(activeUrl);
       if (!isMounted) return;
-      if (isUp) {
+      if (activeUrl) {
         invalidateResolutionCache();
         setStatus('READY');
         clearInterval(pollTimer);
