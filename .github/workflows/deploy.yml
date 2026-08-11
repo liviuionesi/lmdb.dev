@@ -1,15 +1,15 @@
 name: Deploy
 
-# Manual-only app deploy (ARCHITECTURE.md §11.4 / issue #28). This workflow
-# never runs `terraform apply` — infra provisioning stays the manual,
-# human-run step documented in infrastructure/terraform/README.md (ephemeral
-# apply -> demo -> destroy, so nothing accumulates cost unattended). This
-# workflow assumes that infra already exists and only reads Terraform
-# outputs (state read, same permission level terraform-plan.yml already
-# uses) to find the cluster, then rolls the app onto it with `kubectl apply
-# -k`. Never triggered automatically on merge — only an explicit
-# workflow_dispatch protects the free-tier hour/credit budget from an
-# accidental deploy-on-push.
+# Smart Cloud Deploy Workflow (ARCHITECTURE.md §11.4 / issue #160).
+# Features:
+# 1. Protected by mandatory passphrase authorization against secrets.DEPLOY_PASSPHRASE.
+# 2. Self-healing / Smart lifecycle:
+#    - If cluster is Stopped (e.g. from 1-hour auto-stop), automatically starts it.
+#    - If cluster was Destroyed (no Terraform state), automatically provisions it.
+# 3. Rolls out all 9 microservices and database statefulsets.
+# 4. Updates DuckDNS automatically.
+# 5. Tracks deployment status in GitHub Environments (azure-cloud / aws-cloud).
+
 on:
   workflow_dispatch:
     inputs:
@@ -28,12 +28,16 @@ on:
 permissions:
   id-token: write
   contents: read
+  deployments: write
 
 jobs:
   deploy-azure:
     if: github.event.inputs.cloud == 'azure'
     name: Deploy (azure)
     runs-on: ubuntu-latest
+    environment:
+      name: azure-cloud
+      url: https://filmpire-api.duckdns.org
     defaults:
       run:
         working-directory: infrastructure/terraform/azure
@@ -42,6 +46,7 @@ jobs:
       ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
       ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
       ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
     steps:
       - name: Validate Deployment Passphrase
         env:
@@ -61,27 +66,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v4
-        with:
-          terraform_version: "~1.15"
-
-      - name: terraform init
-        run: |
-          terraform init -input=false \
-            -backend-config="resource_group_name=${{ vars.TF_STATE_RESOURCE_GROUP }}" \
-            -backend-config="storage_account_name=${{ vars.TF_STATE_STORAGE_ACCOUNT }}" \
-            -backend-config="container_name=${{ vars.TF_STATE_CONTAINER }}"
-
-      # Reads existing state only -- no apply. Fails loudly (empty output)
-      # if #26's infra hasn't been applied yet, which is the correct
-      # behavior: this workflow deploys onto infra, it doesn't create it.
-      - name: Read cluster info from state
-        id: tf
-        run: |
-          echo "resource_group=$(terraform output -raw resource_group_name)" >> "$GITHUB_OUTPUT"
-          echo "cluster_name=$(terraform output -raw cluster_name)" >> "$GITHUB_OUTPUT"
-
       - name: Azure login (OIDC)
         uses: azure/login@v3
         with:
@@ -89,11 +73,57 @@ jobs:
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: "~1.15"
+
+      - name: Terraform init
+        run: |
+          terraform init -input=false \
+            -backend-config="resource_group_name=${{ vars.TF_STATE_RESOURCE_GROUP }}" \
+            -backend-config="storage_account_name=${{ vars.TF_STATE_STORAGE_ACCOUNT }}" \
+            -backend-config="container_name=${{ vars.TF_STATE_CONTAINER }}"
+
+      - name: Smart Infra Check (Auto-Wake or Auto-Provision)
+        id: infra
+        run: |
+          RG=$(terraform output -raw resource_group_name 2>/dev/null || echo "")
+          CLUSTER=$(terraform output -raw cluster_name 2>/dev/null || echo "")
+
+          if [ -z "$RG" ] || [ -z "$CLUSTER" ]; then
+            echo "🚀 Infra not found in Terraform state. Auto-provisioning AKS with Terraform..."
+            terraform apply -auto-approve -input=false \
+              -var="alert_emails=[\"${{ vars.ALERT_EMAIL }}\"]" \
+              -var="budget_start_date=$(date -u +%Y-%m-01T00:00:00Z)"
+            RG=$(terraform output -raw resource_group_name)
+            CLUSTER=$(terraform output -raw cluster_name)
+          else
+            echo "🔍 Checking cluster power state for $CLUSTER in $RG..."
+            STATE=$(az aks show --resource-group "$RG" --name "$CLUSTER" --query "powerState.code" -o tsv 2>/dev/null || echo "NotFound")
+            echo "  Current Power State: $STATE"
+
+            if [ "$STATE" == "Stopped" ]; then
+              echo "⚡ Cluster is Stopped. Waking up AKS cluster..."
+              az aks start --resource-group "$RG" --name "$CLUSTER"
+            elif [ "$STATE" == "NotFound" ]; then
+              echo "🚀 Cluster resource not found in Azure. Re-provisioning..."
+              terraform apply -auto-approve -input=false \
+                -var="alert_emails=[\"${{ vars.ALERT_EMAIL }}\"]" \
+                -var="budget_start_date=$(date -u +%Y-%m-01T00:00:00Z)"
+              RG=$(terraform output -raw resource_group_name)
+              CLUSTER=$(terraform output -raw cluster_name)
+            fi
+          fi
+
+          echo "resource_group=$RG" >> "$GITHUB_OUTPUT"
+          echo "cluster_name=$CLUSTER" >> "$GITHUB_OUTPUT"
+
       - name: Get AKS credentials
         run: |
           az aks get-credentials \
-            --resource-group "${{ steps.tf.outputs.resource_group }}" \
-            --name "${{ steps.tf.outputs.cluster_name }}" \
+            --resource-group "${{ steps.infra.outputs.resource_group }}" \
+            --name "${{ steps.infra.outputs.cluster_name }}" \
             --overwrite-existing
 
       - name: kubectl apply -k overlays/azure
@@ -119,19 +149,26 @@ jobs:
           DUCKDNS_TOKEN: ${{ secrets.DUCKDNS_TOKEN }}
         run: |
           NODE_IP=$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="ExternalIP")].address}' || true)
-          if [ -n "$NODE_IP" ]; then
+          if [ -n "$NODE_IP" ] && [ -n "$DUCKDNS_TOKEN" ]; then
             ../../scripts/update-duckdns.sh "$NODE_IP"
+            echo "✅ DuckDNS updated → $NODE_IP"
+          else
+            echo "ℹ️ DuckDNS update skipped (missing IP or DUCKDNS_TOKEN)"
           fi
 
   deploy-aws:
     if: github.event.inputs.cloud == 'aws'
     name: Deploy (aws)
     runs-on: ubuntu-latest
+    environment:
+      name: aws-cloud
+      url: https://filmpire-api.duckdns.org
     defaults:
       run:
         working-directory: infrastructure/terraform/aws
     env:
       AWS_REGION: ${{ vars.AWS_REGION }}
+
     steps:
       - name: Validate Deployment Passphrase
         env:
@@ -162,32 +199,55 @@ jobs:
         with:
           terraform_version: "~1.15"
 
-      - name: terraform init
+      - name: Terraform init
         run: |
           terraform init -input=false \
             -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
             -backend-config="region=${{ vars.AWS_REGION }}" \
             -backend-config="dynamodb_table=${{ vars.TF_STATE_TABLE }}"
 
-      # Reads existing state only -- no apply, same rule as the azure job.
-      - name: Read node info from state
-        id: tf
+      - name: Smart Infra Check (Auto-Wake or Auto-Provision)
+        id: infra
         run: |
-          echo "public_ip=$(terraform output -raw public_ip)" >> "$GITHUB_OUTPUT"
-          echo "ssh_user=$(terraform output -raw ssh_user)" >> "$GITHUB_OUTPUT"
+          INSTANCE_ID=$(terraform output -raw instance_id 2>/dev/null || echo "")
+          PUBLIC_IP=$(terraform output -raw public_ip 2>/dev/null || echo "")
 
-      # No `az aks get-credentials` equivalent for a self-managed k3s node
-      # (see infrastructure/terraform/README.md) -- fetch the kubeconfig
-      # k3s already wrote with the node's public IP as the server address
-      # over SSH, using the private half of the key `ssh_public_key`
-      # provisioned the node with.
+          if [ -z "$INSTANCE_ID" ]; then
+            echo "🚀 AWS infra not found in state. Auto-provisioning..."
+            terraform apply -auto-approve -input=false \
+              -var="alert_emails=[\"${{ vars.ALERT_EMAIL }}\"]" \
+              -var="ssh_public_key=ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGhub2RldGVzdGtleWVwaGVtZXJhbGRlbW8K dummy"
+            INSTANCE_ID=$(terraform output -raw instance_id)
+            PUBLIC_IP=$(terraform output -raw public_ip)
+          else
+            STATE=$(aws ec2 describe-instances --instance-ids "$INSTANCE_ID" --query "Reservations[0].Instances[0].State.Name" -o text 2>/dev/null || echo "not-found")
+            echo "  Current EC2 State: $STATE"
+
+            if [ "$STATE" == "stopped" ]; then
+              echo "⚡ Resuming stopped AWS EC2 instance..."
+              aws ec2 start-instances --instance-ids "$INSTANCE_ID"
+              aws ec2 wait instance-running --instance-ids "$INSTANCE_ID"
+              PUBLIC_IP=$(aws ec2 describe-instances --instance-ids "$INSTANCE_ID" --query "Reservations[0].Instances[0].PublicIpAddress" -o text)
+            elif [ "$STATE" == "not-found" ] || [ "$STATE" == "terminated" ]; then
+              echo "🚀 Re-provisioning AWS infra..."
+              terraform apply -auto-approve -input=false \
+                -var="alert_emails=[\"${{ vars.ALERT_EMAIL }}\"]" \
+                -var="ssh_public_key=ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGhub2RldGVzdGtleWVwaGVtZXJhbGRlbW8K dummy"
+              INSTANCE_ID=$(terraform output -raw instance_id)
+              PUBLIC_IP=$(terraform output -raw public_ip)
+            fi
+          fi
+
+          echo "public_ip=$PUBLIC_IP" >> "$GITHUB_OUTPUT"
+          echo "ssh_user=$(terraform output -raw ssh_user 2>/dev/null || echo 'ubuntu')" >> "$GITHUB_OUTPUT"
+
       - name: Fetch kubeconfig over SSH
         run: |
           mkdir -p ~/.ssh
           printf '%s\n' "${{ secrets.AWS_K3S_SSH_PRIVATE_KEY }}" > ~/.ssh/k3s_deploy_key
           chmod 600 ~/.ssh/k3s_deploy_key
           ssh -o StrictHostKeyChecking=accept-new -i ~/.ssh/k3s_deploy_key \
-            "${{ steps.tf.outputs.ssh_user }}@${{ steps.tf.outputs.public_ip }}" \
+            "${{ steps.infra.outputs.ssh_user }}@${{ steps.infra.outputs.public_ip }}" \
             sudo cat /etc/rancher/k3s/k3s.yaml > "$RUNNER_TEMP/kubeconfig-aws.yaml"
           echo "KUBECONFIG=$RUNNER_TEMP/kubeconfig-aws.yaml" >> "$GITHUB_ENV"
 
@@ -213,4 +273,6 @@ jobs:
           DUCKDNS_DOMAIN: ${{ vars.DUCKDNS_DOMAIN }}
           DUCKDNS_TOKEN: ${{ secrets.DUCKDNS_TOKEN }}
         run: |
-          ../../scripts/update-duckdns.sh "${{ steps.tf.outputs.public_ip }}"
+          if [ -n "${{ steps.infra.outputs.public_ip }}" ] && [ -n "$DUCKDNS_TOKEN" ]; then
+            ../../scripts/update-duckdns.sh "${{ steps.infra.outputs.public_ip }}"
+          fi
