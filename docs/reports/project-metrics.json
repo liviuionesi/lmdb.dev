@@ -1,16 +1,16 @@
 {
-  "generated_at": "2026-08-11T14:40:17.257564",
+  "generated_at": "2026-08-11T16:43:03.427907",
   "git": {
-    "commit_count": 397,
+    "commit_count": 398,
     "first_commit": "2024-03-14 (2 years, 5 months ago)",
-    "latest_commit": "2026-08-11 (11 seconds ago)",
-    "commit_hash": "071d655",
+    "latest_commit": "2026-08-11 (3 minutes ago)",
+    "commit_hash": "702e8fd",
     "branch": "develop",
-    "insertions": 267254,
-    "deletions": 191052,
-    "total_churn": 458306,
+    "insertions": 267304,
+    "deletions": 191102,
+    "total_churn": 458406,
     "net_growth": 76202,
-    "authors_count": 5
+    "authors_count": 6
   },
   "languages": {
     "Java (Spring Boot / gRPC)": {
@@ -42,11 +42,11 @@
       "code": 4326
     },
     "Terraform & Cloud (HCL)": {
-      "files": 26,
-      "total": 1056,
+      "files": 28,
+      "total": 1062,
       "blank": 136,
       "comment": 153,
-      "code": 767
+      "code": 773
     },
     "Shell Automation (Bash)": {
       "files": 30,
@@ -63,11 +63,11 @@
       "code": 12
     },
     "Build & Config (Gradle/Properties)": {
-      "files": 14,
-      "total": 1235,
-      "blank": 172,
-      "comment": 24,
-      "code": 1039
+      "files": 17,
+      "total": 1291,
+      "blank": 182,
+      "comment": 46,
+      "code": 1063
     },
     "Protocol Buffers (Proto3)": {
       "files": 1,
@@ -160,10 +160,10 @@
       "comment": 502
     },
     "infrastructure (Terraform, K8s, Scripts)": {
-      "files": 120,
-      "total": 8068,
-      "code": 6457,
-      "comment": 883
+      "files": 125,
+      "total": 8130,
+      "code": 6487,
+      "comment": 905
     },
     "docs (Architecture, Guides, ADRs)": {
       "files": 49,
@@ -179,11 +179,11 @@
     }
   },
   "architecture": {
-    "classes": 93,
+    "classes": 100,
     "records": 51,
-    "interfaces": 14,
+    "interfaces": 20,
     "enums": 4,
-    "total_types": 162,
+    "total_types": 175,
     "controllers": 16,
     "services": 22,
     "repositories": 10,
@@ -193,7 +193,7 @@
     "post_endpoints": 14,
     "put_endpoints": 2,
     "delete_endpoints": 5,
-    "flyway_migrations": 6,
+    "flyway_migrations": 12,
     "contract_tests": 8,
     "proto_files": 1,
     "react_components": 42,
@@ -222,11 +222,11 @@
     ]
   },
   "tests": {
-    "backend_tests": 474,
-    "backend_test_files": 78,
+    "backend_tests": 478,
+    "backend_test_files": 82,
     "frontend_tests": 193,
     "frontend_test_files": 31,
-    "total_tests": 667,
-    "total_test_files": 109
+    "total_tests": 671,
+    "total_test_files": 113
   }
 }
