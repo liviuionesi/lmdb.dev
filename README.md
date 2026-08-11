@@ -8,19 +8,19 @@
 [![Spring Boot 4.1.0](https://img.shields.io/badge/Spring%20Boot-4.1.0-brightgreen.svg)](https://spring.io/projects/spring-boot)
 [![Spring Cloud 2025.1.2](https://img.shields.io/badge/Spring%20Cloud-2025.1.2-blue.svg)](https://spring.io/projects/spring-cloud)
 [![React 18 / Vite](https://img.shields.io/badge/React-18%20%7C%20Vite-61dafb.svg)](https://vitejs.dev/)
-[![Project Analytics](https://img.shields.io/badge/Project%20Metrics-Dynamic%20Report-purple.svg)](docs/PROJECT_METRICS.md)
+[![Project Analytics](https://img.shields.io/badge/Project%20Metrics-Dynamic%20Report-purple.svg)](docs/reports/PROJECT_METRICS.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 > **A production-grade, event-driven movie streaming & recommendation microservices platform.** Featuring an AI assistant powered by Spring AI & Ollama (LLaMA 3.2), semantic vector search (pgvector), offline speech-to-text voice control (Vosk), a self-healing TMDB v3 API facade, 7 layers of automated testing, full observability (ELK, Zipkin, Prometheus, Grafana), and automated multi-cloud deployment to Azure AKS and AWS k3s.
 
 🌐 **Live Demo (Frontend):** [filmpire-microservices-tan.vercel.app](https://filmpire-microservices-tan.vercel.app/)  
-📊 **Live Project Analytics & Code Statistics:** [docs/PROJECT_METRICS.md](docs/PROJECT_METRICS.md) *(Self-actualizing report updated on every push)*
+📊 **Live Project Analytics & Code Statistics:** [docs/reports/PROJECT_METRICS.md](docs/reports/PROJECT_METRICS.md) *(Self-actualizing report updated on every push)*
 
 ---
 
 ## Table of Contents
 
-0. [📊 Live Project Analytics & Code Metrics](docs/PROJECT_METRICS.md)
+0. [📊 Live Project Analytics & Code Metrics](docs/reports/PROJECT_METRICS.md)
 1. [Executive Overview & Capabilities](#1-executive-overview--capabilities)
 2. [Feature Catalog & Technical Implementation](#2-feature-catalog--technical-implementation)
 3. [SDLC Story: From Idea to Finished Product](#3-sdlc-story-from-idea-to-finished-product)
@@ -426,7 +426,7 @@ Visit **`http://localhost:5173`** (or `http://localhost:3000`) in your browser t
 ## 11. Master Documentation Index
 
 ### Architecture & Technical Guides
-* [Dynamic Project Metrics & Analytics Report (docs/PROJECT_METRICS.md)](docs/PROJECT_METRICS.md) — Live self-actualizing repository metrics & code statistics
+* [Dynamic Project Metrics & Analytics Report (docs/reports/PROJECT_METRICS.md)](docs/reports/PROJECT_METRICS.md) — Live self-actualizing repository metrics & code statistics
 * [System Architecture Specification (ARCHITECTURE.md)](docs/architecture/ARCHITECTURE.md) — Comprehensive 2,700+ line technical architecture
 * [Port Allocation Matrix](docs/architecture/PORT_MAPPING.md) — Local and container port assignments
 * [Event-Driven Architecture & Kafka Bus](docs/architecture/EVENT_DRIVEN_ARCHITECTURE.md) — Asynchronous event topics and schemas

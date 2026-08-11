@@ -437,7 +437,7 @@ def generate_markdown_report(git_stats, lang_stats, mod_stats, arch_stats, test_
     lines.append("|---|---|---|")
     for adr_name in arch_stats["adr_files"]:
         clean_title = adr_name.replace("-", " ").title()
-        lines.append(f"| [`{adr_name}`](architecture/adr/{adr_name}.md) | **Accepted** | Architecture Decision |")
+        lines.append(f"| [`{adr_name}`](../architecture/adr/{adr_name}.md) | **Accepted** | Architecture Decision |")
     lines.append("")
     lines.append("---")
     lines.append("")
@@ -484,15 +484,15 @@ def main():
     print("🔍 Auditing test suites and testing metrics...")
     test_stats = gather_test_stats()
     
-    print("📝 Generating docs/PROJECT_METRICS.md...")
+    print("📝 Generating docs/reports/PROJECT_METRICS.md...")
     report_md = generate_markdown_report(git_stats, lang_stats, mod_stats, arch_stats, test_stats)
     
-    output_md_path = REPO_ROOT / "docs" / "PROJECT_METRICS.md"
+    output_md_path = REPO_ROOT / "docs" / "reports" / "PROJECT_METRICS.md"
     output_md_path.parent.mkdir(parents=True, exist_ok=True)
     with open(output_md_path, "w", encoding="utf-8") as f:
         f.write(report_md)
         
-    output_json_path = REPO_ROOT / "docs" / "project-metrics.json"
+    output_json_path = REPO_ROOT / "docs" / "reports" / "project-metrics.json"
     json_data = {
         "generated_at": datetime.now().isoformat(),
         "git": git_stats,

@@ -452,7 +452,7 @@ tasks.register('statusInfra', Exec) {
 
 tasks.register('projectStats', Exec) {
     group = 'documentation'
-    description = 'Dynamically analyzes and generates project metrics & analytics report in docs/PROJECT_METRICS.md'
+    description = 'Dynamically analyzes and generates project metrics & analytics report in docs/reports/PROJECT_METRICS.md'
     commandLine './infrastructure/scripts/generate-project-stats.sh'
 }
 
