@@ -111,11 +111,10 @@ function BackendStandbyModal({ onBackendReady }) {
   useEffect(() => {
     if ((status === 'STANDBY' || status === 'WAKING_UP') && !dismissed) {
       setOpen(true);
-      setShowLogoReveal(false);
-    } else if ((status === 'ONLINE' || status === 'READY') && !showLogoReveal) {
+    } else if (status === 'ONLINE' && !showLogoReveal) {
       setOpen(false);
     }
-  }, [status, dismissed, showLogoReveal]);
+  }, [status, dismissed]);
 
   const handleClose = () => {
     setDismissed(true);
