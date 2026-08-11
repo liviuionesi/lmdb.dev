@@ -25,7 +25,7 @@ describe('BackendStandbyModal Cinematic Trailer & Logo Reveal', () => {
     expect(screen.queryByTestId('trailer-iframe')).not.toBeInTheDocument();
   });
 
-  it('renders YouTube trailer iframe with default video and announcer subtitles', () => {
+  it('renders YouTube trailer iframe with a curated video and announcer subtitles', () => {
     const wakeUpMock = vi.fn();
     useBackendWakeup.mockReturnValue({
       status: 'WAKING_UP',
@@ -38,7 +38,7 @@ describe('BackendStandbyModal Cinematic Trailer & Logo Reveal', () => {
 
     const iframe = screen.getByTestId('trailer-iframe');
     expect(iframe).toBeInTheDocument();
-    expect(iframe.getAttribute('src')).toContain('h2QJMfXJZaY');
+    expect(iframe.getAttribute('src')).toContain('https://www.youtube-nocookie.com/embed/');
 
     // Announcer subtitle
     expect(screen.getByText(/Welcome to Filmpire Theaters! Starting the cloud backend for you/)).toBeInTheDocument();
@@ -63,11 +63,26 @@ describe('BackendStandbyModal Cinematic Trailer & Logo Reveal', () => {
 
     renderWithProviders(<BackendStandbyModal />);
 
-    // Click Oppenheimer chip
-    fireEvent.click(screen.getByText('Oppenheimer'));
+    // Click Gladiator II chip
+    fireEvent.click(screen.getByText('Gladiator II'));
 
     const iframe = screen.getByTestId('trailer-iframe');
-    expect(iframe.getAttribute('src')).toContain('uYPbbksJxIg');
+    expect(iframe.getAttribute('src')).toContain('nGrW-OR2uDk');
+  });
+
+  it('allows shuffling to a random trailer via the Shuffle button', () => {
+    useBackendWakeup.mockReturnValue({
+      status: 'WAKING_UP',
+      secondsRemaining: 50,
+      targetCloud: 'azure',
+      wakeUp: vi.fn(),
+    });
+
+    renderWithProviders(<BackendStandbyModal />);
+
+    fireEvent.click(screen.getByText('Shuffle'));
+    const iframe = screen.getByTestId('trailer-iframe');
+    expect(iframe.getAttribute('src')).toMatch(/https:\/\/www\.youtube-nocookie\.com\/embed\/[a-zA-Z0-9_-]{11}/);
   });
 
   it('allows searching and loading custom trailer via YouTube URL', () => {
@@ -81,7 +96,7 @@ describe('BackendStandbyModal Cinematic Trailer & Logo Reveal', () => {
     renderWithProviders(<BackendStandbyModal />);
 
     // Open search bar
-    fireEvent.click(screen.getByText('Custom Trailer URL / ID'));
+    fireEvent.click(screen.getByText('Custom Trailer'));
 
     const input = screen.getByPlaceholderText(/Paste YouTube Video Link/);
     fireEvent.change(input, { target: { value: 'https://youtu.be/zSWdZVtXT7E' } });

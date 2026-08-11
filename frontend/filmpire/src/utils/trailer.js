@@ -3,10 +3,7 @@ export const DEFAULT_TRAILER_ID = 'h2QJMfXJZaY';
 export const CURATED_TRAILERS = [
   { id: 'h2QJMfXJZaY', title: 'Dune: Part Two', tag: 'Sci-Fi • 2024' },
   { id: 'GuDF9CEtFwE', title: 'Blade Runner 2049', tag: 'Sci-Fi • 2017' },
-  { id: 'uYPbbksJxIg', title: 'Oppenheimer', tag: 'Drama • 2023' },
-  { id: 'zSWdZVtXT7E', title: 'Interstellar', tag: 'Sci-Fi • 2014' },
-  { id: 'YoHD9XEInc0', title: 'Inception', tag: 'Action • 2010' },
-  { id: 'EXeTwQWrcwY', title: 'The Dark Knight', tag: 'Hero • 2008' },
+  { id: 'nGrW-OR2uDk', title: 'Gladiator II', tag: 'Action • 2024' },
 ];
 
 /**
@@ -36,13 +33,25 @@ export function extractYouTubeId(input) {
 }
 
 /**
- * Resolves the configured standby trailer ID.
- * Priority: localStorage -> import.meta.env.VITE_STANDBY_TRAILER_ID -> DEFAULT_TRAILER_ID
+ * Picks a random trailer ID from the curated playlist of user favorite trailers.
  *
  * @returns {string} YouTube video ID
  */
-export function getStandbyTrailerId() {
-  if (typeof window !== 'undefined') {
+export function getRandomCuratedTrailerId() {
+  const randomIndex = Math.floor(Math.random() * CURATED_TRAILERS.length);
+  return CURATED_TRAILERS[randomIndex].id;
+}
+
+/**
+ * Resolves the configured standby trailer ID.
+ * If VITE_STANDBY_TRAILER_ID is explicitly provided (or stored in localStorage), uses it.
+ * Otherwise, randomly selects one of the favorite trailers (Dune 2, Blade Runner 2049, Gladiator II).
+ *
+ * @param {boolean} [forceRandom=false] - If true, ignores stored preference and selects a new random trailer
+ * @returns {string} YouTube video ID
+ */
+export function getStandbyTrailerId(forceRandom = false) {
+  if (!forceRandom && typeof window !== 'undefined') {
     const saved = localStorage.getItem('filmpire_standby_trailer');
     if (saved) {
       return extractYouTubeId(saved);
@@ -52,7 +61,7 @@ export function getStandbyTrailerId() {
   if (envId) {
     return extractYouTubeId(envId);
   }
-  return DEFAULT_TRAILER_ID;
+  return getRandomCuratedTrailerId();
 }
 
 /**

@@ -3,6 +3,8 @@ import {
   extractYouTubeId,
   getStandbyTrailerId,
   setStandbyTrailerId,
+  getRandomCuratedTrailerId,
+  CURATED_TRAILERS,
   DEFAULT_TRAILER_ID,
 } from './trailer';
 
@@ -42,9 +44,18 @@ describe('trailer utilities', () => {
     });
   });
 
+  describe('getRandomCuratedTrailerId', () => {
+    it('returns one of the curated trailer IDs', () => {
+      const validIds = CURATED_TRAILERS.map((t) => t.id);
+      const randomId = getRandomCuratedTrailerId();
+      expect(validIds).toContain(randomId);
+    });
+  });
+
   describe('getStandbyTrailerId & setStandbyTrailerId', () => {
-    it('defaults to DEFAULT_TRAILER_ID when unset', () => {
-      expect(getStandbyTrailerId()).toBe(DEFAULT_TRAILER_ID);
+    it('returns a valid curated trailer ID when unset', () => {
+      const validIds = CURATED_TRAILERS.map((t) => t.id);
+      expect(validIds).toContain(getStandbyTrailerId());
     });
 
     it('reads VITE_STANDBY_TRAILER_ID environment variable', () => {
@@ -52,10 +63,14 @@ describe('trailer utilities', () => {
       expect(getStandbyTrailerId()).toBe('zSWdZVtXT7E');
     });
 
-    it('prefers localStorage over environment variable', () => {
+    it('prefers localStorage over environment variable unless forceRandom is true', () => {
       vi.stubEnv('VITE_STANDBY_TRAILER_ID', 'zSWdZVtXT7E');
       setStandbyTrailerId('https://youtu.be/EXeTwQWrcwY');
       expect(getStandbyTrailerId()).toBe('EXeTwQWrcwY');
+
+      // forceRandom picks a random curated trailer
+      const validIds = CURATED_TRAILERS.map((t) => t.id);
+      expect(validIds).toContain(getStandbyTrailerId(true));
     });
   });
 });

@@ -17,12 +17,14 @@ import FiberDvrIcon from '@mui/icons-material/FiberDvr';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import SearchIcon from '@mui/icons-material/Search';
 import MovieFilterIcon from '@mui/icons-material/MovieFilter';
+import ShuffleIcon from '@mui/icons-material/Shuffle';
 
 import { useBackendWakeup } from './useBackendWakeup';
 import {
   CURATED_TRAILERS,
   getStandbyTrailerId,
   setStandbyTrailerId,
+  getRandomCuratedTrailerId,
   extractYouTubeId,
 } from '../../utils/trailer';
 
@@ -74,8 +76,8 @@ const SUBTITLES = [
 ];
 
 /**
- * Cinematic Movie Trailer Standby Experience with Configurable YouTube Trailers,
- * Curated Presets, Dynamic Announcer Subtitles, and Filmpire Studio Logo Reveal.
+ * Cinematic Movie Trailer Standby Experience with Randomized Trailer Picker,
+ * Configurable Presets, Dynamic Announcer Subtitles, and Filmpire Studio Logo Reveal.
  *
  * @param {Object} props
  * @param {Function} [props.onBackendReady] - Callback triggered when the backend is live
@@ -130,6 +132,16 @@ function BackendStandbyModal({ onBackendReady }) {
     const extracted = extractYouTubeId(id);
     setTrailerId(extracted);
     setStandbyTrailerId(extracted);
+  };
+
+  const handleShuffleTrailer = () => {
+    let nextId = getRandomCuratedTrailerId();
+    // Try to pick a different trailer than current
+    if (nextId === trailerId && CURATED_TRAILERS.length > 1) {
+      const remaining = CURATED_TRAILERS.filter((t) => t.id !== trailerId);
+      nextId = remaining[Math.floor(Math.random() * remaining.length)].id;
+    }
+    setTrailerId(nextId);
   };
 
   const handleApplyCustomTrailer = (e) => {
@@ -379,21 +391,39 @@ function BackendStandbyModal({ onBackendReady }) {
               </Typography>
             </Box>
 
-            <Button
-              size="small"
-              onClick={() => setShowSearch((prev) => !prev)}
-              startIcon={<SearchIcon fontSize="small" />}
-              sx={{
-                color: '#f5c518',
-                fontSize: '0.75rem',
-                fontWeight: 700,
-                textTransform: 'none',
-                p: 0.2,
-                minWidth: 'auto',
-              }}
-            >
-              {showSearch ? 'Close Search' : 'Custom Trailer URL / ID'}
-            </Button>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
+              <Button
+                size="small"
+                onClick={handleShuffleTrailer}
+                startIcon={<ShuffleIcon fontSize="small" />}
+                sx={{
+                  color: '#ff4d58',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  textTransform: 'none',
+                  p: 0.2,
+                  minWidth: 'auto',
+                }}
+              >
+                Shuffle
+              </Button>
+
+              <Button
+                size="small"
+                onClick={() => setShowSearch((prev) => !prev)}
+                startIcon={<SearchIcon fontSize="small" />}
+                sx={{
+                  color: '#f5c518',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  textTransform: 'none',
+                  p: 0.2,
+                  minWidth: 'auto',
+                }}
+              >
+                {showSearch ? 'Close Search' : 'Custom Trailer'}
+              </Button>
+            </Box>
           </Box>
 
           {/* Search / Custom YouTube URL Bar */}
