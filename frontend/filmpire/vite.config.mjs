@@ -1,61 +1,106 @@
 import { fileURLToPath, URL } from 'node:url';
+import { spawn } from 'node:child_process';
+import path from 'node:path';
 import { defineConfig, coverageConfigDefaults } from 'vitest/config';
 import react from '@vitejs/plugin-react';
+
+const __dirname = fileURLToPath(new URL('.', import.meta.url));
+
+/**
+ * Development middleware to handle /api/wakeup requests directly in the Vite dev server.
+ */
+function wakeupDevPlugin() {
+  return {
+    name: 'filmpire-wakeup-dev-plugin',
+    configureServer(server) {
+      server.middlewares.use('/api/wakeup', (req, res) => {
+        if (req.method === 'OPTIONS') {
+          res.writeHead(200, {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type',
+          });
+          return res.end();
+        }
+
+        let body = '';
+        req.on('data', (chunk) => {
+          body += chunk;
+        });
+        req.on('end', () => {
+          let parsed = {};
+          try {
+            parsed = JSON.parse(body || '{}');
+          } catch {
+            // Ignored
+          }
+          const cloud = parsed.cloud || 'azure';
+          const repoRoot = path.resolve(__dirname, '../..');
+
+          // Trigger backend start in background
+          if (cloud === 'minikube' || cloud === 'tunnel') {
+            spawn('docker', ['compose', '-f', 'infrastructure/docker/docker-compose.yml', 'start'], {
+              cwd: repoRoot,
+              detached: true,
+              stdio: 'ignore',
+            }).unref();
+          } else if (cloud === 'aws') {
+            spawn('bash', ['infrastructure/scripts/start-aws.sh'], {
+              cwd: repoRoot,
+              detached: true,
+              stdio: 'ignore',
+            }).unref();
+          } else {
+            spawn('bash', ['infrastructure/scripts/start-azure.sh'], {
+              cwd: repoRoot,
+              detached: true,
+              stdio: 'ignore',
+            }).unref();
+          }
+
+          res.writeHead(200, {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+          });
+          res.end(
+            JSON.stringify({
+              status: 'WAKING_UP',
+              targetCloud: cloud,
+              estimatedSeconds: 90,
+              message: `Initiated backend start for ${cloud.toUpperCase()}`,
+            }),
+          );
+        });
+      });
+    },
+  };
+}
 
 /**
  * Vite build/dev-server configuration for the Filmpire frontend, plus the
  * Vitest `test` block (#127) that replaces CRA's Jest setup.
- *
- * Replaces the previous CRA (react-scripts) toolchain (#125). `@vitejs/plugin-react`
- * enables JSX transform + Fast Refresh; the `@` alias mirrors the common Vite
- * convention for absolute imports rooted at `src/` (the codebase itself currently
- * only uses relative imports, but the alias is set up so future code doesn't have
- * to fall back to CRA-style implicit resolution). `defineConfig` comes from
- * `vitest/config` rather than plain `vite` so the `test` key below is
- * recognized alongside the regular Vite options — it re-exports Vite's own
- * `defineConfig`, so nothing about the build/dev behavior changes.
- *
- * See https://vite.dev/config/ for the full Vite options reference and
- * https://vitest.dev/config/ for the full Vitest `test` options reference.
  */
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), wakeupDevPlugin()],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
   server: {
-    // 1. Match the CRA dev server's default port so existing local workflows
-    //    (docs, bookmarks, the gateway's CORS allow-list) keep working.
     port: 3000,
   },
   build: {
-    // 2. `dist/` is the Vite convention (replacing CRA's `build/`) and is
-    //    already covered by the repo's .gitignore.
     outDir: 'dist',
   },
   test: {
-    // 3. `globals: true` keeps describe/it/expect/vi available without an
-    //    import in every test file, matching how the existing suite (ported
-    //    from Jest, which is always-global) is already written.
     globals: true,
-    // 4. jsdom supplies the DOM the component tests render into; Vitest
-    //    doesn't default to it the way CRA's Jest preset did.
     environment: 'jsdom',
     setupFiles: ['./src/setupTests.js'],
-    // 5. Mirrors CRA's Jest preset default (`resetMocks: true`): every mock's
-    //    calls *and* implementation are cleared between tests, so a
-    //    `mockReturnValue`/`mockImplementation` from one test can't leak into
-    //    the next.
     mockReset: true,
     coverage: {
       provider: 'v8',
       include: ['src/**/*.{js,jsx}'],
-      // 6. Same exclusion list as the old `jest.collectCoverageFrom` config
-      //    (test files, test-only helpers, and bootstrap/static files with
-      //    no branch logic worth gating on), layered on top of Vitest's own
-      //    coverage defaults (node_modules, config files, etc.).
       exclude: [
         ...coverageConfigDefaults.exclude,
         'src/**/*.test.{js,jsx}',

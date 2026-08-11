@@ -66,12 +66,12 @@ const SUBTITLES = [
     text: '🍿 Loading 10,000+ movie titles, cast profiles, reviews, and 4K posters...',
   },
   {
-    minRemaining: 5,
+    minRemaining: 1,
     text: '🌟 Calibrating Dolby audio streams & warming up TMDB cache clusters...',
   },
   {
     minRemaining: 0,
-    text: '✨ Backend is ready! The silver screen is about to light up...',
+    text: '⏳ Microservices are performing final health checks & warming up... Almost ready!',
   },
 ];
 
@@ -242,7 +242,7 @@ function BackendStandbyModal({ onBackendReady }) {
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Typography variant="caption" sx={{ color: '#f5c518', fontWeight: 800, letterSpacing: 1 }}>
-              {`${secondsRemaining}s TO SHOWTIME`}
+              {secondsRemaining > 0 ? `${secondsRemaining}s TO SHOWTIME` : 'WARMING UP PODS...'}
             </Typography>
             <IconButton
               aria-label="close"
@@ -317,12 +317,12 @@ function BackendStandbyModal({ onBackendReady }) {
               boxShadow: '0 10px 40px rgba(0,0,0,0.9)',
             }}
           >
-            {/* Embedded 16:9 YouTube Trailer */}
+            {/* Embedded 16:9 YouTube Trailer with seamless loop */}
             <iframe
               data-testid="trailer-iframe"
               width="100%"
               height="100%"
-              src={`https://www.youtube-nocookie.com/embed/${trailerId}?autoplay=1&mute=0&controls=1&rel=0&modestbranding=1`}
+              src={`https://www.youtube-nocookie.com/embed/${trailerId}?autoplay=1&mute=0&controls=1&rel=0&modestbranding=1&loop=1&playlist=${trailerId}`}
               title="Filmpire Pre-Show Trailer"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
               allowFullScreen
