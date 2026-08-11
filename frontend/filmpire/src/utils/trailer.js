@@ -22,14 +22,31 @@ export function extractYouTubeId(input) {
   const trimmed = input.trim();
 
   // If already an 11-character alphanumeric ID
-  if (/^[a-zA-Z0-9_-]{11}$/.test(trimmed)) {
+  if (/^[\w-]{11}$/.test(trimmed)) {
     return trimmed;
   }
 
-  // Handle standard watch?v=, youtu.be, or embed URLs
-  const urlMatch = /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/i.exec(trimmed);
-  if (urlMatch?.[1]) {
-    return urlMatch[1];
+  try {
+    const url = new URL(trimmed.startsWith('http') ? trimmed : `https://${trimmed}`);
+    if (url.hostname.includes('youtu.be')) {
+      const id = url.pathname.slice(1);
+      if (/^[\w-]{11}$/.test(id)) {
+        return id;
+      }
+    }
+    if (url.hostname.includes('youtube.com')) {
+      const v = url.searchParams.get('v');
+      if (v && /^[\w-]{11}$/.test(v)) {
+        return v;
+      }
+      const parts = url.pathname.split('/').filter(Boolean);
+      const lastPart = parts.at(-1);
+      if (lastPart && /^[\w-]{11}$/.test(lastPart)) {
+        return lastPart;
+      }
+    }
+  } catch {
+    // If not a parseable URL, fallback
   }
 
   return DEFAULT_TRAILER_ID;
