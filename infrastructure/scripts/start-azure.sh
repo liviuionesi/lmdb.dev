@@ -48,26 +48,67 @@ else
   terraform apply -auto-approve -input=false
 fi
 
-# Fetch credentials & deploy Kubernetes manifests if needed
+# Fetch credentials & deploy Kubernetes manifests
 if command -v kubectl >/dev/null 2>&1; then
   echo -e "\n${BLUE}🔑 Refreshing AKS credentials...${NC}"
   az aks get-credentials --resource-group "$RG_NAME" --name "$CLUSTER_NAME" --overwrite-existing
-  
+
   if [ -d "$REPO_ROOT/infrastructure/kubernetes/overlays/azure" ]; then
-    echo -e "${BLUE}📦 Applying Kubernetes manifests...${NC}"
+    echo -e "${BLUE}📦 Applying Kubernetes manifests (overlays/azure)...${NC}"
     kubectl apply -k "$REPO_ROOT/infrastructure/kubernetes/overlays/azure" || true
   fi
 
-  echo -e "${BLUE}🌐 Checking node IP...${NC}"
+  # Wait for all 9 workloads to be Ready
+  echo -e "\n${BLUE}⏳ Waiting for all pods to be Ready...${NC}"
+  WORKLOADS=("deployment/api-gateway" "deployment/movie-service" "deployment/actor-service" "deployment/user-service" "deployment/ai-service")
+  STATEFULSETS=("statefulset/postgres" "statefulset/mongodb" "statefulset/redis" "statefulset/ollama")
+  for w in "${WORKLOADS[@]}"; do
+    kubectl rollout status "$w" --timeout=300s 2>/dev/null && \
+      echo -e "  ${GREEN}✅ $w ready${NC}" || \
+      echo -e "  ${YELLOW}⚠️  $w not yet ready — check 'kubectl get pods'${NC}"
+  done
+  for s in "${STATEFULSETS[@]}"; do
+    kubectl rollout status "$s" --timeout=300s 2>/dev/null && \
+      echo -e "  ${GREEN}✅ $s ready${NC}" || \
+      echo -e "  ${YELLOW}⚠️  $s not yet ready — check 'kubectl get pods'${NC}"
+  done
+
+  # Resolve live node IP
+  echo -e "\n${BLUE}🌐 Resolving live Node IP...${NC}"
   NODE_IP="$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="ExternalIP")].address}' 2>/dev/null || true)"
   if [ -n "$NODE_IP" ]; then
-    echo -e "${GREEN}✅ Node IP: ${NODE_IP}${NC}"
-    if [ -f "$REPO_ROOT/infrastructure/scripts/update-duckdns.sh" ] && [ -n "${DUCKDNS_TOKEN:-}" ]; then
-      "$REPO_ROOT/infrastructure/scripts/update-duckdns.sh" "$NODE_IP" || true
+    echo -e "  ${GREEN}✅ Node public IP: ${NODE_IP}${NC}"
+    echo -e "  ${CYAN}🔗 Direct API Gateway: http://${NODE_IP}:30080/actuator/health${NC}"
+
+    # Update DuckDNS so filmpire-api.duckdns.org points to the new IP
+    if [ -f "$REPO_ROOT/infrastructure/scripts/update-duckdns.sh" ]; then
+      if [ -n "${DUCKDNS_TOKEN:-}" ]; then
+        echo -e "${BLUE}🦆 Updating DuckDNS → ${NODE_IP}...${NC}"
+        "$REPO_ROOT/infrastructure/scripts/update-duckdns.sh" "$NODE_IP" && \
+          echo -e "${GREEN}✅ DuckDNS updated: filmpire-api.duckdns.org → ${NODE_IP}${NC}" || \
+          echo -e "${YELLOW}⚠️  DuckDNS update failed — check DUCKDNS_TOKEN${NC}"
+      else
+        echo -e "${YELLOW}⚠️  DUCKDNS_TOKEN not set — DuckDNS NOT updated. Export it and re-run:${NC}"
+        echo -e "     ${CYAN}export DUCKDNS_TOKEN=your-token${NC}"
+        echo -e "     ${CYAN}./infrastructure/scripts/update-duckdns.sh ${NODE_IP}${NC}"
+      fi
     fi
+  else
+    echo -e "  ${YELLOW}⚠️  Could not resolve node external IP yet — try 'kubectl get nodes -o wide'${NC}"
   fi
 fi
 
 echo -e "\n${GREEN}=====================================================${NC}"
-echo -e "${GREEN}  🎉 Azure Backend Started Successfully!             ${NC}"
+echo -e "${GREEN}  🎬 Filmpire Azure Backend is Live!                 ${NC}"
 echo -e "${GREEN}=====================================================${NC}"
+echo -e "  API Gateway:  ${CYAN}http://${NODE_IP:-<node-ip>}:30080${NC}"
+echo -e "  Cloud DNS:    ${CYAN}https://filmpire-api.duckdns.org${NC}"
+echo -e "  Vercel App:   ${CYAN}https://filmpire-microservices-tan.vercel.app${NC}"
+echo -e ""
+echo -e "  To start a HTTPS tunnel (bypasses DNS caching):"
+echo -e "    ${CYAN}./infrastructure/scripts/start-tunnel.sh${NC}"
+echo -e ""
+echo -e "  To stop and save ~\$5/day when not in use:"
+echo -e "    ${CYAN}./infrastructure/scripts/stop-azure.sh${NC}"
+echo -e "${GREEN}=====================================================${NC}"
+echo -e ""

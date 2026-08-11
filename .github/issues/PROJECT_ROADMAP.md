@@ -1,8 +1,8 @@
 # Filmpire Microservices - Project Roadmap
 
-**Version:** 2.0.0
-**Date:** July 21, 2026
-**Supersedes:** v1.0.0 (November 14, 2025)
+**Version:** 2.1.0
+**Date:** August 11, 2026
+**Supersedes:** v2.0.0 (July 21, 2026)
 
 ---
 
@@ -18,8 +18,9 @@ Reference: [ARCHITECTURE.md v1.2.0](../../docs/architecture/ARCHITECTURE.md) §5
 
 **Descoped (v1.2.0):** the separate Next.js web app and React Native mobile apps. The real frontend is the React 18 / Vite application merged directly into `frontend/filmpire/` ([ADR-013](../../docs/architecture/adr/013-frontend-merged-into-monorepo.md)), which consumes this backend as a drop-in TMDB replacement.
 
-**Budget:** cloud is strictly $0 — see ARCHITECTURE.md §11.1 (non-billable
-account types, ephemeral demo clusters, zero-spend alarms, local-first).
+**Budget:** cloud uses `az aks stop` / `ec2 stop` between demo sessions (~$0.25/day idle, $0 compute).
+See ARCHITECTURE.md §11.5 and [ADR-018](../../docs/architecture/adr/018-cloud-lifecycle-stop-not-destroy.md).
+`terraform destroy` is reserved for end-of-semester.
 
 ---
 
@@ -59,12 +60,19 @@ integration testing (open), #20 SonarQube (open).
 real Filmpire React app against the local stack — the facade's acceptance
 test). Performance/security per ARCHITECTURE.md §10.
 
-### 🔄 Phase 7: Observability & Cloud Deployment ($0 hard budget)
-**Issues:** #22 (Epic), #23 service instrumentation, #24 local
-Prometheus+Grafana / ELK, #25 Kubernetes Kustomize manifests, #26 Terraform
-Azure (AKS), #27 Terraform AWS (k3s), #28 CI/CD publish+deploy.
-Local-first on the dev laptop (podman Kubernetes); cloud clusters are
-ephemeral demos on non-billable free-tier accounts.
+### ✅ Phase 7: Observability & Cloud Deployment — LIVE
+**Issues:** #22 (Epic), #23 ✓, #24 ✓, #25 ✓, #26 ✓ (Azure AKS), #27 ✓ (AWS k3s), #28 ✓ (CI/CD).
+Azure AKS (`filmpire-aks`, `Standard_D4ls_v7`, `eastus`) live-verified 2026-08-11:
+all 9 services (api-gateway, movie-service, actor-service, user-service, ai-service,
+postgres, mongodb, redis, ollama) deployed and healthy.
+Dynamic backend resolution (#151 ✅ closed): `apiUrl.js` waterfall + null sentinel,
+`BackendStandbyModal` only shown when all tiers are genuinely unreachable.
+
+### 🔄 Phase 8: Maintenance & Cloud Lifecycle (#76 Epic)
+**Issues:** #160 (Story: Professional Cloud Lifecycle Management — open).
+Professional stop/start lifecycle for Azure, AWS, and Minikube: `stop-all-clouds.sh`,
+improved `start-azure.sh` (auto DuckDNS, all-pods wait), `cluster-stop.yml` GitHub
+Actions workflow, ADR-018 documenting stop-not-destroy decision.
 
 ---
 
@@ -89,7 +97,7 @@ The board is the single source of truth for remaining work.
 | §6 Security | #13 ✓ (JWT/rate-limit), #20, #29 |
 | §7 Dev environment | #5 ✓, #34 (runbook) |
 | §10 Testing strategy | #19, #38, per-service test criteria |
-| §11 Deployment (Terraform/K8s/$0 free tier) | #22, #25, #26, #27, #28 |
+| §11 Deployment (Terraform/K8s/lifecycle) | #22 ✓, #25 ✓, #26 ✓ (Azure live), #27 ✓ (AWS), #28 ✓, #160 (lifecycle) |
 | §12 Observability (Prometheus/Grafana/ELK) | #23, #24 |
 | §12.3 Distributed tracing (ADR-007) | #42 |
 | §12.4 SLOs / §10.5 performance testing | #45 |

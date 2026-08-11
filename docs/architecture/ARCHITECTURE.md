@@ -1,7 +1,7 @@
 # Filmpire Microservices - Enterprise Software Architecture Document
 
-**Version:** 1.7.3  
-**Date:** August 1, 2026 (#36: ai-service implemented — Spring AI 2.0.0 + Ollama, PostgreSQL/pgvector per ADR-012, REST + gRPC — §3.7 updated; dependency versions synchronized with codebase)  
+**Version:** 1.8.0  
+**Date:** August 11, 2026 (#160: cloud lifecycle — ADR-018, §11.5 stop-not-destroy, §11.7 lifecycle management; #151: bug closed — resolveApiUrl null sentinel verified live)
 **Author:** Liviu Ionesi  
 **Purpose:** Portfolio project demonstrating enterprise-grade full-stack development for a movie platform
 
@@ -2383,26 +2383,42 @@ push to main
 
 ### 11.5 What's Actually Deployed, and What It Costs
 
-Both clouds are ephemeral by design (§11.1) — neither is meant to be "up"
-by default. As of the last verification pass, both were torn down
-(`terraform destroy`, $0). When one *is* up, it's been live-verified:
-movies, actors, register/login, and voice control's speech-to-text all
-return correct data end-to-end through a real gateway, real CORS, real
-JWTs — not curled against a bare pod bypassing the actual routing layer.
+Azure AKS is the primary demo cloud as of 2026-08-11 (cluster `filmpire-aks`,
+resource group `filmpire-demo`, `eastus`, `Standard_D4ls_v7`). AWS k3s is
+provided as an alternative overlay and has been live-verified but is not the
+primary target. When either cloud is up, all 9 workloads are deployed:
+`api-gateway`, `movie-service`, `actor-service`, `user-service`, `ai-service`,
+`postgres`, `mongodb`, `redis`, `ollama`.
 
-**What leaving one running would actually cost** (real Azure Retail
-Pricing, `eastus`, checked live rather than assumed):
+**Cost model — ADR-018: stop-not-destroy between demo sessions:**
+
+| State | What's billed | Rate | Daily cost |
+|---|---|---|---|
+| Running (`az aks start`) | VM + disks + IP | ~$0.21/hr | ~**$5.06/day** |
+| Stopped (`az aks stop`) | Disks (~16 GiB) + public IP only | ~$0.01/hr | ~**$0.25/day** |
+| Destroyed (`terraform destroy`) | Nothing | $0 | $0 |
+
+`az aks stop` de-allocates the VM while preserving all 5 PVCs (Postgres,
+MongoDB ×2, Redis, Ollama). Credits last ~10–20× longer than always-on.
+Terraform destroy is reserved for end-of-semester or region migration.
+
+**PVC reclaim policy:** All PVCs use the AKS `default` StorageClass (Azure
+Disk, `reclaimPolicy: Delete`). Data survives `az aks stop` / `az aks start`
+cycles. Data is **permanently lost** on `terraform destroy` or `kubectl delete
+pvc`. This is intentional for a demo environment — no backup strategy is
+implemented.
+
+**What leaving one running would actually cost** (Azure Retail Pricing,
+`eastus`):
 
 | Node | Spec | Rate | If left running 24/7 for a month |
 |---|---|---|---|
 | `Standard_D2ls_v7` (movie-only slice, retired) | 2vCPU/4GB | $0.117/hr | ~$85 |
-| `Standard_D4ls_v7` (full parity, current Azure size) | 4vCPU/8GB | $0.234/hr | ~$171 |
+| `Standard_D4ls_v7` (full parity, current) | 4vCPU/8GB | $0.192/hr | ~$139 |
 
-Burning a full $200 free credit at the higher rate needs **~854 hours
-(~35 days) of continuous, unattended runtime** — a realistic demo session
-costs cents, not dollars. The actual budget risk was never node size; it's
-leaving something running unattended for weeks, which the
-destroy-after-demo habit (§11.1) exists specifically to prevent.
+A realistic demo session costs cents. The budget risk is leaving the cluster
+running unattended, which `auto-stop-watchdog.sh` and the stop scripts
+(§11.7) are designed to prevent.
 
 **Two real production-shaped bugs were found and fixed live** while
 standing this up, both worth noting as they're the kind of thing that
@@ -2476,6 +2492,43 @@ every request — including the health check in step 4/5 above — gets a
 successful `curl` against a backend is not proof a browser can use it;
 verifying this properly means sending the real `Origin` header and
 checking for `access-control-allow-origin` in the response.
+
+### 11.7 Cloud Lifecycle Management
+
+Lifecycle is managed via scripts in `infrastructure/scripts/` and a GitHub
+Actions workflow — no manual Azure Portal clicks required.
+
+| Tool | What it does |
+|---|---|
+| `start-azure.sh` | Starts (or provisions) AKS, waits all 9 pods Ready, auto-updates DuckDNS |
+| `stop-azure.sh` | Stops AKS, waits for full de-allocation, prints cost summary |
+| `stop-all-clouds.sh` | Detects and stops whichever cloud(s) are running (Azure, AWS, Minikube) |
+| `stop-all-clouds.sh --dry-run` | Print what would be stopped without acting |
+| `auto-stop-watchdog.sh` | Checks inactivity via `/actuator/activity`; stops cluster if idle > 1h |
+| `.github/workflows/cluster-stop.yml` | Remote start/stop from GitHub UI when no local machine available |
+| `.github/workflows/deploy.yml` | Deploy workloads to a running cluster (does not provision) |
+| `.github/workflows/destroy.yml` | Full `terraform destroy` — manual only, irreversible |
+
+**Typical day lifecycle:**
+
+```bash
+# Morning — resume
+./infrastructure/scripts/start-azure.sh          # ~2-3 min, data intact
+
+# Optional: start HTTPS tunnel (bypasses DNS TTL)
+./infrastructure/scripts/start-tunnel.sh
+
+# Evening — stop to save ~$5/day
+./infrastructure/scripts/stop-azure.sh           # wait for full stop
+# OR: stop everything
+./infrastructure/scripts/stop-all-clouds.sh
+
+# From GitHub UI (no local machine needed)
+# → Actions → Cluster Stop / Start → Run workflow → cloud: azure, action: stop
+```
+
+See [ADR-018](adr/018-cloud-lifecycle-stop-not-destroy.md) for the
+full rationale.
 
 ---
 

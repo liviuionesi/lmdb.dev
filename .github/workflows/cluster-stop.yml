@@ -1,0 +1,216 @@
+name: Cluster Stop / Start
+
+# Manual workflow to start or stop cloud compute from GitHub UI or API.
+# This is the remote equivalent of ./infrastructure/scripts/stop-all-clouds.sh.
+# Use this when you don't have your local machine available (e.g. from a phone).
+# It does NOT destroy infrastructure — data on PVCs is preserved.
+#
+# Related: deploy.yml (deploy workloads), destroy.yml (full terraform destroy)
+# See: docs/architecture/adr/016-cloud-lifecycle-stop-not-destroy.md
+
+on:
+  workflow_dispatch:
+    inputs:
+      cloud:
+        description: "Cloud target"
+        required: true
+        type: choice
+        options:
+          - azure
+          - aws
+      action:
+        description: "Action to perform"
+        required: true
+        type: choice
+        default: stop
+        options:
+          - stop
+          - start
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  # ── Azure AKS ──────────────────────────────────────────────────────────────
+  azure:
+    if: github.event.inputs.cloud == 'azure'
+    name: "Azure AKS — ${{ github.event.inputs.action }}"
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infrastructure/terraform/azure
+    env:
+      ARM_USE_OIDC: "true"
+      ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+      ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: "~1.15"
+
+      - name: Terraform init (read state only)
+        run: |
+          terraform init -input=false \
+            -backend-config="resource_group_name=${{ vars.TF_STATE_RESOURCE_GROUP }}" \
+            -backend-config="storage_account_name=${{ vars.TF_STATE_STORAGE_ACCOUNT }}" \
+            -backend-config="container_name=${{ vars.TF_STATE_CONTAINER }}"
+
+      - name: Resolve cluster coordinates from state
+        id: tf
+        run: |
+          echo "rg=$(terraform output -raw resource_group_name)" >> "$GITHUB_OUTPUT"
+          echo "cluster=$(terraform output -raw cluster_name)" >> "$GITHUB_OUTPUT"
+
+      - name: Check current power state
+        id: power
+        run: |
+          STATE=$(az aks show \
+            --resource-group "${{ steps.tf.outputs.rg }}" \
+            --name "${{ steps.tf.outputs.cluster }}" \
+            --query "powerState.code" -o tsv 2>/dev/null || echo "Unknown")
+          echo "Current power state: $STATE"
+          echo "state=$STATE" >> "$GITHUB_OUTPUT"
+
+      - name: Stop AKS cluster
+        if: github.event.inputs.action == 'stop' && steps.power.outputs.state != 'Stopped'
+        run: |
+          az aks stop \
+            --resource-group "${{ steps.tf.outputs.rg }}" \
+            --name "${{ steps.tf.outputs.cluster }}"
+          echo "✅ Cluster stopped. Compute cost: \$0. Disk cost: ~\$0.25/day."
+
+      - name: Already stopped (no-op)
+        if: github.event.inputs.action == 'stop' && steps.power.outputs.state == 'Stopped'
+        run: echo "ℹ️ Cluster is already stopped — no action taken."
+
+      - name: Start AKS cluster
+        if: github.event.inputs.action == 'start' && steps.power.outputs.state != 'Running'
+        run: |
+          az aks start \
+            --resource-group "${{ steps.tf.outputs.rg }}" \
+            --name "${{ steps.tf.outputs.cluster }}"
+          echo "✅ Cluster started."
+
+      - name: Update DuckDNS after start
+        if: github.event.inputs.action == 'start'
+        env:
+          DUCKDNS_DOMAIN: ${{ vars.DUCKDNS_DOMAIN }}
+          DUCKDNS_TOKEN: ${{ secrets.DUCKDNS_TOKEN }}
+        run: |
+          # Get AKS credentials and find node IP
+          az aks get-credentials \
+            --resource-group "${{ steps.tf.outputs.rg }}" \
+            --name "${{ steps.tf.outputs.cluster }}" \
+            --overwrite-existing
+          NODE_IP=$(kubectl get nodes \
+            -o jsonpath='{.items[0].status.addresses[?(@.type=="ExternalIP")].address}' || true)
+          if [ -n "$NODE_IP" ] && [ -n "$DUCKDNS_TOKEN" ]; then
+            infrastructure/scripts/update-duckdns.sh "$NODE_IP"
+            echo "✅ DuckDNS updated → $NODE_IP"
+          else
+            echo "⚠️ Could not update DuckDNS (missing NODE_IP or DUCKDNS_TOKEN)"
+          fi
+
+      - name: Already running (no-op)
+        if: github.event.inputs.action == 'start' && steps.power.outputs.state == 'Running'
+        run: echo "ℹ️ Cluster is already running — no action taken."
+
+  # ── AWS k3s ────────────────────────────────────────────────────────────────
+  aws:
+    if: github.event.inputs.cloud == 'aws'
+    name: "AWS k3s — ${{ github.event.inputs.action }}"
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infrastructure/terraform/aws
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: "~1.15"
+
+      - name: Terraform init (read state only)
+        run: |
+          terraform init -input=false \
+            -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
+            -backend-config="region=${{ vars.AWS_REGION }}" \
+            -backend-config="dynamodb_table=${{ vars.TF_STATE_TABLE }}"
+
+      - name: Resolve instance ID from state
+        id: tf
+        run: |
+          echo "instance_id=$(terraform output -raw instance_id 2>/dev/null || echo '')" >> "$GITHUB_OUTPUT"
+          echo "public_ip=$(terraform output -raw public_ip 2>/dev/null || echo '')" >> "$GITHUB_OUTPUT"
+
+      - name: Check current instance state
+        if: steps.tf.outputs.instance_id != ''
+        id: ec2
+        run: |
+          STATE=$(aws ec2 describe-instances \
+            --instance-ids "${{ steps.tf.outputs.instance_id }}" \
+            --query "Reservations[0].Instances[0].State.Name" \
+            --output text 2>/dev/null || echo "unknown")
+          echo "Current instance state: $STATE"
+          echo "state=$STATE" >> "$GITHUB_OUTPUT"
+
+      - name: Stop EC2 instance
+        if: github.event.inputs.action == 'stop' && steps.ec2.outputs.state == 'running'
+        run: |
+          aws ec2 stop-instances \
+            --instance-ids "${{ steps.tf.outputs.instance_id }}"
+          echo "✅ EC2 instance stopped. Data preserved on EBS volume."
+
+      - name: Start EC2 instance
+        if: github.event.inputs.action == 'start' && steps.ec2.outputs.state == 'stopped'
+        run: |
+          aws ec2 start-instances \
+            --instance-ids "${{ steps.tf.outputs.instance_id }}"
+          # Wait for running
+          aws ec2 wait instance-running \
+            --instance-ids "${{ steps.tf.outputs.instance_id }}"
+          echo "✅ EC2 instance running."
+
+      - name: Update DuckDNS after start
+        if: github.event.inputs.action == 'start' && steps.ec2.outputs.state == 'stopped'
+        env:
+          DUCKDNS_DOMAIN: ${{ vars.DUCKDNS_DOMAIN }}
+          DUCKDNS_TOKEN: ${{ secrets.DUCKDNS_TOKEN }}
+        run: |
+          NEW_IP=$(aws ec2 describe-instances \
+            --instance-ids "${{ steps.tf.outputs.instance_id }}" \
+            --query "Reservations[0].Instances[0].PublicIpAddress" \
+            --output text 2>/dev/null || echo "")
+          if [ -n "$NEW_IP" ] && [ -n "$DUCKDNS_TOKEN" ]; then
+            infrastructure/scripts/update-duckdns.sh "$NEW_IP"
+            echo "✅ DuckDNS updated → $NEW_IP"
+          fi
+
+      - name: Instance not provisioned
+        if: steps.tf.outputs.instance_id == ''
+        run: echo "⚠️ No AWS instance found in Terraform state — not provisioned."
