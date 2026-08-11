@@ -180,8 +180,8 @@ describe('createDynamicBaseQuery URL joining', () => {
 
     await baseQuery('/media/upload', {}, {});
 
-    const request = global.fetch.mock.calls[0][0];
-    const requestUrl = typeof request === 'string' ? request : request?.url;
+    const lastCall = global.fetch.mock.calls[global.fetch.mock.calls.length - 1][0];
+    const requestUrl = typeof lastCall === 'string' ? lastCall : lastCall?.url;
     expect(requestUrl).toBe('http://localhost:8080/api/v1/media/upload');
   });
 
@@ -199,8 +199,8 @@ describe('createDynamicBaseQuery URL joining', () => {
 
     await baseQuery('genre/movie/list?api_key=abc', {}, {});
 
-    const request = global.fetch.mock.calls[0][0];
-    const requestUrl = typeof request === 'string' ? request : request?.url;
+    const lastCall = global.fetch.mock.calls[global.fetch.mock.calls.length - 1][0];
+    const requestUrl = typeof lastCall === 'string' ? lastCall : lastCall?.url;
     expect(requestUrl).toBe('http://localhost:8080/genre/movie/list?api_key=abc');
   });
 });

@@ -52,17 +52,7 @@ if [ -n "$TUNNEL_URL" ]; then
   REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
   POINTER_FILE="$REPO_ROOT/infrastructure/tunnel-url.txt"
   echo "$TUNNEL_URL" > "$POINTER_FILE"
-
-  if git -C "$REPO_ROOT" diff --quiet -- "$POINTER_FILE" 2>/dev/null; then
-    echo "ℹ️  Tunnel URL unchanged from last published value; nothing to push."
-  elif git -C "$REPO_ROOT" add "$POINTER_FILE" \
-    && git -C "$REPO_ROOT" commit -m "chore: publish local tunnel URL for FE auto-discovery (#151)" >/dev/null 2>&1 \
-    && git -C "$REPO_ROOT" push origin HEAD:develop >/dev/null 2>&1; then
-    echo "✅ Published tunnel URL to develop for automatic frontend discovery."
-  else
-    echo "⚠️  Could not publish the tunnel URL to develop (offline, or push rejected)." >&2
-    echo "   The deployed frontend will keep using the last published URL until this succeeds." >&2
-  fi
+  echo "✅ Local tunnel pointer updated: $POINTER_FILE -> $TUNNEL_URL"
 
   echo ""
   echo "=================================================="
