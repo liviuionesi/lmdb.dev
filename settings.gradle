@@ -2,6 +2,8 @@ pluginManagement {
     plugins {
         id 'org.springframework.boot' version "${springBootVersion}"
         id 'io.spring.dependency-management' version "${springDependencyManagementVersion}"
+        id 'org.springframework.cloud.contract' version "${springCloudContractVersion}"
+        id 'com.google.protobuf' version "${protobufPluginVersion}"
     }
     repositories {
         gradlePluginPortal()

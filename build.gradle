@@ -222,12 +222,12 @@ subprojects {
     // Managed-dependency CVE fixes ahead of Spring Boot's next BOM refresh
     // (#105) — resolved against the imported BOM's own version properties,
     // the standard Spring Boot override mechanism.
-    ext['tomcat.version'] = '11.0.24'         // CVE-2026-53434/55276/59083/59084/53404
-    ext['netty.version'] = '4.2.16.Final'     // CVE-2026-56817/56820/55851/56745/44891/55831/55833/56816/56819
-    ext['jackson-2-bom.version'] = '2.21.5'   // CVE-2026-54515
-    ext['postgresql.version'] = '42.7.13'     // CVE-2026-54291
-    ext['log4j2.version'] = '2.25.5'          // CVE-2026-49844
-    ext['httpcore5.version'] = '5.4.3'        // CVE-2026-54399/54428
+    ext['tomcat.version'] = "${tomcatVersion}"
+    ext['netty.version'] = "${nettyVersion}"
+    ext['jackson-2-bom.version'] = "${jacksonBomVersion}"
+    ext['postgresql.version'] = "${postgresqlDriverVersion}"
+    ext['log4j2.version'] = "${log4j2Version}"
+    ext['httpcore5.version'] = "${httpcore5Version}"
 
     dependencyManagement {
         imports {
@@ -242,9 +242,9 @@ subprojects {
         resolutionStrategy {
             // Pulled in by the Eureka client's netflix-infix across every
             // service that registers with discovery.
-            force 'org.apache.httpcomponents:httpclient:4.5.14' // CVE-2020-13956
+            force "org.apache.httpcomponents:httpclient:${httpclientVersion}"
             // Pulled in transitively by the MinIO client in media-service.
-            force 'org.apache.commons:commons-compress:1.28.0'  // CVE-2024-25710/26308
+            force "org.apache.commons:commons-compress:${commonsCompressVersion}"
         }
     }
 
