@@ -10,6 +10,7 @@ GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
+CYAN='\033[0;36m'
 NC='\033[0m'
 
 echo -e "${BLUE}=====================================================${NC}"
@@ -39,9 +40,21 @@ STATE="$(aws ec2 describe-instances --instance-ids "$INSTANCE_ID" --query "Reser
 echo -e "  Current State: ${YELLOW}${STATE}${NC}"
 
 if [ "$STATE" == "stopped" ]; then
-  echo -e "${GREEN}✅ Instance is already stopped! Compute is at $0 spend.${NC}"
+  echo -e "${GREEN}✅ Instance is already stopped! Compute is at \$0 spend.${NC}"
 else
   echo -e "\n${BLUE}🛑 Stopping EC2 Instance (${INSTANCE_ID})...${NC}"
   aws ec2 stop-instances --instance-ids "$INSTANCE_ID" >/dev/null
-  echo -e "${GREEN}✅ Stop command issued. EC2 instance is powering down.${NC}"
+  echo -e "${BLUE}⏳ Waiting for instance to enter stopped state...${NC}"
+  aws ec2 wait instance-stopped --instance-ids "$INSTANCE_ID"
+  echo -e "${GREEN}✅ EC2 instance is now fully Stopped.${NC}"
 fi
+
+echo -e "\n${CYAN}💰 AWS Cost Summary (approximate):${NC}"
+echo -e "  ${GREEN}EC2 Compute (m7i-flex.large): \$0.00/hr  ← saved!${NC}"
+echo -e "  ${YELLOW}EBS Root Volume (30 GB):       ~\$0.10/day (~\$3.00/month)${NC}"
+echo -e "  ─────────────────────────────────────────"
+echo -e "  ${YELLOW}Total idle cost:               ~\$0.10/day  (vs ~\$2.50/day running)${NC}"
+echo -e "\n  📦 Your k3s database data is preserved on the EBS volume."
+echo -e "  ▶️  To resume: ${CYAN}./infrastructure/scripts/start-aws.sh${NC} or ${CYAN}./gradlew startAws${NC}"
+echo -e "  🌐 Or via GitHub Actions: trigger ${CYAN}cluster-stop.yml${NC} with cloud=aws, action=start"
+echo -e ""

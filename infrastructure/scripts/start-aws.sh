@@ -10,6 +10,7 @@ GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
+CYAN='\033[0;36m'
 NC='\033[0m'
 
 echo -e "${BLUE}=====================================================${NC}"
@@ -60,5 +61,13 @@ if [ -f "$REPO_ROOT/infrastructure/scripts/update-duckdns.sh" ] && [ -n "${DUCKD
 fi
 
 echo -e "\n${GREEN}=====================================================${NC}"
-echo -e "${GREEN}  🎉 AWS Backend Started Successfully!                ${NC}"
+echo -e "${GREEN}  🎬 AWS Backend is Live!                            ${NC}"
 echo -e "${GREEN}=====================================================${NC}"
+echo -e "  API Gateway:  ${CYAN}http://${PUBLIC_IP}:30080${NC}"
+echo -e "  Cloud DNS:    ${CYAN}https://filmpire-api.duckdns.org${NC}"
+echo -e "  Vercel App:   ${CYAN}https://filmpire-microservices-tan.vercel.app${NC}"
+echo -e ""
+echo -e "  To stop and save compute spend when not in use:"
+echo -e "    ${CYAN}./infrastructure/scripts/stop-aws.sh${NC} or ${CYAN}./gradlew stopAws${NC}"
+echo -e "${GREEN}=====================================================${NC}"
+echo -e ""
