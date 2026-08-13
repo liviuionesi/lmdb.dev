@@ -24,8 +24,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * Native typed actor endpoints (issue #18): profile, filmography, search. Uses the shared {@link
- * ApiResponse} envelope like every native LMDB endpoint; the TMDB-shaped facade lives
- * separately in {@code PersonFacadeController}.
+ * ApiResponse} envelope like every native LMDB endpoint; the TMDB-shaped facade lives separately in
+ * {@code PersonFacadeController}.
  */
 @RestController
 @RequestMapping("/api/v1/actors")
@@ -65,8 +65,8 @@ public class ActorController {
   /**
    * Returns a page of an actor's filmography, newest release first.
    *
-   * <p>Paged here even though TMDB's own {@code movie_credits} is not: this is LMDB's native
-   * API, so it can page, while the facade keeps serving TMDB's exact unpaginated shape.
+   * <p>Paged here even though TMDB's own {@code movie_credits} is not: this is LMDB's native API,
+   * so it can page, while the facade keeps serving TMDB's exact unpaginated shape.
    *
    * @param id TMDB person id
    * @param page 1-based page number

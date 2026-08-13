@@ -41,8 +41,8 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * <p>The TMDB API key is no longer handled here — it is injected transparently by the {@link
  * org.springframework.web.client.RestClient} interceptor configured in {@link
- * dev.lmdb.actor.client.TmdbClientConfig}, keeping this class focused on orchestration rather
- * than transport concerns.
+ * dev.lmdb.actor.client.TmdbClientConfig}, keeping this class focused on orchestration rather than
+ * transport concerns.
  */
 @Service
 @Slf4j

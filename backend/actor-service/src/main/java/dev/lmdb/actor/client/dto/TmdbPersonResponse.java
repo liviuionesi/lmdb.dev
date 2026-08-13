@@ -8,9 +8,9 @@ import java.util.List;
 /**
  * TMDB API response for person (actor) details. Fields mirror TMDB's real {@code /person/{id}}
  * shape (ADR-010) so this same record can be reused to serialize our own persisted {@link
- * dev.lmdb.actor.model.Actor} back out through the facade, not just to deserialize TMDB's
- * response. Serializable: read-through lookups are not currently cached, but nothing else in this
- * codebase's TMDB response records is either — kept consistent.
+ * dev.lmdb.actor.model.Actor} back out through the facade, not just to deserialize TMDB's response.
+ * Serializable: read-through lookups are not currently cached, but nothing else in this codebase's
+ * TMDB response records is either — kept consistent.
  */
 public record TmdbPersonResponse(
     Long id,

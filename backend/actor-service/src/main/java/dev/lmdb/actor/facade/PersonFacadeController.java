@@ -23,8 +23,8 @@ import org.springframework.web.client.RestClientResponseException;
  * TMDB v3-compatible person facade — actor-service's slice of the primary API (ARCHITECTURE.md §5.1
  * row 8, issues #18/#32).
  *
- * <p>The LMDB React app calls {@code GET /person/{id}} for actor pages. As of ADR-010
- * (supersedes ADR-003), this serves TMDB's exact field names/shape but the data behind it is {@link
+ * <p>The LMDB React app calls {@code GET /person/{id}} for actor pages. As of ADR-010 (supersedes
+ * ADR-003), this serves TMDB's exact field names/shape but the data behind it is {@link
  * ActorService}'s persisted, mapped {@link Actor} catalog — not a raw cached copy of TMDB's bytes.
  * Discover-by-cast ({@code /discover/movie?with_cast=}) is intentionally NOT here — it is a
  * movie-list endpoint and lives in movie-service's facade (#31).
@@ -146,9 +146,8 @@ public class PersonFacadeController {
 
   /**
    * Replays a real TMDB error response byte-for-byte: {@link
-   * dev.lmdb.actor.client.TmdbPersonClient} calls go through Spring's RestClient, which
-   * captures the upstream body on a non-2xx response — reusing it preserves TMDB's exact error
-   * shape.
+   * dev.lmdb.actor.client.TmdbPersonClient} calls go through Spring's RestClient, which captures
+   * the upstream body on a non-2xx response — reusing it preserves TMDB's exact error shape.
    *
    * @param e the captured upstream HTTP error
    * @return response mirroring TMDB's error exactly
