@@ -1,15 +1,15 @@
 {
-  "generated_at": "2026-08-13T09:19:44.023547",
+  "generated_at": "2026-08-13T12:43:43.850196",
   "git": {
-    "commit_count": 401,
+    "commit_count": 407,
     "first_commit": "2024-03-14 (2 years, 5 months ago)",
-    "latest_commit": "2026-08-13 (19 seconds ago)",
-    "commit_hash": "0afb959",
-    "branch": "develop",
-    "insertions": 268015,
-    "deletions": 191284,
-    "total_churn": 459299,
-    "net_growth": 76731,
+    "latest_commit": "2026-08-13 (11 seconds ago)",
+    "commit_hash": "b7c7583",
+    "branch": "main",
+    "insertions": 268208,
+    "deletions": 191447,
+    "total_churn": 459655,
+    "net_growth": 76761,
     "authors_count": 6
   },
   "languages": {
@@ -43,10 +43,10 @@
     },
     "Terraform & Cloud (HCL)": {
       "files": 26,
-      "total": 1084,
-      "blank": 138,
+      "total": 1112,
+      "blank": 140,
       "comment": 157,
-      "code": 789
+      "code": 815
     },
     "Shell Automation (Bash)": {
       "files": 30,
@@ -161,8 +161,8 @@
     },
     "infrastructure (Terraform, K8s, Scripts)": {
       "files": 121,
-      "total": 8190,
-      "code": 6551,
+      "total": 8218,
+      "code": 6577,
       "comment": 908
     },
     "docs (Architecture, Guides, ADRs)": {
