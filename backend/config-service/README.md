@@ -112,7 +112,7 @@ spring:
     config:
       server:
         git:
-          uri: https://github.com/your-org/filmpire-config-repo
+          uri: https://github.com/your-org/lmdb-config-repo
           default-label: main
           clone-on-start: true
           username: ${GIT_USERNAME}

@@ -65,7 +65,7 @@
   // never be committed. Add them once in your IDE's *user* settings:
   //
   //   "sonarlint.connectedMode.connections.sonarqube": [
-  //     { "connectionId": "filmpire-local", "serverUrl": "http://localhost:9010" }
+  //     { "connectionId": "lmdb-local", "serverUrl": "http://localhost:9010" }
   //   ]
   //
   // ...then run "SonarQube for IDE: Connect to SonarQube (Server)" and paste a

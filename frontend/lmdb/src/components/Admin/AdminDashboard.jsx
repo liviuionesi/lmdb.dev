@@ -59,7 +59,7 @@ function AdminDashboard() {
     return <Navigate to="/" replace />;
   }
 
-  const filmpireApiUrl = getApiUrl();
+  const lmdbApiUrl = getApiUrl();
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4, pb: 8, width: '100%' }}>
@@ -100,8 +100,8 @@ function AdminDashboard() {
           <StatusCard
             title="API Gateway"
             description="Central entry point, JWT authentication & route filter."
-            url={`${filmpireApiUrl}/actuator/health`}
-            secondaryUrl={`${filmpireApiUrl}/actuator/gateway/routes`}
+            url={`${lmdbApiUrl}/actuator/health`}
+            secondaryUrl={`${lmdbApiUrl}/actuator/gateway/routes`}
             secondaryLabel="Routes"
           />
           <StatusCard
@@ -116,7 +116,7 @@ function AdminDashboard() {
                 ? 'Real-time performance dashboards & alerts.'
                 : 'Prometheus performance metrics and service telemetries.'
             }
-            url={grafanaUrl || `${filmpireApiUrl}/actuator/prometheus`}
+            url={grafanaUrl || `${lmdbApiUrl}/actuator/prometheus`}
           />
         </Box>
       </Box>

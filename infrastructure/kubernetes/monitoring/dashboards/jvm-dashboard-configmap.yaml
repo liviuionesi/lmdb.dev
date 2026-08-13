@@ -5,7 +5,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: filmpire-jvm-dashboard
+  name: lmdb-jvm-dashboard
   namespace: monitoring
   labels:
     grafana_dashboard: "1"
@@ -13,8 +13,8 @@ data:
   jvm-dashboard.json: |
     {
       "title": "LMDB - JVM",
-      "uid": "filmpire-jvm",
-      "tags": ["filmpire"],
+      "uid": "lmdb-jvm",
+      "tags": ["lmdb"],
       "timezone": "browser",
       "schemaVersion": 39,
       "refresh": "30s",

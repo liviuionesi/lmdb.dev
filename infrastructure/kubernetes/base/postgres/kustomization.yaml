@@ -13,7 +13,7 @@ configMapGenerator:
       # their own (lmdb_actor, lmdb_ai), created by
       # init-multiple-databases.sh on first boot — mirrors
       # infrastructure/docker/docker-compose.yml exactly.
-      - POSTGRES_DB=filmpire
+      - POSTGRES_DB=lmdb
       - POSTGRES_MULTIPLE_DATABASES=lmdb_actor,lmdb_ai
   - name: postgres-init
     files:

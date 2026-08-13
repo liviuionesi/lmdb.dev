@@ -1,5 +1,5 @@
 {
-  "name": "filmpire-e2e",
+  "name": "lmdb-e2e",
   "version": "1.0.0",
   "description": "Playwright E2E tests driving the real LMDB React app against the local backend stack",
   "private": true,

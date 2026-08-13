@@ -30,7 +30,7 @@ updates:
 
   # Frontend - LMDB React App (CRA)
   - package-ecosystem: "npm"
-    directory: "/frontend/filmpire"
+    directory: "/frontend/lmdb"
     schedule:
       interval: "weekly"
       day: "monday"

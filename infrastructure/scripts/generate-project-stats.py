@@ -165,7 +165,7 @@ def gather_codebase_stats():
         "discovery-service (Eureka 8761)": REPO_ROOT / "backend" / "discovery-service",
         "config-service (Spring Config 8888)": REPO_ROOT / "backend" / "config-service",
         "shared-library (Common DTOs & Mappers)": REPO_ROOT / "backend" / "shared-library",
-        "frontend (React 19 / MUI 9 / Vite 8)": REPO_ROOT / "frontend" / "filmpire",
+        "frontend (React 19 / MUI 9 / Vite 8)": REPO_ROOT / "frontend" / "lmdb",
         "infrastructure (Terraform, K8s, Scripts)": REPO_ROOT / "infrastructure",
         "docs (Architecture, Guides, ADRs)": REPO_ROOT / "docs",
         "e2e (Postman & Newman Regression)": REPO_ROOT / "e2e"
@@ -216,7 +216,7 @@ def gather_codebase_stats():
 def gather_architecture_topology():
     """Inspects Java classes, endpoints, databases, and React components."""
     backend_dir = REPO_ROOT / "backend"
-    frontend_dir = REPO_ROOT / "frontend" / "filmpire" / "src"
+    frontend_dir = REPO_ROOT / "frontend" / "lmdb" / "src"
     docs_dir = REPO_ROOT / "docs"
     
     # Java types

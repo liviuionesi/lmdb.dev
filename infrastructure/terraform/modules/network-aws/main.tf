@@ -3,13 +3,13 @@ resource "aws_vpc" "this" {
   enable_dns_support   = true
   enable_dns_hostnames = true
 
-  tags = merge(var.tags, { Name = "filmpire-vpc" })
+  tags = merge(var.tags, { Name = "lmdb-vpc" })
 }
 
 resource "aws_internet_gateway" "this" {
   vpc_id = aws_vpc.this.id
 
-  tags = merge(var.tags, { Name = "filmpire-igw" })
+  tags = merge(var.tags, { Name = "lmdb-igw" })
 }
 
 # A single AZ is enough for a one-node demo cluster — no HA requirement, and
@@ -26,7 +26,7 @@ resource "aws_subnet" "public" {
   availability_zone       = data.aws_availability_zones.available.names[0]
   map_public_ip_on_launch = true
 
-  tags = merge(var.tags, { Name = "filmpire-public-subnet" })
+  tags = merge(var.tags, { Name = "lmdb-public-subnet" })
 }
 
 resource "aws_route_table" "public" {
@@ -37,7 +37,7 @@ resource "aws_route_table" "public" {
     gateway_id = aws_internet_gateway.this.id
   }
 
-  tags = merge(var.tags, { Name = "filmpire-public-rt" })
+  tags = merge(var.tags, { Name = "lmdb-public-rt" })
 }
 
 resource "aws_route_table_association" "public" {

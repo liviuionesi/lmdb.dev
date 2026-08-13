@@ -51,7 +51,7 @@ Request → Check Redis → Check MongoDB → Fetch from TMDB → Store in Mongo
 ### Environment Variables
 ```bash
 export TMDB_API_KEY="your_tmdb_api_key_here"
-export MONGODB_URI="mongodb://admin:${MONGO_ROOT_PASSWORD}@localhost:27017/filmpire?authSource=admin"
+export MONGODB_URI="mongodb://admin:${MONGO_ROOT_PASSWORD}@localhost:27017/lmdb?authSource=admin"
 export REDIS_HOST="localhost"
 export REDIS_PORT="6379"
 ```
@@ -199,7 +199,7 @@ TTL movies::550
 ### Check MongoDB
 ```bash
 # Connect to MongoDB
-mongosh mongodb://admin:${MONGO_ROOT_PASSWORD}@localhost:27017/filmpire?authSource=admin
+mongosh mongodb://admin:${MONGO_ROOT_PASSWORD}@localhost:27017/lmdb?authSource=admin
 
 # List movies
 db.movies.find().limit(5)
@@ -251,7 +251,7 @@ tail -f logs/movie-service.log | grep TMDB
 ### MongoDB Connection Issues
 ```bash
 # Test MongoDB connection
-mongosh mongodb://admin:${MONGO_ROOT_PASSWORD}@localhost:27017/filmpire?authSource=admin
+mongosh mongodb://admin:${MONGO_ROOT_PASSWORD}@localhost:27017/lmdb?authSource=admin
 
 # Check if MongoDB is running
 docker ps | grep mongo

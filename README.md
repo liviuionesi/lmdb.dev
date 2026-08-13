@@ -81,7 +81,7 @@ Redis                                   Ollama (LLaMA 3.2)
 | **Voice Navigation** | [`ai-service`](backend/ai-service/) | Vosk native library | Speech-to-text audio processing (`POST /api/v1/ai/speech-to-text`). Translates spoken commands into category navigation, searches, and UI actions. |
 | **Media Asset Management** | [`media-service`](backend/media-service/) | MinIO (S3 API), MongoDB 8.0 | Multipart image upload, binary chunking, metadata indexing, and presigned asset streaming. |
 | **Traffic Control & Edge Routing** | [`api-gateway`](backend/api-gateway/) | Spring Cloud Gateway, Redis | Redis token-bucket rate limiting, Resilience4j circuit breakers, JWT validation filter, CORS origin pattern matching, and URL rewrites. |
-| **Web Client Application** | [`frontend/filmpire`](frontend/lmdb/) | React 18, Vite, Redux Toolkit, MUI | Responsive UI, dark/light theme toggle, speech recognition controller, movie trailer modal, and dynamic backend resolver. |
+| **Web Client Application** | [`frontend/lmdb`](frontend/lmdb/) | React 18, Vite, Redux Toolkit, MUI | Responsive UI, dark/light theme toggle, speech recognition controller, movie trailer modal, and dynamic backend resolver. |
 
 ---
 
@@ -251,10 +251,10 @@ LMDB implements a comprehensive testing pyramid encompassing 7 distinct testing 
 ./gradlew :backend:api-gateway:contractTest
 
 # Level 4: Frontend Component & State Tests (Vitest)
-cd frontend/filmpire && npm test
+cd frontend/lmdb && npm test
 
 # Frontend test coverage report
-cd frontend/filmpire && npm run test:coverage
+cd frontend/lmdb && npm run test:coverage
 
 # Level 5: Playwright Browser End-to-End Tests
 cd e2e && npx playwright test
@@ -339,7 +339,7 @@ All infrastructure actions are wrapped into unified Gradle tasks and shell autom
 
 ### Dynamic Runtime Frontend-to-Backend Binding
 The frontend on Vercel resolves its active backend dynamically at request time ([`apiUrl.js`](frontend/lmdb/src/utils/apiUrl.js)):
-1. Checks for a manual override in `localStorage` (`filmpire_api_url`).
+1. Checks for a manual override in `localStorage` (`lmdb_api_url`).
 2. Checks for a build-time `VITE_API_URL`.
 3. Resolves the live Cloudflare HTTPS tunnel pointer from GitHub ([`infrastructure/tunnel-url.txt`](infrastructure/tunnel-url.txt)).
 4. Verifies candidate reachability via `/actuator/health`.
@@ -416,7 +416,7 @@ docker exec -it lmdb-ollama ollama pull llama3.2
 docker exec -it lmdb-ollama ollama pull nomic-embed-text
 
 # 5. Start the React/Vite development server
-cd frontend/filmpire
+cd frontend/lmdb
 npm install
 npm run dev
 ```
@@ -468,7 +468,7 @@ Visit **`http://localhost:5173`** (or `http://localhost:3000`) in your browser t
 ### Deployment, Operations & Infrastructure
 * [Multi-Cloud Deployment Runbook](docs/guides/DEPLOYMENT_GUIDE.md) — Local, Azure AKS, AWS k3s, and Vercel setup
 * [GitOps & CI/CD Cloud Automation](docs/guides/GITOPS_AND_CI_CD.md) — GitHub Actions pipelines, secrets, and zero-budget alerts
-* [Frontend Integration & Execution Guide](docs/guides/RUN_WITH_FILMPIRE_APP.md) — Frontend runtime configuration
+* [Frontend Integration & Execution Guide](docs/guides/RUN_WITH_LMDB_APP.md) — Frontend runtime configuration
 * [Terraform Multi-Cloud Infrastructure](infrastructure/terraform/README.md) — Azure AKS and AWS EC2 Terraform modules
 * [Docker Compose Testing Runbook](infrastructure/docker/TESTING_GUIDE.md) — Local Compose verification workflows
 * [Kubernetes Prometheus ServiceMonitors](infrastructure/kubernetes/monitoring/service-monitors/README.md) — Monitoring scrape configs

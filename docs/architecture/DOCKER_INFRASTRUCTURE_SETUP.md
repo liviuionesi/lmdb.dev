@@ -108,13 +108,13 @@ cp .env.example .env
 
 **PostgreSQL:**
 - Host: `localhost:5432`
-- Database: `filmpire`
+- Database: `lmdb`
 - Username: `admin`
 - Password: `${POSTGRES_PASSWORD}` (defined in `.env`)
 
 **MongoDB:**
 - Host: `localhost:27017`
-- Database: `filmpire`
+- Database: `lmdb`
 - Username: `admin`
 - Password: `${MONGO_ROOT_PASSWORD}` (defined in `.env`)
 
@@ -136,7 +136,7 @@ cp .env.example .env
 ```yaml
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/filmpire
+    url: jdbc:postgresql://localhost:5432/lmdb
     username: admin
     password: ${POSTGRES_PASSWORD}
     driver-class-name: org.postgresql.Driver
@@ -147,7 +147,7 @@ spring:
 spring:
   data:
     mongodb:
-      uri: mongodb://admin:${MONGO_ROOT_PASSWORD}@localhost:27017/filmpire?authSource=admin
+      uri: mongodb://admin:${MONGO_ROOT_PASSWORD}@localhost:27017/lmdb?authSource=admin
 ```
 
 **Redis (application.yml):**
@@ -177,7 +177,7 @@ minio:
 - **Server:** postgres
 - **Username:** admin
 - **Password:** `${POSTGRES_PASSWORD}`
-- **Database:** filmpire
+- **Database:** lmdb
 
 ### Mongo Express (MongoDB)
 - **URL:** http://localhost:9082
@@ -207,7 +207,7 @@ volumes:
 
 To view volumes:
 ```bash
-docker volume ls | grep filmpire
+docker volume ls | grep lmdb
 ```
 
 To inspect a volume:
@@ -302,7 +302,7 @@ PostgreSQL automatically creates multiple databases:
 - `lmdb_users` - User Service
 - `lmdb_actors` - Actor Service
 
-MongoDB uses collections within single `filmpire` database:
+MongoDB uses collections within single `lmdb` database:
 - `movies` - Movie Service
 - `ai_conversations` - AI Service
 - `media_files` - Media Service
@@ -334,12 +334,12 @@ Features:
 
 ### 2. Test PostgreSQL
 ```bash
-psql -h localhost -U admin -d filmpire
+psql -h localhost -U admin -d lmdb
 ```
 
 ### 3. Test MongoDB
 ```bash
-mongosh mongodb://admin:${MONGO_ROOT_PASSWORD}@localhost:27017/filmpire?authSource=admin
+mongosh mongodb://admin:${MONGO_ROOT_PASSWORD}@localhost:27017/lmdb?authSource=admin
 ```
 
 ### 4. Test Redis
@@ -399,15 +399,15 @@ infrastructure/
 $ podman ps
 NAMES                     STATUS                    PORTS
 lmdb-postgres         Up (healthy)              0.0.0.0:5432->5432/tcp
-filmpire-mongo            Up (healthy)              0.0.0.0:27017->27017/tcp
+lmdb-mongo            Up (healthy)              0.0.0.0:27017->27017/tcp
 lmdb-redis            Up (healthy)              0.0.0.0:6379->6379/tcp
-filmpire-adminer          Up                        0.0.0.0:9081->8080/tcp
-filmpire-mongo-express    Up                        0.0.0.0:9082->8081/tcp
+lmdb-adminer          Up                        0.0.0.0:9081->8080/tcp
+lmdb-mongo-express    Up                        0.0.0.0:9082->8081/tcp
 lmdb-redis-commander  Up                        0.0.0.0:9083->8081/tcp
 ```
 
 #### Database Accessibility
-- ✅ PostgreSQL: Port 5432 accessible, credentials working, database 'filmpire' created
+- ✅ PostgreSQL: Port 5432 accessible, credentials working, database 'lmdb' created
 - ✅ MongoDB: Port 27017 accessible, authentication working, ready for connections
 - ✅ Redis: Port 6379 accessible, password auth working, persistence enabled
 

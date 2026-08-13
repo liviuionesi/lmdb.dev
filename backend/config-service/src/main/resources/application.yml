@@ -17,7 +17,7 @@ spring:
           search-locations: classpath:/config
         # Git mode disabled - using native/filesystem mode instead
         # git:
-        #   uri: https://github.com/yourusername/filmpire-config-repo
+        #   uri: https://github.com/yourusername/lmdb-config-repo
         #   default-label: main
         #   clone-on-start: true
 

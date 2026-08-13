@@ -9,7 +9,7 @@
 ## 📋 Product Goal (the north star)
 
 Clone the TMDB v3 API in Spring so the **existing LMDB React app**
-(`~/Desktop/filmpire`) consumes this backend as a drop-in replacement for
+(`~/Desktop/lmdb`) consumes this backend as a drop-in replacement for
 `api.themoviedb.org/3` — only its base URL changes. Data is served
 read-through (**Redis → MongoDB → real TMDB fallback**) with save-through
 persistence; TMDB auth/account endpoints are proxied to the real TMDB.

@@ -11,7 +11,7 @@ const __dirname = fileURLToPath(new URL('.', import.meta.url));
  */
 function wakeupDevPlugin() {
   return {
-    name: 'filmpire-wakeup-dev-plugin',
+    name: 'lmdb-wakeup-dev-plugin',
     configureServer(server) {
       server.middlewares.use('/api/wakeup', (req, res) => {
         if (req.method === 'OPTIONS') {
@@ -77,7 +77,7 @@ function wakeupDevPlugin() {
 }
 
 /**
- * Vite build/dev-server configuration for the Filmpire frontend, plus the
+ * Vite build/dev-server configuration for the LMDB frontend, plus the
  * Vitest `test` block (#127) that replaces CRA's Jest setup.
  */
 export default defineConfig({

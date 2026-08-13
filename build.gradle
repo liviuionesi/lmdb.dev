@@ -54,8 +54,8 @@ rewrite {
 //   ./gradlew test jacocoTestReport sonar
 sonar {
     properties {
-        property 'sonar.projectKey', 'lmdb-microservices'
-        property 'sonar.projectName', 'LMDB Microservices'
+        property 'sonar.projectKey', 'lmdb.dev'
+        property 'sonar.projectName', 'LMDB.dev'
         property 'sonar.host.url', System.getenv('SONAR_HOST_URL') ?: 'http://localhost:9010'
         if (System.getenv('SONAR_TOKEN')) {
             property 'sonar.token', System.getenv('SONAR_TOKEN')
@@ -134,7 +134,7 @@ dependencyCheck {
         assemblyEnabled = false
         nodeAuditEnabled = false
         nodeEnabled = false
-        // frontend/filmpire is scanned separately via `npm audit` in CI —
+        // frontend/lmdb is scanned separately via `npm audit` in CI —
         // this plugin only needs to cover the Gradle/Java dependency graph.
     }
     // The root `rewrite` configuration (OpenRewrite recipe artifacts, incl.

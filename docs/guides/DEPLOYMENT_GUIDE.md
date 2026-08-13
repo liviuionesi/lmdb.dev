@@ -17,7 +17,7 @@ Every real request from the React app goes through
 which resolves a backend URL in this order, **every time, automatically —
 no manual step in any of the scenarios below unless noted**:
 
-1. `localStorage.filmpire_api_url` — a manual pin. Nothing sets this
+1. `localStorage.lmdb_api_url` — a manual pin. Nothing sets this
    automatically anymore; only useful if you open devtools and set it
    yourself to force a specific backend.
 2. `VITE_API_URL` — a build-time env var. Unset in Vercel today.
@@ -181,7 +181,7 @@ plus origin *patterns* for `*.vercel.app`/`*.trycloudflare.com`/
 domain, that's the file to update.
 
 **Image freshness:** the deployed image is whatever `ghcr.io/pehlivanu/
-filmpire-*:latest` was at the last successful `Docker Publish` run — which
+lmdb-*:latest` was at the last successful `Docker Publish` run — which
 only fires after a **green Backend CI on `main`**
 (`.github/workflows/docker-publish.yml`). If CI is red, deploys silently
 run stale code. Check `gh run list --workflow="Backend CI"` before
@@ -201,7 +201,7 @@ Teardown (**always do this — Azure's free spending-limit account is the
 only thing keeping this at $0, not a literal free SKU**):
 
 ```bash
-docker rm -f filmpire-azure-tunnel   # if you started the extra tunnel above
+docker rm -f lmdb-azure-tunnel   # if you started the extra tunnel above
 ./gradlew destroyAzure                # infrastructure/scripts/destroy-azure.sh
 ```
 
@@ -277,7 +277,7 @@ accidental cloud charges:
 ## 7. Deploying the frontend itself
 
 Push to `main` — Vercel's git integration auto-builds
-`frontend/filmpire` and redeploys `lmdb.dev`.
+`frontend/lmdb` and redeploys `lmdb.dev`.
 That's the actual live mechanism; confirm a deploy happened by checking
 the served JS bundle hash changed (`curl -s <url> | grep -o 'assets/index-[a-zA-Z0-9]*\.js'`).
 
@@ -306,5 +306,5 @@ dashboard.
 - **Frontend seems to ignore a fresh local tunnel:** `tunnel-url.txt`
   updates propagate through `raw.githubusercontent.com`, which can lag a
   push by up to ~5 minutes on a cold cache. Also check the manual
-  `localStorage.filmpire_api_url` override isn't set to something stale in
+  `localStorage.lmdb_api_url` override isn't set to something stale in
   your browser (devtools → Application → Local Storage).

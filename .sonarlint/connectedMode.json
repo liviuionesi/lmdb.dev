@@ -1,4 +1,4 @@
 {
-  "connectionId": "filmpire-local",
+  "connectionId": "lmdb-local",
   "projectKey": "lmdb.dev"
 }

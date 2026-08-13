@@ -5,7 +5,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: filmpire-gateway-dashboard
+  name: lmdb-gateway-dashboard
   namespace: monitoring
   labels:
     grafana_dashboard: "1"
@@ -13,8 +13,8 @@ data:
   gateway-dashboard.json: |
     {
       "title": "LMDB - API Gateway",
-      "uid": "filmpire-gateway",
-      "tags": ["filmpire"],
+      "uid": "lmdb-gateway",
+      "tags": ["lmdb"],
       "timezone": "browser",
       "schemaVersion": 39,
       "refresh": "30s",

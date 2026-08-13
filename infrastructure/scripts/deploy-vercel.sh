@@ -4,7 +4,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-FRONTEND_DIR="$SCRIPT_DIR/../../frontend/filmpire"
+FRONTEND_DIR="$SCRIPT_DIR/../../frontend/lmdb"
 
 echo "=================================================="
 echo "  🚀 LMDB 1-Step Automated Vercel Deployment"

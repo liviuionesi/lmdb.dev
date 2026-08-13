@@ -48,14 +48,14 @@ you see inline is exactly what the pipeline sees — not a bundled default rules
    holds a credential, so it must never be committed):
    ```json
    "sonarlint.connectedMode.connections.sonarqube": [
-     { "connectionId": "filmpire-local", "serverUrl": "http://localhost:9010" }
+     { "connectionId": "lmdb-local", "serverUrl": "http://localhost:9010" }
    ]
    ```
 3. Run **"SonarQube for IDE: Connect to SonarQube (Server)"** and paste a token
    (stored in the OS keychain). Reload the window.
 
 The **project binding** is committed at [`.sonarlint/connectedMode.json`](../../.sonarlint/connectedMode.json)
-(`connectionId: filmpire-local`, `projectKey: lmdb.dev`), so every
+(`connectionId: lmdb-local`, `projectKey: lmdb.dev`), so every
 developer binds to the same project. Workspace-level SonarLint prefs live in
 `.vscode/settings.json`.
 
@@ -63,7 +63,7 @@ developer binds to the same project. Workspace-level SonarLint prefs live in
 
 Java analysis uses a custom profile — a copy of **Sonar way** with two rules
 deactivated. Exported for reproducibility at
-[`infrastructure/sonarqube/filmpire-way-java-profile.xml`](../../infrastructure/sonarqube/filmpire-way-java-profile.xml)
+[`infrastructure/sonarqube/lmdb-way-java-profile.xml`](../../infrastructure/sonarqube/lmdb-way-java-profile.xml)
 (restore via *Quality Profiles → Restore*).
 
 | Rule | Why deactivated |

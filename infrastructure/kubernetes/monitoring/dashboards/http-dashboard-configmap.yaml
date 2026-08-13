@@ -5,7 +5,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: filmpire-http-dashboard
+  name: lmdb-http-dashboard
   namespace: monitoring
   labels:
     grafana_dashboard: "1"
@@ -13,8 +13,8 @@ data:
   http-dashboard.json: |
     {
       "title": "LMDB - HTTP",
-      "uid": "filmpire-http",
-      "tags": ["filmpire"],
+      "uid": "lmdb-http",
+      "tags": ["lmdb"],
       "timezone": "browser",
       "schemaVersion": 39,
       "refresh": "30s",

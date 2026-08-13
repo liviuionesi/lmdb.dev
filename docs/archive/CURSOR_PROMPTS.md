@@ -270,7 +270,7 @@ spring:
     config:
       server:
         git:
-          uri: https://github.com/{org}/filmpire-config-repo
+          uri: https://github.com/{org}/lmdb-config-repo
           default-label: main
           clone-on-start: true
 
@@ -1257,7 +1257,7 @@ web-nextjs/
 **package.json:**
 ```json
 {
-  "name": "filmpire-web",
+  "name": "lmdb-web",
   "version": "1.0.0",
   "engines": {
     "node": ">=22.0.0"
@@ -1469,8 +1469,8 @@ Create a React Native 0.82 mobile application with Expo:
 
 **Project Initialization:**
 ```bash
-npx create-expo-app@latest filmpire-mobile --template tabs
-cd filmpire-mobile
+npx create-expo-app@latest lmdb-mobile --template tabs
+cd lmdb-mobile
 npm install react-native-paper
 npm install @react-navigation/native
 npm install zustand
@@ -1482,7 +1482,7 @@ npm install @tanstack/react-query
 {
   "expo": {
     "name": "LMDB",
-    "slug": "filmpire",
+    "slug": "lmdb",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -1897,7 +1897,7 @@ services:
     image: postgres:16-alpine
     container_name: lmdb-postgres
     environment:
-      POSTGRES_DB: filmpire
+      POSTGRES_DB: lmdb
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
@@ -1914,7 +1914,7 @@ services:
 
   mongodb:
     image: mongo:8.0
-    container_name: filmpire-mongo
+    container_name: lmdb-mongo
     environment:
       MONGO_INITDB_ROOT_USERNAME: admin
       MONGO_INITDB_ROOT_PASSWORD: ${POSTGRES_PASSWORD}
@@ -1936,7 +1936,7 @@ services:
   # Spring Cloud Services
   eureka-server:
     build: ../../backend/discovery-service
-    container_name: filmpire-eureka
+    container_name: lmdb-eureka
     ports:
       - "8761:8761"
     environment:
@@ -1951,7 +1951,7 @@ services:
 
   config-server:
     build: ../../backend/config-service
-    container_name: filmpire-config
+    container_name: lmdb-config
     ports:
       - "8888:8888"
     environment:
@@ -1965,7 +1965,7 @@ services:
 
   api-gateway:
     build: ../../backend/api-gateway
-    container_name: filmpire-gateway
+    container_name: lmdb-gateway
     ports:
       - "8080:8080"
     environment:
@@ -1990,7 +1990,7 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
-      SPRING_DATA_MONGODB_URI: mongodb://admin:${POSTGRES_PASSWORD}@mongodb:27017/filmpire?authSource=admin
+      SPRING_DATA_MONGODB_URI: mongodb://admin:${POSTGRES_PASSWORD}@mongodb:27017/lmdb?authSource=admin
     depends_on:
       - eureka-server
       - mongodb
@@ -2005,7 +2005,7 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/filmpire
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/lmdb
       SPRING_DATASOURCE_USERNAME: admin
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
     depends_on:
@@ -2024,7 +2024,7 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/filmpire
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/lmdb
       SPRING_DATASOURCE_USERNAME: admin
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
     depends_on:
@@ -2041,7 +2041,7 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
-      SPRING_DATA_MONGODB_URI: mongodb://admin:${POSTGRES_PASSWORD}@mongodb:27017/filmpire?authSource=admin
+      SPRING_DATA_MONGODB_URI: mongodb://admin:${POSTGRES_PASSWORD}@mongodb:27017/lmdb?authSource=admin
       SPRING_AI_OPENAI_API_KEY: ${OPENAI_API_KEY}
     depends_on:
       - eureka-server
@@ -2057,7 +2057,7 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
-      SPRING_DATA_MONGODB_URI: mongodb://admin:${POSTGRES_PASSWORD}@mongodb:27017/filmpire?authSource=admin
+      SPRING_DATA_MONGODB_URI: mongodb://admin:${POSTGRES_PASSWORD}@mongodb:27017/lmdb?authSource=admin
     depends_on:
       - eureka-server
       - mongodb
@@ -2101,7 +2101,7 @@ Create production deployment configurations for Render and Vercel:
 services:
   # Eureka Server
   - type: web
-    name: filmpire-eureka
+    name: lmdb-eureka
     env: docker
     dockerfilePath: ./backend/discovery-service/Dockerfile
     envVars:
@@ -2111,14 +2111,14 @@ services:
 
   # API Gateway
   - type: web
-    name: filmpire-gateway
+    name: lmdb-gateway
     env: docker
     dockerfilePath: ./backend/api-gateway/Dockerfile
     envVars:
       - key: SPRING_PROFILES_ACTIVE
         value: prod
       - key: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
-        value: https://filmpire-eureka.onrender.com/eureka/
+        value: https://lmdb-eureka.onrender.com/eureka/
       - key: SPRING_DATA_REDIS_HOST
         fromService:
           name: redis
@@ -2149,8 +2149,8 @@ services:
 
 databases:
   - name: lmdb-postgres
-    databaseName: filmpire
-    user: filmpire
+    databaseName: lmdb
+    user: lmdb
     plan: free
 
   - name: lmdb-mongodb
@@ -2165,12 +2165,12 @@ databases:
   "outputDirectory": ".next",
   "framework": "nextjs",
   "env": {
-    "NEXT_PUBLIC_API_URL": "https://filmpire-gateway.onrender.com"
+    "NEXT_PUBLIC_API_URL": "https://lmdb-gateway.onrender.com"
   },
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://filmpire-gateway.onrender.com/api/:path*"
+      "destination": "https://lmdb-gateway.onrender.com/api/:path*"
     }
   ]
 }

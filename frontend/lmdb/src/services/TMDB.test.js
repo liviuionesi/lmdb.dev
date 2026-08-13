@@ -32,7 +32,7 @@ describe('tmdbApi endpoint query builders', () => {
   let store;
 
   beforeEach(() => {
-    localStorage.setItem('filmpire_api_url', baseUrl);
+    localStorage.setItem('lmdb_api_url', baseUrl);
     store = buildStore();
     global.fetch = vi.fn().mockResolvedValue(jsonResponse({ ok: true }));
   });

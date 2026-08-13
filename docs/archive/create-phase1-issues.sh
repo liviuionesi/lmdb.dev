@@ -401,7 +401,7 @@ cd infrastructure/docker
 docker-compose up -d
 docker-compose ps
 docker-compose logs -f
-psql -h localhost -U admin -d filmpire
+psql -h localhost -U admin -d lmdb
 mongosh mongodb://admin:${MONGO_ROOT_PASSWORD}@localhost:27017
 redis-cli ping
 ```

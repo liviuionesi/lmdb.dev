@@ -8,7 +8,7 @@ data "azurerm_subscription" "current" {}
 # argument — the Azure Consumption Budgets API doesn't support tagging —
 # so there's nothing to apply var.tags to here.
 resource "azurerm_consumption_budget_subscription" "zero_spend" {
-  name            = "filmpire-zero-spend-guard"
+  name            = "lmdb-zero-spend-guard"
   subscription_id = data.azurerm_subscription.current.id
 
   amount     = var.budget_amount

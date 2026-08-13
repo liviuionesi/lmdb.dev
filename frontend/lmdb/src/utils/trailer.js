@@ -82,7 +82,7 @@ export function getStandbyTrailerId(forceRandom = false) {
     return getRandomCuratedTrailerId();
   }
   if (typeof window !== 'undefined') {
-    const saved = localStorage.getItem('lmdb_standby_trailer') || localStorage.getItem('filmpire_standby_trailer');
+    const saved = localStorage.getItem('lmdb_standby_trailer') || localStorage.getItem('lmdb_standby_trailer');
     if (saved) {
       return extractYouTubeId(saved);
     }

@@ -80,7 +80,7 @@ grafana:
   replicas: 1
   persistence:
     enabled: false
-  adminPassword: filmpire-admin
+  adminPassword: lmdb-admin
   # This chart's Grafana ships the newer unified-storage/apiserver backend
   # (SQLite + a Bleve search index + an internal apiserver), which is
   # noticeably heavier than classic Grafana even at rest — 256Mi limits

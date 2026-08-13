@@ -28,7 +28,7 @@ To enable click-to-talk voice commands:
 
 ## Available Scripts
 
-In `frontend/filmpire`:
+In `frontend/lmdb`:
 
 ### `npm run dev`
 Runs the application in development mode with Hot Module Replacement (HMR) on [http://localhost:5173](http://localhost:5173) (or `http://localhost:3000`).

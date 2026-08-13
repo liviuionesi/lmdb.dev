@@ -16,7 +16,7 @@ const baseUrl = 'http://localhost:8080/api/v1';
 // stealing mock.calls[0] out from under fetchedRequest() below. Pinning the
 // manual localStorage override short-circuits that waterfall synchronously
 // so the endpoint request is always the only fetch call.
-const pinStaticApiUrl = () => localStorage.setItem('filmpire_api_url', 'http://localhost:8080');
+const pinStaticApiUrl = () => localStorage.setItem('lmdb_api_url', 'http://localhost:8080');
 
 const buildStore = () => configureStore({
   reducer: { [mediaApi.reducerPath]: mediaApi.reducer },

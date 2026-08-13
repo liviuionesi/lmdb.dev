@@ -1,12 +1,12 @@
 # 🎬 LMDB Microservices — Product Delivery & Agile Governance Board
 
-This GitHub Project board tracks the end-to-end product delivery lifecycle for **LMDB** — a full-stack monorepo featuring a **Spring Boot 4.1.0 & Java 25** polyglot microservices backend and an integrated **React frontend application** (`frontend/filmpire` with CRA, Redux Toolkit Query, Material UI, and native AI voice / Speech-to-Text integration powered by `ai-service` and local Ollama).
+This GitHub Project board tracks the end-to-end product delivery lifecycle for **LMDB** — a full-stack monorepo featuring a **Spring Boot 4.1.0 & Java 25** polyglot microservices backend and an integrated **React frontend application** (`frontend/lmdb` with CRA, Redux Toolkit Query, Material UI, and native AI voice / Speech-to-Text integration powered by `ai-service` and local Ollama).
 
 ---
 
 ## 🎯 Product Goal
 
-Clone the TMDB v3 API contract (`https://api.themoviedb.org/3`) so the integrated **LMDB React App** (`frontend/filmpire`) runs against this microservice cluster by changing *only* its base URL. Requests are served via read-through/save-through caching (**Redis → Local Catalog [MongoDB/PostgreSQL] → Real TMDB Fallback**), while user authentication and accounts run natively in **`user-service`** (PostgreSQL 17, BCrypt, JWT).
+Clone the TMDB v3 API contract (`https://api.themoviedb.org/3`) so the integrated **LMDB React App** (`frontend/lmdb`) runs against this microservice cluster by changing *only* its base URL. Requests are served via read-through/save-through caching (**Redis → Local Catalog [MongoDB/PostgreSQL] → Real TMDB Fallback**), while user authentication and accounts run natively in **`user-service`** (PostgreSQL 17, BCrypt, JWT).
 
 ---
 
@@ -43,7 +43,7 @@ Work on this board is governed by strict Scrum engineering standards:
 
 Rather than repeating technical specs on this board, complete system documentation lives in the repository:
 
-- 🎨 **Monorepo Frontend**: Integrated React app (`frontend/filmpire` — CRA, Redux Toolkit Query, Material UI, Speech-to-Text & AI Voice Assistant) running drop-in against the backend gateway (**[ADR-013](https://github.com/pehlivanu/lmdb.dev/blob/develop/docs/architecture/adr/013-frontend-merged-into-monorepo.md)**).
+- 🎨 **Monorepo Frontend**: Integrated React app (`frontend/lmdb` — CRA, Redux Toolkit Query, Material UI, Speech-to-Text & AI Voice Assistant) running drop-in against the backend gateway (**[ADR-013](https://github.com/pehlivanu/lmdb.dev/blob/develop/docs/architecture/adr/013-frontend-merged-into-monorepo.md)**).
 - 🏗️ **Microservices System Architecture**: 8 microservices (`api-gateway`, `discovery-service`, `config-service`, `movie-service`, `user-service`, `actor-service`, `ai-service`, `media-service`). Detailed in **[ARCHITECTURE.md](https://github.com/pehlivanu/lmdb.dev/blob/develop/docs/architecture/ARCHITECTURE.md)**.
 - 🤖 **Spring AI & Local LLM**: REST + gRPC `ai-service` paired with local Ollama models, Speech-to-Text voice interface, and PostgreSQL + `pgvector` semantic taste search (**[ADR-012](https://github.com/pehlivanu/lmdb.dev/blob/develop/docs/architecture/adr/012-ai-service-postgresql-pgvector.md)**).
 - 🔄 **Self-Healing Catalog**: Automatic eviction & TMDB sync on schema drift (**[ADR-011](https://github.com/pehlivanu/lmdb.dev/blob/develop/docs/architecture/adr/011-self-healing-read-through-on-schema-drift.md)**).

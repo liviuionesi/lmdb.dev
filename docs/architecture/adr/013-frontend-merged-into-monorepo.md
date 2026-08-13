@@ -9,7 +9,7 @@
 
 Since the TMDB-facade pivot (ADR-010), the product's actual frontend has
 been the pre-existing LMDB React app — originally a standalone project
-at `~/Desktop/filmpire` (github.com/pehlivanu/filmpire), unrelated in
+at `~/Desktop/lmdb` (github.com/pehlivanu/lmdb), unrelated in
 origin to this backend and predating it. The two repos evolved in lockstep
 in practice (issue #34 required a frontend code change — reading
 `REACT_APP_API_URL` instead of hardcoding TMDB's base URL — to consume this
@@ -17,7 +17,7 @@ backend) but lived in separate git histories, separate clones, separate
 `git status`, with the pairing only documented, never enforced.
 
 That split cost real friction: the runbook
-(`docs/guides/RUN_WITH_FILMPIRE_APP.md`) had to describe two working
+(`docs/guides/RUN_WITH_LMDB_APP.md`) had to describe two working
 directories and two "make sure this is committed" steps; a change that
 spans both (like #34's) produced two disconnected commits with no shared
 history to diff or bisect across; and anyone cloning this repo to look at
@@ -25,7 +25,7 @@ history to diff or bisect across; and anyone cloning this repo to look at
 
 ## Decision
 
-Merge `~/Desktop/filmpire`'s full git history into this repo at
+Merge `~/Desktop/lmdb`'s full git history into this repo at
 `frontend/lmdb/`, preserving every commit and its original authorship
 — not a fresh import, not a squash. Mechanically:
 
@@ -37,12 +37,12 @@ Merge `~/Desktop/filmpire`'s full git history into this repo at
    value, which had *also* been hardcoded directly in `src/services/TMDB.js`
    across several early commits before the app switched to reading it from
    an env var — deleting the `.env` file alone would not have removed that.
-4. `git filter-repo --to-subdirectory-filter frontend/filmpire` to rewrite
+4. `git filter-repo --to-subdirectory-filter frontend/lmdb` to rewrite
    every remaining commit so its paths land under that prefix.
 5. `git fetch` the rewritten history into this repo and
    `git merge --allow-unrelated-histories`.
 
-This is the manual equivalent of `git subtree add --prefix=frontend/filmpire
+This is the manual equivalent of `git subtree add --prefix=frontend/lmdb
 <remote> master`; the `git-subtree` contrib tool itself isn't installed on
 this machine and installing it needs `sudo`, which wasn't available in the
 session that did this merge. The filter-repo route produces the same
@@ -50,7 +50,7 @@ result — a merge commit joining two previously-unrelated histories, with
 every frontend file already living at the target prefix — without that
 dependency.
 
-The original `~/Desktop/filmpire` repo (and its GitHub remote) is left
+The original `~/Desktop/lmdb` repo (and its GitHub remote) is left
 untouched; this is not a migration that deletes the source, just an
 additional copy of its history folded into a new home.
 
@@ -82,7 +82,7 @@ repos for one logical change).
 ## Consequences
 
 - Easier: `frontend/lmdb/` is now a normal part of this repo — clone
-  once, `git log -- frontend/filmpire` shows its real history, a change
+  once, `git log -- frontend/lmdb` shows its real history, a change
   spanning gateway config and frontend base-URL wiring can be one commit
   instead of two across two clones.
 - Cost: repo size/clone time grow by the frontend's history (~44 commits,

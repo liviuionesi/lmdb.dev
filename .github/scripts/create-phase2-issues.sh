@@ -181,7 +181,7 @@ Implement Spring Cloud Config Server for centralized configuration management wi
 ## Implementation Checklist
 - [ ] Create Config Server main class with @EnableConfigServer
 - [ ] Configure application.yml (port 8888, Git backend)
-- [ ] Create separate config repository (filmpire-config-repo)
+- [ ] Create separate config repository (lmdb-config-repo)
 - [ ] Add environment-specific configs (dev, prod)
 - [ ] Add service-specific configs for each microservice
 - [ ] Configure encryption for sensitive data
@@ -201,7 +201,7 @@ dependencies {
 
 ## Config Repository Structure
 ```
-filmpire-config-repo/
+lmdb-config-repo/
 ├── application.yml          # Shared configuration
 ├── application-dev.yml      # Development environment
 ├── application-prod.yml     # Production environment

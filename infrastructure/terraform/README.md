@@ -88,12 +88,12 @@ hand:
 az login
 
 export TF_STATE_RG=lmdb-tfstate
-export TF_STATE_SA=filmpiretfstate$RANDOM   # must be globally unique, lowercase, no dashes, <=24 chars
+export TF_STATE_SA=lmdbtfstate$RANDOM   # must be globally unique, lowercase, no dashes, <=24 chars
 export TF_STATE_CONTAINER=tfstate
 export LOCATION=eastus                      # see the region note below — this is NOT a safe assumption
 
 az group create --name "$TF_STATE_RG" --location "$LOCATION" \
-  --tags project=filmpire managed-by=manual-bootstrap
+  --tags project=lmdb managed-by=manual-bootstrap
 
 az storage account create \
   --name "$TF_STATE_SA" \
@@ -103,7 +103,7 @@ az storage account create \
   --kind StorageV2 \
   --min-tls-version TLS1_2 \
   --allow-blob-public-access false \
-  --tags project=filmpire managed-by=manual-bootstrap
+  --tags project=lmdb managed-by=manual-bootstrap
 
 az storage container create \
   --name "$TF_STATE_CONTAINER" \

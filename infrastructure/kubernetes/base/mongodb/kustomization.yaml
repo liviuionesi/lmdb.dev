@@ -8,4 +8,4 @@ resources:
 configMapGenerator:
   - name: mongodb-config
     literals:
-      - MONGO_INITDB_DATABASE=filmpire
+      - MONGO_INITDB_DATABASE=lmdb

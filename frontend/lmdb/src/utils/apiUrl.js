@@ -46,7 +46,7 @@ export function notifyBackendStatus(status, details = {}) {
  */
 export function getBackendTarget() {
   if (typeof window !== 'undefined') {
-    const saved = localStorage.getItem('lmdb_backend_target') || localStorage.getItem('filmpire_backend_target');
+    const saved = localStorage.getItem('lmdb_backend_target') || localStorage.getItem('lmdb_backend_target');
     if (saved && ['azure', 'aws', 'minikube', 'tunnel'].includes(saved)) {
       return saved === 'tunnel' ? 'minikube' : saved;
     }
@@ -85,7 +85,7 @@ function getStaticOverride() {
   if (typeof window === 'undefined') {
     return LOCAL_API_URL;
   }
-  const manual = localStorage.getItem('lmdb_api_url') || localStorage.getItem('filmpire_api_url');
+  const manual = localStorage.getItem('lmdb_api_url') || localStorage.getItem('lmdb_api_url');
   if (manual) {
     return manual;
   }

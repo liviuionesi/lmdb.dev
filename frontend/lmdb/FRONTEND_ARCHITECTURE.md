@@ -1,6 +1,6 @@
 # LMDB Frontend Architecture Specification
 
-Comprehensive technical specification for the LMDB web application (`frontend/filmpire`), detailing UI component architecture, Redux state management, RTK Query caching policies, dynamic backend auto-discovery, offline voice recognition, and testing methodology.
+Comprehensive technical specification for the LMDB web application (`frontend/lmdb`), detailing UI component architecture, Redux state management, RTK Query caching policies, dynamic backend auto-discovery, offline voice recognition, and testing methodology.
 
 ---
 
@@ -59,7 +59,7 @@ To support zero-cost ephemeral cloud deployments and local tunneling without mod
 ```mermaid
 flowchart TD
     A[App Startup / API Request] --> B{1. Manual localStorage Override?}
-    B -- Yes --> C[Use localStorage.filmpire_api_url]
+    B -- Yes --> C[Use localStorage.lmdb_api_url]
     B -- No --> D{2. Static VITE_API_URL configured?}
     D -- Yes --> E[Use import.meta.env.VITE_API_URL]
     D -- No --> F{3. Fetch Remote Tunnel URL from GitHub?}
@@ -70,7 +70,7 @@ flowchart TD
 ```
 
 ### Resolution Logic
-1. **`localStorage.getItem('filmpire_api_url')`**: Developer / tester manual override.
+1. **`localStorage.getItem('lmdb_api_url')`**: Developer / tester manual override.
 2. **`import.meta.env.VITE_API_URL`**: Static environment variable (e.g., provided during local testing).
 3. **`https://raw.githubusercontent.com/.../develop/infrastructure/tunnel-url.txt`**: Probes the live published Cloudflare tunnel URL updated by `start-tunnel.sh`.
 4. **`http://localhost:8080`**: Local Docker Compose / Minikube default ingress.

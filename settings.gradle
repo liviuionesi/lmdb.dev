@@ -24,7 +24,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = 'lmdb-microservices'
+rootProject.name = 'lmdb.dev'
 
 include(
     'backend:api-gateway',

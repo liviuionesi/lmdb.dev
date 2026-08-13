@@ -12,9 +12,9 @@
 This document outlines the complete architecture for LMDB, a production-ready microservices-based movie platform.
 
 **Core product goal:** clone the TMDB v3 API in Spring so that the existing
-**LMDB React application** (`frontend/filmpire` — merged into this repo
+**LMDB React application** (`frontend/lmdb` — merged into this repo
 as a monorepo on 2026-07-30, full original commit history preserved; was
-previously the separate `~/Desktop/filmpire` project. CRA + Redux Toolkit
+previously the separate `~/Desktop/lmdb` project. CRA + Redux Toolkit
 Query + MUI + Vosk voice control) can consume this backend as a **drop-in replacement**
 for `https://api.themoviedb.org/3` — the React app changes only its base URL.
 Requests are served read-through: **Redis cache → MongoDB → real TMDB API
@@ -90,14 +90,14 @@ the existing LMDB React app is the only frontend.
 
 The frontend is the pre-existing LMDB application, now living at
 `frontend/lmdb/` in this repo. It was originally a standalone project
-(`~/Desktop/filmpire`, github.com/pehlivanu/filmpire) and was folded into
+(`~/Desktop/lmdb`, github.com/pehlivanu/lmdb) and was folded into
 this repo as a monorepo on 2026-07-30 — its full commit history (44 commits,
 authorship intact) was preserved via `git filter-repo` (to relocate every
 commit's paths under `frontend/lmdb/`) followed by a
 `--allow-unrelated-histories` merge, after first scrubbing a leaked `.env`
 file and a hardcoded TMDB API key from its history. It consumes this
 backend without frontend logic changes beyond configuration — see
-`docs/guides/RUN_WITH_FILMPIRE_APP.md` for the runbook:
+`docs/guides/RUN_WITH_LMDB_APP.md` for the runbook:
 
 | Technology | Version | Notes |
 |------------|---------|-------|
@@ -138,7 +138,7 @@ backend without frontend logic changes beyond configuration — see
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│         LMDB React App (now Vite, frontend/filmpire)    │
+│         LMDB React App (now Vite, frontend/lmdb)    │
 │    RTK Query, TMDB v3 contract, Vosk AI voice via ai-service │
 │  baseURL: resolved per-request (local/cloud/tunnel — ADR-016)│
 └──────────────────────────────┬──────────────────────────────┘
@@ -1194,12 +1194,12 @@ Every service includes complete OpenAPI 3.0 specification:
         description = "Movie catalog and search operations",
         contact = @Contact(
             name = "LMDB Team",
-            email = "api@filmpire.com"
+            email = "api@lmdb.com"
         )
     ),
     servers = {
         @Server(url = "http://localhost:8081", description = "Local"),
-        @Server(url = "https://api.filmpire.com", description = "Production")
+        @Server(url = "https://api.lmdb.com", description = "Production")
     }
 )
 @SecurityScheme(
@@ -1334,9 +1334,9 @@ cd movie-service
 ./gradlew test
 ./gradlew bootRun
 
-# Frontend (existing LMDB React app — now frontend/filmpire, merged into
-# this repo as a monorepo; see docs/guides/RUN_WITH_FILMPIRE_APP.md)
-cd frontend/filmpire
+# Frontend (existing LMDB React app — now frontend/lmdb, merged into
+# this repo as a monorepo; see docs/guides/RUN_WITH_LMDB_APP.md)
+cd frontend/lmdb
 echo "REACT_APP_API_URL=http://localhost:8080" >> .env.local  # point at gateway
 npm install
 npm start
@@ -1355,7 +1355,7 @@ services:
     image: postgres:17-alpine
     container_name: lmdb-postgres
     environment:
-      POSTGRES_DB: filmpire
+      POSTGRES_DB: lmdb
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
@@ -1368,11 +1368,11 @@ services:
   # MongoDB
   mongodb:
     image: mongo:8.0
-    container_name: filmpire-mongo
+    container_name: lmdb-mongo
     environment:
       MONGO_INITDB_ROOT_USERNAME: admin
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
-      MONGO_INITDB_DATABASE: filmpire
+      MONGO_INITDB_DATABASE: lmdb
     ports:
       - "27017:27017"
     volumes:
@@ -1394,7 +1394,7 @@ services:
   # Eureka Server
   eureka-server:
     build: ../../backend/discovery-service
-    container_name: filmpire-eureka
+    container_name: lmdb-eureka
     ports:
       - "8761:8761"
     environment:
@@ -1410,7 +1410,7 @@ services:
   # Config Server
   config-server:
     build: ../../backend/config-service
-    container_name: filmpire-config
+    container_name: lmdb-config
     ports:
       - "8888:8888"
     environment:
@@ -1424,7 +1424,7 @@ services:
   # API Gateway
   api-gateway:
     build: ../../backend/api-gateway
-    container_name: filmpire-gateway
+    container_name: lmdb-gateway
     ports:
       - "8080:8080"
     environment:
@@ -1447,7 +1447,7 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
-      SPRING_DATA_MONGODB_URI: mongodb://admin:${MONGO_ROOT_PASSWORD}@mongodb:27017/filmpire?authSource=admin
+      SPRING_DATA_MONGODB_URI: mongodb://admin:${MONGO_ROOT_PASSWORD}@mongodb:27017/lmdb?authSource=admin
     depends_on:
       - eureka-server
       - mongodb
@@ -1463,7 +1463,7 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/filmpire
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/lmdb
       SPRING_DATASOURCE_USERNAME: admin
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
     depends_on:
@@ -1481,7 +1481,7 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/filmpire
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/lmdb
       SPRING_DATASOURCE_USERNAME: admin
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
     depends_on:
@@ -2196,7 +2196,7 @@ infrastructure/terraform/
   through Entra ID (`use_azuread_auth = true` on the backend) rather than
   a Storage Account key — both local (`az login`) and CI (OIDC, below)
   authenticate the same way, and there's no key to leak.
-- All resources tagged/labeled `project=filmpire`, `managed-by=terraform`
+- All resources tagged/labeled `project=lmdb`, `managed-by=terraform`
   — except Azure Consumption Budgets (`modules/budget-guard`), which
   structurally don't support a `tags` argument at all.
 - Credentials come from environment (`ARM_*`, `AWS_*`) locally, or GitHub
@@ -2213,11 +2213,11 @@ infrastructure/terraform/
 
 **Example — AKS free-tier cluster (modules/cluster-aks):**
 ```hcl
-resource "azurerm_kubernetes_cluster" "filmpire" {
+resource "azurerm_kubernetes_cluster" "lmdb" {
   name                = "lmdb-aks"
   location            = var.location
   resource_group_name = var.resource_group_name
-  dns_prefix          = "filmpire"
+  dns_prefix          = "lmdb"
   sku_tier            = "Free"          # free control plane
 
   default_node_pool {
@@ -2257,7 +2257,7 @@ resource "aws_instance" "k3s_server" {
       --disable traefik --write-kubeconfig-mode 644
   EOF
   root_block_device { volume_size = 30 }
-  tags = { Name = "lmdb-k3s", project = "filmpire" }
+  tags = { Name = "lmdb-k3s", project = "lmdb" }
 }
 ```
 `instance_type` is a variable for the same reason `vm_size` is on the Azure
@@ -2293,7 +2293,7 @@ infrastructure/kubernetes/
 │   ├── ai-service/            # REST (8084) + gRPC (9084, exposed not yet consumed) — #36
 │   ├── ollama/                # StatefulSet + PVC — local model server for ai-service
 │   ├── postgres/              # StatefulSet + PVC (pgvector/pgvector:pg17, ADR-012) —
-│   │                          #   user-service (filmpire), actor-service (lmdb_actor),
+│   │                          #   user-service (lmdb), actor-service (lmdb_actor),
 │   │                          #   ai-service (lmdb_ai)
 │   ├── mongodb/               # StatefulSet + PVC — movie-service
 │   ├── redis/
@@ -2809,7 +2809,7 @@ lmdb.dev/
 │   ├── process/                 # Scrum artifacts — DoR/DoD/NFRs, product goal, methodology
 │   ├── api/                     # Postman collection
 │   └── guides/
-│       ├── RUN_WITH_FILMPIRE_APP.md  # pointing the frontend at this backend
+│       ├── RUN_WITH_LMDB_APP.md  # pointing the frontend at this backend
 │       └── DEPLOYMENT_GUIDE.md       # local/Azure/AWS deploy + FE-binding runbook
 ├── .github/
 │   ├── workflows/

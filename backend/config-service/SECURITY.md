@@ -27,7 +27,7 @@ All sensitive values use Spring Boot's property placeholder syntax:
 ```yaml
 spring:
   datasource:
-    url: ${POSTGRES_URL:jdbc:postgresql://localhost:5432/filmpire}
+    url: ${POSTGRES_URL:jdbc:postgresql://localhost:5432/lmdb}
     username: ${POSTGRES_USERNAME:postgres}
     password: ${POSTGRES_PASSWORD}  # No default - MUST be set
 ```
@@ -51,7 +51,7 @@ Edit `.env` with your actual credentials:
 ```bash
 POSTGRES_PASSWORD=my-secure-password
 JWT_SECRET=$(openssl rand -base64 64)
-MONGODB_URI=mongodb://admin:mypassword@localhost:27017/filmpire?authSource=admin
+MONGODB_URI=mongodb://admin:mypassword@localhost:27017/lmdb?authSource=admin
 ```
 
 ### 3. Load Environment Variables

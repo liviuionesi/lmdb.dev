@@ -1,6 +1,6 @@
 # LMDB End-to-End Test Suite (Playwright)
 
-This directory contains browser-level E2E tests that drive the real LMDB React app (`frontend/filmpire`) against the local microservices stack and API Gateway. This complements the Postman/Newman API smoke tests by verifying actual user journeys in the DOM.
+This directory contains browser-level E2E tests that drive the real LMDB React app (`frontend/lmdb`) against the local microservices stack and API Gateway. This complements the Postman/Newman API smoke tests by verifying actual user journeys in the DOM.
 
 ## Prerequisites & Stack Startup
 
@@ -14,7 +14,7 @@ Before running the Playwright tests locally, bring up both the backend services 
 
 2. **Start the React frontend application:**
    ```bash
-   cd frontend/filmpire
+   cd frontend/lmdb
    npm run dev
    ```
    The frontend app should be live at `http://localhost:5173` (or `http://localhost:3000`).

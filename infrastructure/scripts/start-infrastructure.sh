@@ -84,11 +84,11 @@ echo -e "${BLUE}📊 Service Status:${NC}"
 $COMPOSE_CMD $COMPOSE_FILES ps
 
 # ---------------------------------------------------------------------------
-# Frontend (frontend/filmpire) has no compose service — it's a plain
+# Frontend (frontend/lmdb) has no compose service — it's a plain
 # background npm process, logged to /tmp and stopped by
 # stop-infrastructure.sh via pkill.
 # ---------------------------------------------------------------------------
-FRONTEND_DIR="$SCRIPT_DIR/../../frontend/filmpire"
+FRONTEND_DIR="$SCRIPT_DIR/../../frontend/lmdb"
 FRONTEND_LOG="/tmp/lmdb-frontend.log"
 
 echo ""
@@ -96,7 +96,7 @@ if [ ! -d "$FRONTEND_DIR" ]; then
     echo -e "${YELLOW}⚠  Frontend directory not found at $FRONTEND_DIR — skipping.${NC}"
 elif ! command -v npm &> /dev/null; then
     echo -e "${YELLOW}⚠  npm not found on PATH — skipping frontend startup. Install Node.js 24.x (NVM) and run:${NC}"
-    echo "     cd frontend/filmpire && npm install && npm start"
+    echo "     cd frontend/lmdb && npm install && npm start"
 elif pgrep -f "vite" > /dev/null || pgrep -f "react-scripts start" > /dev/null; then
     echo -e "${GREEN}✓ Frontend dev server already running.${NC}"
 else

@@ -10,5 +10,5 @@ configMapGenerator:
     literals:
       - SPRING_APPLICATION_NAME=user-service
       - SPRING_PROFILES_ACTIVE=prod
-      # user-service owns the default POSTGRES_DB (filmpire) — ADR-002.
-      - POSTGRES_URL=jdbc:postgresql://postgres:5432/filmpire
+      # user-service owns the default POSTGRES_DB (lmdb) — ADR-002.
+      - POSTGRES_URL=jdbc:postgresql://postgres:5432/lmdb

@@ -20,7 +20,7 @@ media:
     max-file-size: 10485760  # 10MB
     allowed-extensions: jpg,jpeg,png,gif,webp,mp4,webm
   storage:
-    temp-dir: /tmp/filmpire-uploads
+    temp-dir: /tmp/lmdb-uploads
 
 eureka:
   client:

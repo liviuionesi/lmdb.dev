@@ -39,7 +39,7 @@ describe('apiUrl static overrides (no network involved)', () => {
   });
 
   it('getApiUrl and resolveApiUrl both return the manual localStorage override when set', async () => {
-    localStorage.setItem('filmpire_api_url', 'https://manually-pinned.example.com');
+    localStorage.setItem('lmdb_api_url', 'https://manually-pinned.example.com');
 
     expect(getApiUrl()).toBe('https://manually-pinned.example.com');
     await expect(resolveApiUrl()).resolves.toBe('https://manually-pinned.example.com');

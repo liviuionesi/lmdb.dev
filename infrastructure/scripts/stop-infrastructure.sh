@@ -47,7 +47,7 @@ if [ -f "$SCRIPT_DIR/stop-tunnel.sh" ]; then
     echo ""
 fi
 
-# Frontend (frontend/filmpire) isn't part of the compose stack — it's a
+# Frontend (frontend/lmdb) isn't part of the compose stack — it's a
 # plain background npm process started by start-infrastructure.sh.
 if pgrep -f "vite" > /dev/null || pgrep -f "react-scripts start" > /dev/null; then
     echo -e "${BLUE}🛑 Stopping frontend dev server...${NC}"

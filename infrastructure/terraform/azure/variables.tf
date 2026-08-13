@@ -64,7 +64,7 @@ variable "budget_start_date" {
 variable "tags" {
   type = map(string)
   default = {
-    project     = "filmpire"
+    project     = "lmdb"
     managed-by  = "terraform"
     environment = "demo"
   }
