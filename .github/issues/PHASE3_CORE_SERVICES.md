@@ -13,7 +13,7 @@
 **Labels:** `epic`, `P0-critical`, `sprint-3`, `backend`
 
 **Description:**
-Implement the three core business microservices that form the foundation of the Filmpire platform: Movie Service (TMDB integration + caching), User Service (authentication + profiles), and Actor Service (cast information).
+Implement the three core business microservices that form the foundation of the LMDB platform: Movie Service (TMDB integration + caching), User Service (authentication + profiles), and Actor Service (cast information).
 
 **Business Value:**
 Delivers core functionality for movie discovery, user management, and actor information. Enables users to browse movies, create accounts, and explore cast details.

@@ -14,12 +14,12 @@ variable "location" {
 
 variable "resource_group_name" {
   type    = string
-  default = "filmpire-demo"
+  default = "lmdb-demo"
 }
 
 variable "cluster_name" {
   type    = string
-  default = "filmpire-aks"
+  default = "lmdb-aks"
 }
 
 variable "vm_size" {

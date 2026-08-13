@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Filmpire Microservices - 1-Command Live Demo Launcher
+# LMDB Microservices - 1-Command Live Demo Launcher
 # Starts all microservices, databases, React frontend, and public Cloudflare Tunnel in one step.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 echo "=================================================="
-echo "  🎬 Filmpire 1-Command Live Demo Launcher"
+echo "  🎬 LMDB 1-Command Live Demo Launcher"
 echo "=================================================="
 echo ""
 

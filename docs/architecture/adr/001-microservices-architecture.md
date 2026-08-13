@@ -6,7 +6,7 @@
 
 ## Context
 
-Filmpire needs a backend that clones the TMDB v3 API for an existing React
+LMDB needs a backend that clones the TMDB v3 API for an existing React
 app. Functionally, a single Spring Boot monolith would serve the product goal
 with a fraction of the operational cost. However, this project has an
 explicit second goal: to learn and demonstrate end-to-end ownership of a

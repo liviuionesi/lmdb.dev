@@ -2,7 +2,7 @@
   "groups": [
     {
       "name": "jwt",
-      "type": "com.filmpire.gateway.config.JwtProperties",
+      "type": "dev.lmdb.gateway.config.JwtProperties",
       "description": "JWT configuration properties for token generation and validation."
     }
   ],
@@ -11,7 +11,7 @@
       "name": "jwt.secret",
       "type": "java.lang.String",
       "description": "Secret key used for signing and verifying JWT tokens. Should be changed in production.",
-      "defaultValue": "filmpire-secret-key-change-in-production"
+      "defaultValue": "lmdb-secret-key-change-in-production"
     },
     {
       "name": "jwt.expiration",

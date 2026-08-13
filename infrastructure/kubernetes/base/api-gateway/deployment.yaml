@@ -28,7 +28,7 @@ spec:
       automountServiceAccountToken: false
       containers:
         - name: api-gateway
-          image: filmpire/api-gateway:local
+          image: lmdb/api-gateway:local
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
@@ -42,17 +42,17 @@ spec:
             - name: REDIS_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: filmpire-secrets
+                  name: lmdb-secrets
                   key: REDIS_PASSWORD
             - name: JWT_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: filmpire-secrets
+                  name: lmdb-secrets
                   key: JWT_SECRET
             - name: TMDB_API_KEY
               valueFrom:
                 secretKeyRef:
-                  name: filmpire-secrets
+                  name: lmdb-secrets
                   key: TMDB_API_KEY
           # Reactive Spring Boot's cold start can exceed the old fixed
           # initialDelaySeconds under a demo node's tight CPU limit (found

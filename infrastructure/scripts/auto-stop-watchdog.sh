@@ -3,7 +3,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-GATEWAY_URL="${GATEWAY_URL:-https://filmpire-api.duckdns.org}"
+GATEWAY_URL="${GATEWAY_URL:-https://api.lmdb.dev}"
 IDLE_THRESHOLD_SECONDS="${IDLE_THRESHOLD_SECONDS:-3600}" # 1 hour
 TARGET_CLOUD="${TARGET_CLOUD:-auto}" # azure, aws, or auto
 

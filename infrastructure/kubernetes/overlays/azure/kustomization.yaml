@@ -24,7 +24,7 @@ resources:
   - caddy-tls.yaml
 
 secretGenerator:
-  - name: filmpire-secrets
+  - name: lmdb-secrets
     envs:
       - secrets.env
 
@@ -61,20 +61,20 @@ configMapGenerator:
       - MOVIE_SERVICE_BASE_URL=http://movie-service:8081
 
 images:
-  - name: filmpire/api-gateway
-    newName: ghcr.io/pehlivanu/filmpire-api-gateway
+  - name: lmdb/api-gateway
+    newName: ghcr.io/pehlivanu/lmdb-api-gateway
     newTag: latest # docker-publish.yml (#28) pushes both :latest and :${GIT_SHA}; deploy always rolls out :latest
-  - name: filmpire/movie-service
-    newName: ghcr.io/pehlivanu/filmpire-movie-service
+  - name: lmdb/movie-service
+    newName: ghcr.io/pehlivanu/lmdb-movie-service
     newTag: latest
-  - name: filmpire/actor-service
-    newName: ghcr.io/pehlivanu/filmpire-actor-service
+  - name: lmdb/actor-service
+    newName: ghcr.io/pehlivanu/lmdb-actor-service
     newTag: latest
-  - name: filmpire/user-service
-    newName: ghcr.io/pehlivanu/filmpire-user-service
+  - name: lmdb/user-service
+    newName: ghcr.io/pehlivanu/lmdb-user-service
     newTag: latest
-  - name: filmpire/ai-service
-    newName: ghcr.io/pehlivanu/filmpire-ai-service
+  - name: lmdb/ai-service
+    newName: ghcr.io/pehlivanu/lmdb-ai-service
     newTag: latest
 
 patches:

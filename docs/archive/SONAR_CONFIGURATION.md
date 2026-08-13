@@ -7,7 +7,7 @@ This project uses **SonarLint** for static code analysis with customized rules f
 ## Configuration Structure
 
 ```
-filmpire-microservices/
+lmdb.dev/
 ├── .sonarlint/settings.json              # Root config
 ├── sonar-project.properties              # Root Sonar config
 └── backend/
@@ -234,7 +234,7 @@ For SonarQube/SonarCloud in GitHub Actions or Jenkins:
 ```bash
 # Run Sonar analysis
 ./gradlew sonarqube \
-  -Dsonar.projectKey=filmpire-microservices \
+  -Dsonar.projectKey=lmdb.dev \
   -Dsonar.host.url=$SONAR_HOST_URL \
   -Dsonar.login=$SONAR_TOKEN
 ```
@@ -316,6 +316,6 @@ For issues or questions about Sonar configuration:
 
 **Last Updated:** November 17, 2025  
 **Configuration Version:** 1.0  
-**Applies to:** All backend services in `filmpire-microservices`
+**Applies to:** All backend services in `lmdb.dev`
 
 

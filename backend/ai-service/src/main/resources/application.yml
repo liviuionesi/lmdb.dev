@@ -16,7 +16,7 @@ spring:
   application:
     name: ai-service
   datasource:
-    # Database-per-service (ADR-002): ai-service owns filmpire_ai so its
+    # Database-per-service (ADR-002): ai-service owns lmdb_ai so its
     # Flyway history never collides with user/actor-service's in the shared
     # instance (which must run pgvector/pgvector:pg17 — ADR-012).
     url: ${POSTGRES_URL}
@@ -63,7 +63,7 @@ spring:
         model: ${OLLAMA_EMBEDDING_MODEL:nomic-embed-text}
 
 # Candidate pool for recommendations comes from movie-service's own catalog
-# (Filmpire's persisted data), not TMDB directly — see MovieCatalogClient.
+# (LMDB's persisted data), not TMDB directly — see MovieCatalogClient.
 movie-service:
   base-url: ${MOVIE_SERVICE_BASE_URL:lb://movie-service}
 

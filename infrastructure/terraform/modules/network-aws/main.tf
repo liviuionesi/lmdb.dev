@@ -54,7 +54,7 @@ resource "aws_route_table_association" "public" {
 # `az aks get-credentials` for a self-managed k3s node). Acceptable only
 # because the instance is created for one demo and destroyed straight after.
 resource "aws_security_group" "k3s" {
-  name        = "filmpire-k3s-sg"
+  name        = "lmdb-k3s-sg"
   description = "Inbound SSH + gateway NodePort for the single k3s demo node (issue #27)."
   vpc_id      = aws_vpc.this.id
 
@@ -110,5 +110,5 @@ resource "aws_security_group" "k3s" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = merge(var.tags, { Name = "filmpire-k3s-sg" })
+  tags = merge(var.tags, { Name = "lmdb-k3s-sg" })
 }

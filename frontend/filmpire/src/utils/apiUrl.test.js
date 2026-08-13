@@ -9,7 +9,7 @@
 const stubNonLocalhost = () => {
   Object.defineProperty(window, 'location', {
     writable: true,
-    value: { hostname: 'filmpire-microservices-tan.vercel.app' },
+    value: { hostname: 'lmdb.dev' },
   });
 };
 
@@ -109,16 +109,16 @@ describe('apiUrl health-checked waterfall (non-localhost)', () => {
     global.fetch = vi.fn().mockResolvedValue({ ok: true });
     const { resolveApiUrl } = await import('./apiUrl');
 
-    await expect(resolveApiUrl()).resolves.toBe('https://filmpire-api.duckdns.org');
+    await expect(resolveApiUrl()).resolves.toBe('https://api.lmdb.dev');
     expect(global.fetch).toHaveBeenCalledWith(
-      'https://filmpire-api.duckdns.org/actuator/health',
+      'https://api.lmdb.dev/actuator/health',
       expect.objectContaining({ method: 'GET' }),
     );
   });
 
   it('falls back to the published tunnel URL when the cloud health check fails and the tunnel is healthy', async () => {
     global.fetch = vi.fn().mockImplementation((url) => {
-      if (url.startsWith('https://filmpire-api.duckdns.org')) {
+      if (url.startsWith('https://api.lmdb.dev')) {
         return Promise.reject(new Error('unreachable'));
       }
       if (url.startsWith('https://raw.githubusercontent.com')) {

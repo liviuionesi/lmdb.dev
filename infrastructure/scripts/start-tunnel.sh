@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Exposes the local Filmpire API Gateway via a secure Cloudflare Tunnel (public HTTPS).
+# Exposes the local LMDB API Gateway via a secure Cloudflare Tunnel (public HTTPS).
 # Works with both Podman and Docker without requiring a Cloudflare account or paid domain.
 set -euo pipefail
 
-CONTAINER_NAME="filmpire-cloudflare-tunnel"
+CONTAINER_NAME="lmdb-cloudflare-tunnel"
 DOCKER_CMD="podman"
 if command -v docker >/dev/null 2>&1; then
   DOCKER_CMD="docker"

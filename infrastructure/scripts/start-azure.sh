@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Starts or provisions Azure AKS cluster to run Filmpire backend.
+# Starts or provisions Azure AKS cluster to run LMDB backend.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -13,7 +13,7 @@ RED='\033[0;31m'
 NC='\033[0m'
 
 echo -e "${BLUE}=====================================================${NC}"
-echo -e "${BLUE}  Filmpire — Start Azure AKS Backend Cluster        ${NC}"
+echo -e "${BLUE}  LMDB — Start Azure AKS Backend Cluster        ${NC}"
 echo -e "${BLUE}=====================================================${NC}"
 
 for cmd in az terraform; do
@@ -28,8 +28,8 @@ if [ ! -d ".terraform" ]; then
   terraform init -backend-config=backend.hcl -input=false
 fi
 
-RG_NAME="${AZURE_RESOURCE_GROUP:-$(terraform output -raw resource_group_name 2>/dev/null || echo "filmpire-demo")}"
-CLUSTER_NAME="${AZURE_CLUSTER_NAME:-$(terraform output -raw cluster_name 2>/dev/null || echo "filmpire-aks")}"
+RG_NAME="${AZURE_RESOURCE_GROUP:-$(terraform output -raw resource_group_name 2>/dev/null || echo "lmdb-demo")}"
+CLUSTER_NAME="${AZURE_CLUSTER_NAME:-$(terraform output -raw cluster_name 2>/dev/null || echo "lmdb-aks")}"
 
 echo -e "\n${BLUE}🔍 Checking current AKS cluster power state for ${CLUSTER_NAME}...${NC}"
 CURRENT_STATE="$(az aks show --resource-group "$RG_NAME" --name "$CLUSTER_NAME" --query "powerState.code" -o tsv 2>/dev/null || echo "NotFound")"
@@ -80,12 +80,12 @@ if command -v kubectl >/dev/null 2>&1; then
     echo -e "  ${GREEN}✅ Node public IP: ${NODE_IP}${NC}"
     echo -e "  ${CYAN}🔗 Direct API Gateway: http://${NODE_IP}:30080/actuator/health${NC}"
 
-    # Update DuckDNS so filmpire-api.duckdns.org points to the new IP
+    # Update DuckDNS so api.lmdb.dev points to the new IP
     if [ -f "$REPO_ROOT/infrastructure/scripts/update-duckdns.sh" ]; then
       if [ -n "${DUCKDNS_TOKEN:-}" ]; then
         echo -e "${BLUE}🦆 Updating DuckDNS → ${NODE_IP}...${NC}"
         "$REPO_ROOT/infrastructure/scripts/update-duckdns.sh" "$NODE_IP" && \
-          echo -e "${GREEN}✅ DuckDNS updated: filmpire-api.duckdns.org → ${NODE_IP}${NC}" || \
+          echo -e "${GREEN}✅ DuckDNS updated: api.lmdb.dev → ${NODE_IP}${NC}" || \
           echo -e "${YELLOW}⚠️  DuckDNS update failed — check DUCKDNS_TOKEN${NC}"
       else
         echo -e "${YELLOW}⚠️  DUCKDNS_TOKEN not set — DuckDNS NOT updated. Export it and re-run:${NC}"
@@ -99,11 +99,11 @@ if command -v kubectl >/dev/null 2>&1; then
 fi
 
 echo -e "\n${GREEN}=====================================================${NC}"
-echo -e "${GREEN}  🎬 Filmpire Azure Backend is Live!                 ${NC}"
+echo -e "${GREEN}  🎬 LMDB Azure Backend is Live!                 ${NC}"
 echo -e "${GREEN}=====================================================${NC}"
 echo -e "  API Gateway:  ${CYAN}http://${NODE_IP:-<node-ip>}:30080${NC}"
-echo -e "  Cloud DNS:    ${CYAN}https://filmpire-api.duckdns.org${NC}"
-echo -e "  Vercel App:   ${CYAN}https://filmpire-microservices-tan.vercel.app${NC}"
+echo -e "  Cloud DNS:    ${CYAN}https://api.lmdb.dev${NC}"
+echo -e "  Vercel App:   ${CYAN}https://lmdb.dev${NC}"
 echo -e ""
 echo -e "  To start a HTTPS tunnel (bypasses DNS caching):"
 echo -e "    ${CYAN}./infrastructure/scripts/start-tunnel.sh${NC}"

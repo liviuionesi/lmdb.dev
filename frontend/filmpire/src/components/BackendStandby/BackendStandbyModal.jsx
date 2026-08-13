@@ -58,7 +58,7 @@ function BackendStandbyModal({ onBackendReady }) {
   const { status } = useBackendWakeup({
     autoWakeup: true,
     onReady: () => {
-      // Trigger dramatic Filmpire logo reveal before final dismissal
+      // Trigger dramatic LMDB logo reveal before final dismissal
       setShowLogoReveal(true);
       if (onBackendReady) {
         onBackendReady();

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Wrapper to generate Filmpire project statistics and documentation
+# Wrapper to generate LMDB project statistics and documentation
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

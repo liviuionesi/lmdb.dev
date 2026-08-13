@@ -1,7 +1,7 @@
 variable "instance_name" {
   description = "Name tag for the EC2 instance and its key pair."
   type        = string
-  default     = "filmpire-k3s"
+  default     = "lmdb-k3s"
 }
 
 variable "instance_type" {

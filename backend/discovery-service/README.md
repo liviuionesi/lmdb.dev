@@ -1,6 +1,6 @@
 # Discovery Service (Eureka Server)
 
-Spring Cloud Netflix Eureka Server for service discovery and registration in the Filmpire microservices architecture.
+Spring Cloud Netflix Eureka Server for service discovery and registration in the LMDB microservices architecture.
 
 ## Overview
 
@@ -32,10 +32,10 @@ cd backend/discovery-service
 
 ```bash
 # Build image
-docker build -t filmpire/discovery-service:latest .
+docker build -t lmdb/discovery-service:latest .
 
 # Run container
-docker run -p 8761:8761 filmpire/discovery-service:latest
+docker run -p 8761:8761 lmdb/discovery-service:latest
 ```
 
 ## Access Points

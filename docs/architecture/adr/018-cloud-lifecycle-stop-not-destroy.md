@@ -11,7 +11,7 @@
 
 ## Context
 
-Filmpire runs on ephemeral free-tier cloud compute (Azure AKS
+LMDB runs on ephemeral free-tier cloud compute (Azure AKS
 `Standard_D4ls_v7`, AWS EC2 k3s node). The system is a portfolio demo, not a
 production service, so it does not need to run 24/7. The question is: when a
 demo session ends, should we **destroy** the infrastructure (`terraform destroy`)
@@ -67,7 +67,7 @@ model weights). This costs ~$0.25/day for Azure (~$7.50/month if idle all month)
 ./gradlew startAws
 
 # Demo:
-# https://filmpire-microservices-tan.vercel.app/
+# https://lmdb.dev/
 
 # Evening: Stop cloud compute to bring compute spend to $0
 ./gradlew stopAzure

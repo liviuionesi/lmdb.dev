@@ -6,42 +6,42 @@
     {
       "id": "command:codemod",
       "kind": "command",
-      "path": "/home/liviu/Desktop/filmpire-microservices/.claude/commands/codemod.md",
+      "path": "/home/liviu/Desktop/lmdb.dev/.claude/commands/codemod.md",
       "version": "1.13.18",
       "fingerprint": "514d4336ddbdc78acf9476c1329410b18d25ba79966ebc69e86038fd4174757e"
     },
     {
       "id": "discovery-guide:CLAUDE.md",
       "kind": "discovery_guide",
-      "path": "/home/liviu/Desktop/filmpire-microservices/CLAUDE.md",
+      "path": "/home/liviu/Desktop/lmdb.dev/CLAUDE.md",
       "version": null,
       "fingerprint": "50bf9801c1d7adfe025947438b47ccad28eb1b3404be1e5fbaa8693bb0920dd4"
     },
     {
       "id": "periodic-trigger:check-updates.sh",
       "kind": "discovery_guide",
-      "path": "/home/liviu/Desktop/filmpire-microservices/.claude/codemod/periodic-update/check-updates.sh",
+      "path": "/home/liviu/Desktop/lmdb.dev/.claude/codemod/periodic-update/check-updates.sh",
       "version": null,
       "fingerprint": "19aed3a70526a7496367e6fa26f18f5800fecb6da27835a58a0b0788cafd71d2"
     },
     {
       "id": "periodic-trigger:settings.json",
       "kind": "discovery_guide",
-      "path": "/home/liviu/Desktop/filmpire-microservices/.claude/settings.json",
+      "path": "/home/liviu/Desktop/lmdb.dev/.claude/settings.json",
       "version": null,
       "fingerprint": "5b1ed1db93deb320efb8505bd9ba3f2d68d4ab0ddf1d467034a18498f7406cbf"
     },
     {
       "id": "codemod-mcp",
       "kind": "mcp_config",
-      "path": "/home/liviu/Desktop/filmpire-microservices/.mcp.json",
+      "path": "/home/liviu/Desktop/lmdb.dev/.mcp.json",
       "version": null,
       "fingerprint": "2d0cba9c33c57572a75a0f45d6aa5a9789b27539552e945efbab37ae23641cbd"
     },
     {
       "id": "codemod",
       "kind": "skill",
-      "path": "/home/liviu/Desktop/filmpire-microservices/.claude/skills/codemod/SKILL.md",
+      "path": "/home/liviu/Desktop/lmdb.dev/.claude/skills/codemod/SKILL.md",
       "version": "1.1.0",
       "fingerprint": "b4062d5a201d28bbb1b6b6157354d05400114070740f0d381b7541cea97ae9ed"
     }

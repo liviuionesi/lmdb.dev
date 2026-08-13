@@ -1,0 +1,181 @@
+package dev.lmdb.gateway.config;
+
+import dev.lmdb.gateway.filter.JwtAuthenticationFilter;
+import java.util.Arrays;
+import java.util.List;
+import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
+import org.springframework.security.config.web.server.SecurityWebFiltersOrder;
+import org.springframework.security.config.web.server.ServerHttpSecurity;
+import org.springframework.security.web.server.SecurityWebFilterChain;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.reactive.CorsConfigurationSource;
+import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
+
+/**
+ * Security configuration for API Gateway. Configures JWT authentication, CORS, and public/private
+ * endpoints.
+ *
+ * @author LMDB Development Team
+ * @version 1.0.0
+ */
+@Configuration
+@EnableWebFluxSecurity
+@RequiredArgsConstructor
+public class SecurityConfig {
+
+  private final JwtAuthenticationFilter jwtAuthenticationFilter;
+
+  /** Media service API path pattern — used in three separate security rules. */
+  private static final String MEDIA_API_PATH = "/api/v1/media/**";
+
+  /**
+   * Configures security filter chain for the API Gateway
+   *
+   * @param http the ServerHttpSecurity to configure
+   * @return the configured SecurityWebFilterChain
+   */
+  @Bean
+  public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
+    return http
+        // Disable CSRF for stateless API
+        .csrf(ServerHttpSecurity.CsrfSpec::disable)
+
+        // Configure CORS
+        .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+
+        // Configure authorization
+        .authorizeExchange(
+            exchanges ->
+                exchanges
+                    // Public endpoints
+                    .pathMatchers(HttpMethod.POST, "/api/v1/auth/login")
+                    .permitAll()
+                    .pathMatchers(HttpMethod.POST, "/api/v1/auth/register")
+                    .permitAll()
+                    .pathMatchers(HttpMethod.POST, "/api/v1/auth/refresh")
+                    .permitAll()
+                    .pathMatchers("/actuator/**")
+                    .permitAll()
+                    .pathMatchers("/fallback/**")
+                    .permitAll()
+
+                    // Public GET endpoints (read-only access)
+                    .pathMatchers(HttpMethod.GET, "/api/v1/movies/**")
+                    .permitAll()
+                    .pathMatchers(HttpMethod.GET, "/api/v1/genres/**")
+                    .permitAll()
+                    .pathMatchers(HttpMethod.GET, "/api/v1/actors/**")
+                    .permitAll()
+                    .pathMatchers(HttpMethod.GET, MEDIA_API_PATH)
+                    .permitAll()
+
+                    // Media service: upload and deletion require JWT authentication
+                    .pathMatchers(HttpMethod.POST, MEDIA_API_PATH)
+                    .authenticated()
+                    .pathMatchers(HttpMethod.DELETE, MEDIA_API_PATH)
+                    .authenticated()
+
+                    // TMDB v3 facade (#33): bare TMDB catalog paths are public
+                    // reads served by the movie/actor facade controllers.
+                    .pathMatchers(HttpMethod.GET, "/movie/**")
+                    .permitAll()
+                    .pathMatchers(HttpMethod.GET, "/genre/**")
+                    .permitAll()
+                    .pathMatchers(HttpMethod.GET, "/discover/**")
+                    .permitAll()
+                    .pathMatchers(HttpMethod.GET, "/search/**")
+                    .permitAll()
+                    .pathMatchers(HttpMethod.GET, "/person/**")
+                    .permitAll()
+
+                    // TMDB auth/account proxy (#33): authentication is enforced
+                    // by TMDB itself via the forwarded session_id, so the gateway
+                    // does not require a local JWT on these passthrough routes.
+                    .pathMatchers("/authentication/**")
+                    .permitAll()
+                    .pathMatchers("/account/**")
+                    .permitAll()
+
+                    // Voice control (#68): unlike the rest of ai-service, speech-to-text
+                    // isn't scoped to a user (no conversation/taste-profile data touched)
+                    // — voice button works for anonymous
+                    // visitors too (theme toggle, genre browsing). Must be listed before
+                    // the /api/v1/ai/** rule below, which requires auth for everything else.
+                    .pathMatchers(HttpMethod.POST, "/api/v1/ai/speech-to-text")
+                    .permitAll()
+
+                    // AI service (#36): every other feature (chat, recommendations,
+                    // semantic search) is scoped to a userId — conversations and taste
+                    // profiles are user-owned data (ADR-012), so these routes are
+                    // explicitly JWT-gated rather than left to the anyExchange()
+                    // catch-all below.
+                    .pathMatchers("/api/v1/ai/**")
+                    .authenticated()
+
+                    // Admin endpoints (require authentication - should add role check in
+                    // production)
+                    .pathMatchers("/admin/**")
+                    .authenticated()
+
+                    // All other endpoints require authentication
+                    .anyExchange()
+                    .authenticated())
+
+        // Add JWT authentication filter
+        .addFilterAt(jwtAuthenticationFilter, SecurityWebFiltersOrder.AUTHENTICATION)
+        .build();
+  }
+
+  /**
+   * Configures CORS for the API Gateway
+   *
+   * @return CorsConfigurationSource with allowed origins, methods, and headers
+   */
+  @Bean
+  public CorsConfigurationSource corsConfigurationSource() {
+    CorsConfiguration configuration = new CorsConfiguration();
+
+    // Allowed origins (frontend applications)
+    configuration.setAllowedOrigins(
+        Arrays.asList(
+            "http://localhost:3000",
+            "http://localhost:3001",
+            "http://localhost:5173",
+            "http://localhost:5174",
+            "https://lmdb.dev",
+            "https://lmdb.dev",
+            "https://www.lmdb.dev"));
+    configuration.setAllowedOriginPatterns(
+        Arrays.asList(
+            "http://localhost:*",
+            "https://*.vercel.app",
+            "https://*.duckdns.org",
+            "https://*.trycloudflare.com",
+            "https://*.lmdb.dev"));
+
+    // Allowed HTTP methods
+    configuration.setAllowedMethods(
+        Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
+
+    // Allowed headers
+    configuration.setAllowedHeaders(List.of("*"));
+
+    // Allow credentials (cookies, authorization headers)
+    configuration.setAllowCredentials(true);
+
+    // How long the response from a pre-flight request can be cached
+    configuration.setMaxAge(3600L);
+
+    // Expose headers to the client
+    configuration.setExposedHeaders(Arrays.asList("Authorization", "Access-Control-Allow-Origin"));
+
+    UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+    source.registerCorsConfiguration("/**", configuration);
+
+    return source;
+  }
+}

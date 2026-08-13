@@ -4,7 +4,7 @@
 
 set -e
 
-REPO="pehlivanu/filmpire-microservices"
+REPO="pehlivanu/lmdb.dev"
 
 echo "🔒 Configuring branch protection rules for $REPO..."
 

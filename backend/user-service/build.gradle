@@ -7,7 +7,7 @@ plugins {
 }
 
 contracts {
-    baseClassForTests = 'com.filmpire.user.contract.BaseContractTest'
+    baseClassForTests = 'dev.lmdb.user.contract.BaseContractTest'
     testFramework = 'JUNIT5'
 }
 

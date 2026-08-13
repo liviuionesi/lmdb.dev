@@ -1,0 +1,56 @@
+package dev.lmdb.user.contract;
+
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import dev.lmdb.user.controller.UserController;
+import dev.lmdb.user.dto.AuthDtos.UserProfileResponse;
+import dev.lmdb.user.service.UserAccountService;
+import io.restassured.module.mockmvc.RestAssuredMockMvc;
+import java.time.LocalDateTime;
+import java.time.Month;
+import java.util.List;
+import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+
+/**
+ * Base setup class for Spring Cloud Contract generated producer tests in {@code user-service}.
+ * Mocks {@link UserAccountService} responses and configures {@link RestAssuredMockMvc} with mock
+ * authentication.
+ */
+public abstract class BaseContractTest {
+
+  /**
+   * Sets up mock MVC controller environment with stubbed user profiles and security principal
+   * before each contract test.
+   */
+  @BeforeEach
+  public void setup() {
+    UserAccountService userAccountService = mock(UserAccountService.class);
+
+    UserProfileResponse profileResponse =
+        new UserProfileResponse(
+            UUID.fromString("123e4567-e89b-12d3-a456-426614174000"),
+            "liviu",
+            "liviu@example.com",
+            "ROLE_USER",
+            LocalDateTime.of(2026, Month.AUGUST, 5, 12, 0),
+            LocalDateTime.of(2026, Month.AUGUST, 5, 12, 0));
+
+    when(userAccountService.getProfile(anyString())).thenReturn(profileResponse);
+
+    UserController userController = new UserController(userAccountService);
+
+    Authentication auth = new UsernamePasswordAuthenticationToken("liviu", null, List.of());
+
+    RestAssuredMockMvc.standaloneSetup(userController);
+    RestAssuredMockMvc.postProcessors(
+        req -> {
+          req.setUserPrincipal(auth);
+          return req;
+        });
+  }
+}

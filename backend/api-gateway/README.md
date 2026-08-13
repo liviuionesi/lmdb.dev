@@ -1,6 +1,6 @@
-# Filmpire API Gateway
+# LMDB API Gateway
 
-Spring Cloud Gateway serving as the single entry point for all client requests in the Filmpire microservices platform.
+Spring Cloud Gateway serving as the single entry point for all client requests in the LMDB microservices platform.
 
 **Port:** 8080  
 **Version:** 1.0.0
@@ -9,7 +9,7 @@ Spring Cloud Gateway serving as the single entry point for all client requests i
 
 ## 📋 Overview
 
-The API Gateway provides intelligent routing, security, rate limiting, and circuit breaking for all microservices in the Filmpire platform.
+The API Gateway provides intelligent routing, security, rate limiting, and circuit breaking for all microservices in the LMDB platform.
 
 ---
 
@@ -56,14 +56,14 @@ The API Gateway provides intelligent routing, security, rate limiting, and circu
 
 ```bash
 # Build Docker image
-docker build -t filmpire/api-gateway:latest backend/api-gateway/
+docker build -t lmdb/api-gateway:latest backend/api-gateway/
 
 # Run container
 docker run -p 8080:8080 \
   -e EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka/ \
   -e REDIS_HOST=redis \
   -e JWT_SECRET=your-secret-key \
-  filmpire/api-gateway:latest
+  lmdb/api-gateway:latest
 ```
 
 ---
@@ -279,7 +279,7 @@ Log format:
 api-gateway/
 ├── src/
 │   ├── main/
-│   │   ├── java/com/filmpire/gateway/
+│   │   ├── java/dev/lmdb/gateway/
 │   │   │   ├── ApiGatewayApplication.java      # Main application class
 │   │   │   ├── config/
 │   │   │   │   └── SecurityConfig.java         # Security configuration
@@ -295,7 +295,7 @@ api-gateway/
 │   │   └── resources/
 │   │       └── application.yml                  # Application configuration
 │   └── test/
-│       ├── java/com/filmpire/gateway/
+│       ├── java/dev/lmdb/gateway/
 │       │   ├── ApiGatewayApplicationTests.java
 │       │   ├── controller/
 │       │   │   └── FallbackControllerTest.java
@@ -362,11 +362,11 @@ api-gateway/
 
 ## 📄 License
 
-Part of the Filmpire Microservices Platform - Portfolio Project
+Part of the LMDB Microservices Platform - Portfolio Project
 
 ---
 
 **Version:** 1.0.0  
 **Last Updated:** November 16, 2025  
-**Maintainer:** Filmpire Development Team
+**Maintainer:** LMDB Development Team
 

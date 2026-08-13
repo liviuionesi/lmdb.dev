@@ -1,7 +1,7 @@
-# 📊 Filmpire Microservices — Project Analytics & Metrics Report
+# 📊 LMDB Microservices — Project Analytics & Metrics Report
 
 > **Dynamically Generated:** `2026-08-13 13:21:53 UTC`  
-> **Git Status:** Branch `develop` | Commit [`447b685`](https://github.com/pehlivanu/filmpire-microservices/commit/447b685)  
+> **Git Status:** Branch `develop` | Commit [`447b685`](https://github.com/pehlivanu/lmdb.dev/commit/447b685)  
 > **Auto-Update Trigger:** Executes automatically on each push and via `./gradlew projectStats`
 
 ---
@@ -142,8 +142,8 @@ The repository includes **19 formal Architectural Decision Records** in `docs/ar
 |---|---|---|---|---|
 | **Local Development** | Docker & Podman Compose / Minikube | Compose / Kustomize | Local Machine RAM/CPU | $0.00 |
 | **Public HTTPS Gateway** | Cloudflare Quick Tunnel (`cloudflared`) | Docker / K8s Deployment | Ephemeral tunnel | $0.00 |
-| **Azure AKS** | Managed Kubernetes (`filmpire-aks`) | Terraform + K8s Overlays | `Standard_D4ls_v7` (4 vCPU / 8 GB) | $0.00/hr when stopped (`az aks stop`) |
-| **AWS Cloud** | Single-Node k3s (`filmpire-k3s`) | Terraform + k3s over SSH | `m7i-flex.large` (2 vCPU / 8 GB) | $0.00/hr when stopped (`ec2 stop`) |
+| **Azure AKS** | Managed Kubernetes (`lmdb-aks`) | Terraform + K8s Overlays | `Standard_D4ls_v7` (4 vCPU / 8 GB) | $0.00/hr when stopped (`az aks stop`) |
+| **AWS Cloud** | Single-Node k3s (`lmdb-k3s`) | Terraform + k3s over SSH | `m7i-flex.large` (2 vCPU / 8 GB) | $0.00/hr when stopped (`ec2 stop`) |
 | **Frontend Production** | Vercel Edge Network | Next-gen Static / SPA | Global Edge CDN | $0.00 (Hobby tier) |
 
 ---

@@ -15,7 +15,7 @@ compileTestJava {
 }
 
 contracts {
-    baseClassForTests = 'com.filmpire.actor.contract.BaseContractTest'
+    baseClassForTests = 'dev.lmdb.actor.contract.BaseContractTest'
     testFramework = 'JUNIT5'
 }
 

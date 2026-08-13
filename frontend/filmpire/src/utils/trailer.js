@@ -82,7 +82,7 @@ export function getStandbyTrailerId(forceRandom = false) {
     return getRandomCuratedTrailerId();
   }
   if (typeof window !== 'undefined') {
-    const saved = localStorage.getItem('filmpire_standby_trailer');
+    const saved = localStorage.getItem('lmdb_standby_trailer') || localStorage.getItem('filmpire_standby_trailer');
     if (saved) {
       return extractYouTubeId(saved);
     }
@@ -101,6 +101,6 @@ export function getStandbyTrailerId(forceRandom = false) {
  */
 export function setStandbyTrailerId(trailerId) {
   if (typeof window !== 'undefined') {
-    localStorage.setItem('filmpire_standby_trailer', extractYouTubeId(trailerId));
+    localStorage.setItem('lmdb_standby_trailer', extractYouTubeId(trailerId));
   }
 }

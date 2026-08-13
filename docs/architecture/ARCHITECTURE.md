@@ -1,4 +1,4 @@
-# Filmpire Microservices - Enterprise Software Architecture Document
+# LMDB Microservices - Enterprise Software Architecture Document
 
 **Version:** 1.8.0  
 **Date:** August 11, 2026 (#160: cloud lifecycle — ADR-018, §11.5 stop-not-destroy, §11.7 lifecycle management; #151: bug closed — resolveApiUrl null sentinel verified live)
@@ -9,10 +9,10 @@
 
 ## Executive Summary
 
-This document outlines the complete architecture for Filmpire, a production-ready microservices-based movie platform.
+This document outlines the complete architecture for LMDB, a production-ready microservices-based movie platform.
 
 **Core product goal:** clone the TMDB v3 API in Spring so that the existing
-**Filmpire React application** (`frontend/filmpire` — merged into this repo
+**LMDB React application** (`frontend/filmpire` — merged into this repo
 as a monorepo on 2026-07-30, full original commit history preserved; was
 previously the separate `~/Desktop/filmpire` project. CRA + Redux Toolkit
 Query + MUI + Vosk voice control) can consume this backend as a **drop-in replacement**
@@ -27,7 +27,7 @@ The system demonstrates modern Java 25 and Spring Boot 4.1 capabilities and
 emphasizes enterprise best practices, comprehensive testing (TDD), IaC-based
 free-tier cloud deployment, and full observability. A dedicated Next.js web
 app and React Native mobile apps were considered and **descoped** (v1.2.0) —
-the existing Filmpire React app is the only frontend.
+the existing LMDB React app is the only frontend.
 
 📊 **Live Project Metrics & Code Analytics:** See [`docs/reports/PROJECT_METRICS.md`](../reports/PROJECT_METRICS.md) for real-time dynamically computed codebase statistics (git churn, LOC, test suites, architecture topology, and documentation coverage).
 
@@ -86,14 +86,14 @@ the existing Filmpire React app is the only frontend.
 | OpenRewrite | 7.37.0 | Gradle | Standing framework-migration tool (see ADR-009) |
 | SonarQube Plugin | 6.2.0.5505 | Gradle | Static code analysis Gradle plugin (#20) |
 
-### 1.2 Frontend — Existing Filmpire React App (consumer, built elsewhere, merged in-repo)
+### 1.2 Frontend — Existing LMDB React App (consumer, built elsewhere, merged in-repo)
 
-The frontend is the pre-existing Filmpire application, now living at
-`frontend/filmpire/` in this repo. It was originally a standalone project
+The frontend is the pre-existing LMDB application, now living at
+`frontend/lmdb/` in this repo. It was originally a standalone project
 (`~/Desktop/filmpire`, github.com/pehlivanu/filmpire) and was folded into
 this repo as a monorepo on 2026-07-30 — its full commit history (44 commits,
 authorship intact) was preserved via `git filter-repo` (to relocate every
-commit's paths under `frontend/filmpire/`) followed by a
+commit's paths under `frontend/lmdb/`) followed by a
 `--allow-unrelated-histories` merge, after first scrubbing a leaked `.env`
 file and a hardcoded TMDB API key from its history. It consumes this
 backend without frontend logic changes beyond configuration — see
@@ -138,7 +138,7 @@ backend without frontend logic changes beyond configuration — see
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│         Filmpire React App (now Vite, frontend/filmpire)    │
+│         LMDB React App (now Vite, frontend/filmpire)    │
 │    RTK Query, TMDB v3 contract, Vosk AI voice via ai-service │
 │  baseURL: resolved per-request (local/cloud/tunnel — ADR-016)│
 └──────────────────────────────┬──────────────────────────────┘
@@ -207,10 +207,10 @@ Significant decisions are recorded in [`adr/`](adr/):
 | [007](adr/007-distributed-tracing-zipkin.md) | Distributed tracing now (Micrometer Tracing + Zipkin) |
 | [008](adr/008-contract-testing.md) | Contract testing with Spring Cloud Contract |
 | [009](adr/009-openrewrite-spring-boot-4-migration.md) | OpenRewrite-driven Spring Boot 3.5 → 4.0 migration (Framework 7, Jackson 3, Cloud 2025.1); a routine follow-up chore then bumped 4.0.7 → 4.1.0 |
-| [010](adr/010-tmdb-facade-mapped-persisted-schema.md) | TMDB facade serves TMDB-shaped responses backed by Filmpire's own mapped, persisted data — supersedes ADR-003's raw-passthrough model |
+| [010](adr/010-tmdb-facade-mapped-persisted-schema.md) | TMDB facade serves TMDB-shaped responses backed by LMDB's own mapped, persisted data — supersedes ADR-003's raw-passthrough model |
 | [011](adr/011-self-healing-read-through-on-schema-drift.md) | Read-through treats a schema-drifted MongoDB document as a cache miss: evict + re-fetch instead of a permanent 500 |
 | [012](adr/012-ai-service-postgresql-pgvector.md) | ai-service stores conversations in PostgreSQL + pgvector, not MongoDB — amends ADR-002's AI row, since user-owned data can't be self-healed |
-| [013](adr/013-frontend-merged-into-monorepo.md) | Filmpire React frontend merged into this repo at `frontend/filmpire/` with full history preserved — this is now a monorepo |
+| [013](adr/013-frontend-merged-into-monorepo.md) | LMDB React frontend merged into this repo at `frontend/lmdb/` with full history preserved — this is now a monorepo |
 | [014](adr/014-media-service-s3-mongo-storage.md) | media-service: dual-tier storage — MinIO/S3-compatible object storage for user-uploaded binaries, MongoDB for their metadata; TMDB's own media stays on TMDB's CDN, never proxied |
 | [015](adr/015-local-only-deploy-trigger.md) | Deploy/destroy triggered only from a local shell (`./gradlew deploy*`) — the web-triggered `/admin` button and its serverless token proxy were removed outright, not just secured further, once found to have no authentication of its own |
 | [016](adr/016-dynamic-backend-resolution.md) | Frontend resolves its backend per-request (local → cloud → published tunnel fallback, health-checked), fronted by an ephemeral Cloudflare tunnel for HTTPS — one Vercel deploy works against any live backend, no redeploy needed |
@@ -714,7 +714,7 @@ nearest-neighbour search over `user_taste_profiles` embeddings specifically
 `backend/ai-service/README.md` for the exact API surface.
 
 **Port:** 8084 (REST), 9084 (gRPC)  
-**Database:** PostgreSQL + pgvector (`filmpire_ai`) — **ADR-012**  
+**Database:** PostgreSQL + pgvector (`lmdb_ai`) — **ADR-012**  
 **Protocols:** REST + gRPC  
 **Dependencies:** Spring AI, Ollama (local, $0 — see ADR-004)
 
@@ -1073,9 +1073,9 @@ public class CacheConfig {
 **This is the product — but as of ADR-010, it is not a proxy.** The gateway
 exposes the exact TMDB v3 API surface — same paths, same query parameters,
 same JSON response shapes (`{page, results, total_pages, total_results}` for
-lists, TMDB's exact field names everywhere) — so the Filmpire React app
+lists, TMDB's exact field names everywhere) — so the LMDB React app
 works by changing only its base URL and its auth flow (see endpoints 10–14
-below). What sits behind that surface is Filmpire's own persisted, typed,
+below). What sits behind that surface is LMDB's own persisted, typed,
 queryable catalog (`Movie`, `Actor`, …), fetched from TMDB once per resource
 and mapped/save-through rather than cached as opaque bytes (ADR-010,
 superseding ADR-003). The `api_key` query parameter sent by the app is
@@ -1122,11 +1122,11 @@ self-heals. Only mapping/conversion failures are absorbed this way —
 outage as a miss would stampede TMDB. This is safe **only** because the catalog
 is re-derivable from TMDB; user-owned data (favorites, watchlists, accounts)
 lives in PostgreSQL under Flyway and must never adopt this pattern.
-| 10 | Login | Gateway → user-service | **Filmpire JWT, not TMDB session proxy — implemented, see below** |
-| 11 | Register | Gateway → user-service | **Filmpire JWT, not TMDB session proxy — implemented, see below** |
-| 12 | Profile | Gateway → user-service | **Filmpire JWT, not TMDB session proxy — implemented, see below** |
-| 13 | Favorites / watchlist lists | Gateway → user-service | **Filmpire JWT, not TMDB session proxy — implemented, see below** |
-| 14 | Favorites / watchlist toggle | Gateway → user-service | **Filmpire JWT, not TMDB session proxy — implemented, see below** |
+| 10 | Login | Gateway → user-service | **LMDB JWT, not TMDB session proxy — implemented, see below** |
+| 11 | Register | Gateway → user-service | **LMDB JWT, not TMDB session proxy — implemented, see below** |
+| 12 | Profile | Gateway → user-service | **LMDB JWT, not TMDB session proxy — implemented, see below** |
+| 13 | Favorites / watchlist lists | Gateway → user-service | **LMDB JWT, not TMDB session proxy — implemented, see below** |
+| 14 | Favorites / watchlist toggle | Gateway → user-service | **LMDB JWT, not TMDB session proxy — implemented, see below** |
 
 **Read-through / save-through flow (endpoints 5, 8 — near-immutable detail
 resources):**
@@ -1148,7 +1148,7 @@ Request → real TMDB API (rate-limited, Bucket4j) → Redis-cached response
 ```
 TMDB's search/ranking/recommendation algorithms are not reimplemented — these
 calls stay live — but every movie any endpoint has ever returned accumulates
-in Filmpire's own MongoDB catalog, growing a real, queryable dataset from
+in LMDB's own MongoDB catalog, growing a real, queryable dataset from
 traffic (ADR-010). A movie only ever seen via a list carries the list-item
 fields until its own detail endpoint is hit at least once, which fills in
 the rest (progressive enrichment).
@@ -1160,12 +1160,12 @@ the rest (progressive enrichment).
 **Auth/account (endpoints 10–14) — implemented end-to-end, not a TMDB
 proxy:** these were originally speced as a transparent pass-through to
 `api.themoviedb.org/3` (TMDB's own request-token/session-id flow). That plan
-changed during implementation: they're retargeted at Filmpire's own
+changed during implementation: they're retargeted at LMDB's own
 user-service JWT auth instead (register/login, favorites, watchlist — see
-§3.5), so the account features are backed by Filmpire's own data, not
+§3.5), so the account features are backed by LMDB's own data, not
 TMDB's. This was a real, non-trivial deviation from the original spec — it
 required editing the React app's auth code, not just its base URL — and is
-fully done on both sides: `frontend/filmpire/src/components/NavBar/
+fully done on both sides: `frontend/lmdb/src/components/NavBar/
 LoginDialog.jsx` calls `useLoginMutation`/`useRegisterMutation`
 (`src/services/user.js`, RTK Query against `/api/v1/auth/**`), storing the
 returned JWT and dispatching it into Redux auth state. No TMDB
@@ -1193,7 +1193,7 @@ Every service includes complete OpenAPI 3.0 specification:
         version = "1.0.0",
         description = "Movie catalog and search operations",
         contact = @Contact(
-            name = "Filmpire Team",
+            name = "LMDB Team",
             email = "api@filmpire.com"
         )
     ),
@@ -1322,8 +1322,8 @@ sudo dnf install git gh jq httpie
 
 ```bash
 # Clone repository
-git clone https://github.com/yourusername/filmpire-microservices.git
-cd filmpire-microservices
+git clone https://github.com/yourusername/lmdb.dev.git
+cd lmdb.dev
 
 # Backend services setup
 cd backend
@@ -1334,7 +1334,7 @@ cd movie-service
 ./gradlew test
 ./gradlew bootRun
 
-# Frontend (existing Filmpire React app — now frontend/filmpire, merged into
+# Frontend (existing LMDB React app — now frontend/filmpire, merged into
 # this repo as a monorepo; see docs/guides/RUN_WITH_FILMPIRE_APP.md)
 cd frontend/filmpire
 echo "REACT_APP_API_URL=http://localhost:8080" >> .env.local  # point at gateway
@@ -1353,7 +1353,7 @@ services:
   # PostgreSQL
   postgres:
     image: postgres:17-alpine
-    container_name: filmpire-postgres
+    container_name: lmdb-postgres
     environment:
       POSTGRES_DB: filmpire
       POSTGRES_USER: admin
@@ -1363,7 +1363,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - filmpire-network
+      - lmdb-network
 
   # MongoDB
   mongodb:
@@ -1378,18 +1378,18 @@ services:
     volumes:
       - mongo_data:/data/db
     networks:
-      - filmpire-network
+      - lmdb-network
 
   # Redis
   redis:
     image: redis:7.4-alpine
-    container_name: filmpire-redis
+    container_name: lmdb-redis
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
     networks:
-      - filmpire-network
+      - lmdb-network
 
   # Eureka Server
   eureka-server:
@@ -1400,7 +1400,7 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
     networks:
-      - filmpire-network
+      - lmdb-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
       interval: 30s
@@ -1419,7 +1419,7 @@ services:
     depends_on:
       - eureka-server
     networks:
-      - filmpire-network
+      - lmdb-network
 
   # API Gateway
   api-gateway:
@@ -1436,12 +1436,12 @@ services:
       - config-server
       - redis
     networks:
-      - filmpire-network
+      - lmdb-network
 
   # Movie Service
   movie-service:
     build: ../../backend/movie-service
-    container_name: filmpire-movie-service
+    container_name: lmdb-movie-service
     ports:
       - "8081:8081"
     environment:
@@ -1452,12 +1452,12 @@ services:
       - eureka-server
       - mongodb
     networks:
-      - filmpire-network
+      - lmdb-network
 
   # User Service
   user-service:
     build: ../../backend/user-service
-    container_name: filmpire-user-service
+    container_name: lmdb-user-service
     ports:
       - "8082:8082"
     environment:
@@ -1470,12 +1470,12 @@ services:
       - eureka-server
       - postgres
     networks:
-      - filmpire-network
+      - lmdb-network
 
   # Actor Service
   actor-service:
     build: ../../backend/actor-service
-    container_name: filmpire-actor-service
+    container_name: lmdb-actor-service
     ports:
       - "8083:8083"
     environment:
@@ -1488,7 +1488,7 @@ services:
       - eureka-server
       - postgres
     networks:
-      - filmpire-network
+      - lmdb-network
 
 volumes:
   postgres_data:
@@ -1496,7 +1496,7 @@ volumes:
   redis_data:
 
 networks:
-  filmpire-network:
+  lmdb-network:
     driver: bridge
 ```
 
@@ -1567,11 +1567,11 @@ rewriteRecipeBomVersion=3.35.0
 sonarqubePluginVersion=6.2.0.5505
 ```
 
-**Frontend: consumer app, own dependency set.** The Filmpire frontend lives at
-`frontend/filmpire/` in this repo (Vite + Redux Toolkit Query, see §1.2). Its `package.json`/`package-lock.json`
+**Frontend: consumer app, own dependency set.** The LMDB frontend lives at
+`frontend/lmdb/` in this repo (Vite + Redux Toolkit Query, see §1.2). Its `package.json`/`package-lock.json`
 are its own lock files. 
 
-Automated checking and refactoring tools integrated in `frontend/filmpire/package.json`:
+Automated checking and refactoring tools integrated in `frontend/lmdb/package.json`:
 - **Dependency Version Checker (`ncu`)**: `npm run deps:check` (inspects available package updates) and `npm run deps:update` (upgrades package versions).
 - **Automated JS/React Refactoring**: `npm run codemod:mui` runs `@mui/codemod` (Material UI codemods) via `npx`. Serves as the frontend equivalent to OpenRewrite. (The former `@codemod/cli` devDependency and its `codemod`/`codemod:react18` scripts were removed in #131 — unused, and pulled in a vulnerable transitive `got`; the standalone `codemod.com` CLI, registered separately in `.mcp.json`, is available for ad hoc AST transforms instead.)
 
@@ -1784,10 +1784,10 @@ All seven, with where each actually lives:
 | 1 | Unit | JUnit 5 + Mockito | §10.2 | `<service>/src/test/` |
 | 2 | Integration | Testcontainers + `@ServiceConnection` | §10.3 | `<service>/src/test/` |
 | 3 | E2E (browser) | Playwright | §10.4 | `e2e/` (repo root) |
-| 4 | API smoke | Postman/Newman | §10.5 | `docs/api/Filmpire-API.postman_collection.json`, `.github/workflows/e2e-smoke.yml` |
+| 4 | API smoke | Postman/Newman | §10.5 | `docs/api/LMDB-API.postman_collection.json`, `.github/workflows/e2e-smoke.yml` |
 | 5 | Performance | Gatling (Java DSL) | §10.6 | `movie-service/src/test/.../performance/` |
 | 6 | Contract | Spring Cloud Contract (ADR-008) | §10.7 | `<service>/src/contractTest/` — movie, user, actor, ai-service |
-| 7 | Frontend unit/component | Vitest + Testing Library | §10.8 | `frontend/filmpire/src/**/*.test.{js,jsx}` |
+| 7 | Frontend unit/component | Vitest + Testing Library | §10.8 | `frontend/lmdb/src/**/*.test.{js,jsx}` |
 
 ### 10.2 Unit Testing (60% of tests)
 
@@ -1942,7 +1942,7 @@ class MovieServiceIntegrationTest {
 ### 10.4 End-to-End Testing (browser, Playwright)
 
 **Location:** `e2e/` (repo root, its own `package.json`/`playwright.config.js`
-— not nested under `frontend/filmpire/`). Drives the real React app against
+— not nested under `frontend/lmdb/`). Drives the real React app against
 the real local backend stack (`start-infrastructure.sh` + `npm run start`),
 not mocks throughout — this is the true acceptance test for the TMDB
 facade's drop-in compatibility, and the one layer that would catch a
@@ -1974,7 +1974,7 @@ test.describe('Authentication & Session Flow (Mocked & Redirect)', () => {
 
 ### 10.5 API Smoke Testing (Postman/Newman)
 
-**Location:** `docs/api/Filmpire-API.postman_collection.json`, run via
+**Location:** `docs/api/LMDB-API.postman_collection.json`, run via
 `newman` in `.github/workflows/e2e-smoke.yml` — the same collection is also
 usable directly in Postman for manual/exploratory API work, with an
 auth pre-request script that handles the JWT login flow automatically.
@@ -2029,7 +2029,7 @@ public class MovieFacadeGatlingSimulation extends Simulation {
 
 ### 10.8 Frontend Testing (Vitest + Testing Library)
 
-**Location:** `frontend/filmpire/src/**/*.test.{js,jsx}`, run via
+**Location:** `frontend/lmdb/src/**/*.test.{js,jsx}`, run via
 `npm test` (`vitest run`) — component and service-layer unit tests for the
 React app itself, not covered by any backend test type above and easy to
 forget precisely because it lives in a different toolchain (JS/Vitest vs.
@@ -2214,7 +2214,7 @@ infrastructure/terraform/
 **Example — AKS free-tier cluster (modules/cluster-aks):**
 ```hcl
 resource "azurerm_kubernetes_cluster" "filmpire" {
-  name                = "filmpire-aks"
+  name                = "lmdb-aks"
   location            = var.location
   resource_group_name = var.resource_group_name
   dns_prefix          = "filmpire"
@@ -2257,7 +2257,7 @@ resource "aws_instance" "k3s_server" {
       --disable traefik --write-kubeconfig-mode 644
   EOF
   root_block_device { volume_size = 30 }
-  tags = { Name = "filmpire-k3s", project = "filmpire" }
+  tags = { Name = "lmdb-k3s", project = "filmpire" }
 }
 ```
 `instance_type` is a variable for the same reason `vm_size` is on the Azure
@@ -2293,8 +2293,8 @@ infrastructure/kubernetes/
 │   ├── ai-service/            # REST (8084) + gRPC (9084, exposed not yet consumed) — #36
 │   ├── ollama/                # StatefulSet + PVC — local model server for ai-service
 │   ├── postgres/              # StatefulSet + PVC (pgvector/pgvector:pg17, ADR-012) —
-│   │                          #   user-service (filmpire), actor-service (filmpire_actor),
-│   │                          #   ai-service (filmpire_ai)
+│   │                          #   user-service (filmpire), actor-service (lmdb_actor),
+│   │                          #   ai-service (lmdb_ai)
 │   ├── mongodb/               # StatefulSet + PVC — movie-service
 │   ├── redis/
 │   └── kustomization.yaml
@@ -2372,7 +2372,7 @@ push to main
   `movie-service`, `user-service`, `actor-service`, `ai-service`) from the
   repo root as build context (every Dockerfile does `COPY backend backend`
   for the multi-module Gradle build) and pushes each to
-  `ghcr.io/pehlivanu/filmpire-<service>` tagged both `${GIT_SHA}` and
+  `ghcr.io/pehlivanu/lmdb-<service>` tagged both `${GIT_SHA}` and
   `latest`. Check `gh run list --workflow="Backend CI"` before assuming a
   fresh deploy actually has your latest changes.
 - `deploy.yml`/`destroy.yml` (`workflow_dispatch`, cloud picker) still
@@ -2388,8 +2388,8 @@ push to main
 
 ### 11.5 What's Actually Deployed, and What It Costs
 
-Azure AKS is the primary demo cloud as of 2026-08-11 (cluster `filmpire-aks`,
-resource group `filmpire-demo`, `eastus`, `Standard_D4ls_v7`). AWS k3s is
+Azure AKS is the primary demo cloud as of 2026-08-11 (cluster `lmdb-aks`,
+resource group `lmdb-demo`, `eastus`, `Standard_D4ls_v7`). AWS k3s is
 provided as an alternative overlay and has been live-verified but is not the
 primary target. When either cloud is up, all 9 workloads are deployed:
 `api-gateway`, `movie-service`, `actor-service`, `user-service`, `ai-service`,
@@ -2445,7 +2445,7 @@ would otherwise ship silently:
 
 The frontend is deployed to Vercel exactly once and never redeployed just
 to change which backend it talks to. Instead,
-[`frontend/filmpire/src/utils/apiUrl.js`](../../frontend/filmpire/src/utils/apiUrl.js)
+[`frontend/lmdb/src/utils/apiUrl.js`](../../frontend/lmdb/src/utils/apiUrl.js)
 resolves the backend URL **per request**, in priority order:
 
 1. A manual `localStorage` override (devtools-only escape hatch; nothing
@@ -2453,7 +2453,7 @@ resolves the backend URL **per request**, in priority order:
 2. `VITE_API_URL`, if fixed at build time (intentionally unset in Vercel —
    setting it would disable everything below).
 3. `http://localhost:8080`, if the code itself is running on `localhost`.
-4. The default cloud target (`filmpire-api.duckdns.org`), **only if it
+4. The default cloud target (`api.lmdb.dev`), **only if it
    passes a live health check** — not assumed reachable just because it's
    configured.
 5. Whichever URL is currently published in `infrastructure/tunnel-url.txt`
@@ -2477,7 +2477,7 @@ account needed — the same mechanism fronts whichever backend is currently
 live, local machine or either cloud. **Azure is the one exception** (ADR-019):
 it runs its own always-there Caddy pod (`infrastructure/kubernetes/overlays/
 azure/caddy-tls.yaml`) terminating real HTTPS on the node's static public IP,
-so `filmpire-api.duckdns.org` works directly with no tunnel step at all — the
+so `api.lmdb.dev` works directly with no tunnel step at all — the
 tunnel/pointer-file mechanism below remains how AWS and local expose HTTPS.
 
 **Why a published pointer file, not a fixed hostname:** a quick tunnel's
@@ -2494,7 +2494,7 @@ can't justify a real service registry.
 **CORS is a separate concern from routing, and was found live to be the
 actual root cause of an outage that looked like a routing problem:** the
 gateway's `SecurityConfig` allow-list has to include the frontend's real
-origin (`https://filmpire-microservices-tan.vercel.app`, plus origin
+origin (`https://lmdb.dev`, plus origin
 *patterns* for `*.vercel.app`/`*.trycloudflare.com`/`*.duckdns.org`) or
 every request — including the health check in step 4/5 above — gets a
 403 invisible to a plain `curl` test that omits the `Origin` header. A
@@ -2522,7 +2522,7 @@ and GitHub Actions workflows — no manual cloud portal clicks required.
 | `.github/workflows/cluster-idle-stop.yml` | **Scheduled** (every 10 min, ADR-019): checks `/actuator/activity`, stops whichever cloud is running once idle ≥ 1h. The actual mechanism behind the "auto-sleep after an hour" promise — no passphrase needed since cron can't be dispatched externally |
 | `.github/workflows/destroy.yml` | Full `terraform destroy` — password-gated, requires confirmation `DESTROY` |
 
-**Zero-touch Azure wake/sleep (ADR-019):** `frontend/filmpire/api/wakeup.js`
+**Zero-touch Azure wake/sleep (ADR-019):** `frontend/lmdb/api/wakeup.js`
 (Vercel serverless) is what makes visiting the deployed frontend alone enough
 to wake a stopped Azure backend — no push, no shell, no manual trigger. It
 health-checks the gateway on every hit; if unreachable, it dispatches
@@ -2634,7 +2634,7 @@ implementation 'net.logstash.logback:logstash-logback-encoder:8.0'
 </appender>
 ```
 
-**Index strategy:** `filmpire-logs-%{+yyyy.MM.dd}`, ILM policy: delete after
+**Index strategy:** `lmdb-logs-%{+yyyy.MM.dd}`, ILM policy: delete after
 7 days (local) / 3 days (cloud) to bound disk usage.
 
 **Free-tier reality:** Elasticsearch needs ≥1 GB heap — it does NOT fit on a
@@ -2693,7 +2693,7 @@ window):
 - [ ] Sub-200ms average API response time
 - [ ] Zero critical security vulnerabilities (Snyk/OWASP)
 - [ ] SonarQube quality gate: A rating
-- [ ] **Filmpire React app runs fully against this backend with only a
+- [ ] **LMDB React app runs fully against this backend with only a
       base-URL change** (browse, search, details, actor pages, login,
       favorites via TMDB proxy)
 - [ ] Complete API documentation (OpenAPI/Swagger)
@@ -2732,7 +2732,7 @@ window):
 ## Appendix A: Project Structure
 
 ```
-filmpire-microservices/
+lmdb.dev/
 ├── backend/
 │   ├── api-gateway/
 │   │   ├── src/
@@ -2744,7 +2744,7 @@ filmpire-microservices/
 │   ├── movie-service/
 │   │   ├── src/
 │   │   │   ├── main/
-│   │   │   │   ├── java/com/filmpire/movie/
+│   │   │   │   ├── java/dev/lmdb/movie/
 │   │   │   │   │   ├── controller/
 │   │   │   │   │   ├── service/
 │   │   │   │   │   ├── repository/
@@ -2757,7 +2757,7 @@ filmpire-microservices/
 │   │   │   │       ├── application.yml
 │   │   │   │       └── application-prod.yml
 │   │   │   └── test/
-│   │   │       ├── java/com/filmpire/movie/
+│   │   │       ├── java/dev/lmdb/movie/
 │   │   │       │   ├── service/
 │   │   │       │   ├── controller/
 │   │   │       │   └── integration/
@@ -2775,7 +2775,7 @@ filmpire-microservices/
 │   ├── settings.gradle.kts
 │   └── gradle.properties
 ├── frontend/
-│   └── filmpire/            # Vite app (migrated from CRA, #125-127), merged
+│   └── lmdb/            # Vite app (migrated from CRA, #125-127), merged
 │       │                    # in as a monorepo 2026-07-30, full history preserved
 │       ├── src/
 │       │   ├── components/  # App shell, NavBar (+LoginDialog), Movies,

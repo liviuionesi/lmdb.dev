@@ -27,7 +27,7 @@ spec:
       automountServiceAccountToken: false
       containers:
         - name: movie-service
-          image: filmpire/movie-service:local
+          image: lmdb/movie-service:local
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8081
@@ -41,17 +41,17 @@ spec:
             - name: MONGODB_URI
               valueFrom:
                 secretKeyRef:
-                  name: filmpire-secrets
+                  name: lmdb-secrets
                   key: MONGODB_URI
             - name: REDIS_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: filmpire-secrets
+                  name: lmdb-secrets
                   key: REDIS_PASSWORD
             - name: TMDB_API_KEY
               valueFrom:
                 secretKeyRef:
-                  name: filmpire-secrets
+                  name: lmdb-secrets
                   key: TMDB_API_KEY
           # Same issue as api-gateway's identical fix: a fixed-delay
           # liveness probe killed this container mid-boot under a free-tier

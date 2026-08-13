@@ -20,6 +20,6 @@ resources:
 
 labels:
   - pairs:
-      app.kubernetes.io/part-of: filmpire-microservices
+      app.kubernetes.io/part-of: lmdb.dev
       app.kubernetes.io/managed-by: kustomize
     includeSelectors: false

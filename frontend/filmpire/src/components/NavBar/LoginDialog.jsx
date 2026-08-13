@@ -7,7 +7,7 @@ import { setUser } from '../../features/auth';
 import { storeAuthTokens } from '../../utils';
 
 /**
- * Login/register modal backed by Filmpire's own user-service JWT API
+ * Login/register modal backed by LMDB's own user-service JWT API
  * (replaces the old redirect-to-themoviedb.org flow).
  */
 function LoginDialog({ open, onClose }) {

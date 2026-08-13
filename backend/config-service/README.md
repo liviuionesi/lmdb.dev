@@ -1,6 +1,6 @@
 # Config Service (Spring Cloud Config Server)
 
-Spring Cloud Config Server for centralized configuration management in the Filmpire microservices architecture.
+Spring Cloud Config Server for centralized configuration management in the LMDB microservices architecture.
 
 ## Overview
 
@@ -49,10 +49,10 @@ cd backend/config-service
 
 ```bash
 # Build image
-docker build -t filmpire/config-service:latest .
+docker build -t lmdb/config-service:latest .
 
 # Run container
-docker run -p 8888:8888 filmpire/config-service:latest
+docker run -p 8888:8888 lmdb/config-service:latest
 ```
 
 ## Access Points

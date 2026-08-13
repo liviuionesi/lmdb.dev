@@ -10,10 +10,10 @@ resources:
 
 # secrets.env is gitignored — copy secrets.env.example to secrets.env first
 # (see that file). Kustomize's name-suffix-hash keeps this in sync: every
-# base Deployment/StatefulSet references the plain name `filmpire-secrets`
+# base Deployment/StatefulSet references the plain name `lmdb-secrets`
 # and Kustomize rewrites those references to the generated hashed name.
 secretGenerator:
-  - name: filmpire-secrets
+  - name: lmdb-secrets
     envs:
       - secrets.env
 

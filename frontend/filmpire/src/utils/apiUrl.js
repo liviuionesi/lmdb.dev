@@ -1,6 +1,6 @@
 import { fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 
-const CLOUD_API_URL = 'https://filmpire-api.duckdns.org';
+const CLOUD_API_URL = 'https://api.lmdb.dev';
 const LOCAL_API_URL = 'http://localhost:8080';
 // Published by infrastructure/scripts/start-tunnel.sh or cloud deployment -
 // provides instant HTTPS endpoint bypassing any ISP DNS caching.
@@ -46,7 +46,7 @@ export function notifyBackendStatus(status, details = {}) {
  */
 export function getBackendTarget() {
   if (typeof window !== 'undefined') {
-    const saved = localStorage.getItem('filmpire_backend_target');
+    const saved = localStorage.getItem('lmdb_backend_target') || localStorage.getItem('filmpire_backend_target');
     if (saved && ['azure', 'aws', 'minikube', 'tunnel'].includes(saved)) {
       return saved === 'tunnel' ? 'minikube' : saved;
     }
@@ -65,7 +65,7 @@ export function getBackendTarget() {
  */
 export function setBackendTarget(target) {
   if (typeof window !== 'undefined') {
-    localStorage.setItem('filmpire_backend_target', target);
+    localStorage.setItem('lmdb_backend_target', target);
   }
 }
 
@@ -85,7 +85,7 @@ function getStaticOverride() {
   if (typeof window === 'undefined') {
     return LOCAL_API_URL;
   }
-  const manual = localStorage.getItem('filmpire_api_url');
+  const manual = localStorage.getItem('lmdb_api_url') || localStorage.getItem('filmpire_api_url');
   if (manual) {
     return manual;
   }
@@ -165,7 +165,7 @@ export async function fetchPublishedTunnelUrl() {
  * Resolves the backend base URL dynamically with multi-tier fallback:
  * 1. Manual override (localStorage or VITE_API_URL)
  * 2. Localhost:8080 (if running on localhost AND healthy)
- * 3. Default Cloud URL (https://filmpire-api.duckdns.org if healthy)
+ * 3. Default Cloud URL (https://api.lmdb.dev if healthy)
  * 4. Published HTTPS Tunnel URL (if healthy)
  * 5. Standby fallback
  *

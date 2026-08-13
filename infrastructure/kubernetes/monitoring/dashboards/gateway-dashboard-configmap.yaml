@@ -12,7 +12,7 @@ metadata:
 data:
   gateway-dashboard.json: |
     {
-      "title": "Filmpire - API Gateway",
+      "title": "LMDB - API Gateway",
       "uid": "filmpire-gateway",
       "tags": ["filmpire"],
       "timezone": "browser",

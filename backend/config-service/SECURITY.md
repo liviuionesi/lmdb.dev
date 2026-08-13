@@ -130,7 +130,7 @@ spring:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: filmpire-secrets
+  name: lmdb-secrets
 type: Opaque
 data:
   postgres-password: base64-encoded-value
@@ -143,7 +143,7 @@ env:
   - name: POSTGRES_PASSWORD
     valueFrom:
       secretKeyRef:
-        name: filmpire-secrets
+        name: lmdb-secrets
         key: postgres-password
 ```
 

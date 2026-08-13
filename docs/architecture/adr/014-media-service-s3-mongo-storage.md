@@ -14,7 +14,7 @@ TMDB media (posters, backdrops, stills) is served via TMDB's public CDN, but use
 
 `media-service` is established as a dedicated microservice with dual-tier storage:
 1. **S3-Compatible Object Store (MinIO / AWS S3)**: Stores raw image payload bytes with SHA-256 deduplication keys and content-type metadata.
-2. **MongoDB Metadata Database (`filmpire_media`)**: Stores document metadata tracking upload ownership (`userId`), media entity type (`AVATAR` vs `REVIEW_ATTACHMENT`), image dimensions, content length, S3 object keys, and upload timestamps.
+2. **MongoDB Metadata Database (`lmdb_media`)**: Stores document metadata tracking upload ownership (`userId`), media entity type (`AVATAR` vs `REVIEW_ATTACHMENT`), image dimensions, content length, S3 object keys, and upload timestamps.
 
 ### Key Architectural Standards
 - **API Gateway Routing**: Requests to `/api/v1/media/**` are routed to `media-service` with circuit breaker and rate limiting enabled (`mediaServiceCircuitBreaker`).

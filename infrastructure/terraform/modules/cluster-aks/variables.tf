@@ -1,7 +1,7 @@
 variable "cluster_name" {
   description = "AKS cluster name."
   type        = string
-  default     = "filmpire-aks"
+  default     = "lmdb-aks"
 }
 
 variable "location" {

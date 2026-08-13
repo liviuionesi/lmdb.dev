@@ -1,0 +1,62 @@
+# Alert rules (issue #24, ARCHITECTURE.md section 12.1 / 12.4). Scoped to
+# the 8 LMDB services by job name — job defaults to the target Service's
+# name for a ServiceMonitor-discovered target, which under this directory's
+# contract (service-monitors/README.md) is the same as each service's `app`
+# label. Node/pod-level rules (restart loop) aren't service-scoped since
+# they come from kube-state-metrics, not the app's own /actuator/prometheus.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: filmpire-alerts
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: filmpire.rules
+      rules:
+        - alert: LMDBServiceDown
+          expr: |
+            up{job=~"discovery-service|config-service|api-gateway|movie-service|user-service|actor-service|ai-service|media-service"} == 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "{{ $labels.job }} is down"
+            description: "Prometheus has failed to scrape {{ $labels.job }} for 2 minutes straight."
+
+        - alert: LMDBHighP95Latency
+          expr: |
+            histogram_quantile(0.95,
+              sum(rate(http_server_requests_seconds_bucket{job=~"discovery-service|config-service|api-gateway|movie-service|user-service|actor-service|ai-service|media-service"}[5m])) by (le, application)
+            ) > 0.5
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.application }} P95 latency above 500ms"
+            description: "{{ $labels.application }}'s 5-minute P95 request latency has been above 500ms for 5 minutes (SLO: section 12.4)."
+
+        - alert: LMDBJvmHeapHigh
+          expr: |
+            (
+              sum(jvm_memory_used_bytes{area="heap", job=~"discovery-service|config-service|api-gateway|movie-service|user-service|actor-service|ai-service|media-service"}) by (application)
+              /
+              sum(jvm_memory_max_bytes{area="heap", job=~"discovery-service|config-service|api-gateway|movie-service|user-service|actor-service|ai-service|media-service"}) by (application)
+            ) > 0.85
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.application }} JVM heap above 85%"
+            description: "{{ $labels.application }}'s heap usage has been above 85% of its max for 5 minutes — real risk on the 1 GB nodes this is sized for."
+
+        - alert: LMDBPodRestartLoop
+          expr: |
+            increase(kube_pod_container_status_restarts_total{namespace="default"}[10m]) > 3
+          for: 0m
+          labels:
+            severity: critical
+          annotations:
+            summary: "{{ $labels.pod }} is restart-looping"
+            description: "{{ $labels.pod }}/{{ $labels.container }} has restarted more than 3 times in the last 10 minutes."

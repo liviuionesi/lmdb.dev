@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Filmpire Microservices - Create Phase 2 Issues Script
+# LMDB Microservices - Create Phase 2 Issues Script
 # Creates all issues for Phase 2: Infrastructure Services
 
 set -e
@@ -337,7 +337,7 @@ Create shared library module with common DTOs, exceptions, utilities, and consta
 ## Structure
 ```
 shared-library/
-└── src/main/java/com/filmpire/shared/
+└── src/main/java/dev/lmdb/shared/
     ├── dto/
     ├── exception/
     ├── util/

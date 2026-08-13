@@ -1,9 +1,9 @@
 syntax = "proto3";
 
-package com.filmpire.ai;
+package dev.lmdb.ai;
 
 option java_multiple_files = true;
-option java_package = "com.filmpire.ai.grpc";
+option java_package = "dev.lmdb.ai.grpc";
 option java_outer_classname = "AiServiceProto";
 
 // gRPC surface for ai-service (#36, ARCHITECTURE.md §3.7). Mirrors the two

@@ -17,7 +17,7 @@ spec:
       automountServiceAccountToken: false
       containers:
         - name: user-service
-          image: filmpire/user-service:local
+          image: lmdb/user-service:local
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8082
@@ -31,19 +31,19 @@ spec:
             - name: POSTGRES_USERNAME
               valueFrom:
                 secretKeyRef:
-                  name: filmpire-secrets
+                  name: lmdb-secrets
                   key: POSTGRES_USER
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: filmpire-secrets
+                  name: lmdb-secrets
                   key: POSTGRES_PASSWORD
             # CONTRACT: must match api-gateway's JWT_SECRET — the gateway
             # validates the access tokens this service issues.
             - name: JWT_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: filmpire-secrets
+                  name: lmdb-secrets
                   key: JWT_SECRET
           readinessProbe:
             httpGet:

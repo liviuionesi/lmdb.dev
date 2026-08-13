@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Filmpire Microservices - Start Infrastructure Script
+# LMDB Microservices - Start Infrastructure Script
 # This script starts all required infrastructure services using Docker Compose
 
 set -e
@@ -17,7 +17,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOCKER_DIR="$SCRIPT_DIR/../docker"
 
 echo -e "${BLUE}================================================${NC}"
-echo -e "${BLUE}  Filmpire Microservices - Infrastructure${NC}"
+echo -e "${BLUE}  LMDB Microservices - Infrastructure${NC}"
 ENABLE_TUNNEL=false
 for arg in "$@"; do
     if [ "$arg" == "--tunnel" ] || [ "$arg" == "--live" ]; then
@@ -89,7 +89,7 @@ $COMPOSE_CMD $COMPOSE_FILES ps
 # stop-infrastructure.sh via pkill.
 # ---------------------------------------------------------------------------
 FRONTEND_DIR="$SCRIPT_DIR/../../frontend/filmpire"
-FRONTEND_LOG="/tmp/filmpire-frontend.log"
+FRONTEND_LOG="/tmp/lmdb-frontend.log"
 
 echo ""
 if [ ! -d "$FRONTEND_DIR" ]; then
@@ -105,7 +105,7 @@ else
     if [ ! -f "$FRONTEND_DIR/.env.local" ]; then
         echo "VITE_API_URL=http://localhost:${API_GATEWAY_PORT:-8080}" > "$FRONTEND_DIR/.env.local"
         echo "REACT_APP_API_URL=http://localhost:${API_GATEWAY_PORT:-8080}" >> "$FRONTEND_DIR/.env.local"
-        echo -e "${GREEN}✓ Created frontend/filmpire/.env.local (VITE_API_URL=http://localhost:${API_GATEWAY_PORT:-8080})${NC}"
+        echo -e "${GREEN}✓ Created frontend/lmdb/.env.local (VITE_API_URL=http://localhost:${API_GATEWAY_PORT:-8080})${NC}"
     fi
 
     if [ ! -d "$FRONTEND_DIR/node_modules" ]; then
@@ -154,7 +154,7 @@ echo "  (Prometheus/Grafana are provisioned via the minikube/k8s monitoring"
 echo "   stack, not this docker-compose stack — see infrastructure/kubernetes/monitoring)"
 echo ""
 echo -e "${GREEN}Frontend:${NC}"
-echo "  Filmpire app:            http://localhost:3000"
+echo "  LMDB app:            http://localhost:3000"
 echo "  Frontend log:            tail -f $FRONTEND_LOG"
 echo ""
 echo -e "${GREEN}Credentials (from environment / .env):${NC}"

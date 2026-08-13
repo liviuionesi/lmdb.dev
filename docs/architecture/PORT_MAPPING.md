@@ -1,6 +1,6 @@
 # Port Mapping Reference
 
-Complete port mapping for Filmpire Microservices infrastructure, backend services, telemetry, and frontend applications.
+Complete port mapping for LMDB Microservices infrastructure, backend services, telemetry, and frontend applications.
 
 ## 🗺️ Port Allocation Strategy
 

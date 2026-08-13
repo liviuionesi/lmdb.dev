@@ -22,7 +22,7 @@ terraform {
   # the storage account, not just the management-plane access `az login`
   # already implies — see README.md.
   backend "azurerm" {
-    key              = "filmpire-azure.tfstate"
+    key              = "lmdb-azure.tfstate"
     use_azuread_auth = true
   }
 }

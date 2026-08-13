@@ -8,7 +8,7 @@
 ## Context
 
 Since the TMDB-facade pivot (ADR-010), the product's actual frontend has
-been the pre-existing Filmpire React app — originally a standalone project
+been the pre-existing LMDB React app — originally a standalone project
 at `~/Desktop/filmpire` (github.com/pehlivanu/filmpire), unrelated in
 origin to this backend and predating it. The two repos evolved in lockstep
 in practice (issue #34 required a frontend code change — reading
@@ -26,7 +26,7 @@ history to diff or bisect across; and anyone cloning this repo to look at
 ## Decision
 
 Merge `~/Desktop/filmpire`'s full git history into this repo at
-`frontend/filmpire/`, preserving every commit and its original authorship
+`frontend/lmdb/`, preserving every commit and its original authorship
 — not a fresh import, not a squash. Mechanically:
 
 1. Clone the frontend repo to a scratch location.
@@ -81,7 +81,7 @@ repos for one logical change).
 
 ## Consequences
 
-- Easier: `frontend/filmpire/` is now a normal part of this repo — clone
+- Easier: `frontend/lmdb/` is now a normal part of this repo — clone
   once, `git log -- frontend/filmpire` shows its real history, a change
   spanning gateway config and frontend base-URL wiring can be one commit
   instead of two across two clones.

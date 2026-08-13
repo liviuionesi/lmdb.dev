@@ -17,7 +17,7 @@ CYAN='\033[0;36m'
 NC='\033[0m'
 
 echo -e "${BLUE}=====================================================${NC}"
-echo -e "${BLUE}  Filmpire — Stop Azure AKS Backend Cluster         ${NC}"
+echo -e "${BLUE}  LMDB — Stop Azure AKS Backend Cluster         ${NC}"
 echo -e "${BLUE}=====================================================${NC}"
 
 # 1. Check prerequisites
@@ -34,8 +34,8 @@ if [ ! -d ".terraform" ]; then
   echo -e "${BLUE}⚙️  Initialising Terraform backend to read state...${NC}"
   terraform init -backend-config=backend.hcl -input=false -reconfigure >/dev/null 2>&1
 fi
-RG_NAME="${AZURE_RESOURCE_GROUP:-$(terraform output -raw resource_group_name 2>/dev/null || echo "filmpire-demo")}"
-CLUSTER_NAME="${AZURE_CLUSTER_NAME:-$(terraform output -raw cluster_name 2>/dev/null || echo "filmpire-aks")}"
+RG_NAME="${AZURE_RESOURCE_GROUP:-$(terraform output -raw resource_group_name 2>/dev/null || echo "lmdb-demo")}"
+CLUSTER_NAME="${AZURE_CLUSTER_NAME:-$(terraform output -raw cluster_name 2>/dev/null || echo "lmdb-aks")}"
 
 # 3. Check current power state
 echo -e "\n${BLUE}🔍 Checking power state for cluster: ${YELLOW}${CLUSTER_NAME}${BLUE} in RG ${YELLOW}${RG_NAME}${NC}"

@@ -1,6 +1,6 @@
 # Deployment Guide
 
-How to run Filmpire end-to-end — local only, local backend + the deployed
+How to run LMDB end-to-end — local only, local backend + the deployed
 Vercel frontend, Azure AKS, and AWS EC2/k3s — and how the frontend finds
 whichever backend is actually up in each case.
 
@@ -13,7 +13,7 @@ destroy anything.
 ## 1. How the frontend finds its backend
 
 Every real request from the React app goes through
-[`frontend/filmpire/src/utils/apiUrl.js`](../../frontend/filmpire/src/utils/apiUrl.js),
+[`frontend/lmdb/src/utils/apiUrl.js`](../../frontend/lmdb/src/utils/apiUrl.js),
 which resolves a backend URL in this order, **every time, automatically —
 no manual step in any of the scenarios below unless noted**:
 
@@ -23,7 +23,7 @@ no manual step in any of the scenarios below unless noted**:
 2. `VITE_API_URL` — a build-time env var. Unset in Vercel today.
 3. `http://localhost:8080` — if the code itself is running on `localhost`
    (i.e. you're running `npm run dev` locally).
-4. `https://filmpire-api.duckdns.org` — the cloud default, **only if it
+4. `https://api.lmdb.dev` — the cloud default, **only if it
    passes a health check** (`GET /actuator/health`).
 5. Whatever URL is published in [`infrastructure/tunnel-url.txt`](../../infrastructure/tunnel-url.txt)
    — **only if that also passes a health check.** This file is
@@ -107,7 +107,7 @@ Teardown:
 
 ## 4. Scenario: local backend + the deployed Vercel frontend
 
-Use this to make `https://filmpire-microservices-tan.vercel.app` talk to
+Use this to make `https://lmdb.dev` talk to
 your own machine — e.g. when Azure/AWS are torn down (the normal $0-budget
 state) but you still want to demo against something real.
 
@@ -152,7 +152,7 @@ This single command: `terraform apply` (provisions AKS on
 apply -k infrastructure/kubernetes/overlays/azure` (full local-parity
 service set — gateway, movie/actor/user/ai-service, MongoDB, Postgres,
 Redis, Ollama) → waits for full 9-workload rollout → auto-updates DuckDNS
-(`filmpire-api.duckdns.org`).
+(`api.lmdb.dev`).
 
 The gateway itself is exposed as a **NodePort** (`:30080`, no load balancer —
 see `infrastructure/terraform/README.md`) at that raw IP, over plain HTTP —
@@ -161,13 +161,13 @@ can't call it directly. Unlike AWS/local, **Azure no longer needs a manual
 tunnel for this** (ADR-019): `infrastructure/kubernetes/overlays/azure/
 caddy-tls.yaml` deploys a Caddy pod bound to the node's own (static) public
 IP as the 10th workload, alongside the other 9, which gets a real Let's
-Encrypt certificate for `filmpire-api.duckdns.org` automatically and
+Encrypt certificate for `api.lmdb.dev` automatically and
 reverse-proxies to the gateway. `deploy-azure.sh` rolling out that manifest
 and `cluster-stop.yml`'s start action re-pointing DuckDNS is the whole
 bridge — no tunnel, no hand-published URL, nothing to redo per session.
 
-Visiting `https://filmpire-microservices-tan.vercel.app/` with the backend
-asleep is itself enough to wake it: `frontend/filmpire/api/wakeup.js`
+Visiting `https://lmdb.dev/` with the backend
+asleep is itself enough to wake it: `frontend/lmdb/api/wakeup.js`
 health-checks on every hit and dispatches `cluster-stop.yml`'s start action
 if the backend doesn't answer, while `BackendStandbyModal` plays a trailer
 during the ~2-3 min AKS resume. See ADR-019 for the full mechanism and the
@@ -175,7 +175,7 @@ tradeoff it knowingly makes with ADR-015.
 
 **CORS note:** the gateway's allow-list
 (`backend/api-gateway/.../SecurityConfig.java`) has to include the
-frontend's actual origin — `https://filmpire-microservices-tan.vercel.app`
+frontend's actual origin — `https://lmdb.dev`
 plus origin *patterns* for `*.vercel.app`/`*.trycloudflare.com`/
 `*.duckdns.org` are already in there. If you ever change the Vercel
 domain, that's the file to update.
@@ -236,7 +236,7 @@ half.
 
 Like Azure, **AWS runs the zero-touch Caddy TLS proxy** (`infrastructure/kubernetes/overlays/aws/caddy-tls.yaml`)
 bound to host ports 80/443 on the EC2 instance's public IP, auto-fetching a Let's Encrypt
-certificate for `filmpire-api.duckdns.org`. No manual tunnel is needed when switching between
+certificate for `api.lmdb.dev`. No manual tunnel is needed when switching between
 Azure and AWS.
 
 The deployed frontend automatically displays an interactive **telemetry footer** showing:
@@ -265,7 +265,7 @@ accidental cloud charges:
 | `AZURE_CLIENT_ID`/`AZURE_TENANT_ID`/`AZURE_SUBSCRIPTION_ID` | Variable | Azure OIDC login |
 | `AWS_ROLE_ARN`, `AWS_REGION` | Variable | AWS OIDC login |
 | `TF_STATE_*` | Variable | Terraform remote state backend |
-| `DUCKDNS_TOKEN` | Secret | Updates `filmpire-api.duckdns.org` with live node IP |
+| `DUCKDNS_TOKEN` | Secret | Updates `api.lmdb.dev` with live node IP |
 | `AWS_K3S_SSH_PRIVATE_KEY` | Secret | Fetches kubeconfig over SSH from AWS k3s nodes |
 
 #### Smart Self-Healing Behavior in `deploy.yml`:
@@ -277,7 +277,7 @@ accidental cloud charges:
 ## 7. Deploying the frontend itself
 
 Push to `main` — Vercel's git integration auto-builds
-`frontend/filmpire` and redeploys `filmpire-microservices-tan.vercel.app`.
+`frontend/filmpire` and redeploys `lmdb.dev`.
 That's the actual live mechanism; confirm a deploy happened by checking
 the served JS bundle hash changed (`curl -s <url> | grep -o 'assets/index-[a-zA-Z0-9]*\.js'`).
 
@@ -292,7 +292,7 @@ dashboard.
 
 ## 8. Troubleshooting
 
-- **Movies don't load, `filmpire-api.duckdns.org` doesn't resolve:** cloud
+- **Movies don't load, `api.lmdb.dev` doesn't resolve:** cloud
   is torn down (expected — that's the $0-budget default state). Bring up
   local + tunnel (§4) or a cloud target (§5/§6); the frontend picks either
   up automatically once its health check passes.

@@ -1,6 +1,6 @@
-# Filmpire Shared Library
+# LMDB Shared Library
 
-Common library containing DTOs, exceptions, utilities, constants, and annotations used across all Filmpire microservices.
+Common library containing DTOs, exceptions, utilities, constants, and annotations used across all LMDB microservices.
 
 ## 📋 Contents
 
@@ -27,8 +27,8 @@ dependencies {
 The shared-library can also be used as a Java module. In your service's `module-info.java`:
 
 ```java
-module com.filmpire.movie {
-    requires com.filmpire.shared;
+module dev.lmdb.movie {
+    requires dev.lmdb.shared;
     // ... other requires
 }
 ```
@@ -38,9 +38,9 @@ module com.filmpire.movie {
 ### Usage Example
 
 ```java
-import com.filmpire.shared.dto.ApiResponse;
-import com.filmpire.shared.exception.ResourceNotFoundException;
-import com.filmpire.shared.util.ValidationUtils;
+import dev.lmdb.shared.dto.ApiResponse;
+import dev.lmdb.shared.exception.ResourceNotFoundException;
+import dev.lmdb.shared.util.ValidationUtils;
 
 @RestController
 public class MovieController {
@@ -366,8 +366,8 @@ ApiConstants.DATE_TIME_FORMAT      // "yyyy-MM-dd'T'HH:mm:ss"
 ApiConstants.ISO_8601_FORMAT       // "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"
 
 // Cache Keys
-ApiConstants.CACHE_PREFIX          // "filmpire:"
-ApiConstants.CACHE_MOVIES          // "filmpire:movies:"
+ApiConstants.CACHE_PREFIX          // "lmdb:"
+ApiConstants.CACHE_MOVIES          // "lmdb:movies:"
 ApiConstants.DEFAULT_CACHE_TTL     // 3600 (1 hour)
 
 // Messages
@@ -694,7 +694,7 @@ The library includes `lombok-mapstruct-binding` for seamless integration between
 
 ## 🤝 Contributing
 
-This library is used across all Filmpire microservices. When adding new functionality:
+This library is used across all LMDB microservices. When adding new functionality:
 
 1. Ensure it's truly cross-cutting (used by 2+ services)
 2. Write comprehensive tests
@@ -703,7 +703,7 @@ This library is used across all Filmpire microservices. When adding new function
 
 ## 📄 License
 
-Part of the Filmpire Microservices Platform - Portfolio Project
+Part of the LMDB Microservices Platform - Portfolio Project
 
 ---
 

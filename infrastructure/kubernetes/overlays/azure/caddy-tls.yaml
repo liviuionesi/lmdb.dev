@@ -6,7 +6,7 @@
 # pod bridges the gap without adding a billable Azure resource: it runs
 # hostNetwork on the node's existing *static* public IP (verified static via
 # `az vmss list-instance-public-ips` — survives `az aks stop`/`start`) and
-# gets a real Let's Encrypt certificate for filmpire-api.duckdns.org
+# gets a real Let's Encrypt certificate for api.lmdb.dev
 # automatically, then reverse-proxies to the gateway's ClusterIP Service.
 #
 # /data is a PVC so the issued cert survives pod restarts and cluster
@@ -21,7 +21,7 @@ data:
       email pehlivanu@gmail.com
     }
 
-    filmpire-api.duckdns.org {
+    api.lmdb.dev {
       reverse_proxy api-gateway.default.svc.cluster.local:8080
     }
 ---

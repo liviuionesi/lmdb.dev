@@ -23,7 +23,7 @@ describe('useBackendWakeup hook', () => {
   });
 
   it('sets status to ONLINE if backend is already healthy on mount', async () => {
-    apiUrlModule.resolveApiUrl.mockResolvedValue('https://filmpire-api.duckdns.org');
+    apiUrlModule.resolveApiUrl.mockResolvedValue('https://api.lmdb.dev');
 
     const { result } = renderHook(() => useBackendWakeup({ autoWakeup: false }));
 
@@ -58,7 +58,7 @@ describe('useBackendWakeup hook', () => {
     // Initially down, then becomes healthy on second poll
     apiUrlModule.resolveApiUrl
       .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce('https://filmpire-api.duckdns.org');
+      .mockResolvedValueOnce('https://api.lmdb.dev');
 
     const onReadyMock = vi.fn();
     const { result } = renderHook(() => useBackendWakeup({ autoWakeup: true, onReady: onReadyMock }));

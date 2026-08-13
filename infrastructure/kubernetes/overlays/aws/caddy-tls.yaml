@@ -4,7 +4,7 @@
 # modules/network-aws/main.tf), but the Vercel frontend is HTTPS and
 # browsers block that mixed content. This pod bridges the gap without adding
 # a billable AWS resource: it runs hostNetwork on the EC2 node's public IP
-# and gets a real Let's Encrypt certificate for filmpire-api.duckdns.org
+# and gets a real Let's Encrypt certificate for api.lmdb.dev
 # automatically, then reverse-proxies to the gateway's ClusterIP Service.
 #
 # /data is a PVC so the issued cert survives pod restarts and cluster
@@ -19,7 +19,7 @@ data:
       email pehlivanu@gmail.com
     }
 
-    filmpire-api.duckdns.org {
+    api.lmdb.dev {
       reverse_proxy api-gateway.default.svc.cluster.local:8080
     }
 ---

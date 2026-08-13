@@ -2,7 +2,7 @@
 # Stops and removes the local Cloudflare Tunnel container.
 set -euo pipefail
 
-CONTAINER_NAME="filmpire-cloudflare-tunnel"
+CONTAINER_NAME="lmdb-cloudflare-tunnel"
 DOCKER_CMD="podman"
 if command -v docker >/dev/null 2>&1; then
   DOCKER_CMD="docker"

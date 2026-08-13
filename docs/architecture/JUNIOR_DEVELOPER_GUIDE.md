@@ -1,8 +1,8 @@
-# Filmpire: The Complete Junior Developer Guide (Deep Dive Tech Lead Edition)
+# LMDB: The Complete Junior Developer Guide (Deep Dive Tech Lead Edition)
 
-Welcome to the Filmpire project! If you're a junior developer familiar with basic Java, SQL, HTML, CSS, and JavaScript, you might look at this project and feel a bit overwhelmed by the sheer number of technologies used. Don't worry! This guide—written from the perspective of a Tech Lead—is designed to take you on a deep dive through our entire `ARCHITECTURE.md`. We will demystify all the concepts, buzzwords, and structural decisions so you can confidently contribute to the codebase.
+Welcome to the LMDB project! If you're a junior developer familiar with basic Java, SQL, HTML, CSS, and JavaScript, you might look at this project and feel a bit overwhelmed by the sheer number of technologies used. Don't worry! This guide—written from the perspective of a Tech Lead—is designed to take you on a deep dive through our entire `ARCHITECTURE.md`. We will demystify all the concepts, buzzwords, and structural decisions so you can confidently contribute to the codebase.
 
-We are building an **enterprise-grade backend clone of the TMDB (The Movie Database) API v3**. The primary goal is that the existing Filmpire React application can consume our backend as a **drop-in replacement** for the real TMDB API by simply changing its base URL. 
+We are building an **enterprise-grade backend clone of the TMDB (The Movie Database) API v3**. The primary goal is that the existing LMDB React application can consume our backend as a **drop-in replacement** for the real TMDB API by simply changing its base URL. 
 
 ---
 

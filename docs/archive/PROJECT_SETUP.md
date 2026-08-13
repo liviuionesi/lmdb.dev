@@ -4,13 +4,13 @@
 
 ```bash
 # Initialize git (if not done)
-cd /home/liviu/Desktop/filmpire-microservices
+cd /home/liviu/Desktop/lmdb.dev
 git init
 git add .
 git commit -m "Initial commit: Project structure and documentation"
 
 # Create repo on GitHub (via CLI)
-gh repo create filmpire-microservices --public --source=. --remote=origin
+gh repo create lmdb.dev --public --source=. --remote=origin
 git push -u origin main
 ```
 
@@ -19,7 +19,7 @@ git push -u origin main
 ### Via GitHub CLI:
 ```bash
 # Create project
-gh project create --owner @me --title "Filmpire Microservices" --format board
+gh project create --owner @me --title "LMDB Microservices" --format board
 
 # Or via web: https://github.com/users/YOUR_USERNAME/projects/new
 ```
@@ -28,7 +28,7 @@ gh project create --owner @me --title "Filmpire Microservices" --format board
 1. Go to: https://github.com/YOUR_USERNAME?tab=projects
 2. Click "New project"
 3. Choose "Board" template
-4. Name: "Filmpire Microservices - Sprint Board"
+4. Name: "LMDB Microservices - Sprint Board"
 
 ## Step 3: Configure Project Board
 

@@ -1,6 +1,6 @@
-# Filmpire End-to-End Test Suite (Playwright)
+# LMDB End-to-End Test Suite (Playwright)
 
-This directory contains browser-level E2E tests that drive the real Filmpire React app (`frontend/filmpire`) against the local microservices stack and API Gateway. This complements the Postman/Newman API smoke tests by verifying actual user journeys in the DOM.
+This directory contains browser-level E2E tests that drive the real LMDB React app (`frontend/filmpire`) against the local microservices stack and API Gateway. This complements the Postman/Newman API smoke tests by verifying actual user journeys in the DOM.
 
 ## Prerequisites & Stack Startup
 

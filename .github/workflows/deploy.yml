@@ -37,7 +37,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: azure-cloud
-      url: https://filmpire-api.duckdns.org
+      url: https://api.lmdb.dev
     defaults:
       run:
         working-directory: infrastructure/terraform/azure
@@ -162,7 +162,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: aws-cloud
-      url: https://filmpire-api.duckdns.org
+      url: https://api.lmdb.dev
     defaults:
       run:
         working-directory: infrastructure/terraform/aws

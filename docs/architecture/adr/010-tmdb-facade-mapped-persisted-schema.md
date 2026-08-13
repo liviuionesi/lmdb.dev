@@ -10,7 +10,7 @@ ADR-003 chose byte-for-byte raw JSON passthrough for the TMDB-shaped facade
 (`/movie/**`, `/person/**`, `/discover/**`, `/search/**`, `/genre/**`):
 TMDB's response bodies were stored verbatim as opaque strings
 (`tmdb_raw_documents`) and replayed unmodified, specifically to guarantee the
-existing Filmpire React app (built against real TMDB) would work by changing
+existing LMDB React app (built against real TMDB) would work by changing
 only its base URL.
 
 Revisiting the goal: this project is a portfolio showcase. A service whose
@@ -20,7 +20,7 @@ service (movie, actor, media, ai, user) to be backed by data the platform
 actually owns, computes, and persists — queryable, extensible, and capable of
 outliving TMDB as a data source — while *still* presenting the TMDB v3 API
 surface (paths, snake_case field names, response envelopes) so the existing
-Filmpire React app keeps working with no changes to its data-access code.
+LMDB React app keeps working with no changes to its data-access code.
 
 Two prior assumptions from ADR-003 turned out to not hold as strongly as
 believed:

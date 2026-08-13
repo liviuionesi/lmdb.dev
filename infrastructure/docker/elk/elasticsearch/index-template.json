@@ -1,10 +1,10 @@
 {
-  "index_patterns": ["filmpire-logs-*"],
+  "index_patterns": ["lmdb-logs-*"],
   "template": {
     "settings": {
       "number_of_shards": 1,
       "number_of_replicas": 0,
-      "index.lifecycle.name": "filmpire-logs-policy"
+      "index.lifecycle.name": "lmdb-logs-policy"
     },
     "mappings": {
       "properties": {
@@ -22,7 +22,7 @@
     }
   },
   "_meta": {
-    "description": "Filmpire service logs, ARCHITECTURE.md section 12.2 (issue #24)",
+    "description": "LMDB service logs, ARCHITECTURE.md section 12.2 (issue #24)",
     "managed_by": "infrastructure/docker/elk/setup/setup.sh"
   }
 }

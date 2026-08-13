@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Deploys Filmpire backend to Azure AKS via Terraform and Kubernetes overlays.
+# Deploys LMDB backend to Azure AKS via Terraform and Kubernetes overlays.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -14,7 +14,7 @@ RED='\033[0;31m'
 NC='\033[0m'
 
 echo -e "${BLUE}=====================================================${NC}"
-echo -e "${BLUE}  Filmpire — Deploy to Azure AKS (Terraform + K8s)  ${NC}"
+echo -e "${BLUE}  LMDB — Deploy to Azure AKS (Terraform + K8s)  ${NC}"
 echo -e "${BLUE}=====================================================${NC}"
 
 # 1. Verify required CLI tools

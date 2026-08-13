@@ -13,7 +13,7 @@ RED='\033[0;31m'
 NC='\033[0m'
 
 echo -e "${YELLOW}=====================================================${NC}"
-echo -e "${YELLOW}  Filmpire — Destroy Azure AKS (Maintain $0 Spend)   ${NC}"
+echo -e "${YELLOW}  LMDB — Destroy Azure AKS (Maintain $0 Spend)   ${NC}"
 echo -e "${YELLOW}=====================================================${NC}"
 
 if [ ! -d "$TF_DIR" ]; then

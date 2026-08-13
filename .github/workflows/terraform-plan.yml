@@ -11,7 +11,7 @@ name: Terraform Plan
 # repo: AZURE_CLIENT_ID/AZURE_TENANT_ID/AZURE_SUBSCRIPTION_ID and the
 # TF_STATE_* values below are plain identifiers, not credentials — they
 # only work paired with a live OIDC trust scoped to
-# repo:pehlivanu/filmpire-microservices:ref:refs/heads/main, so knowing them
+# repo:pehlivanu/lmdb.dev:ref:refs/heads/main, so knowing them
 # alone doesn't grant anyone access.
 #
 # The identity behind AZURE_CLIENT_ID holds Reader on the subscription plus

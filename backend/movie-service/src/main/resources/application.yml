@@ -14,8 +14,8 @@ spring:
 
   # MongoDB Configuration
   mongodb:
-    database: filmpire
-    uri: ${MONGODB_URI}
+    database: lmdb
+    uri: ${MONGODB_URI:mongodb://localhost:27017/lmdb}
 
   data:
     redis:
@@ -121,7 +121,7 @@ management:
 logging:
   level:
     root: INFO
-    "[com.filmpire.movie]": DEBUG
+    "[dev.lmdb.movie]": DEBUG
     "[org.springframework.web]": INFO
     "[org.springframework.data.mongodb]": DEBUG
     "[org.springframework.cache]": DEBUG
@@ -143,7 +143,7 @@ springdoc:
 info:
   app:
     name: ${spring.application.name}
-    description: Movie Service for Filmpire platform
+    description: Movie Service for LMDB platform
     version: 1.0.0
     java-version: ${java.version}
 

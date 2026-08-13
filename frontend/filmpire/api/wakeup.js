@@ -1,11 +1,11 @@
 /**
  * Vercel Serverless Function: /api/wakeup
  *
- * Checks if the Filmpire backend is healthy and reachable. If offline / sleeping,
+ * Checks if the LMDB backend is healthy and reachable. If offline / sleeping,
  * initiates an automated wake-up signal for Azure or AWS compute nodes.
  */
 
-const CLOUD_API_URL = process.env.CLOUD_API_URL || 'https://filmpire-api.duckdns.org';
+const CLOUD_API_URL = process.env.CLOUD_API_URL || 'https://api.lmdb.dev';
 const GITHUB_REPO = process.env.GITHUB_REPO || 'pehlivanu/lmdb.dev';
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 // Server-side only (this file runs as a Vercel serverless function, never
@@ -59,7 +59,7 @@ async function dispatchWakeupWorkflow(targetCloud) {
       headers: {
         Authorization: `Bearer ${GITHUB_TOKEN}`,
         Accept: 'application/vnd.github+json',
-        'User-Agent': 'Filmpire-Wakeup-Serverless',
+        'User-Agent': 'LMDB-Wakeup-Serverless',
       },
       body: JSON.stringify({
         ref: 'develop',

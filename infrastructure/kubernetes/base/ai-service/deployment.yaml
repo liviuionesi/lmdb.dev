@@ -17,7 +17,7 @@ spec:
       automountServiceAccountToken: false
       containers:
         - name: ai-service
-          image: filmpire/ai-service:local
+          image: lmdb/ai-service:local
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8084
@@ -33,17 +33,17 @@ spec:
             - name: POSTGRES_USERNAME
               valueFrom:
                 secretKeyRef:
-                  name: filmpire-secrets
+                  name: lmdb-secrets
                   key: POSTGRES_USER
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: filmpire-secrets
+                  name: lmdb-secrets
                   key: POSTGRES_PASSWORD
             - name: REDIS_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: filmpire-secrets
+                  name: lmdb-secrets
                   key: REDIS_PASSWORD
           readinessProbe:
             httpGet:

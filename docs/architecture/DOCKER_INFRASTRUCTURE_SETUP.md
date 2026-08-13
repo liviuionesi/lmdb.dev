@@ -2,7 +2,7 @@
 
 ## Overview
 
-Complete Docker Compose configuration for local development environment with all required databases and services for Filmpire Microservices.
+Complete Docker Compose configuration for local development environment with all required databases and services for LMDB Microservices.
 
 ## Services Included
 
@@ -166,7 +166,7 @@ minio:
   url: http://localhost:9000
   access-key: minioadmin
   secret-key: ${MINIO_ROOT_PASSWORD}
-  bucket-name: filmpire-media
+  bucket-name: lmdb-media
 ```
 
 ## Management UIs
@@ -231,7 +231,7 @@ docker compose ps
 
 ## Networking
 
-All services are on the `filmpire-network` bridge network, allowing inter-service communication.
+All services are on the `lmdb-network` bridge network, allowing inter-service communication.
 
 Services can reference each other by service name:
 - `postgres` → PostgreSQL
@@ -278,7 +278,7 @@ newgrp docker
 
 Ensure services are on the same network:
 ```bash
-docker network inspect filmpire-network
+docker network inspect lmdb-network
 ```
 
 ## Production Considerations
@@ -299,8 +299,8 @@ For production:
 ## Multiple Database Support
 
 PostgreSQL automatically creates multiple databases:
-- `filmpire_users` - User Service
-- `filmpire_actors` - Actor Service
+- `lmdb_users` - User Service
+- `lmdb_actors` - Actor Service
 
 MongoDB uses collections within single `filmpire` database:
 - `movies` - Movie Service
@@ -361,7 +361,7 @@ curl http://localhost:9000/minio/health/live
 - [x] Configure MongoDB 8.0
 - [x] Configure Redis 7.4
 - [x] Configure MinIO
-- [x] Setup networking (filmpire-network)
+- [x] Setup networking (lmdb-network)
 - [x] Configure volumes (5 persistent volumes)
 - [x] Add health checks (all services)
 - [x] Create startup script (start-infrastructure.sh)
@@ -374,7 +374,7 @@ curl http://localhost:9000/minio/health/live
 - [x] All databases configured and accessible
 - [x] Health checks configured for all services
 - [x] Services can connect to databases (via network)
-- [x] Proper networking configured (filmpire-network)
+- [x] Proper networking configured (lmdb-network)
 - [x] Volumes persist data (5 volumes configured)
 - [x] Management UIs included (Adminer, Mongo Express, Redis Commander)
 
@@ -398,12 +398,12 @@ infrastructure/
 ```bash
 $ podman ps
 NAMES                     STATUS                    PORTS
-filmpire-postgres         Up (healthy)              0.0.0.0:5432->5432/tcp
+lmdb-postgres         Up (healthy)              0.0.0.0:5432->5432/tcp
 filmpire-mongo            Up (healthy)              0.0.0.0:27017->27017/tcp
-filmpire-redis            Up (healthy)              0.0.0.0:6379->6379/tcp
+lmdb-redis            Up (healthy)              0.0.0.0:6379->6379/tcp
 filmpire-adminer          Up                        0.0.0.0:9081->8080/tcp
 filmpire-mongo-express    Up                        0.0.0.0:9082->8081/tcp
-filmpire-redis-commander  Up                        0.0.0.0:9083->8081/tcp
+lmdb-redis-commander  Up                        0.0.0.0:9083->8081/tcp
 ```
 
 #### Database Accessibility

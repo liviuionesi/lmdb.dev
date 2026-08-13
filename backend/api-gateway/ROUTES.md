@@ -1,6 +1,6 @@
 # API Gateway Routes Documentation
 
-Complete reference for all routes configured in the Filmpire API Gateway.
+Complete reference for all routes configured in the LMDB API Gateway.
 
 **Version:** 1.0.0  
 **Last Updated:** November 16, 2025
@@ -248,7 +248,7 @@ When rate limit is exceeded:
 - `http://localhost:3001` (Alternative React port)
 - `http://localhost:5173` (Vite default)
 - `http://localhost:5174` (Alternative Vite port)
-- `https://filmpire-microservices-tan.vercel.app` (deployed frontend)
+- `https://lmdb.dev` (deployed frontend)
 
 Plus origin **patterns** (`setAllowedOriginPatterns`, not the exact-match
 list above) for `http://localhost:*`, `https://*.vercel.app`,

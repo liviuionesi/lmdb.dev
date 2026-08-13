@@ -10,8 +10,8 @@ configMapGenerator:
     literals:
       - SPRING_APPLICATION_NAME=actor-service
       - SPRING_PROFILES_ACTIVE=prod
-      # actor-service owns its own database (ADR-002) — filmpire_actor,
+      # actor-service owns its own database (ADR-002) — lmdb_actor,
       # created by postgres/init-multiple-databases.sh on first boot.
-      - POSTGRES_URL=jdbc:postgresql://postgres:5432/filmpire_actor
+      - POSTGRES_URL=jdbc:postgresql://postgres:5432/lmdb_actor
       - REDIS_HOST=redis
       - REDIS_PORT=6379

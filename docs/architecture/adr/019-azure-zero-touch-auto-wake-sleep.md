@@ -15,7 +15,7 @@
 
 ADR-018 decided *stop, don't destroy* for idle cloud compute, and #160 built
 the scripts/workflow to do it on command. The remaining promise — visiting
-`https://filmpire-microservices-tan.vercel.app/` alone should wake a stopped
+`https://lmdb.dev/` alone should wake a stopped
 Azure backend, with no push/commit/manual step, and the backend should sleep
 itself again after an hour of inactivity — turned out not to work when
 actually tested live against the deployed frontend. Tracing the real request
@@ -56,7 +56,7 @@ Rather than a Standard Load Balancer + ingress-nginx + cert-manager (real
 Azure cost, conflicts with ADR-004), `infrastructure/kubernetes/overlays/
 azure/caddy-tls.yaml` runs a single Caddy pod with `hostNetwork: true` on the
 existing node, binding its already-static public IP. Caddy auto-obtains a
-real Let's Encrypt certificate for `filmpire-api.duckdns.org` and
+real Let's Encrypt certificate for `api.lmdb.dev` and
 reverse-proxies to the gateway's ClusterIP Service. The issued cert is kept
 on a small PVC so it survives pod restarts and stop/start cycles instead of
 re-issuing (and risking Let's Encrypt's rate limit) every time. NSG rules for

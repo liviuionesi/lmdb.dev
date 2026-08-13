@@ -35,8 +35,8 @@ docker-compose up -d mongodb minio
 ## Docker
 
 ```bash
-docker build -t filmpire/media-service:latest .
-docker run -p 8085:8085 filmpire/media-service:latest
+docker build -t lmdb/media-service:latest .
+docker run -p 8085:8085 lmdb/media-service:latest
 ```
 
 ## API Endpoints
@@ -106,14 +106,14 @@ minio:
   endpoint: http://localhost:9000
   access-key: minioadmin
   secret-key: minioadmin
-  bucket: filmpire-media
+  bucket: lmdb-media
 ```
 
 ### Local Filesystem (Development)
 ```yaml
 storage:
   type: filesystem
-  base-path: /var/filmpire/media
+  base-path: /var/lmdb/media
 ```
 
 ## Testing

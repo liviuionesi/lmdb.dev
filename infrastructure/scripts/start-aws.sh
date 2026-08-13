@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Starts an existing stopped AWS EC2 k3s instance to resume Filmpire backend.
+# Starts an existing stopped AWS EC2 k3s instance to resume LMDB backend.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -14,7 +14,7 @@ CYAN='\033[0;36m'
 NC='\033[0m'
 
 echo -e "${BLUE}=====================================================${NC}"
-echo -e "${BLUE}  Filmpire — Start AWS EC2 Backend Instance (k3s)   ${NC}"
+echo -e "${BLUE}  LMDB — Start AWS EC2 Backend Instance (k3s)   ${NC}"
 echo -e "${BLUE}=====================================================${NC}"
 
 for cmd in aws terraform; do
@@ -32,11 +32,11 @@ fi
 INSTANCE_ID="${AWS_INSTANCE_ID:-$(terraform output -raw instance_id 2>/dev/null || true)}"
 if [ -z "$INSTANCE_ID" ]; then
   # Fallback query by tag
-  INSTANCE_ID="$(aws ec2 describe-instances --filters "Name=tag:Name,Values=filmpire-k3s-demo" "Name=instance-state-name,Values=running,stopped" --query "Reservations[0].Instances[0].InstanceId" --output text 2>/dev/null || echo "")"
+  INSTANCE_ID="$(aws ec2 describe-instances --filters "Name=tag:Name,Values=lmdb-k3s-demo" "Name=instance-state-name,Values=running,stopped" --query "Reservations[0].Instances[0].InstanceId" --output text 2>/dev/null || echo "")"
 fi
 
 if [ -z "$INSTANCE_ID" ] || [ "$INSTANCE_ID" == "None" ]; then
-  echo -e "${RED}❌ Could not find EC2 instance for Filmpire. Please apply Terraform first.${NC}" >&2
+  echo -e "${RED}❌ Could not find EC2 instance for LMDB. Please apply Terraform first.${NC}" >&2
   exit 1
 fi
 
@@ -64,8 +64,8 @@ echo -e "\n${GREEN}=====================================================${NC}"
 echo -e "${GREEN}  🎬 AWS Backend is Live!                            ${NC}"
 echo -e "${GREEN}=====================================================${NC}"
 echo -e "  API Gateway:  ${CYAN}http://${PUBLIC_IP}:30080${NC}"
-echo -e "  Cloud DNS:    ${CYAN}https://filmpire-api.duckdns.org${NC}"
-echo -e "  Vercel App:   ${CYAN}https://filmpire-microservices-tan.vercel.app${NC}"
+echo -e "  Cloud DNS:    ${CYAN}https://api.lmdb.dev${NC}"
+echo -e "  Vercel App:   ${CYAN}https://lmdb.dev${NC}"
 echo -e ""
 echo -e "  To stop and save compute spend when not in use:"
 echo -e "    ${CYAN}./infrastructure/scripts/stop-aws.sh${NC} or ${CYAN}./gradlew stopAws${NC}"

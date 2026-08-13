@@ -59,4 +59,4 @@ server:
 logging:
   level:
     root: INFO
-    "[com.filmpire.movie]": DEBUG
+    "[dev.lmdb.movie]": DEBUG

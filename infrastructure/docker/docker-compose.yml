@@ -9,17 +9,17 @@ services:
   # vector extension, are unaffected.
   postgres:
     image: docker.io/pgvector/pgvector:pg17
-    container_name: filmpire-postgres
+    container_name: lmdb-postgres
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-filmpire}
+      POSTGRES_DB: ${POSTGRES_DB:-lmdb}
       POSTGRES_USER: ${POSTGRES_USER:-admin}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       # Extra databases created by init-scripts/01-create-multiple-databases.sh
       # on FIRST volume init. user-service deliberately uses the default
-      # POSTGRES_DB (filmpire); actor-service owns filmpire_actor, ai-service
-      # owns filmpire_ai (ADR-002/ADR-012). These names must match the
+      # POSTGRES_DB (lmdb); actor-service owns lmdb_actor, ai-service
+      # owns lmdb_ai (ADR-002/ADR-012). These names must match the
       # POSTGRES_URL of each service below.
-      POSTGRES_MULTIPLE_DATABASES: filmpire_actor,filmpire_ai
+      POSTGRES_MULTIPLE_DATABASES: lmdb_actor,lmdb_ai
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
@@ -28,9 +28,9 @@ services:
       # already-provisioned volume, create it by hand or `down -v` first.
       - ./init-scripts:/docker-entrypoint-initdb.d:ro
     networks:
-      - filmpire-network
+      - lmdb-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-admin} -d ${POSTGRES_DB:-filmpire}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-admin} -d ${POSTGRES_DB:-lmdb}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -44,18 +44,18 @@ services:
   # 8.0.0 release, which predates the guard.
   mongodb:
     image: docker.io/library/mongo@sha256:0c17421487ae4a5cae88e7652a26ef72a8162adbc599a0730805526f5ff5ee83
-    container_name: filmpire-mongo
+    container_name: lmdb-mongodb
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:-admin}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
-      MONGO_INITDB_DATABASE: ${MONGO_DATABASE:-filmpire}
+      MONGO_INITDB_DATABASE: ${MONGO_DATABASE:-lmdb}
     ports:
       - "${MONGO_PORT:-27017}:27017"
     volumes:
       - mongo_data:/data/db
       - mongo_config:/data/configdb
     networks:
-      - filmpire-network
+      - lmdb-network
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 10s
@@ -67,14 +67,14 @@ services:
   # Redis 7.4 - For API Gateway (rate limiting, session)
   redis:
     image: docker.io/library/redis:7.4-alpine
-    container_name: filmpire-redis
+    container_name: lmdb-redis
     command: redis-server --requirepass ${REDIS_PASSWORD} --appendonly yes
     ports:
       - "${REDIS_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
     networks:
-      - filmpire-network
+      - lmdb-network
     healthcheck:
       test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
       interval: 10s
@@ -86,7 +86,7 @@ services:
   # MinIO - For Media Service (object storage)
   minio:
     image: docker.io/minio/minio:RELEASE.2024-11-07T00-52-20Z
-    container_name: filmpire-minio
+    container_name: lmdb-minio
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
@@ -97,7 +97,7 @@ services:
     volumes:
       - minio_data:/data
     networks:
-      - filmpire-network
+      - lmdb-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 10s
@@ -110,7 +110,7 @@ services:
   # Runs single-node without ZooKeeper for local event publishing and analytics.
   kafka:
     image: docker.io/confluentinc/cp-kafka:7.7.1
-    container_name: filmpire-kafka
+    container_name: lmdb-kafka
     ports:
       - "${KAFKA_PORT:-9092}:9092"
     environment:
@@ -131,7 +131,7 @@ services:
     volumes:
       - kafka_data:/var/lib/kafka/data
     networks:
-      - filmpire-network
+      - lmdb-network
     healthcheck:
       test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9092 --list || exit 1"]
       interval: 10s
@@ -145,11 +145,11 @@ services:
   # UI: http://localhost:9411
   zipkin:
     image: docker.io/openzipkin/zipkin:3
-    container_name: filmpire-zipkin
+    container_name: lmdb-zipkin
     ports:
       - "9411:9411"
     networks:
-      - filmpire-network
+      - lmdb-network
     healthcheck:
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:9411/health || exit 1"]
       interval: 10s
@@ -164,12 +164,12 @@ services:
   # local dev. Bring it up on demand: docker compose --profile dev-tools up -d
   adminer:
     image: docker.io/library/adminer:latest
-    container_name: filmpire-adminer
+    container_name: lmdb-adminer
     profiles: ["dev-tools"]
     ports:
       - "${ADMINER_PORT:-9081}:8080"
     networks:
-      - filmpire-network
+      - lmdb-network
     environment:
       ADMINER_DEFAULT_SERVER: postgres
     restart: unless-stopped
@@ -181,7 +181,7 @@ services:
   # see the adminer comment above.
   mongo-express:
     image: docker.io/library/mongo-express:latest
-    container_name: filmpire-mongo-express
+    container_name: lmdb-mongo-express
     profiles: ["dev-tools"]
     environment:
       ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_ROOT_USER:-admin}
@@ -191,7 +191,7 @@ services:
     ports:
       - "${MONGO_EXPRESS_PORT:-9082}:8081"
     networks:
-      - filmpire-network
+      - lmdb-network
     restart: unless-stopped
     depends_on:
       mongodb:
@@ -201,14 +201,14 @@ services:
   # see the adminer comment above.
   redis-commander:
     image: docker.io/rediscommander/redis-commander:latest
-    container_name: filmpire-redis-commander
+    container_name: lmdb-redis-commander
     profiles: ["dev-tools"]
     environment:
       REDIS_HOSTS: local:redis:6379:0:${REDIS_PASSWORD}
     ports:
       - "${REDIS_COMMANDER_PORT:-9083}:8081"
     networks:
-      - filmpire-network
+      - lmdb-network
     restart: unless-stopped
     depends_on:
       redis:
@@ -219,11 +219,11 @@ services:
     build:
       context: ../..
       dockerfile: backend/discovery-service/Dockerfile
-    container_name: filmpire-discovery-service
+    container_name: lmdb-discovery-service
     ports:
       - "${DISCOVERY_SERVICE_PORT:-8761}:8761"
     networks:
-      - filmpire-network
+      - lmdb-network
     environment:
       SPRING_APPLICATION_NAME: discovery-service
       MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
@@ -246,11 +246,11 @@ services:
     build:
       context: ../..
       dockerfile: backend/config-service/Dockerfile
-    container_name: filmpire-config-service
+    container_name: lmdb-config-service
     ports:
       - "${CONFIG_SERVICE_PORT:-8888}:8888"
     networks:
-      - filmpire-network
+      - lmdb-network
     environment:
       SPRING_APPLICATION_NAME: config-service
       MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
@@ -274,11 +274,11 @@ services:
     build:
       context: ../..
       dockerfile: backend/api-gateway/Dockerfile
-    container_name: filmpire-api-gateway
+    container_name: lmdb-api-gateway
     ports:
       - "${API_GATEWAY_PORT:-8080}:8080"
     networks:
-      - filmpire-network
+      - lmdb-network
     environment:
       SPRING_APPLICATION_NAME: api-gateway
       MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
@@ -315,11 +315,11 @@ services:
     build:
       context: ../..
       dockerfile: backend/movie-service/Dockerfile
-    container_name: filmpire-movie-service
+    container_name: lmdb-movie-service
     ports:
       - "${MOVIE_SERVICE_PORT:-8081}:8081"
     networks:
-      - filmpire-network
+      - lmdb-network
     environment:
       SPRING_APPLICATION_NAME: movie-service
       MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
@@ -327,7 +327,7 @@ services:
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
       EUREKA_SERVER_URL: http://discovery-service:8761/eureka/
       SPRING_CONFIG_IMPORT: optional:configserver:http://config-service:8888
-      MONGODB_URI: mongodb://${MONGO_ROOT_USER:-admin}:${MONGO_ROOT_PASSWORD}@mongodb:27017/filmpire?authSource=admin
+      MONGODB_URI: mongodb://${MONGO_ROOT_USER:-admin}:${MONGO_ROOT_PASSWORD}@mongodb:27017/lmdb?authSource=admin
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD}
@@ -355,22 +355,22 @@ services:
     restart: unless-stopped
 
   # User Service - JWT auth, profiles, favorites & watchlist (#17)
-  # Uses the default `filmpire` database; owns no TMDB data at all.
+  # Uses the default `lmdb` database; owns no TMDB data at all.
   user-service:
     build:
       context: ../..
       dockerfile: backend/user-service/Dockerfile
-    container_name: filmpire-user-service
+    container_name: lmdb-user-service
     ports:
       - "${USER_SERVICE_PORT:-8082}:8082"
     networks:
-      - filmpire-network
+      - lmdb-network
     environment:
       SPRING_APPLICATION_NAME: user-service
       MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
       SPRING_CONFIG_IMPORT: optional:configserver:http://config-service:8888
-      POSTGRES_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-filmpire}
+      POSTGRES_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-lmdb}
       POSTGRES_USERNAME: ${POSTGRES_USER:-admin}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       # CONTRACT: must match the api-gateway's JWT_SECRET — the gateway
@@ -394,22 +394,22 @@ services:
     restart: unless-stopped
 
   # Actor Service - TMDB-shaped /person facade + native actor API (#18, #32)
-  # Owns filmpire_actor (ADR-002); caches in Redis; reads TMDB as seed data.
+  # Owns lmdb_actor (ADR-002); caches in Redis; reads TMDB as seed data.
   actor-service:
     build:
       context: ../..
       dockerfile: backend/actor-service/Dockerfile
-    container_name: filmpire-actor-service
+    container_name: lmdb-actor-service
     ports:
       - "${ACTOR_SERVICE_PORT:-8083}:8083"
     networks:
-      - filmpire-network
+      - lmdb-network
     environment:
       SPRING_APPLICATION_NAME: actor-service
       MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
       SPRING_CONFIG_IMPORT: optional:configserver:http://config-service:8888
-      POSTGRES_URL: jdbc:postgresql://postgres:5432/filmpire_actor
+      POSTGRES_URL: jdbc:postgresql://postgres:5432/lmdb_actor
       POSTGRES_USERNAME: ${POSTGRES_USER:-admin}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       REDIS_HOST: redis
@@ -438,17 +438,17 @@ services:
   # Ollama — local model server backing ai-service (#36), $0 per ADR-004: no
   # OpenAI API key, ever. Models aren't bundled in the image; pull them once
   # after first start:
-  #   docker exec -it filmpire-ollama ollama pull llama3.2
-  #   docker exec -it filmpire-ollama ollama pull nomic-embed-text
+  #   docker exec -it lmdb-ollama ollama pull llama3.2
+  #   docker exec -it lmdb-ollama ollama pull nomic-embed-text
   ollama:
     image: docker.io/ollama/ollama:latest
-    container_name: filmpire-ollama
+    container_name: lmdb-ollama
     ports:
       - "${OLLAMA_PORT:-11434}:11434"
     volumes:
       - ollama_data:/root/.ollama
     networks:
-      - filmpire-network
+      - lmdb-network
     healthcheck:
       test: ["CMD-SHELL", "ollama list || exit 1"]
       interval: 10s
@@ -461,18 +461,18 @@ services:
     build:
       context: ../..
       dockerfile: backend/ai-service/Dockerfile
-    container_name: filmpire-ai-service
+    container_name: lmdb-ai-service
     ports:
       - "${AI_SERVICE_PORT:-8084}:8084"
       - "${AI_SERVICE_GRPC_PORT:-9084}:9084"
     networks:
-      - filmpire-network
+      - lmdb-network
     environment:
       SPRING_APPLICATION_NAME: ai-service
       MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
       SPRING_CONFIG_IMPORT: optional:configserver:http://config-service:8888
-      POSTGRES_URL: jdbc:postgresql://postgres:5432/filmpire_ai
+      POSTGRES_URL: jdbc:postgresql://postgres:5432/lmdb_ai
       POSTGRES_USERNAME: ${POSTGRES_USER:-admin}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       REDIS_HOST: redis
@@ -511,16 +511,16 @@ services:
     build:
       context: ../..
       dockerfile: backend/media-service/Dockerfile
-    container_name: filmpire-media-service
+    container_name: lmdb-media-service
     ports:
       - "${MEDIA_SERVICE_PORT:-8085}:8085"
     networks:
-      - filmpire-network
+      - lmdb-network
     environment:
       SPRING_APPLICATION_NAME: media-service
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
       SPRING_CONFIG_IMPORT: optional:configserver:http://config-service:8888
-      MONGODB_URI: mongodb://${MONGO_ROOT_USER:-admin}:${MONGO_ROOT_PASSWORD}@mongodb:27017/filmpire?authSource=admin
+      MONGODB_URI: mongodb://${MONGO_ROOT_USER:-admin}:${MONGO_ROOT_PASSWORD}@mongodb:27017/lmdb?authSource=admin
       MINIO_ENDPOINT: http://minio:9000
       MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
       MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin123}
@@ -554,7 +554,7 @@ services:
   # owns/migrates its own schema).
   sonar-db:
     image: docker.io/library/postgres:17-alpine
-    container_name: filmpire-sonar-db
+    container_name: lmdb-sonar-db
     profiles: ["sonar"]
     environment:
       POSTGRES_USER: ${SONAR_DB_USER:-sonar}
@@ -563,7 +563,7 @@ services:
     volumes:
       - sonarqube_db_data:/var/lib/postgresql/data
     networks:
-      - filmpire-network
+      - lmdb-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${SONAR_DB_USER:-sonar} -d ${SONAR_DB_NAME:-sonar}"]
       interval: 10s
@@ -577,7 +577,7 @@ services:
     # a specific `<version>-community` tag for full reproducibility once a
     # version is chosen — but never reuse an older version's data volume (below).
     image: docker.io/library/sonarqube:community
-    container_name: filmpire-sonarqube
+    container_name: lmdb-sonarqube
     profiles: ["sonar"]
     depends_on:
       sonar-db:
@@ -594,7 +594,7 @@ services:
       - sonarqube_extensions:/opt/sonarqube/extensions
       - sonarqube_logs:/opt/sonarqube/logs
     networks:
-      - filmpire-network
+      - lmdb-network
     # SonarQube's Elasticsearch needs a high mmap limit. This host already has
     # vm.max_map_count >= 262144; if a fresh host fails to boot ES, set it with
     #   sudo sysctl -w vm.max_map_count=262144
@@ -635,6 +635,6 @@ volumes:
     driver: local
 
 networks:
-  filmpire-network:
+  lmdb-network:
     driver: bridge
-    name: filmpire-network
+    name: lmdb-network

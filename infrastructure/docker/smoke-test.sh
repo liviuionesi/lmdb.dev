@@ -2,7 +2,7 @@
 #
 # smoke-test.sh — automated live-stack API acceptance test (issue #47).
 #
-# Waits for the Filmpire stack to be healthy, then runs the Postman/newman
+# Waits for the LMDB stack to be healthy, then runs the Postman/newman
 # collection against it. One source of truth for "the services are up — prove
 # the API works", used both locally and in CI:
 #
@@ -17,7 +17,7 @@
 #
 # Configuration (all optional, sane defaults):
 #   GATEWAY_URL     Base URL of the running gateway   (default http://localhost:8080)
-#   COLLECTION      Postman collection path           (default docs/api/Filmpire-API.postman_collection.json)
+#   COLLECTION      Postman collection path           (default docs/api/LMDB-API.postman_collection.json)
 #   HEALTH_TIMEOUT  Seconds to wait for health        (default 180)
 #   MANAGE_STACK    "true" to up/down the compose stack (default false)
 #   COMPOSE_FILE    Compose file for MANAGE_STACK     (default infrastructure/docker/docker-compose.yml)
@@ -34,7 +34,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 GATEWAY_URL="${GATEWAY_URL:-http://localhost:8080}"
-COLLECTION="${COLLECTION:-$REPO_ROOT/docs/api/Filmpire-API.postman_collection.json}"
+COLLECTION="${COLLECTION:-$REPO_ROOT/docs/api/LMDB-API.postman_collection.json}"
 HEALTH_TIMEOUT="${HEALTH_TIMEOUT:-180}"
 MANAGE_STACK="${MANAGE_STACK:-false}"
 COMPOSE_FILE="${COMPOSE_FILE:-$REPO_ROOT/infrastructure/docker/docker-compose.yml}"

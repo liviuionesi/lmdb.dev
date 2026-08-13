@@ -31,7 +31,7 @@ jobs:
       - name: Probe /actuator/activity
         id: eval
         env:
-          GATEWAY_URL: https://filmpire-api.duckdns.org
+          GATEWAY_URL: https://api.lmdb.dev
           IDLE_THRESHOLD_SECONDS: 3600
         run: |
           HTTP_CODE="$(curl -s -o /tmp/activity.json -w "%{http_code}" --max-time 8 "${GATEWAY_URL}/actuator/activity" || echo "000")"

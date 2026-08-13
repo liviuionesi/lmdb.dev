@@ -20,7 +20,7 @@ plugins {
 }
 
 allprojects {
-    group = 'com.filmpire'
+    group = 'dev.lmdb'
     version = projectVersion
 }
 
@@ -54,8 +54,8 @@ rewrite {
 //   ./gradlew test jacocoTestReport sonar
 sonar {
     properties {
-        property 'sonar.projectKey', 'filmpire-microservices'
-        property 'sonar.projectName', 'Filmpire Microservices'
+        property 'sonar.projectKey', 'lmdb-microservices'
+        property 'sonar.projectName', 'LMDB Microservices'
         property 'sonar.host.url', System.getenv('SONAR_HOST_URL') ?: 'http://localhost:9010'
         if (System.getenv('SONAR_TOKEN')) {
             property 'sonar.token', System.getenv('SONAR_TOKEN')

@@ -26,7 +26,7 @@ for arg in "$@"; do
 done
 
 echo -e "${BLUE}=====================================================${NC}"
-echo -e "${BLUE}  Filmpire — Stop All Cloud Backends                 ${NC}"
+echo -e "${BLUE}  LMDB — Stop All Cloud Backends                 ${NC}"
 if $DRY_RUN; then
   echo -e "${YELLOW}  [DRY RUN — no changes will be made]               ${NC}"
 fi

@@ -27,7 +27,7 @@ feign:
 
 logging:
   level:
-    com.filmpire.movie: DEBUG
+    dev.lmdb.movie: DEBUG
 
 ---
 # Development Profile
@@ -51,7 +51,7 @@ redis:
 
 logging:
   level:
-    com.filmpire.movie: DEBUG
+    dev.lmdb.movie: DEBUG
     feign: DEBUG
 
 ---
@@ -75,5 +75,5 @@ redis:
 
 logging:
   level:
-    com.filmpire.movie: INFO
+    dev.lmdb.movie: INFO
     feign: INFO

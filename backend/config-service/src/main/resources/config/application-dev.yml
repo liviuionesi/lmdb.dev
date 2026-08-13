@@ -3,7 +3,7 @@
 logging:
   level:
     root: DEBUG
-    '[com.filmpire]': TRACE
+    '[dev.lmdb]': TRACE
     '[org.springframework.web]': DEBUG
     '[org.springframework.security]': DEBUG
 

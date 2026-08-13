@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Filmpire API Gateway Testing Script
+# LMDB API Gateway Testing Script
 # Tests all major gateway features including DDoS protection
 
 set -e
@@ -13,7 +13,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 echo -e "${BLUE}╔══════════════════════════════════════════════════════════╗${NC}"
-echo -e "${BLUE}║     Filmpire API Gateway - Testing Suite                ║${NC}"
+echo -e "${BLUE}║     LMDB API Gateway - Testing Suite                ║${NC}"
 echo -e "${BLUE}╚══════════════════════════════════════════════════════════╝${NC}"
 echo ""
 

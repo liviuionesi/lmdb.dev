@@ -1,12 +1,12 @@
 const { test, expect } = require('@playwright/test');
 
 /**
- * End-to-end user journey tests for the Filmpire React app.
+ * End-to-end user journey tests for the LMDB React app.
  * Validates browsing categories, genre selection, search functionality,
  * viewing movie information, inspecting actor profiles, and pagination.
  */
 
-test.describe('Filmpire Core User Journeys', () => {
+test.describe('LMDB Core User Journeys', () => {
   test('Given a user opens the home page, when movies finish loading, then movie cards and navigation items are visible', async ({ page }) => {
     await page.goto('/');
     // Verify navbar brand and initial movie cards render in the viewport

@@ -1,4 +1,4 @@
-# Filmpire Microservices - Project Roadmap
+# LMDB Microservices - Project Roadmap
 
 **Version:** 2.1.0
 **Date:** August 11, 2026
@@ -8,7 +8,7 @@
 
 ## 📋 Product Goal (the north star)
 
-Clone the TMDB v3 API in Spring so the **existing Filmpire React app**
+Clone the TMDB v3 API in Spring so the **existing LMDB React app**
 (`~/Desktop/filmpire`) consumes this backend as a drop-in replacement for
 `api.themoviedb.org/3` — only its base URL changes. Data is served
 read-through (**Redis → MongoDB → real TMDB fallback**) with save-through
@@ -16,7 +16,7 @@ persistence; TMDB auth/account endpoints are proxied to the real TMDB.
 
 Reference: [ARCHITECTURE.md v1.2.0](../../docs/architecture/ARCHITECTURE.md) §5.1.
 
-**Descoped (v1.2.0):** the separate Next.js web app and React Native mobile apps. The real frontend is the React 18 / Vite application merged directly into `frontend/filmpire/` ([ADR-013](../../docs/architecture/adr/013-frontend-merged-into-monorepo.md)), which consumes this backend as a drop-in TMDB replacement.
+**Descoped (v1.2.0):** the separate Next.js web app and React Native mobile apps. The real frontend is the React 18 / Vite application merged directly into `frontend/lmdb/` ([ADR-013](../../docs/architecture/adr/013-frontend-merged-into-monorepo.md)), which consumes this backend as a drop-in TMDB replacement.
 
 **Budget:** cloud uses `az aks stop` / `ec2 stop` between demo sessions (~$0.25/day idle, $0 compute).
 See ARCHITECTURE.md §11.5 and [ADR-018](../../docs/architecture/adr/018-cloud-lifecycle-stop-not-destroy.md).
@@ -43,11 +43,11 @@ backend/encryption missing, runs native-mode), #13 gateway ✓, #14 shared-lib
 integration testing (open), #20 SonarQube (open).
 
 ### 🔄 Phase 4: TMDB v3 Facade & React App Integration — **THE CORE PRODUCT**
-**Issues:** [#30](https://github.com/pehlivanu/filmpire-microservices/issues/30) (Epic), #31–#34.
+**Issues:** [#30](https://github.com/pehlivanu/lmdb.dev/issues/30) (Epic), #31–#34.
 - #31 TMDB-shaped movie/genre/search/discover endpoints, read-through/save-through (movie-service)
 - #32 TMDB-shaped person + discover-by-cast endpoints (actor-service, extends #18)
 - #33 Gateway facade routing + auth/account proxy to real TMDB
-- #34 Filmpire React app integration (env base URL, CORS, runbook)
+- #34 LMDB React app integration (env base URL, CORS, runbook)
 **Dependencies:** movie-service ✓; #32 depends on #18.
 
 ### 🔄 Phase 5: Advanced Services
@@ -57,12 +57,12 @@ integration testing (open), #20 SonarQube (open).
 
 ### 🔄 Phase 6: Comprehensive Testing
 **Issues:** #19 (service integration tests), #38 (E2E: Playwright driving the
-real Filmpire React app against the local stack — the facade's acceptance
+real LMDB React app against the local stack — the facade's acceptance
 test). Performance/security per ARCHITECTURE.md §10.
 
 ### ✅ Phase 7: Observability & Cloud Deployment — LIVE
 **Issues:** #22 (Epic), #23 ✓, #24 ✓, #25 ✓, #26 ✓ (Azure AKS), #27 ✓ (AWS k3s), #28 ✓ (CI/CD).
-Azure AKS (`filmpire-aks`, `Standard_D4ls_v7`, `eastus`) live-verified 2026-08-11:
+Azure AKS (`lmdb-aks`, `Standard_D4ls_v7`, `eastus`) live-verified 2026-08-11:
 all 9 services (api-gateway, movie-service, actor-service, user-service, ai-service,
 postgres, mongodb, redis, ollama) deployed and healthy.
 Dynamic backend resolution (#151 ✅ closed): `apiUrl.js` waterfall + null sentinel,
@@ -81,7 +81,7 @@ Actions workflow, ADR-018 documenting stop-not-destroy decision.
 Issues #1–#20 were created from the `.github/issues/PHASE*.md` specs via
 `.github/scripts/create-phase*-issues.sh`. Issues #22–#38 were created
 directly with `gh issue create` on 2026-07-21 and added to the
-[Filmpire Microservices project board](https://github.com/users/pehlivanu/projects/1).
+[LMDB Microservices project board](https://github.com/users/pehlivanu/projects/1).
 The board is the single source of truth for remaining work.
 
 ## 🗺️ Architecture → Issue Coverage Matrix (v1.2.0)

@@ -318,18 +318,18 @@ public class IpFilterGlobalFilter implements GlobalFilter, Ordered {
 ## 📝 Files Created/Modified
 
 ### New Files (8)
-1. `src/main/java/com/filmpire/gateway/config/RateLimitConfig.java`
-2. `src/main/java/com/filmpire/gateway/config/RedisConfig.java`
-3. `src/main/java/com/filmpire/gateway/filter/GlobalRateLimitFilter.java`
-4. `src/main/java/com/filmpire/gateway/filter/IpFilterGlobalFilter.java`
-5. `src/main/java/com/filmpire/gateway/controller/AdminController.java`
-6. `src/test/java/com/filmpire/gateway/config/RateLimitConfigTest.java`
-7. `src/test/java/com/filmpire/gateway/filter/IpFilterGlobalFilterTest.java`
+1. `src/main/java/dev/lmdb/gateway/config/RateLimitConfig.java`
+2. `src/main/java/dev/lmdb/gateway/config/RedisConfig.java`
+3. `src/main/java/dev/lmdb/gateway/filter/GlobalRateLimitFilter.java`
+4. `src/main/java/dev/lmdb/gateway/filter/IpFilterGlobalFilter.java`
+5. `src/main/java/dev/lmdb/gateway/controller/AdminController.java`
+6. `src/test/java/dev/lmdb/gateway/config/RateLimitConfigTest.java`
+7. `src/test/java/dev/lmdb/gateway/filter/IpFilterGlobalFilterTest.java`
 8. `docs/security/DDOS_PROTECTION_IMPROVEMENTS.md`
 
 ### Modified Files (3)
 1. `src/main/resources/application.yml` - Added rate limiting config
-2. `src/main/java/com/filmpire/gateway/config/SecurityConfig.java` - Added admin endpoints
+2. `src/main/java/dev/lmdb/gateway/config/SecurityConfig.java` - Added admin endpoints
 3. `src/test/resources/application-test.yml` - Disabled Redis for tests
 
 **Total Lines Added:** ~1,200 lines (code + tests + docs)
@@ -448,5 +448,5 @@ Successfully implemented comprehensive DDoS protection for the API Gateway:
 
 **Status:** ✅ **COMPLETE**  
 **Date Implemented:** November 16, 2025  
-**Implemented By:** Filmpire Development Team
+**Implemented By:** LMDB Development Team
 

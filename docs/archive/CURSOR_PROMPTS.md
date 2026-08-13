@@ -1,7 +1,7 @@
-# Cursor IDE Prompts Guide - Filmpire Microservices
+# Cursor IDE Prompts Guide - LMDB Microservices
 
 **Version:** 1.0.0  
-**Purpose:** Comprehensive prompts for building each component of the Filmpire microservices platform  
+**Purpose:** Comprehensive prompts for building each component of the LMDB microservices platform  
 **Target:** Cursor AI IDE for efficient development
 
 ---
@@ -24,15 +24,15 @@
 ### Prompt 1: Initialize Project Structure
 
 ```
-Create a multi-module microservices project structure for Filmpire with the following requirements:
+Create a multi-module microservices project structure for LMDB with the following requirements:
 
 **Backend Structure:**
-- Create a root directory `filmpire-microservices/backend/`
+- Create a root directory `lmdb.dev/backend/`
 - 8 microservices: api-gateway, discovery-service, config-service, movie-service, user-service, actor-service, ai-service, media-service
 - Shared library module for common utilities
 - Each service should have:
   - Gradle build files (build.gradle using Groovy DSL)
-  - src/main/java with package structure: com.filmpire.{service-name}
+  - src/main/java with package structure: dev.lmdb.{service-name}
   - src/main/resources with application.yml
   - src/test/java for tests
   - Dockerfile for containerization
@@ -1001,7 +1001,7 @@ public class AIRecommendationService {
 ```protobuf
 syntax = "proto3";
 
-package com.filmpire.ai;
+package dev.lmdb.ai;
 
 service AIService {
   rpc GetRecommendations(RecommendationRequest) returns (RecommendationResponse);
@@ -1481,7 +1481,7 @@ npm install @tanstack/react-query
 ```json
 {
   "expo": {
-    "name": "Filmpire",
+    "name": "LMDB",
     "slug": "filmpire",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -1494,14 +1494,14 @@ npm install @tanstack/react-query
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.filmpire.app"
+      "bundleIdentifier": "dev.lmdb.app"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.filmpire.app"
+      "package": "dev.lmdb.app"
     },
     "plugins": [
       "expo-router"
@@ -1790,8 +1790,8 @@ jobs:
       
       - name: Build Docker Images
         run: |
-          docker build -t filmpire/movie-service:latest backend/movie-service
-          docker build -t filmpire/user-service:latest backend/user-service
+          docker build -t lmdb/movie-service:latest backend/movie-service
+          docker build -t lmdb/user-service:latest backend/user-service
       
       - name: Push to Docker Hub
         env:
@@ -1799,7 +1799,7 @@ jobs:
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
         run: |
           echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
-          docker push filmpire/movie-service:latest
+          docker push lmdb/movie-service:latest
   
   deploy:
     needs: build
@@ -1895,7 +1895,7 @@ services:
   # Databases
   postgres:
     image: postgres:16-alpine
-    container_name: filmpire-postgres
+    container_name: lmdb-postgres
     environment:
       POSTGRES_DB: filmpire
       POSTGRES_USER: admin
@@ -1905,7 +1905,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - filmpire-network
+      - lmdb-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U admin"]
       interval: 10s
@@ -1923,15 +1923,15 @@ services:
     volumes:
       - mongo_data:/data/db
     networks:
-      - filmpire-network
+      - lmdb-network
 
   redis:
     image: redis:7.4-alpine
-    container_name: filmpire-redis
+    container_name: lmdb-redis
     ports:
       - "6379:6379"
     networks:
-      - filmpire-network
+      - lmdb-network
 
   # Spring Cloud Services
   eureka-server:
@@ -1942,7 +1942,7 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
     networks:
-      - filmpire-network
+      - lmdb-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
       interval: 30s
@@ -1961,7 +1961,7 @@ services:
       eureka-server:
         condition: service_healthy
     networks:
-      - filmpire-network
+      - lmdb-network
 
   api-gateway:
     build: ../../backend/api-gateway
@@ -1979,12 +1979,12 @@ services:
       - config-server
       - redis
     networks:
-      - filmpire-network
+      - lmdb-network
 
   # Microservices
   movie-service:
     build: ../../backend/movie-service
-    container_name: filmpire-movie-service
+    container_name: lmdb-movie-service
     ports:
       - "8081:8081"
     environment:
@@ -1995,11 +1995,11 @@ services:
       - eureka-server
       - mongodb
     networks:
-      - filmpire-network
+      - lmdb-network
 
   user-service:
     build: ../../backend/user-service
-    container_name: filmpire-user-service
+    container_name: lmdb-user-service
     ports:
       - "8082:8082"
     environment:
@@ -2014,11 +2014,11 @@ services:
       eureka-server:
         condition: service_healthy
     networks:
-      - filmpire-network
+      - lmdb-network
 
   actor-service:
     build: ../../backend/actor-service
-    container_name: filmpire-actor-service
+    container_name: lmdb-actor-service
     ports:
       - "8083:8083"
     environment:
@@ -2031,11 +2031,11 @@ services:
       - postgres
       - eureka-server
     networks:
-      - filmpire-network
+      - lmdb-network
 
   ai-service:
     build: ../../backend/ai-service
-    container_name: filmpire-ai-service
+    container_name: lmdb-ai-service
     ports:
       - "8084:8084"
     environment:
@@ -2047,11 +2047,11 @@ services:
       - eureka-server
       - mongodb
     networks:
-      - filmpire-network
+      - lmdb-network
 
   media-service:
     build: ../../backend/media-service
-    container_name: filmpire-media-service
+    container_name: lmdb-media-service
     ports:
       - "8085:8085"
     environment:
@@ -2062,14 +2062,14 @@ services:
       - eureka-server
       - mongodb
     networks:
-      - filmpire-network
+      - lmdb-network
 
 volumes:
   postgres_data:
   mongo_data:
 
 networks:
-  filmpire-network:
+  lmdb-network:
     driver: bridge
 ```
 
@@ -2127,33 +2127,33 @@ services:
 
   # Movie Service
   - type: web
-    name: filmpire-movie-service
+    name: lmdb-movie-service
     env: docker
     dockerfilePath: ./backend/movie-service/Dockerfile
     envVars:
       - key: SPRING_DATA_MONGODB_URI
         fromDatabase:
-          name: filmpire-mongodb
+          name: lmdb-mongodb
           property: connectionString
 
   # User Service
   - type: web
-    name: filmpire-user-service
+    name: lmdb-user-service
     env: docker
     dockerfilePath: ./backend/user-service/Dockerfile
     envVars:
       - key: SPRING_DATASOURCE_URL
         fromDatabase:
-          name: filmpire-postgres
+          name: lmdb-postgres
           property: connectionString
 
 databases:
-  - name: filmpire-postgres
+  - name: lmdb-postgres
     databaseName: filmpire
     user: filmpire
     plan: free
 
-  - name: filmpire-mongodb
+  - name: lmdb-mongodb
     plan: free
 ```
 
@@ -2225,7 +2225,7 @@ databases:
 #!/bin/bash
 # infrastructure/scripts/deploy.sh
 
-echo "Deploying Filmpire Microservices..."
+echo "Deploying LMDB Microservices..."
 
 # Deploy backend services
 echo "Building Docker images..."
@@ -2256,7 +2256,7 @@ echo "Deployment complete!"
 
 ## Summary
 
-This comprehensive prompt guide covers all aspects of building the Filmpire microservices platform:
+This comprehensive prompt guide covers all aspects of building the LMDB microservices platform:
 
 1. **Project Setup** - Repository structure, Gradle configuration, GitHub setup
 2. **Infrastructure** - Eureka, Config Server, API Gateway

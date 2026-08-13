@@ -10,10 +10,10 @@ configMapGenerator:
     literals:
       - SPRING_APPLICATION_NAME=ai-service
       - SPRING_PROFILES_ACTIVE=prod
-      # ai-service owns its own database (ADR-002/ADR-012) — filmpire_ai,
+      # ai-service owns its own database (ADR-002/ADR-012) — lmdb_ai,
       # created by postgres/init-multiple-databases.sh on first boot. The
       # shared postgres StatefulSet must run pgvector/pgvector:pg17.
-      - POSTGRES_URL=jdbc:postgresql://postgres:5432/filmpire_ai
+      - POSTGRES_URL=jdbc:postgresql://postgres:5432/lmdb_ai
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - OLLAMA_BASE_URL=http://ollama:11434

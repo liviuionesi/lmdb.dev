@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Filmpire Microservices — Dynamic Project Statistics & Metrics Generator
+LMDB Microservices — Dynamic Project Statistics & Metrics Generator
 Analyzes git velocity, churn, lines of code, architecture topology, test suites,
 API surface, database migrations, and documentation coverage to produce a
 self-actualizing metrics report in docs/PROJECT_METRICS.md.
@@ -286,8 +286,8 @@ def gather_test_stats():
     total_backend_tests = backend_tests + parameterized_tests
     backend_test_files = int(run_cmd("find backend -name '*Test.java' -o -name '*Tests.java' | wc -l") or 0)
     
-    frontend_test_files = int(run_cmd("find frontend/filmpire/src -name '*.test.js' -o -name '*.test.jsx' | wc -l") or 0)
-    frontend_tests = int(run_cmd("grep -r -E 'it\\(|test\\(' frontend/filmpire/src/ --include='*.test.js' --include='*.test.jsx' | wc -l") or 0)
+    frontend_test_files = int(run_cmd("find frontend/lmdb/src -name '*.test.js' -o -name '*.test.jsx' | wc -l") or 0)
+    frontend_tests = int(run_cmd("grep -r -E 'it\\(|test\\(' frontend/lmdb/src/ --include='*.test.js' --include='*.test.jsx' | wc -l") or 0)
     
     total_tests = total_backend_tests + frontend_tests
     total_test_files = backend_test_files + frontend_test_files
@@ -314,10 +314,10 @@ def generate_markdown_report(git_stats, lang_stats, mod_stats, arch_stats, test_
     test_ratio = (test_stats["total_tests"] / (total_code_loc / 1000)) if total_code_loc > 0 else 0
     
     lines = []
-    lines.append("# 📊 Filmpire Microservices — Project Analytics & Metrics Report")
+    lines.append("# 📊 LMDB Microservices — Project Analytics & Metrics Report")
     lines.append("")
     lines.append(f"> **Dynamically Generated:** `{now_str}`  ")
-    lines.append(f"> **Git Status:** Branch `{git_stats['branch']}` | Commit [`{git_stats['commit_hash']}`](https://github.com/pehlivanu/filmpire-microservices/commit/{git_stats['commit_hash']})  ")
+    lines.append(f"> **Git Status:** Branch `{git_stats['branch']}` | Commit [`{git_stats['commit_hash']}`](https://github.com/pehlivanu/lmdb.dev/commit/{git_stats['commit_hash']})  ")
     lines.append("> **Auto-Update Trigger:** Executes automatically on each push and via `./gradlew projectStats`")
     lines.append("")
     lines.append("---")
@@ -449,8 +449,8 @@ def generate_markdown_report(git_stats, lang_stats, mod_stats, arch_stats, test_
     lines.append("|---|---|---|---|---|")
     lines.append("| **Local Development** | Docker & Podman Compose / Minikube | Compose / Kustomize | Local Machine RAM/CPU | $0.00 |")
     lines.append("| **Public HTTPS Gateway** | Cloudflare Quick Tunnel (`cloudflared`) | Docker / K8s Deployment | Ephemeral tunnel | $0.00 |")
-    lines.append("| **Azure AKS** | Managed Kubernetes (`filmpire-aks`) | Terraform + K8s Overlays | `Standard_D4ls_v7` (4 vCPU / 8 GB) | $0.00/hr when stopped (`az aks stop`) |")
-    lines.append("| **AWS Cloud** | Single-Node k3s (`filmpire-k3s`) | Terraform + k3s over SSH | `m7i-flex.large` (2 vCPU / 8 GB) | $0.00/hr when stopped (`ec2 stop`) |")
+    lines.append("| **Azure AKS** | Managed Kubernetes (`lmdb-aks`) | Terraform + K8s Overlays | `Standard_D4ls_v7` (4 vCPU / 8 GB) | $0.00/hr when stopped (`az aks stop`) |")
+    lines.append("| **AWS Cloud** | Single-Node k3s (`lmdb-k3s`) | Terraform + k3s over SSH | `m7i-flex.large` (2 vCPU / 8 GB) | $0.00/hr when stopped (`ec2 stop`) |")
     lines.append("| **Frontend Production** | Vercel Edge Network | Next-gen Static / SPA | Global Edge CDN | $0.00 (Hobby tier) |")
     lines.append("")
     lines.append("---")
@@ -470,7 +470,7 @@ def generate_markdown_report(git_stats, lang_stats, mod_stats, arch_stats, test_
 
 def main():
     print("==================================================")
-    print("  Filmpire — Generating Dynamic Project Statistics")
+    print("  LMDB — Generating Dynamic Project Statistics")
     print("==================================================")
     print("🔍 Analyzing git velocity and commit history...")
     git_stats = gather_git_stats()

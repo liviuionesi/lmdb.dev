@@ -14,7 +14,7 @@ CYAN='\033[0;36m'
 NC='\033[0m'
 
 echo -e "${BLUE}=====================================================${NC}"
-echo -e "${BLUE}  Filmpire — Stop AWS EC2 Backend Instance (Idle)   ${NC}"
+echo -e "${BLUE}  LMDB — Stop AWS EC2 Backend Instance (Idle)   ${NC}"
 echo -e "${BLUE}=====================================================${NC}"
 
 for cmd in aws terraform; do
@@ -27,11 +27,11 @@ done
 cd "$TF_DIR"
 INSTANCE_ID="${AWS_INSTANCE_ID:-$(terraform output -raw instance_id 2>/dev/null || true)}"
 if [ -z "$INSTANCE_ID" ]; then
-  INSTANCE_ID="$(aws ec2 describe-instances --filters "Name=tag:Name,Values=filmpire-k3s-demo" "Name=instance-state-name,Values=running,stopped" --query "Reservations[0].Instances[0].InstanceId" --output text 2>/dev/null || echo "")"
+  INSTANCE_ID="$(aws ec2 describe-instances --filters "Name=tag:Name,Values=lmdb-k3s-demo" "Name=instance-state-name,Values=running,stopped" --query "Reservations[0].Instances[0].InstanceId" --output text 2>/dev/null || echo "")"
 fi
 
 if [ -z "$INSTANCE_ID" ] || [ "$INSTANCE_ID" == "None" ]; then
-  echo -e "${RED}❌ Could not find EC2 instance for Filmpire.${NC}" >&2
+  echo -e "${RED}❌ Could not find EC2 instance for LMDB.${NC}" >&2
   exit 1
 fi
 

@@ -28,7 +28,7 @@ updates:
           - "org.mockito:*"
           - "org.testcontainers:*"
 
-  # Frontend - Filmpire React App (CRA)
+  # Frontend - LMDB React App (CRA)
   - package-ecosystem: "npm"
     directory: "/frontend/filmpire"
     schedule:

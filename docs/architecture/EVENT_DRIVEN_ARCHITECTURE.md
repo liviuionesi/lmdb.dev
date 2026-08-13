@@ -1,12 +1,12 @@
 # Event-Driven Architecture Specification
 
-Comprehensive specification of the asynchronous messaging and event-driven architecture within the Filmpire Microservices platform, based on [ADR-006](adr/006-kafka-event-bus.md) and [ARCHITECTURE.md §2.2](ARCHITECTURE.md).
+Comprehensive specification of the asynchronous messaging and event-driven architecture within the LMDB Microservices platform, based on [ADR-006](adr/006-kafka-event-bus.md) and [ARCHITECTURE.md §2.2](ARCHITECTURE.md).
 
 ---
 
 ## 1. Overview & Architectural Role
 
-Filmpire adopts an asynchronous, event-driven messaging layer powered by **Apache Kafka** to decouple core synchronous user request flows (REST/gRPC) from downstream analytics, audit trails, cache synchronization, and recommendation index updates.
+LMDB adopts an asynchronous, event-driven messaging layer powered by **Apache Kafka** to decouple core synchronous user request flows (REST/gRPC) from downstream analytics, audit trails, cache synchronization, and recommendation index updates.
 
 ```mermaid
 flowchart TD

@@ -5,11 +5,11 @@
 # Usage: source "$(dirname "${BASH_SOURCE[0]}")/env.sh"   (or an absolute path)
 
 ENV_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-FILMPIRE_ENV_FILE="$ENV_SCRIPT_DIR/../docker/.env"
+LMDB_ENV_FILE="$ENV_SCRIPT_DIR/../docker/.env"
 
-if [ -f "$FILMPIRE_ENV_FILE" ]; then
+if [ -f "$LMDB_ENV_FILE" ]; then
     set -a
-    source "$FILMPIRE_ENV_FILE"
+    source "$LMDB_ENV_FILE"
     set +a
 else
     echo "⚠️  No infrastructure/docker/.env found — using defaults. Copy" >&2

@@ -39,7 +39,7 @@ spring:
                   - "http://localhost:3000"
                   - "http://localhost:3001"
                   - "http://localhost:5173"
-                  - "https://filmpire-microservices-tan.vercel.app"
+                  - "https://lmdb.dev"
                   - "https://lmdb.dev"
                   - "https://www.lmdb.dev"
                 allowed-origin-patterns:
@@ -174,7 +174,7 @@ spring:
                     "[redis-rate-limiter.burstCapacity]": 40
 
             # ---------------------------------------------------------------
-            # TMDB v3 FACADE routes (#33) — bare TMDB paths the Filmpire React
+            # TMDB v3 FACADE routes (#33) — bare TMDB paths the LMDB React
             # app calls. Served by the movie/actor facade controllers, which
             # inject the server-side TMDB key themselves; the gateway strips any
             # client-sent api_key so it never reaches a downstream.
@@ -356,7 +356,7 @@ management:
 logging:
   level:
     root: INFO
-    "[com.filmpire.gateway]": DEBUG
+    "[dev.lmdb.gateway]": DEBUG
     "[org.springframework.cloud.gateway]": DEBUG
     "[org.springframework.security]": DEBUG
     "[io.github.resilience4j]": DEBUG

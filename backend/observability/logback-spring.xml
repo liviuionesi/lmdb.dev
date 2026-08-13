@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Shared logging configuration for every Filmpire service (issue #23).
+  Shared logging configuration for every LMDB service (issue #23).
 
   This file is the SINGLE source of truth for the log format. It is not copied
   by hand into each service: the root build.gradle adds it to the resources of

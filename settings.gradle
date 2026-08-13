@@ -24,7 +24,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = 'filmpire-microservices'
+rootProject.name = 'lmdb-microservices'
 
 include(
     'backend:api-gateway',

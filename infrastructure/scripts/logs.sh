@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Filmpire Microservices - Tail Infrastructure Logs
+# LMDB Microservices - Tail Infrastructure Logs
 # Follows logs for all services, or one service if a name is given.
 
 set -e
@@ -38,7 +38,7 @@ COMPOSE_FILES="-f docker-compose.yml -f docker-compose.elk.yml"
 SERVICE="$1"
 if [ "$SERVICE" == "frontend" ]; then
     echo -e "${BLUE}📜 Following frontend log... (Ctrl+C to stop)${NC}"
-    tail -f /tmp/filmpire-frontend.log
+    tail -f /tmp/lmdb-frontend.log
 elif [ -n "$SERVICE" ]; then
     echo -e "${BLUE}📜 Following logs for ${GREEN}${SERVICE}${BLUE}... (Ctrl+C to stop)${NC}"
     $COMPOSE_CMD $COMPOSE_FILES --profile dev-tools logs -f --tail=200 "$SERVICE"

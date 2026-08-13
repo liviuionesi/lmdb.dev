@@ -13,7 +13,7 @@
 
 > **LMDB (Live Movies Database)** is an enterprise-grade, event-driven cinema streaming and AI recommendation platform architected by **[Liviu Ionesi](https://liviuionesi.com)** ([LinkedIn](https://www.linkedin.com/in/liviuionesi/)), where the name stands for *Live Movies Database* as well as *Liviu's Movie Database*. Featuring an AI assistant powered by Spring AI & Ollama (LLaMA 3.2), semantic vector search (pgvector), offline speech-to-text voice control (Vosk), a self-healing TMDB v3 API facade, 7 layers of automated testing, full observability (ELK, Zipkin, Prometheus, Grafana), and automated multi-cloud deployment to Azure AKS and AWS k3s.
 
-🌐 **Live Demo (Frontend):** [lmdb.dev](https://lmdb.dev) *(or [www.lmdb.dev](https://www.lmdb.dev))* • [Vercel Deployment](https://filmpire-microservices-tan.vercel.app/)  
+🌐 **Live Demo (Frontend):** [lmdb.dev](https://lmdb.dev) *(or [www.lmdb.dev](https://www.lmdb.dev))* • [Vercel Deployment](https://lmdb.dev/)  
 👤 **Architect Portfolio:** [liviuionesi.com](https://liviuionesi.com) • [LinkedIn](https://www.linkedin.com/in/liviuionesi/)  
 📊 **Live Project Analytics & Code Statistics:** [docs/reports/PROJECT_METRICS.md](docs/reports/PROJECT_METRICS.md)
 
@@ -81,13 +81,13 @@ Redis                                   Ollama (LLaMA 3.2)
 | **Voice Navigation** | [`ai-service`](backend/ai-service/) | Vosk native library | Speech-to-text audio processing (`POST /api/v1/ai/speech-to-text`). Translates spoken commands into category navigation, searches, and UI actions. |
 | **Media Asset Management** | [`media-service`](backend/media-service/) | MinIO (S3 API), MongoDB 8.0 | Multipart image upload, binary chunking, metadata indexing, and presigned asset streaming. |
 | **Traffic Control & Edge Routing** | [`api-gateway`](backend/api-gateway/) | Spring Cloud Gateway, Redis | Redis token-bucket rate limiting, Resilience4j circuit breakers, JWT validation filter, CORS origin pattern matching, and URL rewrites. |
-| **Web Client Application** | [`frontend/filmpire`](frontend/filmpire/) | React 18, Vite, Redux Toolkit, MUI | Responsive UI, dark/light theme toggle, speech recognition controller, movie trailer modal, and dynamic backend resolver. |
+| **Web Client Application** | [`frontend/filmpire`](frontend/lmdb/) | React 18, Vite, Redux Toolkit, MUI | Responsive UI, dark/light theme toggle, speech recognition controller, movie trailer modal, and dynamic backend resolver. |
 
 ---
 
 ## 3. SDLC Story: From Idea to Finished Product
 
-Filmpire was engineered following a strict **Agile/Scrum** software development lifecycle, prioritizing architectural integrity, rigorous quality gates, and automated validation at every phase.
+LMDB was engineered following a strict **Agile/Scrum** software development lifecycle, prioritizing architectural integrity, rigorous quality gates, and automated validation at every phase.
 
 ```
 ┌─────────────────┐     ┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐
@@ -173,7 +173,7 @@ Every significant architectural choice, pivot, and rejected alternative was form
 ## 5. Codebase Organization & Repository Topology
 
 ```
-filmpire-microservices/
+lmdb.dev/
 ├── backend/                               # 8 Java 25 / Spring Boot 4 Microservices
 │   ├── shared-library/                    # Common DTOs, security filters, error handlers, tracing
 │   ├── api-gateway/                       # Spring Cloud Gateway WebFlux, Redis rate limiter, CORS
@@ -186,7 +186,7 @@ filmpire-microservices/
 │   └── media-service/                     # Media asset management, MinIO S3 object storage
 │
 ├── frontend/                              # Frontend Web Application
-│   └── filmpire/                          # React 18, Vite, Redux Toolkit Query, MUI v5
+│   └── lmdb/                          # React 18, Vite, Redux Toolkit Query, MUI v5
 │
 ├── infrastructure/                        # Multi-Cloud & Local Infrastructure as Code
 │   ├── docker/                            # Docker Compose full-stack topology (15 containers)
@@ -217,7 +217,7 @@ filmpire-microservices/
 
 ## 6. The 7-Layer Testing Strategy
 
-Filmpire implements a comprehensive testing pyramid encompassing 7 distinct testing disciplines, ensuring zero regressions across backend services, distributed data flows, contract boundaries, and frontend user journeys.
+LMDB implements a comprehensive testing pyramid encompassing 7 distinct testing disciplines, ensuring zero regressions across backend services, distributed data flows, contract boundaries, and frontend user journeys.
 
 ```
                   ┌──────────────────────┐
@@ -260,7 +260,7 @@ cd frontend/filmpire && npm run test:coverage
 cd e2e && npx playwright test
 
 # Level 6: Automated Postman/Newman API Smoke Test (requires running stack)
-newman run docs/api/Filmpire_API.postman_collection.json -e docs/api/local_environment.json
+newman run docs/api/LMDB_API.postman_collection.json -e docs/api/local_environment.json
 
 # Level 7: Gatling Performance & Load Simulation
 ./gradlew :backend:api-gateway:gatlingRun
@@ -270,7 +270,7 @@ newman run docs/api/Filmpire_API.postman_collection.json -e docs/api/local_envir
 
 ## 7. Multi-Cloud Deployment & Infrastructure Topology
 
-Filmpire supports four fully-codified deployment topologies with 100% feature and service parity:
+LMDB supports four fully-codified deployment topologies with 100% feature and service parity:
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
@@ -295,7 +295,7 @@ Filmpire supports four fully-codified deployment topologies with 100% feature an
    * Used for daily offline development against `localhost:5173` / `localhost:3000`.
 
 2. **Local Machine / Minikube + Live Cloudflare Tunnel (Powers Vercel FE):**
-   * Allows the public **Vercel frontend** (`https://filmpire-microservices-tan.vercel.app`) to communicate directly with your local developer machine or Minikube cluster with $0 cloud spend.
+   * Allows the public **Vercel frontend** (`https://lmdb.dev`) to communicate directly with your local developer machine or Minikube cluster with $0 cloud spend.
    * `start-tunnel.sh` launches a secure, encrypted Cloudflare quick tunnel (`https://*.trycloudflare.com`) pointing to your local Gateway (`:8080`), automatically captures the generated HTTPS hostname, commits and pushes it to [`infrastructure/tunnel-url.txt`](infrastructure/tunnel-url.txt) on GitHub `develop`.
    * The Vercel frontend automatically discovers the updated tunnel pointer via GitHub raw URL within seconds without requiring frontend rebuilds or manual environment variable updates.
 
@@ -338,7 +338,7 @@ All infrastructure actions are wrapped into unified Gradle tasks and shell autom
 ```
 
 ### Dynamic Runtime Frontend-to-Backend Binding
-The frontend on Vercel resolves its active backend dynamically at request time ([`apiUrl.js`](frontend/filmpire/src/utils/apiUrl.js)):
+The frontend on Vercel resolves its active backend dynamically at request time ([`apiUrl.js`](frontend/lmdb/src/utils/apiUrl.js)):
 1. Checks for a manual override in `localStorage` (`filmpire_api_url`).
 2. Checks for a build-time `VITE_API_URL`.
 3. Resolves the live Cloudflare HTTPS tunnel pointer from GitHub ([`infrastructure/tunnel-url.txt`](infrastructure/tunnel-url.txt)).
@@ -349,7 +349,7 @@ The frontend on Vercel resolves its active backend dynamically at request time (
 
 ## 8. Observability, Logging & Telemetry
 
-Filmpire incorporates a complete observability stack spanning structured logging, distributed tracing, and real-time metric visualization.
+LMDB incorporates a complete observability stack spanning structured logging, distributed tracing, and real-time metric visualization.
 
 ```
                                   TELEMETRY PIPELINE
@@ -376,7 +376,7 @@ Filmpire incorporates a complete observability stack spanning structured logging
 |---|---|---|
 | [`backend-ci.yml`](.github/workflows/backend-ci.yml) | Push/PR to `main`, `develop` | Compiles Java 25 modules, executes Spotless/Checkstyle, runs JUnit & Testcontainers suites, verifies SonarQube Quality Gate. |
 | [`frontend-ci.yml`](.github/workflows/frontend-ci.yml) | Push/PR to `main`, `develop` | Runs ESLint, Prettier, and Vitest component suite with code coverage validation. |
-| [`docker-publish.yml`](.github/workflows/docker-publish.yml) | Chained to green Backend CI on `main` | Builds multi-stage container images for all 8 microservices and publishes to GitHub Container Registry (`ghcr.io/pehlivanu/filmpire-*`). |
+| [`docker-publish.yml`](.github/workflows/docker-publish.yml) | Chained to green Backend CI on `main` | Builds multi-stage container images for all 8 microservices and publishes to GitHub Container Registry (`ghcr.io/pehlivanu/lmdb-*`). |
 | [`terraform-plan.yml`](.github/workflows/terraform-plan.yml) | Changes to `infrastructure/terraform/**` | Validates HCL syntax, runs `terraform fmt`, and generates speculative execution plans for Azure and AWS. |
 
 ### Code Quality & Maintenance Tooling
@@ -412,8 +412,8 @@ cp infrastructure/docker/.env.example infrastructure/docker/.env
 ./gradlew deployLocal
 
 # 4. Pull Ollama AI models for chat and embeddings (one-time setup)
-docker exec -it filmpire-ollama ollama pull llama3.2
-docker exec -it filmpire-ollama ollama pull nomic-embed-text
+docker exec -it lmdb-ollama ollama pull llama3.2
+docker exec -it lmdb-ollama ollama pull nomic-embed-text
 
 # 5. Start the React/Vite development server
 cd frontend/filmpire
@@ -488,7 +488,7 @@ Visit **`http://localhost:5173`** (or `http://localhost:3000`) in your browser t
 * [Discovery Service (Eureka)](backend/discovery-service/README.md)
 * [Config Service](backend/config-service/README.md)
 * [Shared Java Library](backend/shared-library/README.md)
-* [Frontend Application](frontend/filmpire/README.md)
+* [Frontend Application](frontend/lmdb/README.md)
 * [End-to-End Playwright Suite](e2e/README.md)
 
 ### Project Roadmap & Sprint Backlogs

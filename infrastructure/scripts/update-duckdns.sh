@@ -4,7 +4,7 @@
 set -euo pipefail
 
 PUBLIC_IP="${1:-${PUBLIC_IP:-}}"
-DOMAIN="${2:-${DUCKDNS_DOMAIN:-filmpire-api}}"
+DOMAIN="${2:-${DUCKDNS_DOMAIN:-lmdb-api}}"
 TOKEN="${3:-${DUCKDNS_TOKEN:-}}"
 
 if [ -z "$PUBLIC_IP" ]; then

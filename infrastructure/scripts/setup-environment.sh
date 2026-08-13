@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# Filmpire Microservices - Environment Setup Script
+# LMDB Microservices - Environment Setup Script
 # This script verifies and installs the required versions
 
 set -e
 
 echo "========================================="
-echo "Filmpire Microservices Environment Setup"
+echo "LMDB Microservices Environment Setup"
 echo "========================================="
 echo ""
 

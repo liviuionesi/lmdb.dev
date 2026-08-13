@@ -7,7 +7,7 @@
 > **This decision is no longer in force. Do not implement against it.**
 >
 > The raw-passthrough model described below was replaced one day later by
-> ADR-010: the facade now serves TMDB's exact *wire shape* from Filmpire's own
+> ADR-010: the facade now serves TMDB's exact *wire shape* from LMDB's own
 > mapped, typed, persisted catalog rather than replaying stored TMDB bytes. The
 > reason was product-level, not technical — a byte-for-byte proxy does not
 > demonstrate backend engineering, which is the point of the project.
@@ -23,7 +23,7 @@
 
 ## Context
 
-The product goal is a drop-in TMDB v3 clone: the existing Filmpire React app
+The product goal is a drop-in TMDB v3 clone: the existing LMDB React app
 must work by changing only its base URL. The app depends on TMDB's exact
 response shapes (field names, nesting, `{page, results, total_pages,
 total_results}` envelopes). Movie-service already had typed DTOs

@@ -45,7 +45,7 @@ permanently once real conversation history exists.
 ## Decision
 
 **ai-service uses PostgreSQL with the `pgvector` extension** for its own
-database (`filmpire_ai`), under Flyway like the other relational services.
+database (`lmdb_ai`), under Flyway like the other relational services.
 
 - Conversations and messages are relational tables with Flyway migrations and
   `ddl-auto: validate`, exactly as user-service manages accounts and favorites.

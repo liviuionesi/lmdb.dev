@@ -1,6 +1,6 @@
-# Running the Filmpire React App Against This Backend
+# Running the LMDB React App Against This Backend
 
-This is the runbook for running the Filmpire React application (`frontend/filmpire` in this repo — merged in as a monorepo per [ADR-013](../architecture/adr/013-frontend-merged-into-monorepo.md); Vite + Redux Toolkit Query + MUI + Vosk offline voice control) against this repo's TMDB v3 facade instead of the real `api.themoviedb.org`. See [ARCHITECTURE.md §5.1](../architecture/ARCHITECTURE.md) for the facade contract and [ADR-010](../architecture/adr/010-tmdb-facade-mapped-persisted-schema.md) for why the facade is a persisted, typed catalog rather than a simple byte-cache proxy.
+This is the runbook for running the LMDB React application (`frontend/filmpire` in this repo — merged in as a monorepo per [ADR-013](../architecture/adr/013-frontend-merged-into-monorepo.md); Vite + Redux Toolkit Query + MUI + Vosk offline voice control) against this repo's TMDB v3 facade instead of the real `api.themoviedb.org`. See [ARCHITECTURE.md §5.1](../architecture/ARCHITECTURE.md) for the facade contract and [ADR-010](../architecture/adr/010-tmdb-facade-mapped-persisted-schema.md) for why the facade is a persisted, typed catalog rather than a simple byte-cache proxy.
 
 ## 1. Start the backend stack
 
@@ -27,7 +27,7 @@ curl "http://localhost:8080/movie/550?append_to_response=videos,credits"
 
 ## 2. Dynamic Backend Discovery & App Startup
 
-The frontend uses dynamic runtime auto-discovery ([`apiUrl.js`](../../frontend/filmpire/src/utils/apiUrl.js), [ADR-016](../architecture/adr/016-dynamic-backend-resolution.md)). When running locally (`http://localhost:5173` or `http://localhost:3000`), it automatically binds to `http://localhost:8080` without requiring manual environment overrides.
+The frontend uses dynamic runtime auto-discovery ([`apiUrl.js`](../../frontend/lmdb/src/utils/apiUrl.js), [ADR-016](../architecture/adr/016-dynamic-backend-resolution.md)). When running locally (`http://localhost:5173` or `http://localhost:3000`), it automatically binds to `http://localhost:8080` without requiring manual environment overrides.
 
 ```bash
 cd frontend/filmpire
@@ -53,5 +53,5 @@ Automated tests ([`e2e/`](../../e2e/README.md) with Playwright) continuously tes
 ## 4. Notes
 
 - **Image Assets:** Movie poster and backdrop images stream directly from TMDB CDN (`image.tmdb.org`).
-- **CORS:** The gateway's [`SecurityConfig.java`](../../backend/api-gateway/src/main/java/com/filmpire/gateway/config/SecurityConfig.java) permits `http://localhost:5173`, `http://localhost:3000`, and `https://*.vercel.app`.
+- **CORS:** The gateway's [`SecurityConfig.java`](../../backend/api-gateway/src/main/java/dev/lmdb/gateway/config/SecurityConfig.java) permits `http://localhost:5173`, `http://localhost:3000`, and `https://*.vercel.app`.
 - **Teardown:** Run `./gradlew stopLocal` to stop all containers gracefully.

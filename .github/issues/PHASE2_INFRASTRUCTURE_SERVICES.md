@@ -272,7 +272,7 @@ Create shared library module with common DTOs, exceptions, utilities, and consta
 **Structure:**
 ```
 shared-library/
-└── src/main/java/com/filmpire/shared/
+└── src/main/java/dev/lmdb/shared/
     ├── dto/
     │   ├── ApiResponse.java
     │   ├── ErrorResponse.java

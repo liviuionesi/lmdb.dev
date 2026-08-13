@@ -3,13 +3,13 @@
 AI-powered features: catalog-grounded movie recommendations, a chat assistant, and semantic search over user taste profiles (#36, ARCHITECTURE.md §3.7, ADR-012).
 
 **Port:** 8084 (REST), 9084 (gRPC)
-**Database:** PostgreSQL + pgvector (`filmpire_ai`)
+**Database:** PostgreSQL + pgvector (`lmdb_ai`)
 **Protocols:** REST + gRPC
 **Model provider:** Ollama only (local, $0 — ADR-004). No OpenAI/paid API key anywhere in this service.
 
 ## Responsibilities
 
-- Movie recommendations computed from Filmpire's own catalog (movie-service), never proxied from TMDB's own recommendation endpoint
+- Movie recommendations computed from LMDB's own catalog (movie-service), never proxied from TMDB's own recommendation endpoint
 - Chat assistant with persisted conversation history
 - Semantic search: ANN query over user taste embeddings (pgvector `<=>` operator, HNSW index)
 - Offline Speech-to-Text Voice Recognition powered by self-hosted Vosk engine and embedded small English model (replacing cloud Whisper for $0 cost) (#68, #151)
@@ -25,8 +25,8 @@ See [ADR-012](../../docs/architecture/adr/012-ai-service-postgresql-pgvector.md)
 docker-compose up -d postgres redis ollama
 
 # Pull the models this service is configured for (one-time; ~2.3GB total)
-docker exec -it filmpire-ollama ollama pull llama3.2
-docker exec -it filmpire-ollama ollama pull nomic-embed-text
+docker exec -it lmdb-ollama ollama pull llama3.2
+docker exec -it lmdb-ollama ollama pull nomic-embed-text
 
 ./gradlew :backend:ai-service:bootRun
 ```
@@ -34,8 +34,8 @@ docker exec -it filmpire-ollama ollama pull nomic-embed-text
 ## Docker
 
 ```bash
-docker build -f backend/ai-service/Dockerfile -t filmpire/ai-service:local .
-docker run -p 8084:8084 -p 9084:9084 filmpire/ai-service:local
+docker build -f backend/ai-service/Dockerfile -t lmdb/ai-service:local .
+docker run -p 8084:8084 -p 9084:9084 lmdb/ai-service:local
 ```
 
 ## API
@@ -43,7 +43,7 @@ docker run -p 8084:8084 -p 9084:9084 filmpire/ai-service:local
 ### REST — `/api/v1/ai`
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/recommendations` | POST | Ranked, explained recommendations from Filmpire's catalog |
+| `/recommendations` | POST | Ranked, explained recommendations from LMDB's catalog |
 | `/chat` | POST | Continue (or start) a conversation with the assistant |
 | `/search/semantic` | GET | Nearest taste-profile neighbours to a free-text query |
 | `/speech-to-text` | POST | Transcribe WAV audio using self-hosted Vosk engine (#68) |

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Create Phase 1 Issues for Filmpire Microservices
+# Create Phase 1 Issues for LMDB Microservices
 # Run this after creating the GitHub repository
 
 set -e

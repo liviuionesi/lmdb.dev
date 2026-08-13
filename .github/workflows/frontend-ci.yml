@@ -12,8 +12,8 @@ on:
       - 'frontend/**'
 
 jobs:
-  filmpire:
-    name: Filmpire React app
+  lmdb:
+    name: LMDB React app
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -28,7 +28,7 @@ jobs:
         with:
           node-version: '24'
           cache: 'npm'
-          cache-dependency-path: frontend/filmpire/package-lock.json
+          cache-dependency-path: frontend/lmdb/package-lock.json
 
       - name: Install dependencies
         run: npm ci

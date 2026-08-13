@@ -61,7 +61,7 @@ Create complete directory structure for all microservices, frontend applications
 **Files to Create:**
 ```
 backend/<service-name>/
-  ├── src/main/java/com/filmpire/<service>/
+  ├── src/main/java/dev/lmdb/<service>/
   ├── src/main/resources/
   ├── src/test/java/
   ├── build.gradle
@@ -253,8 +253,8 @@ docker-compose logs -f
 
 ### Step 1: Create GitHub Repo
 ```bash
-cd /home/liviu/Desktop/filmpire-microservices
-gh repo create filmpire-microservices --public --source=. --remote=origin
+cd /home/liviu/Desktop/lmdb.dev
+gh repo create lmdb.dev --public --source=. --remote=origin
 ```
 
 ### Step 2: Create Labels

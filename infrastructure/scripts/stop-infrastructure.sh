@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Filmpire Microservices - Stop Infrastructure Script
+# LMDB Microservices - Stop Infrastructure Script
 # This script stops all infrastructure services
 
 set -e
@@ -30,7 +30,7 @@ else
 fi
 
 echo -e "${BLUE}================================================${NC}"
-echo -e "${BLUE}  Stopping Filmpire Infrastructure${NC}"
+echo -e "${BLUE}  Stopping LMDB Infrastructure${NC}"
 echo -e "${BLUE}================================================${NC}"
 echo ""
 

@@ -100,14 +100,14 @@ milestones, don't force them all into one list. Instead:
 
 ## Process
 
-1. **Discover.** `gh issue list --repo pehlivanu/filmpire-microservices --state open --limit 200`.
+1. **Discover.** `gh issue list --repo pehlivanu/lmdb.dev --state open --limit 200`.
    Report the count before starting.
 
 2. **Dispatch one Agent per issue, in parallel.** Give each agent:
    - The before/after example above, verbatim, as the style calibration.
    - The issue number and repo.
    - Instructions:
-     1. `gh issue view <n> --repo pehlivanu/filmpire-microservices --json body,comments,state,title`.
+     1. `gh issue view <n> --repo pehlivanu/lmdb.dev --json body,comments,state,title`.
      2. Ground the rewrite in real state — check relevant code/commits
         (`git log`, file existence, a quick test run if genuinely cheap and
         the issue's claim is easy to verify) rather than trusting the old

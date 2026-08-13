@@ -53,5 +53,5 @@ jobs:
           file: backend/${{ matrix.service }}/Dockerfile
           push: true
           tags: |
-            ghcr.io/pehlivanu/filmpire-${{ matrix.service }}:${{ github.event.workflow_run.head_sha }}
-            ghcr.io/pehlivanu/filmpire-${{ matrix.service }}:latest
+            ghcr.io/pehlivanu/lmdb-${{ matrix.service }}:${{ github.event.workflow_run.head_sha }}
+            ghcr.io/pehlivanu/lmdb-${{ matrix.service }}:latest

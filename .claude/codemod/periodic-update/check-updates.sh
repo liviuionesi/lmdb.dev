@@ -1,6 +1,6 @@
 #!/bin/sh
 set -eu
-STATE_FILE='/home/liviu/Desktop/filmpire-microservices/.claude/codemod/periodic-update/last-check-epoch-secs'
+STATE_FILE='/home/liviu/Desktop/lmdb.dev/.claude/codemod/periodic-update/last-check-epoch-secs'
 INTERVAL=21600
 
 NOW="$(date +%s 2>/dev/null || printf '0')"

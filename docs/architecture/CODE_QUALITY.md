@@ -55,11 +55,11 @@ you see inline is exactly what the pipeline sees — not a bundled default rules
    (stored in the OS keychain). Reload the window.
 
 The **project binding** is committed at [`.sonarlint/connectedMode.json`](../../.sonarlint/connectedMode.json)
-(`connectionId: filmpire-local`, `projectKey: filmpire-microservices`), so every
+(`connectionId: filmpire-local`, `projectKey: lmdb.dev`), so every
 developer binds to the same project. Workspace-level SonarLint prefs live in
 `.vscode/settings.json`.
 
-## Quality profile: "Filmpire way"
+## Quality profile: "LMDB way"
 
 Java analysis uses a custom profile — a copy of **Sonar way** with two rules
 deactivated. Exported for reproducibility at
@@ -79,7 +79,7 @@ independent agreement that they are noise for a codebase like this.
 | Profile | Rules |
 |---|---|
 | Sonar way | 555 |
-| **Filmpire way** (in use) | **553** |
+| **LMDB way** (in use) | **553** |
 | Sonar agentic AI | 486 |
 
 *Sonar agentic AI* is leaner but drops 69 rules that matter here: `S6813`

@@ -1,4 +1,4 @@
-# Agile Workflow Guide - Filmpire Microservices
+# Agile Workflow Guide - LMDB Microservices
 
 ## Complete Setup: From Zero to First Sprint
 
@@ -33,7 +33,7 @@ gh auth login  # Follow prompts
 ### Step 2: Create Repository
 
 ```bash
-cd /home/liviu/Desktop/filmpire-microservices
+cd /home/liviu/Desktop/lmdb.dev
 
 # Initialize git
 git init
@@ -41,7 +41,7 @@ git add .
 git commit -m "chore: initial project structure and documentation"
 
 # Create GitHub repository
-gh repo create filmpire-microservices \
+gh repo create lmdb.dev \
   --public \
   --source=. \
   --remote=origin \
@@ -79,12 +79,12 @@ gh label create "sprint-0" --color "e4e669" --description "Sprint 0 - Setup"
 1. Go to: https://github.com/YOUR_USERNAME?tab=projects
 2. Click "New project"
 3. Choose "Board" view
-4. Name: "Filmpire Microservices"
+4. Name: "LMDB Microservices"
 
 **Via CLI:**
 ```bash
 # Note: Projects beta CLI might require additional setup
-gh project create --owner @me --title "Filmpire Microservices"
+gh project create --owner @me --title "LMDB Microservices"
 ```
 
 ### Step 2: Configure Board Columns
@@ -651,7 +651,7 @@ gh run watch
 
 ```bash
 # Step 1: Create repo
-gh repo create filmpire-microservices --public --source=. --remote=origin
+gh repo create lmdb.dev --public --source=. --remote=origin
 git push -u origin main
 
 # Step 2: Create issues

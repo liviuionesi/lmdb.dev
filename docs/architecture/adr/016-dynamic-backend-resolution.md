@@ -30,7 +30,7 @@ order): a manual `localStorage` override, then a build-time env var, then
 `localhost` if running locally, then the cloud default *only if it passes
 a live health check*, then a published tunnel URL *only if it also passes
 a health check*, then the cloud default anyway as a last, visible resort.
-Implemented in `frontend/filmpire/src/utils/apiUrl.js`, cached 30s per
+Implemented in `frontend/lmdb/src/utils/apiUrl.js`, cached 30s per
 request so it isn't a network round-trip every time.
 
 **HTTPS fronting via an ephemeral Cloudflare quick tunnel.**
@@ -51,7 +51,7 @@ exact problem this exists to solve, and every visitor would see whatever
 was configured at the last build regardless of whether it's currently
 alive.
 
-**A real DNS record kept live** (e.g. `filmpire-api.duckdns.org` pointed
+**A real DNS record kept live** (e.g. `api.lmdb.dev` pointed
 at whichever cloud node is currently up). Tried as the *first* fallback
 tier and kept for that — but it can't be the *only* mechanism: DuckDNS is
 a bare A-record, no TLS termination, so it inherits the exact mixed-content

@@ -1,12 +1,12 @@
-# Filmpire Frontend Architecture Specification
+# LMDB Frontend Architecture Specification
 
-Comprehensive technical specification for the Filmpire web application (`frontend/filmpire`), detailing UI component architecture, Redux state management, RTK Query caching policies, dynamic backend auto-discovery, offline voice recognition, and testing methodology.
+Comprehensive technical specification for the LMDB web application (`frontend/filmpire`), detailing UI component architecture, Redux state management, RTK Query caching policies, dynamic backend auto-discovery, offline voice recognition, and testing methodology.
 
 ---
 
 ## 1. Architectural Overview & Design Philosophy
 
-The Filmpire frontend is a single-page application (SPA) built with **React 18.3.1**, **Vite**, **Material-UI v5 (MUI)**, and **Redux Toolkit Query (RTKQ)**. 
+The LMDB frontend is a single-page application (SPA) built with **React 18.3.1**, **Vite**, **Material-UI v5 (MUI)**, and **Redux Toolkit Query (RTKQ)**. 
 
 ### Core Design Goals
 1. **TMDB Drop-in Replacement:** The frontend interacts with backend APIs using standard TMDB v3 API signatures (`/movie/{id}`, `/genre/movie/list`, `/discover/movie`, `/search/movie`, `/person/{id}`) as defined in [ADR-003](../../docs/architecture/adr/003-tmdb-raw-passthrough-facade.md) and [ADR-010](../../docs/architecture/adr/010-tmdb-facade-mapped-persisted-schema.md).
@@ -19,7 +19,7 @@ The Filmpire frontend is a single-page application (SPA) built with **React 18.3
 ## 2. Directory Structure & Component Hierarchy
 
 ```
-frontend/filmpire/
+frontend/lmdb/
 ├── index.html                    # Root HTML template with viewport & Google Fonts
 ├── vite.config.js                # Vite build configuration (Port 5173 / 3000, alias mapping)
 ├── src/
@@ -164,4 +164,4 @@ sequenceDiagram
 - **Coverage report:** `npm run test:coverage`
 
 ### Production Deployment
-- Continuous deployment via Vercel Git integration: [https://filmpire-microservices-tan.vercel.app/](https://filmpire-microservices-tan.vercel.app/)
+- Continuous deployment via Vercel Git integration: [https://lmdb.dev/](https://lmdb.dev/)

@@ -1,4 +1,4 @@
-# Filmpire Microservices — Autonomous Work Contract
+# LMDB Microservices — Autonomous Work Contract
 
 This file governs unattended/scheduled Claude Code runs on this repo (see the
 `filmpire-autonomous-dev` scheduled routine). A human-driven session can
@@ -51,7 +51,7 @@ Scrum specifically, and how this would change if it didn't)
 
 ## Source of truth for remaining work
 
-- GitHub Issues on `pehlivanu/filmpire-microservices` are the backlog.
+- GitHub Issues on `pehlivanu/lmdb.dev` are the backlog.
   `.github/issues/PROJECT_ROADMAP.md` gives the phase-level narrative; the
   issues themselves (`gh issue list`) are the authoritative status.
 - Architecture reference: `docs/architecture/ARCHITECTURE.md` plus
@@ -65,7 +65,7 @@ Scrum specifically, and how this would change if it didn't)
 
 ## Picking the next task
 
-1. Run `gh issue list --repo pehlivanu/filmpire-microservices --state open`.
+1. Run `gh issue list --repo pehlivanu/lmdb.dev --state open`.
 2. Run `git log --oneline` on `develop` and check which issue numbers are
    already referenced in recent commit subjects. If the most recent commit
    is prefixed `WIP:`, finish that issue before starting a new one.

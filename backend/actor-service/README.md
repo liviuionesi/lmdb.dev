@@ -36,8 +36,8 @@ docker-compose up -d postgres
 ## Docker
 
 ```bash
-docker build -t filmpire/actor-service:latest .
-docker run -p 8083:8083 filmpire/actor-service:latest
+docker build -t lmdb/actor-service:latest .
+docker run -p 8083:8083 lmdb/actor-service:latest
 ```
 
 ## API Endpoints

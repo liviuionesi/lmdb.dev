@@ -15,14 +15,14 @@ until curl -s -o /dev/null "$ES_URL"; do
   sleep 2
 done
 
-echo "Applying ILM policy: filmpire-logs-policy (delete after 7d)"
-curl -sf -X PUT "$ES_URL/_ilm/policy/filmpire-logs-policy" \
+echo "Applying ILM policy: lmdb-logs-policy (delete after 7d)"
+curl -sf -X PUT "$ES_URL/_ilm/policy/lmdb-logs-policy" \
   -H 'Content-Type: application/json' \
   --data-binary @/setup/ilm-policy.json
 echo
 
-echo "Applying index template: filmpire-logs-template (filmpire-logs-*)"
-curl -sf -X PUT "$ES_URL/_index_template/filmpire-logs-template" \
+echo "Applying index template: lmdb-logs-template (lmdb-logs-*)"
+curl -sf -X PUT "$ES_URL/_index_template/lmdb-logs-template" \
   -H 'Content-Type: application/json' \
   --data-binary @/setup/index-template.json
 echo
@@ -32,37 +32,37 @@ until curl -s -o /dev/null "$KIBANA_URL/api/status"; do
   sleep 2
 done
 
-echo "Importing Kibana dashboard: Filmpire Overview (data view, 4 visualizations, 1 saved search, 1 dashboard)"
+echo "Importing Kibana dashboard: LMDB Overview (data view, 4 visualizations, 1 saved search, 1 dashboard)"
 curl -sf -X POST "$KIBANA_URL/api/saved_objects/_import?overwrite=true" \
   -H 'kbn-xsrf: true' \
-  -F 'file=@/setup/filmpire-overview.ndjson;type=application/ndjson'
+  -F 'file=@/setup/lmdb-overview.ndjson;type=application/ndjson'
 echo
 
-# Imported after filmpire-overview.ndjson: re-asserts the same data view, now
+# Imported after lmdb-overview.ndjson: re-asserts the same data view, now
 # with level field-formatting, and adds the 3 Lens dashboards. The Error
 # Triage dashboard's "Recent Errors" panel references the saved search from
-# filmpire-overview.ndjson by id, so that file must import first.
+# lmdb-overview.ndjson by id, so that file must import first.
 echo "Importing Kibana Lens dashboards: Service Health, Error Triage, Per-Service Deep-Dive"
 curl -sf -X POST "$KIBANA_URL/api/saved_objects/_import?overwrite=true" \
   -H 'kbn-xsrf: true' \
-  -F 'file=@/setup/filmpire-lens-suite.ndjson;type=application/ndjson'
+  -F 'file=@/setup/lmdb-lens-suite.ndjson;type=application/ndjson'
 echo
 
 echo "Importing Kibana homepage: links to the 3 Lens dashboards (#112)"
 curl -sf -X POST "$KIBANA_URL/api/saved_objects/_import?overwrite=true" \
   -H 'kbn-xsrf: true' \
-  -F 'file=@/setup/filmpire-homepage.ndjson;type=application/ndjson'
+  -F 'file=@/setup/lmdb-homepage.ndjson;type=application/ndjson'
 echo
 
 # Makes the homepage the actual landing page instead of just another entry
 # in the dashboard list (#112) — an advanced setting, not a saved object, so
 # it's set directly via the settings API rather than through the ndjson
 # import above.
-echo "Setting Kibana default route to the Filmpire homepage dashboard"
+echo "Setting Kibana default route to the LMDB homepage dashboard"
 curl -sf -X POST "$KIBANA_URL/api/kibana/settings" \
   -H 'kbn-xsrf: true' \
   -H 'Content-Type: application/json' \
-  --data '{"changes": {"defaultRoute": "/app/dashboards#/view/filmpire-homepage"}}'
+  --data '{"changes": {"defaultRoute": "/app/dashboards#/view/lmdb-homepage"}}'
 echo
 
 # Kibana always exports alerting rules disabled (a safety default so importing
@@ -73,7 +73,7 @@ echo
 echo "Importing Kibana alerting: Server Log connector, 2 rules"
 curl -sf -X POST "$KIBANA_URL/api/saved_objects/_import?overwrite=true" \
   -H 'kbn-xsrf: true' \
-  -F 'file=@/setup/filmpire-alerting.ndjson;type=application/ndjson'
+  -F 'file=@/setup/lmdb-alerting.ndjson;type=application/ndjson'
 echo
 for rule_id in 27446a28-74e4-429c-b0bf-0782a5aff15a e49c2876-79d4-4666-9d89-6dc8e704828e; do
   curl -sf -X POST "$KIBANA_URL/api/alerting/rule/$rule_id/_enable" -H 'kbn-xsrf: true'

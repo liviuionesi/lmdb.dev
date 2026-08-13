@@ -6,7 +6,7 @@ export const userApi = createApi({
   baseQuery: createDynamicBaseQuery('/api/v1'),
   tagTypes: ['Favorites', 'Watchlist'],
   endpoints: (builder) => ({
-    //* Register a new Filmpire account
+    //* Register a new LMDB account
     register: builder.mutation({
       query: (body) => ({ url: '/auth/register', method: 'POST', body }),
       transformResponse: (response) => response.data,

@@ -10,7 +10,7 @@ The repository is currently private and on GitHub Free tier, which doesn't suppo
 
 ### Option 1: Make Repository Public
 ```bash
-gh repo edit pehlivanu/filmpire-microservices --visibility public
+gh repo edit pehlivanu/lmdb.dev --visibility public
 ```
 
 Then run:
@@ -101,7 +101,7 @@ Since branch protection isn't available, follow these manual practices:
 ## Verification
 
 After branch protection is configured, verify at:
-https://github.com/pehlivanu/filmpire-microservices/settings/branches
+https://github.com/pehlivanu/lmdb.dev/settings/branches
 
 ## References
 

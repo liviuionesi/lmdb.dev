@@ -8,7 +8,7 @@
 
 ## Context
 
-ADR-010 made the TMDB facade serve Filmpire's own persisted, typed catalog
+ADR-010 made the TMDB facade serve LMDB's own persisted, typed catalog
 rather than replaying TMDB's raw bytes. That decision is what makes the project
 a real backend rather than a proxy — but it introduced a failure mode the raw
 model did not have: **the persisted documents now have a schema, and that schema
@@ -27,7 +27,7 @@ stale container images, commit `a88676c`):
 GET /movie/550 -> 500
 org.springframework.core.convert.ConverterNotFoundException:
   No converter found capable of converting from type [java.lang.String]
-  to type [com.filmpire.movie.model.SpokenLanguage]
+  to type [dev.lmdb.movie.model.SpokenLanguage]
 ```
 
 The Fight Club document had been persisted before ADR-010, when
@@ -110,7 +110,7 @@ that may be a tiny fraction of it, and turns every deploy into a TMDB stampede.
   with Flyway + `ddl-auto: validate`, so their equivalent drift is caught at
   startup rather than per-row; adding this there would be dead defensive code.
 - Revisit: if a future model change is genuinely lossy in a way a re-fetch
-  cannot restore (a field Filmpire computes and TMDB does not supply), this
+  cannot restore (a field LMDB computes and TMDB does not supply), this
   pattern silently discards it — that change needs a real migration instead.
 
 ## Verification

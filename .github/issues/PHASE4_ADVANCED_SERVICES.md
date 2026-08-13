@@ -319,7 +319,7 @@ Implement gRPC endpoints for high-performance service-to-service communication b
 **movie-service.proto:**
 ```protobuf
 syntax = "proto3";
-package com.filmpire.movie;
+package dev.lmdb.movie;
 
 service MovieService {
   rpc GetMovie(MovieRequest) returns (MovieResponse);
@@ -342,7 +342,7 @@ message MovieResponse {
 **ai-service.proto:**
 ```protobuf
 syntax = "proto3";
-package com.filmpire.ai;
+package dev.lmdb.ai;
 
 service AIService {
   rpc GetRecommendations(RecommendationRequest) returns (RecommendationResponse);
@@ -353,7 +353,7 @@ service AIService {
 **media-service.proto:**
 ```protobuf
 syntax = "proto3";
-package com.filmpire.media;
+package dev.lmdb.media;
 
 service MediaService {
   rpc UploadFile(stream FileChunk) returns (UploadResponse);
@@ -386,7 +386,7 @@ dependencies {
 ./gradlew generateProto
 ./gradlew :backend:movie-service:bootRun
 grpcurl -plaintext localhost:9090 list
-grpcurl -plaintext -d '{"id":550}' localhost:9090 com.filmpire.movie.MovieService/GetMovie
+grpcurl -plaintext -d '{"id":550}' localhost:9090 dev.lmdb.movie.MovieService/GetMovie
 ```
 
 **Story Points:** 5  

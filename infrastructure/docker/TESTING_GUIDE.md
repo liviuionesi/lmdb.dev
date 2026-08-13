@@ -1,6 +1,6 @@
 # API Gateway Testing Guide
 
-Complete guide for testing the Filmpire API Gateway with DDoS protection in Docker containers.
+Complete guide for testing the LMDB API Gateway with DDoS protection in Docker containers.
 
 ## 🚀 Quick Start
 

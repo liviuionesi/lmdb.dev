@@ -4,7 +4,7 @@ version: '3.9'
 #   pods stdout (JSON) -> Filebeat -> Logstash -> Elasticsearch -> Kibana
 #
 # Overlay file — bring it up alongside the main stack so Filebeat has app
-# containers to tail and both projects share `filmpire-network`:
+# containers to tail and both projects share `lmdb-network`:
 #   podman-compose -f docker-compose.yml -f docker-compose.elk.yml up -d
 #
 # Single-node, no security (xpack.security disabled): this is the local/free
@@ -13,7 +13,7 @@ version: '3.9'
 services:
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.15.3
-    container_name: filmpire-elasticsearch
+    container_name: lmdb-elasticsearch
     environment:
       discovery.type: single-node
       xpack.security.enabled: "false"
@@ -23,7 +23,7 @@ services:
     volumes:
       - elk_es_data:/usr/share/elasticsearch/data
     networks:
-      - filmpire-network
+      - lmdb-network
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=5s || exit 1"]
       interval: 10s
@@ -40,18 +40,18 @@ services:
   # Elasticsearch and Kibana are both healthy.
   elk-setup:
     image: docker.io/curlimages/curl:8.10.1
-    container_name: filmpire-elk-setup
+    container_name: lmdb-elk-setup
     entrypoint: ["/bin/sh", "/setup/setup.sh"]
     volumes:
       - ./elk/setup/setup.sh:/setup/setup.sh:ro,z
       - ./elk/elasticsearch/ilm-policy.json:/setup/ilm-policy.json:ro,z
       - ./elk/elasticsearch/index-template.json:/setup/index-template.json:ro,z
-      - ./elk/kibana/filmpire-overview.ndjson:/setup/filmpire-overview.ndjson:ro,z
-      - ./elk/kibana/filmpire-lens-suite.ndjson:/setup/filmpire-lens-suite.ndjson:ro,z
-      - ./elk/kibana/filmpire-alerting.ndjson:/setup/filmpire-alerting.ndjson:ro,z
-      - ./elk/kibana/filmpire-homepage.ndjson:/setup/filmpire-homepage.ndjson:ro,z
+      - ./elk/kibana/lmdb-overview.ndjson:/setup/lmdb-overview.ndjson:ro,z
+      - ./elk/kibana/lmdb-lens-suite.ndjson:/setup/lmdb-lens-suite.ndjson:ro,z
+      - ./elk/kibana/lmdb-alerting.ndjson:/setup/lmdb-alerting.ndjson:ro,z
+      - ./elk/kibana/lmdb-homepage.ndjson:/setup/lmdb-homepage.ndjson:ro,z
     networks:
-      - filmpire-network
+      - lmdb-network
     depends_on:
       elasticsearch:
         condition: service_healthy
@@ -61,14 +61,14 @@ services:
 
   logstash:
     image: docker.elastic.co/logstash/logstash:8.15.3
-    container_name: filmpire-logstash
+    container_name: lmdb-logstash
     environment:
       LS_JAVA_OPTS: "-Xms256m -Xmx256m"
     volumes:
       - ./elk/logstash/pipeline:/usr/share/logstash/pipeline:ro,z
       - ./elk/logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml:ro,z
     networks:
-      - filmpire-network
+      - lmdb-network
     depends_on:
       elasticsearch:
         condition: service_healthy
@@ -86,7 +86,7 @@ services:
 
   kibana:
     image: docker.elastic.co/kibana/kibana:8.15.3
-    container_name: filmpire-kibana
+    container_name: lmdb-kibana
     environment:
       ELASTICSEARCH_HOSTS: '["http://elasticsearch:9200"]'
       # At-rest encryption key for Kibana's own actions/alerting saved objects
@@ -97,7 +97,7 @@ services:
     ports:
       - "${KIBANA_PORT:-5601}:5601"
     networks:
-      - filmpire-network
+      - lmdb-network
     depends_on:
       elasticsearch:
         condition: service_healthy
@@ -115,7 +115,7 @@ services:
   # podman's own storage tree out from under it.
   filebeat:
     image: docker.elastic.co/beats/filebeat:8.15.3
-    container_name: filmpire-filebeat
+    container_name: lmdb-filebeat
     user: root
     command: ["--strict.perms=false", "-e"]
     environment:
@@ -126,7 +126,7 @@ services:
     security_opt:
       - label:disable
     networks:
-      - filmpire-network
+      - lmdb-network
     depends_on:
       logstash:
         condition: service_healthy
@@ -142,5 +142,5 @@ volumes:
 # definition across merged files is a compose validation error. Run this
 # file alone and podman-compose just reuses the existing network by name.
 networks:
-  filmpire-network:
-    name: filmpire-network
+  lmdb-network:
+    name: lmdb-network

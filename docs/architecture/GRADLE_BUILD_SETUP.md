@@ -1,13 +1,13 @@
 # Gradle Multi-Module Build Configuration
 
 ## Overview
-Complete Gradle multi-module build system for Filmpire microservices platform.
+Complete Gradle multi-module build system for LMDB microservices platform.
 
 ## Architecture
 
 ### Build Structure
 ```
-filmpire-microservices/
+lmdb.dev/
 ├── settings.gradle           # Module definitions & repository management
 ├── build.gradle              # Root build configuration
 ├── gradle.properties         # Version management

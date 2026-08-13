@@ -1,4 +1,4 @@
-# Filmpire Frontend
+# LMDB Frontend
 
 A modern, responsive movie streaming & discovery application built with React 18, Vite, Material-UI, Redux Toolkit Query, and Vosk offline voice recognition.
 
@@ -48,5 +48,5 @@ For deep architectural details on RTK Query caching policies, dynamic URL resolu
 
 ## Deployment
 
-The application is deployed on Vercel: [https://filmpire-microservices-tan.vercel.app/](https://filmpire-microservices-tan.vercel.app/)
+The application is deployed on Vercel: [https://lmdb.dev/](https://lmdb.dev/)
 

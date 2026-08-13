@@ -14,7 +14,7 @@ terraform {
   # and no account-specific state-storage details are committed. See
   # ../README.md for the bootstrap steps and the exact init command.
   backend "s3" {
-    key     = "filmpire-aws.tfstate"
+    key     = "lmdb-aws.tfstate"
     encrypt = true
   }
 }

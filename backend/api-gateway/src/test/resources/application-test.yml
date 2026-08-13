@@ -49,5 +49,5 @@ management:
 logging:
   level:
     root: INFO
-    com.filmpire.gateway: DEBUG
+    dev.lmdb.gateway: DEBUG
 

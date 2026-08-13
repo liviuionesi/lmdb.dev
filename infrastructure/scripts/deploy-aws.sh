@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Deploys Filmpire backend to AWS k3s on EC2 via Terraform.
+# Deploys LMDB backend to AWS k3s on EC2 via Terraform.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -14,7 +14,7 @@ RED='\033[0;31m'
 NC='\033[0m'
 
 echo -e "${BLUE}=====================================================${NC}"
-echo -e "${BLUE}  Filmpire — Deploy to AWS (Terraform + k3s)         ${NC}"
+echo -e "${BLUE}  LMDB — Deploy to AWS (Terraform + k3s)         ${NC}"
 echo -e "${BLUE}=====================================================${NC}"
 
 for cmd in aws terraform kubectl ssh; do

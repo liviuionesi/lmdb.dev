@@ -2,11 +2,11 @@
 services:
   cloudflare-tunnel:
     image: docker.io/cloudflare/cloudflared:latest
-    container_name: filmpire-cloudflare-tunnel
+    container_name: lmdb-cloudflare-tunnel
     restart: unless-stopped
     command: tunnel --no-autoupdate --url http://api-gateway:8080
     networks:
-      - filmpire-network
+      - lmdb-network
     depends_on:
       api-gateway:
         condition: service_healthy

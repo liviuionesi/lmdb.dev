@@ -6,7 +6,7 @@ gateway-boundary suite, and a live full-stack journey suite.
 
 ## Why this shape
 
-Filmpire is database-per-service (ADR-002): each service owns its store and
+LMDB is database-per-service (ADR-002): each service owns its store and
 services never share a database. There is therefore **no direct
 service-to-service DB join to integration-test** — the couplings implied by the
 original #19 checklist ("Movie-User favorites", "Movie-Actor cast") are not DB
@@ -81,7 +81,7 @@ burst, CORS preflight, and — since #33 landed — the TMDB **facade** routes
 A black-box client against the **whole running stack** (gateway + user/movie/
 actor services + PostgreSQL/MongoDB/Redis via Eureka) — the layer where the
 checklist's cross-service journeys are genuinely real. Uses `WebTestClient`
-bound to `${FILMPIRE_GATEWAY_URL:http://localhost:8080}` and a `TestUserBuilder`
+bound to `${LMDB_GATEWAY_URL:http://localhost:8080}` and a `TestUserBuilder`
 that registers a unique throwaway account per run (no cleanup, no collisions).
 
 Four journeys:
@@ -103,7 +103,7 @@ stack running. When the stack is up, the four journeys run for real. This is the
 one live-dependent suite; everything else is self-contained via Testcontainers.
 
 The same journeys are also exercised through **newman** against the shared
-Postman collection (`docs/api/Filmpire-API.postman_collection.json`),
+Postman collection (`docs/api/LMDB-API.postman_collection.json`),
 which is the manual/CI acceptance gate — automated by the smoke-test script
 below (#47).
 
@@ -161,10 +161,10 @@ uploads `newman-report.xml` as a run artifact.
 
 # FullStackJourneyIT runs for real only when the stack is up; otherwise it skips:
 podman-compose -f infrastructure/docker/docker-compose.yml up -d
-FILMPIRE_GATEWAY_URL=http://localhost:8080 ./gradlew :backend:api-gateway:test
+LMDB_GATEWAY_URL=http://localhost:8080 ./gradlew :backend:api-gateway:test
 
 # newman acceptance gate against the running stack:
-npx newman run docs/api/Filmpire-API.postman_collection.json
+npx newman run docs/api/LMDB-API.postman_collection.json
 ```
 
 Requires a container runtime (Podman/Docker) for Testcontainers Redis and the

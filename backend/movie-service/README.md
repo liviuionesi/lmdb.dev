@@ -326,4 +326,4 @@ See `build.gradle` for complete dependency list.
 
 ## License
 
-Copyright © 2025 Filmpire Team
+Copyright © 2025 LMDB Team

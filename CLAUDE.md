@@ -1,4 +1,4 @@
-# Filmpire Microservices — Autonomous Work Contract
+# LMDB Microservices — Autonomous Work Contract
 
 This file governs unattended/scheduled Claude Code runs on this repo (see the
 `filmpire-autonomous-dev` scheduled routine). A human-driven session can

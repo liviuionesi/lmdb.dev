@@ -12,7 +12,7 @@ metadata:
 data:
   infrastructure-dashboard.json: |
     {
-      "title": "Filmpire - Infrastructure",
+      "title": "LMDB - Infrastructure",
       "uid": "filmpire-infra",
       "tags": ["filmpire"],
       "timezone": "browser",

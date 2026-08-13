@@ -1,6 +1,6 @@
 # GitOps, CI/CD Pipelines & Cloud Automation Runbook
 
-Comprehensive reference for the continuous integration, container publishing, zero-budget cloud automation, and GitOps workflows configured in the Filmpire Microservices repository.
+Comprehensive reference for the continuous integration, container publishing, zero-budget cloud automation, and GitOps workflows configured in the LMDB Microservices repository.
 
 ---
 
@@ -51,12 +51,12 @@ flowchart TD
 |---|---|---|---|
 | [`.github/workflows/backend-ci.yml`](../../.github/workflows/backend-ci.yml) | `push`, `pull_request` (`backend/**`, `build.gradle`, `gradle.properties`) | Sets up Java 25 via SDKMAN/Temurin, executes `./gradlew test jacocoTestReport spotlessCheck owaspDependencyCheck`. | CI Runner (Ubuntu 24.04) |
 | [`.github/workflows/frontend-ci.yml`](../../.github/workflows/frontend-ci.yml) | `push`, `pull_request` (`frontend/**`) | Installs Node.js 22, executes `npm run test` (Vitest), `npm run lint`, and `npm run build`. | CI Runner (Ubuntu 24.04) |
-| [`.github/workflows/docker-publish.yml`](../../.github/workflows/docker-publish.yml) | `push` to `main` | Builds Docker images for all 8 microservices and publishes them to GitHub Packages (`ghcr.io/pehlivanu/filmpire-*:latest`). | GitHub Container Registry (GHCR) |
+| [`.github/workflows/docker-publish.yml`](../../.github/workflows/docker-publish.yml) | `push` to `main` | Builds Docker images for all 8 microservices and publishes them to GitHub Packages (`ghcr.io/pehlivanu/lmdb-*:latest`). | GitHub Container Registry (GHCR) |
 | [`.github/workflows/terraform-plan.yml`](../../.github/workflows/terraform-plan.yml) | `push` to `main` (`infrastructure/terraform/**`) | Authenticates to Azure via GitHub OIDC federation (no stored secrets) and verifies Terraform plan syntax. | Azure Resource Manager |
 | [`.github/workflows/deploy.yml`](../../.github/workflows/deploy.yml) | `workflow_dispatch` (Choice: `azure` / `aws` + `passphrase`) | **Smart Deploy**: Authenticates with passphrase, auto-wakes stopped clusters or auto-provisions if destroyed, applies K8s manifests, checks all 9 workloads, and updates DuckDNS. | Azure AKS / AWS EC2 k3s |
 | [`.github/workflows/cluster-stop.yml`](../../.github/workflows/cluster-stop.yml) | `workflow_dispatch` (Choice: `azure` / `aws`, Action: `stop`/`start` + `passphrase`) | Remotely starts or stops cloud compute nodes to save credits while preserving PVC data on disk. | Azure AKS / AWS EC2 k3s |
 | [`.github/workflows/destroy.yml`](../../.github/workflows/destroy.yml) | `workflow_dispatch` (Choice: `azure` / `aws` + `passphrase` + `confirmation: DESTROY`) | Destroys cloud infrastructure via Terraform to maintain $0 spend. | Cloud Providers |
-| [`.github/workflows/e2e-smoke.yml`](../../.github/workflows/e2e-smoke.yml) | Nightly cron / `workflow_dispatch` | Spawns complete stack and executes Newman collection (`Filmpire-API.postman_collection.json`). | CI Runner |
+| [`.github/workflows/e2e-smoke.yml`](../../.github/workflows/e2e-smoke.yml) | Nightly cron / `workflow_dispatch` | Spawns complete stack and executes Newman collection (`LMDB-API.postman_collection.json`). | CI Runner |
 
 ---
 
@@ -75,7 +75,7 @@ flowchart TD
 ### 3.2 GitHub Repository Secrets (Sensitive Credentials)
 - `DEPLOY_PASSPHRASE`: **Mandatory authorization secret** required to trigger deployment, cluster start/stop, or teardown.
 - `TMDB_API_KEY`: API key for upstream TMDB v3 data hydration.
-- `DUCKDNS_TOKEN`: Token for updating `filmpire-api.duckdns.org`.
+- `DUCKDNS_TOKEN`: Token for updating `api.lmdb.dev`.
 - `AWS_K3S_SSH_PRIVATE_KEY`: Private SSH key for fetching `kubeconfig` over SSH from AWS k3s nodes.
 
 ---

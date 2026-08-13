@@ -3,7 +3,7 @@
 logging:
   level:
     root: WARN
-    '[com.filmpire]': INFO
+    '[dev.lmdb]': INFO
 
 # Common production database settings
 spring:

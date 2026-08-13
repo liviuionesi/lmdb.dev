@@ -28,7 +28,7 @@ variable "demo_inbound_port" {
 
 variable "instance_name" {
   type    = string
-  default = "filmpire-k3s"
+  default = "lmdb-k3s"
 }
 
 variable "instance_type" {

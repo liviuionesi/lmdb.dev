@@ -5,7 +5,7 @@
 logging:
   level:
     root: INFO
-    '[com.filmpire]': DEBUG
+    '[dev.lmdb]': DEBUG
   pattern:
     console: '%d{yyyy-MM-dd HH:mm:ss} - %msg%n'
 
@@ -22,6 +22,6 @@ management:
 # Common info
 info:
   app:
-    name: Filmpire Microservices
+    name: LMDB Microservices
     description: Centralized configuration
     version: 1.0.0
