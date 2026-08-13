@@ -25,10 +25,12 @@ class ActivityTrackingServiceTest {
 
   /** Service starts with an activity timestamp initialized to approximately the current instant. */
   @Test
-  @DisplayName("Should initialize with current timestamp")
+  @DisplayName("Should initialize with current timestamp and track uptime")
   void shouldInitializeWithCurrentTimestamp() {
     Instant initial = service.getLastActivityTime();
     assertThat(initial).isNotNull();
+    assertThat(service.getStartTime()).isNotNull();
+    assertThat(service.getUptimeSeconds()).isGreaterThanOrEqualTo(0L);
     assertThat(service.getIdleSeconds()).isLessThanOrEqualTo(2L);
   }
 

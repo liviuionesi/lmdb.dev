@@ -22,7 +22,28 @@ public class ActivityTrackingService {
   /** Default auto-stop inactivity threshold: 1 hour (3600 seconds). */
   public static final long DEFAULT_IDLE_THRESHOLD_SECONDS = 3600L;
 
+  /** Service startup timestamp. */
+  private final Instant startTime = Instant.now();
+
   private final AtomicReference<Instant> lastActivityTime = new AtomicReference<>(Instant.now());
+
+  /**
+   * Returns the timestamp when this gateway instance started.
+   *
+   * @return Instant representing service start time
+   */
+  public Instant getStartTime() {
+    return startTime;
+  }
+
+  /**
+   * Calculates the total uptime in seconds since the service started.
+   *
+   * @return uptime duration in seconds
+   */
+  public long getUptimeSeconds() {
+    return Duration.between(startTime, Instant.now()).getSeconds();
+  }
 
   /** Records that an active user request was processed by the gateway. */
   public void recordActivity() {

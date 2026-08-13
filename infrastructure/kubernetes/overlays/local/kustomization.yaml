@@ -16,3 +16,9 @@ secretGenerator:
   - name: filmpire-secrets
     envs:
       - secrets.env
+
+configMapGenerator:
+  - name: api-gateway-config
+    behavior: merge
+    literals:
+      - CLOUD_PROVIDER=minikube

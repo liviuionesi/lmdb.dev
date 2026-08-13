@@ -234,8 +234,16 @@ it baked in. There's no AWS equivalent of `az aks get-credentials` — the
 script/workflow fetches `kubeconfig` over SSH using that key's private
 half.
 
-Same NodePort (`:30080`) / mixed-content / tunnel-fronting / CORS /
-image-freshness notes as §5 all apply identically.
+Like Azure, **AWS runs the zero-touch Caddy TLS proxy** (`infrastructure/kubernetes/overlays/aws/caddy-tls.yaml`)
+bound to host ports 80/443 on the EC2 instance's public IP, auto-fetching a Let's Encrypt
+certificate for `filmpire-api.duckdns.org`. No manual tunnel is needed when switching between
+Azure and AWS.
+
+The deployed frontend automatically displays an interactive **telemetry footer** showing:
+- 🟢 **Live Cloud Provider Badge** (`Powered by Microsoft Azure`, `Powered by AWS`, or `Powered by Minikube`)
+- ⏱️ **Live Uptime**
+- 🌙 **Time to Auto-Sleep Countdown** (derived from the 1-hour idle threshold)
+- Target selector modal for on-the-fly environment switching.
 
 Teardown:
 
