@@ -41,8 +41,8 @@ import org.springframework.web.client.RestClientResponseException;
  * ours.
  *
  * <p>Auth/account endpoints ({@code /authentication/**}, {@code /account/**}) are NOT here — those
- * are being retargeted at LMDB's own user-service JWT flow rather than proxied to real TMDB
- * (see the follow-up to #33).
+ * are being retargeted at LMDB's own user-service JWT flow rather than proxied to real TMDB (see
+ * the follow-up to #33).
  */
 @RestController
 @Slf4j

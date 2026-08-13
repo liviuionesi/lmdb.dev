@@ -14,9 +14,9 @@ import org.springframework.web.bind.annotation.RestController;
  * Native analytics REST controller exposing aggregated request-count data derived from the {@code
  * tmdb.document.saved} Kafka event stream (#40, #41, Story #96).
  *
- * <p>This endpoint is not part of the TMDB v3 facade — it is LMDB's own analytics API,
- * returning data aggregated by {@link TmdbAnalyticsConsumer} from the Kafka event stream into
- * MongoDB via idempotent upserts.
+ * <p>This endpoint is not part of the TMDB v3 facade — it is LMDB's own analytics API, returning
+ * data aggregated by {@link TmdbAnalyticsConsumer} from the Kafka event stream into MongoDB via
+ * idempotent upserts.
  */
 @RestController
 @RequestMapping("/api/v1/analytics")

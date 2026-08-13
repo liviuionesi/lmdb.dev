@@ -7,8 +7,8 @@ import org.springframework.cloud.netflix.eureka.server.EnableEurekaServer;
 /**
  * Discovery Service Application - Eureka Server
  *
- * <p>This service acts as the service registry for the LMDB microservices architecture. It
- * enables service discovery and registration for all microservices in the system.
+ * <p>This service acts as the service registry for the LMDB microservices architecture. It enables
+ * service discovery and registration for all microservices in the system.
  *
  * <p>Key features:
  *

@@ -61,7 +61,8 @@ public class ActivityStatusController {
     long threshold = ActivityTrackingService.DEFAULT_IDLE_THRESHOLD_SECONDS;
     long idleSeconds = activityTrackingService.getIdleSeconds();
     long remaining = activityTrackingService.getSecondsUntilAutoStop(threshold);
-    String providerKey = (cloudProvider != null && !cloudProvider.isBlank()) ? cloudProvider.toLowerCase() : "azure";
+    String providerKey =
+        (cloudProvider != null && !cloudProvider.isBlank()) ? cloudProvider.toLowerCase() : "azure";
 
     Map<String, Object> response = new LinkedHashMap<>();
     response.put("status", "UP");

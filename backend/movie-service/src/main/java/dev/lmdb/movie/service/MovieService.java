@@ -31,9 +31,9 @@ import org.springframework.stereotype.Service;
  *
  * <p>Two consumers share this service (ADR-010): the native, camelCase {@code /api/v1/movies} API
  * and the TMDB-shaped facade ({@link dev.lmdb.movie.facade.TmdbFacadeController}) that exposes
- * TMDB's exact v3 paths/field names for the LMDB React app. Both read and write the SAME
- * persisted {@link Movie} documents — there is one dataset, not a cache-plus-source-of-truth split.
- * Detail data is near-immutable and served read-through from MongoDB once fetched; list endpoints
+ * TMDB's exact v3 paths/field names for the LMDB React app. Both read and write the SAME persisted
+ * {@link Movie} documents — there is one dataset, not a cache-plus-source-of-truth split. Detail
+ * data is near-immutable and served read-through from MongoDB once fetched; list endpoints
  * (discover/search/trending/popular/top-rated/similar/ recommendations) still ask TMDB live for
  * ranking — its search/relevance algorithm is not being reimplemented — but every movie any
  * endpoint touches is upserted, so the catalog grows from real traffic and repeat detail lookups

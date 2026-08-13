@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
+import com.mongodb.client.result.DeleteResult;
 import dev.lmdb.movie.client.TmdbClient;
 import dev.lmdb.movie.client.dto.*;
 import dev.lmdb.movie.dto.*;
@@ -17,7 +18,6 @@ import dev.lmdb.movie.model.SpokenLanguage;
 import dev.lmdb.movie.model.Video;
 import dev.lmdb.movie.repository.MovieRepository;
 import dev.lmdb.shared.dto.PageResponse;
-import com.mongodb.client.result.DeleteResult;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Arrays;

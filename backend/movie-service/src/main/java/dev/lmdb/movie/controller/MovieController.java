@@ -27,8 +27,8 @@ import org.springframework.web.bind.annotation.*;
  * navigates the API by following links rather than hard-coding URLs. List endpoints keep the
  * compact {@link PageResponse} pagination envelope. The TMDB v3-shaped facade ({@link
  * dev.lmdb.movie.facade.TmdbFacadeController}) is a second, undecorated view over the SAME
- * persisted {@link dev.lmdb.movie.model.Movie} data as this controller, serialized with TMDB's
- * own field names instead (ADR-010) — not a separate cache or a raw passthrough.
+ * persisted {@link dev.lmdb.movie.model.Movie} data as this controller, serialized with TMDB's own
+ * field names instead (ADR-010) — not a separate cache or a raw passthrough.
  */
 @RestController
 @RequestMapping("/api/v1/movies")

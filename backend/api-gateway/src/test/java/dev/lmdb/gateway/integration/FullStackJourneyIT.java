@@ -24,13 +24,13 @@ import org.springframework.test.web.reactive.server.WebTestClient;
  * WireMock stand-in, this suite is a pure black-box client against the <b>whole running stack</b>
  * (gateway + user/movie/actor services + their PostgreSQL/MongoDB/Redis, wired through Eureka). It
  * exercises the exact user journeys the #19 checklist names, at the layer where they are actually
- * real: not a service-to-service DB join (ADR-002 forbids those), but the API composition the
- * LMDB React app performs through the gateway.
+ * real: not a service-to-service DB join (ADR-002 forbids those), but the API composition the LMDB
+ * React app performs through the gateway.
  *
  * <p><b>Runs only when the stack is up.</b> Under database-per-service there is no way to spin all
  * five services inside a single Testcontainers test cheaply, so this suite targets a stack already
- * running on {@code ${LMDB_GATEWAY_URL:http://localhost:8080}} (the podman-compose stack). If
- * the gateway health check is unreachable, every test is skipped via a JUnit assumption rather than
+ * running on {@code ${LMDB_GATEWAY_URL:http://localhost:8080}} (the podman-compose stack). If the
+ * gateway health check is unreachable, every test is skipped via a JUnit assumption rather than
  * failed — so {@code ./gradlew build} stays green on a machine with no stack, while a developer (or
  * the #19 acceptance run) gets genuine end-to-end coverage when the stack is up.
  *
@@ -53,7 +53,10 @@ class FullStackJourneyIT {
 
   /** Base URL of the running gateway; overridable for a non-default host/port. */
   private static final String GATEWAY_URL =
-      System.getenv().getOrDefault("LMDB_GATEWAY_URL", System.getenv().getOrDefault("LMDB_GATEWAY_URL", "http://localhost:8080"));
+      System.getenv()
+          .getOrDefault(
+              "LMDB_GATEWAY_URL",
+              System.getenv().getOrDefault("LMDB_GATEWAY_URL", "http://localhost:8080"));
 
   /** Set once in {@link #verifyStackIsReachable()}; gates the whole suite. */
   private static boolean stackUp;

@@ -3,8 +3,8 @@ package dev.lmdb.movie.client;
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.lmdb.movie.client.dto.TmdbMovieResponse;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
+import dev.lmdb.movie.client.dto.TmdbMovieResponse;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.stream.IntStream;

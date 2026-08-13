@@ -15,8 +15,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 /**
  * Maps exceptions to the shared {@link ApiResponse} error envelope with the appropriate HTTP
- * status, keeping error responses consistent across the user-service API (and with the other
- * LMDB services).
+ * status, keeping error responses consistent across the user-service API (and with the other LMDB
+ * services).
  */
 @RestControllerAdvice
 @Slf4j

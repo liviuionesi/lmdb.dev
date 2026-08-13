@@ -13,8 +13,8 @@ import org.springframework.web.service.invoker.HttpServiceProxyFactory;
  *
  * <p>Defines one shared, rate-limited {@link RestClient} and builds {@link TmdbClient} on top of it
  * — the single typed HTTP interface used by both the native {@code /api/v1} API and the TMDB v3
- * facade ({@code dev.lmdb.movie.facade}) as of ADR-010; there is no longer a separate
- * raw/untyped client.
+ * facade ({@code dev.lmdb.movie.facade}) as of ADR-010; there is no longer a separate raw/untyped
+ * client.
  *
  * <p>The {@link TmdbRateLimitInterceptor} carried by the shared {@code RestClient} holds the token
  * bucket, so all outbound TMDB traffic from this service instance is throttled by ONE bucket.

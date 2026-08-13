@@ -5,10 +5,10 @@ import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.lmdb.movie.support.AbstractMongoIntegrationTest;
-import dev.lmdb.movie.support.TestCacheConfig;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
+import dev.lmdb.movie.support.AbstractMongoIntegrationTest;
+import dev.lmdb.movie.support.TestCacheConfig;
 import io.gatling.app.Gatling$;
 import java.io.File;
 import java.nio.file.Files;

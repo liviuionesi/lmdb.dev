@@ -13,8 +13,7 @@ import java.util.List;
 /**
  * TMDB API response for movie details. Fields mirror TMDB's real {@code /movie/{id}} shape
  * (ADR-010) so this same record can be reused to serialize our own persisted {@link
- * dev.lmdb.movie.model.Movie} back out through the facade, not just to deserialize TMDB's
- * response.
+ * dev.lmdb.movie.model.Movie} back out through the facade, not just to deserialize TMDB's response.
  */
 public record TmdbMovieResponse(
     Long id,
