@@ -8,8 +8,7 @@ import org.springframework.web.client.RestClient;
 
 /**
  * Configures a dedicated load-balanced {@link RestClient} for {@link
- * dev.lmdb.ai.client.MovieCatalogClient} so calls to {@code lb://movie-service} resolve via
- * Eureka.
+ * dev.lmdb.ai.client.MovieCatalogClient} so calls to {@code lb://movie-service} resolve via Eureka.
  *
  * <p>This deliberately does NOT declare a {@code @LoadBalanced RestClient.Builder} bean: Spring
  * Boot's {@code RestClientAutoConfiguration} only supplies its own ambient, unqualified {@code
@@ -22,8 +21,8 @@ import org.springframework.web.client.RestClient;
  * BlockingLoadBalancerInterceptor} (the interface Spring Cloud LoadBalancer's auto-configured
  * interceptor bean always implements, whether or not Spring Retry ends up on the classpath) is
  * attached by hand to a fresh, private {@link RestClient.Builder} that only {@link
- * dev.lmdb.ai.client.MovieCatalogClient} ever sees — no extra {@code RestClient.Builder} bean
- * is ever registered.
+ * dev.lmdb.ai.client.MovieCatalogClient} ever sees — no extra {@code RestClient.Builder} bean is
+ * ever registered.
  */
 @Configuration
 public class RestClientConfig {

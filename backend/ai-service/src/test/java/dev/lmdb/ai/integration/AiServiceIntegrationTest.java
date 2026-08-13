@@ -14,11 +14,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.tomakehurst.wiremock.client.WireMock;
+import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import dev.lmdb.ai.config.AiModelTestConfig;
 import dev.lmdb.ai.repository.ConversationRepository;
 import dev.lmdb.ai.service.SpeechToTextService;
-import com.github.tomakehurst.wiremock.client.WireMock;
-import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -114,9 +114,8 @@ class AiServiceIntegrationTest {
 
   /**
    * Sends a chat request with no {@code conversationId} and verifies a new {@link
-   * dev.lmdb.ai.model.Conversation} is created holding both the user's message and the
-   * assistant's reply — the persistence half of the chat contract, not just the HTTP response
-   * shape.
+   * dev.lmdb.ai.model.Conversation} is created holding both the user's message and the assistant's
+   * reply — the persistence half of the chat contract, not just the HTTP response shape.
    *
    * @throws Exception if the MockMvc request fails to execute
    */
@@ -272,8 +271,8 @@ class AiServiceIntegrationTest {
   /**
    * Stubs movie-service to return zero candidates and verifies the response is a 200 with an empty
    * recommendations list, not an error — {@link
-   * dev.lmdb.ai.service.RecommendationService#recommend} must short-circuit before ever calling
-   * the chat model when there's nothing to rank.
+   * dev.lmdb.ai.service.RecommendationService#recommend} must short-circuit before ever calling the
+   * chat model when there's nothing to rank.
    *
    * @throws Exception if the MockMvc request fails to execute
    */
