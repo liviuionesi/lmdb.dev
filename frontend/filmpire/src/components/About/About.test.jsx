@@ -9,7 +9,7 @@ describe('About Page Component', () => {
     renderWithProviders(<About />);
 
     expect(screen.getByTestId('about-page')).toBeInTheDocument();
-    expect(screen.getByText('Live Movies Database')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: /Live Movies Database/i })).toBeInTheDocument();
     expect(screen.getByText(/Architect & Engineering: Liviu Ionesi/i)).toBeInTheDocument();
 
     // Verify creator links
