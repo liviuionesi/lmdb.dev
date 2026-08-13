@@ -101,7 +101,7 @@ function About() {
             startIcon={<GitHubIcon />}
             endIcon={<OpenInNewIcon fontSize="small" />}
             component="a"
-            href="https://github.com/pehlivanu/filmpire-microservices"
+            href="https://github.com/pehlivanu/lmdb.dev"
             target="_blank"
             rel="noopener noreferrer"
             data-testid="project-github-link"

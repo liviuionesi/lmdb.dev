@@ -6,7 +6,7 @@
  */
 
 const CLOUD_API_URL = process.env.CLOUD_API_URL || 'https://filmpire-api.duckdns.org';
-const GITHUB_REPO = process.env.GITHUB_REPO || 'pehlivanu/filmpire-microservices';
+const GITHUB_REPO = process.env.GITHUB_REPO || 'pehlivanu/lmdb.dev';
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 // Server-side only (this file runs as a Vercel serverless function, never
 // shipped to the browser bundle) mirror of the GitHub repo secret

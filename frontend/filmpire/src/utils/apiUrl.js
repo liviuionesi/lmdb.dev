@@ -4,7 +4,7 @@ const CLOUD_API_URL = 'https://filmpire-api.duckdns.org';
 const LOCAL_API_URL = 'http://localhost:8080';
 // Published by infrastructure/scripts/start-tunnel.sh or cloud deployment -
 // provides instant HTTPS endpoint bypassing any ISP DNS caching.
-const TUNNEL_POINTER_URL = 'https://raw.githubusercontent.com/pehlivanu/filmpire-microservices/develop/infrastructure/tunnel-url.txt';
+const TUNNEL_POINTER_URL = 'https://raw.githubusercontent.com/pehlivanu/lmdb.dev/develop/infrastructure/tunnel-url.txt';
 const HEALTH_CHECK_TIMEOUT_MS = 2500;
 const RESOLUTION_TTL_MS = 30000;
 
