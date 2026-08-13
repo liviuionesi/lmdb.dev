@@ -13,7 +13,7 @@
 
 > **LMDB (Live Movies Database)** is an enterprise-grade, event-driven cinema streaming and AI recommendation platform architected by **Liviu Ionesi** (where the name stands for *Live Movies Database* as well as *Liviu's Movie Database*). Featuring an AI assistant powered by Spring AI & Ollama (LLaMA 3.2), semantic vector search (pgvector), offline speech-to-text voice control (Vosk), a self-healing TMDB v3 API facade, 7 layers of automated testing, full observability (ELK, Zipkin, Prometheus, Grafana), and automated multi-cloud deployment to Azure AKS and AWS k3s.
 
-🌐 **Live Demo (Frontend):** [filmpire-microservices-tan.vercel.app](https://filmpire-microservices-tan.vercel.app/)  
+🌐 **Live Demo (Frontend):** [lmdb.dev](https://lmdb.dev) *(or [www.lmdb.dev](https://www.lmdb.dev))* • [Vercel Deployment](https://filmpire-microservices-tan.vercel.app/)  
 📊 **Live Project Analytics & Code Statistics:** [docs/reports/PROJECT_METRICS.md](docs/reports/PROJECT_METRICS.md)
 
 ---

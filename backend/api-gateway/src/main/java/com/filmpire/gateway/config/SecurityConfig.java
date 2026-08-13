@@ -146,13 +146,16 @@ public class SecurityConfig {
             "http://localhost:3001",
             "http://localhost:5173",
             "http://localhost:5174",
-            "https://filmpire-microservices-tan.vercel.app"));
+            "https://filmpire-microservices-tan.vercel.app",
+            "https://lmdb.dev",
+            "https://www.lmdb.dev"));
     configuration.setAllowedOriginPatterns(
         Arrays.asList(
             "http://localhost:*",
             "https://*.vercel.app",
             "https://*.duckdns.org",
-            "https://*.trycloudflare.com"));
+            "https://*.trycloudflare.com",
+            "https://*.lmdb.dev"));
 
     // Allowed HTTP methods
     configuration.setAllowedMethods(
