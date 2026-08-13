@@ -1,17 +1,8 @@
 name: Project Metrics Auto-Update
 
 on:
-  push:
-    branches:
-      - main
-      - develop
-    paths:
-      - 'backend/**'
-      - 'frontend/**'
-      - 'infrastructure/**'
-      - 'docs/**'
-      - 'build.gradle'
-      - 'gradle.properties'
+  # Disabled auto-update on push to prevent doubling git history and merge conflicts.
+  # Run manually via GitHub Actions Actions tab or ./infrastructure/scripts/generate-project-stats.sh.
   workflow_dispatch:
 
 permissions:
