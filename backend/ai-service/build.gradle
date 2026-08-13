@@ -99,6 +99,27 @@ protobuf {
     }
 }
 
+// Register the protoc/gRPC generated directories as explicit source roots so
+// the IDE language server (STS / VS Code Java LSP) can resolve the generated
+// classes without needing a Gradle task run first. compileJava already depends
+// on generateProto via the Protobuf plugin; the explicit dependsOn below makes
+// that dependency survive a `./gradlew :ai-service:compileJava` invocation
+// that skips the protobuf plugin's auto-wiring on very clean environments.
+sourceSets {
+    main {
+        java {
+            srcDirs += [
+                'build/generated/sources/proto/main/java',
+                'build/generated/sources/proto/main/grpc',
+            ]
+        }
+    }
+}
+
+tasks.named('compileJava') {
+    dependsOn tasks.named('generateProto')
+}
+
 bootJar {
     archiveBaseName = 'ai-service'
     archiveVersion = project.version
