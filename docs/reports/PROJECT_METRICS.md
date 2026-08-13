@@ -1,7 +1,7 @@
 # 📊 Filmpire Microservices — Project Analytics & Metrics Report
 
-> **Dynamically Generated:** `2026-08-13 09:19:44 UTC`  
-> **Git Status:** Branch `develop` | Commit [`0afb959`](https://github.com/pehlivanu/filmpire-microservices/commit/0afb959)  
+> **Dynamically Generated:** `2026-08-13 12:43:12 UTC`  
+> **Git Status:** Branch `develop` | Commit [`26aecbe`](https://github.com/pehlivanu/filmpire-microservices/commit/26aecbe)  
 > **Auto-Update Trigger:** Executes automatically on each push and via `./gradlew projectStats`
 
 ---
@@ -10,9 +10,9 @@
 
 | Metric | Value | Category | Significance |
 |---|---|---|---|
-| **Total Git Commits** | **401** | Git Velocity | Evolutionary depth across 2.5+ years of active development |
-| **Total Code Churn** | **459,299 LOC** (+268,015 / -191,284) | Git Velocity | Continuous refactoring and enterprise hardening |
-| **Total Codebase Lines** | **67,322 LOC** (48,106 code / 10,641 comments) | Codebase Volume | Full-stack polyglot microservice ecosystem |
+| **Total Git Commits** | **403** | Git Velocity | Evolutionary depth across 2.5+ years of active development |
+| **Total Code Churn** | **459,453 LOC** (+268,107 / -191,346) | Git Velocity | Continuous refactoring and enterprise hardening |
+| **Total Codebase Lines** | **67,350 LOC** (48,132 code / 10,641 comments) | Codebase Volume | Full-stack polyglot microservice ecosystem |
 | **Total Automated Tests** | **667 Tests** (474 Backend + 193 Frontend) | Quality & Reliability | 100% Green Unit, Slice, Contract & Integration suites |
 | **Total REST Endpoints** | **60 Endpoints** (39 GET, 14 POST, 2 PUT, 5 DELETE) | API Surface | Microservice REST surface exposed via API Gateway |
 | **Database Migrations** | **6 Flyway SQL Scripts** | Persistence | Versioned, reproducible relational schemas |
@@ -24,12 +24,12 @@
 
 ## 📈 1. Git Velocity & Lifecycle Churn
 
-- **Development Timeline:** `2024-03-14 (2 years, 5 months ago)` ➔ `2026-08-13 (19 seconds ago)`
-- **Total Commits:** `401`
-- **Total Lines Added (+):** `268,015`
-- **Total Lines Deleted / Refactored (-):** `191,284`
-- **Total Churn Volume (Add + Del):** `459,299` lines processed
-- **Net Repository Growth:** `+76,731` lines
+- **Development Timeline:** `2024-03-14 (2 years, 5 months ago)` ➔ `2026-08-13 (10 seconds ago)`
+- **Total Commits:** `403`
+- **Total Lines Added (+):** `268,107`
+- **Total Lines Deleted / Refactored (-):** `191,346`
+- **Total Churn Volume (Add + Del):** `459,453` lines processed
+- **Net Repository Growth:** `+76,761` lines
 
 ---
 
@@ -44,7 +44,7 @@
 | **JSON Data** | 18 | 3,664 | 0 | 1 | **3,665** | `[█░░░░░░░░░░░░░░]   5.4%` |
 | **Shell Automation (Bash)** | 30 | 1,853 | 386 | 360 | **2,599** | `[█░░░░░░░░░░░░░░]   3.9%` |
 | **Build & Config (Gradle/Properties)** | 14 | 1,039 | 24 | 172 | **1,235** | `[░░░░░░░░░░░░░░░]   1.8%` |
-| **Terraform & Cloud (HCL)** | 26 | 789 | 157 | 138 | **1,084** | `[░░░░░░░░░░░░░░░]   1.6%` |
+| **Terraform & Cloud (HCL)** | 26 | 815 | 157 | 140 | **1,112** | `[░░░░░░░░░░░░░░░]   1.7%` |
 | **SQL & DB Migrations** | 6 | 145 | 0 | 20 | **165** | `[░░░░░░░░░░░░░░░]   0.2%` |
 | **XML & HTML** | 3 | 95 | 6 | 12 | **113** | `[░░░░░░░░░░░░░░░]   0.2%` |
 | **Protocol Buffers (Proto3)** | 1 | 31 | 6 | 8 | **45** | `[░░░░░░░░░░░░░░░]   0.1%` |
@@ -56,9 +56,9 @@
 
 | Microservice / Module | Files | Code LOC | Comment LOC | Total LOC | Share of Project |
 |---|---|---|---|---|---|
-| **`docs (Architecture, Guides, ADRs)`** | 50 | 13,583 | 55 | **16,196** | `[████░░░░░░░░░░░]  24.1%` |
+| **`docs (Architecture, Guides, ADRs)`** | 50 | 13,583 | 55 | **16,196** | `[████░░░░░░░░░░░]  24.0%` |
 | **`movie-service (Port 8081)`** | 71 | 6,424 | 2,527 | **10,069** | `[██░░░░░░░░░░░░░]  15.0%` |
-| **`infrastructure (Terraform, K8s, Scripts)`** | 121 | 6,551 | 908 | **8,190** | `[██░░░░░░░░░░░░░]  12.2%` |
+| **`infrastructure (Terraform, K8s, Scripts)`** | 121 | 6,577 | 908 | **8,218** | `[██░░░░░░░░░░░░░]  12.2%` |
 | **`frontend (React 19 / MUI 9 / Vite 8)`** | 90 | 6,008 | 538 | **7,527** | `[██░░░░░░░░░░░░░]  11.2%` |
 | **`api-gateway (Port 8080)`** | 44 | 4,318 | 1,689 | **6,936** | `[██░░░░░░░░░░░░░]  10.3%` |
 | **`shared-library (Common DTOs & Mappers)`** | 33 | 2,343 | 1,464 | **4,406** | `[█░░░░░░░░░░░░░░]   6.5%` |
