@@ -1,52 +1,52 @@
 {
-  "generated_at": "2026-08-13T12:43:12.288062",
+  "generated_at": "2026-08-13T13:21:53.705543",
   "git": {
-    "commit_count": 403,
+    "commit_count": 405,
     "first_commit": "2024-03-14 (2 years, 5 months ago)",
-    "latest_commit": "2026-08-13 (10 seconds ago)",
-    "commit_hash": "26aecbe",
+    "latest_commit": "2026-08-13 (11 seconds ago)",
+    "commit_hash": "447b685",
     "branch": "develop",
-    "insertions": 268107,
-    "deletions": 191346,
-    "total_churn": 459453,
-    "net_growth": 76761,
+    "insertions": 268722,
+    "deletions": 191380,
+    "total_churn": 460102,
+    "net_growth": 77342,
     "authors_count": 6
   },
   "languages": {
     "Java (Spring Boot / gRPC)": {
       "files": 229,
-      "total": 27320,
-      "blank": 2886,
-      "comment": 8794,
-      "code": 15640
+      "total": 27379,
+      "blank": 2891,
+      "comment": 8812,
+      "code": 15676
     },
     "JavaScript / React (JSX)": {
-      "files": 87,
-      "total": 7353,
-      "blank": 951,
-      "comment": 585,
-      "code": 5817
+      "files": 90,
+      "total": 7753,
+      "blank": 986,
+      "comment": 592,
+      "code": 6175
     },
     "Documentation (Markdown)": {
       "files": 69,
-      "total": 18384,
-      "blank": 3760,
+      "total": 18392,
+      "blank": 3761,
       "comment": 1,
-      "code": 14623
+      "code": 14630
     },
     "Kubernetes & CI/CD (YAML)": {
-      "files": 82,
-      "total": 5344,
-      "blank": 264,
-      "comment": 682,
-      "code": 4398
+      "files": 83,
+      "total": 5442,
+      "blank": 266,
+      "comment": 693,
+      "code": 4483
     },
     "Terraform & Cloud (HCL)": {
       "files": 26,
-      "total": 1112,
-      "blank": 140,
+      "total": 1128,
+      "blank": 142,
       "comment": 157,
-      "code": 815
+      "code": 829
     },
     "Shell Automation (Bash)": {
       "files": 30,
@@ -101,9 +101,9 @@
   "modules": {
     "api-gateway (Port 8080)": {
       "files": 44,
-      "total": 6936,
-      "code": 4318,
-      "comment": 1689
+      "total": 6995,
+      "code": 4354,
+      "comment": 1707
     },
     "movie-service (Port 8081)": {
       "files": 71,
@@ -154,21 +154,21 @@
       "comment": 1464
     },
     "frontend (React 19 / MUI 9 / Vite 8)": {
-      "files": 90,
-      "total": 7527,
-      "code": 6008,
-      "comment": 538
+      "files": 93,
+      "total": 7927,
+      "code": 6366,
+      "comment": 545
     },
     "infrastructure (Terraform, K8s, Scripts)": {
-      "files": 121,
-      "total": 8218,
-      "code": 6577,
-      "comment": 908
+      "files": 122,
+      "total": 8332,
+      "code": 6676,
+      "comment": 919
     },
     "docs (Architecture, Guides, ADRs)": {
       "files": 50,
-      "total": 16196,
-      "code": 13583,
+      "total": 16204,
+      "code": 13590,
       "comment": 55
     },
     "e2e (Postman & Newman Regression)": {
@@ -196,7 +196,7 @@
     "flyway_migrations": 6,
     "contract_tests": 8,
     "proto_files": 1,
-    "react_components": 42,
+    "react_components": 44,
     "redux_slices": 4,
     "custom_hooks": 6,
     "adr_count": 19,
@@ -225,9 +225,9 @@
   "tests": {
     "backend_tests": 474,
     "backend_test_files": 78,
-    "frontend_tests": 193,
-    "frontend_test_files": 31,
-    "total_tests": 667,
-    "total_test_files": 109
+    "frontend_tests": 197,
+    "frontend_test_files": 32,
+    "total_tests": 671,
+    "total_test_files": 110
   }
 }
