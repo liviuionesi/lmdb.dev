@@ -38,6 +38,10 @@ secretGenerator:
 # Eureka-resolved lb:// scheme to plain cluster-DNS, same reasoning as the
 # gateway's own "kubernetes" Spring profile (application.yml).
 configMapGenerator:
+  - name: api-gateway-config
+    behavior: merge
+    literals:
+      - CLOUD_PROVIDER=azure
   - name: movie-service-config
     behavior: merge
     literals:

@@ -17,6 +17,7 @@ resources:
   - ../../base/postgres
   - ../../base/redis
   - ../../base/ollama
+  - caddy-tls.yaml
 
 secretGenerator:
   - name: filmpire-secrets
@@ -27,6 +28,10 @@ secretGenerator:
 # Kafka broker in this overlay; ai-service's MOVIE_SERVICE_BASE_URL needs
 # rewriting off the Eureka-resolved lb:// scheme).
 configMapGenerator:
+  - name: api-gateway-config
+    behavior: merge
+    literals:
+      - CLOUD_PROVIDER=aws
   - name: movie-service-config
     behavior: merge
     literals:

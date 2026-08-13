@@ -1,7 +1,7 @@
 # 📊 Filmpire Microservices — Project Analytics & Metrics Report
 
-> **Dynamically Generated:** `2026-08-13 12:43:43 UTC`  
-> **Git Status:** Branch `main` | Commit [`b7c7583`](https://github.com/pehlivanu/filmpire-microservices/commit/b7c7583)  
+> **Dynamically Generated:** `2026-08-13 12:43:12 UTC`  
+> **Git Status:** Branch `develop` | Commit [`26aecbe`](https://github.com/pehlivanu/filmpire-microservices/commit/26aecbe)  
 > **Auto-Update Trigger:** Executes automatically on each push and via `./gradlew projectStats`
 
 ---
@@ -10,8 +10,8 @@
 
 | Metric | Value | Category | Significance |
 |---|---|---|---|
-| **Total Git Commits** | **407** | Git Velocity | Evolutionary depth across 2.5+ years of active development |
-| **Total Code Churn** | **459,655 LOC** (+268,208 / -191,447) | Git Velocity | Continuous refactoring and enterprise hardening |
+| **Total Git Commits** | **403** | Git Velocity | Evolutionary depth across 2.5+ years of active development |
+| **Total Code Churn** | **459,453 LOC** (+268,107 / -191,346) | Git Velocity | Continuous refactoring and enterprise hardening |
 | **Total Codebase Lines** | **67,350 LOC** (48,132 code / 10,641 comments) | Codebase Volume | Full-stack polyglot microservice ecosystem |
 | **Total Automated Tests** | **667 Tests** (474 Backend + 193 Frontend) | Quality & Reliability | 100% Green Unit, Slice, Contract & Integration suites |
 | **Total REST Endpoints** | **60 Endpoints** (39 GET, 14 POST, 2 PUT, 5 DELETE) | API Surface | Microservice REST surface exposed via API Gateway |
@@ -24,11 +24,11 @@
 
 ## 📈 1. Git Velocity & Lifecycle Churn
 
-- **Development Timeline:** `2024-03-14 (2 years, 5 months ago)` ➔ `2026-08-13 (11 seconds ago)`
-- **Total Commits:** `407`
-- **Total Lines Added (+):** `268,208`
-- **Total Lines Deleted / Refactored (-):** `191,447`
-- **Total Churn Volume (Add + Del):** `459,655` lines processed
+- **Development Timeline:** `2024-03-14 (2 years, 5 months ago)` ➔ `2026-08-13 (10 seconds ago)`
+- **Total Commits:** `403`
+- **Total Lines Added (+):** `268,107`
+- **Total Lines Deleted / Refactored (-):** `191,346`
+- **Total Churn Volume (Add + Del):** `459,453` lines processed
 - **Net Repository Growth:** `+76,761` lines
 
 ---

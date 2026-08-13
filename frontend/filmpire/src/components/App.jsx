@@ -11,6 +11,7 @@ import {
   Actors,
   AdminDashboard,
   BackendStandbyModal,
+  Footer,
   MovieInformation,
   Movies,
   NavBar,
@@ -39,6 +40,7 @@ function App() {
           <Route path="/" element={<Movies />} />
           <Route path="/profile/:id" element={<Profile />} />
         </Routes>
+        <Footer />
       </main>
       <BackendStandbyModal onBackendReady={handleBackendReady} />
       <VoiceControl />

@@ -38,7 +38,10 @@ class ActivityStatusControllerTest {
   void getActivityStatus_shouldReturnMetrics() {
     // Given
     Instant fixedTime = Instant.parse("2026-08-11T09:00:00Z");
+    Instant startTime = Instant.parse("2026-08-11T08:00:00Z");
     when(activityTrackingService.getLastActivityTime()).thenReturn(fixedTime);
+    when(activityTrackingService.getStartTime()).thenReturn(startTime);
+    when(activityTrackingService.getUptimeSeconds()).thenReturn(3600L);
     when(activityTrackingService.getIdleSeconds()).thenReturn(120L);
     when(activityTrackingService.getSecondsUntilAutoStop(3600L)).thenReturn(3480L);
 
@@ -50,6 +53,10 @@ class ActivityStatusControllerTest {
     Map<String, Object> body = response.getBody();
     assertThat(body).isNotNull();
     assertThat(body.get("status")).isEqualTo("UP");
+    assertThat(body.get("cloudProvider")).isEqualTo("azure");
+    assertThat(body.get("cloudProviderLabel")).isEqualTo("Microsoft Azure (AKS)");
+    assertThat(body.get("serverStartTime")).isEqualTo(startTime.toString());
+    assertThat(body.get("uptimeSeconds")).isEqualTo(3600L);
     assertThat(body.get("lastActivityTime")).isEqualTo(fixedTime.toString());
     assertThat(body.get("idleSeconds")).isEqualTo(120L);
     assertThat(body.get("secondsUntilAutoStop")).isEqualTo(3480L);
