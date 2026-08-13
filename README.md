@@ -11,9 +11,10 @@
 [![Project Analytics](https://img.shields.io/badge/Project%20Metrics-Dynamic%20Report-purple.svg)](docs/reports/PROJECT_METRICS.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-> **LMDB (Live Movies Database)** is an enterprise-grade, event-driven cinema streaming and AI recommendation platform architected by **Liviu Ionesi** (where the name stands for *Live Movies Database* as well as *Liviu's Movie Database*). Featuring an AI assistant powered by Spring AI & Ollama (LLaMA 3.2), semantic vector search (pgvector), offline speech-to-text voice control (Vosk), a self-healing TMDB v3 API facade, 7 layers of automated testing, full observability (ELK, Zipkin, Prometheus, Grafana), and automated multi-cloud deployment to Azure AKS and AWS k3s.
+> **LMDB (Live Movies Database)** is an enterprise-grade, event-driven cinema streaming and AI recommendation platform architected by **[Liviu Ionesi](https://liviuionesi.com)** ([LinkedIn](https://www.linkedin.com/in/liviuionesi/)), where the name stands for *Live Movies Database* as well as *Liviu's Movie Database*. Featuring an AI assistant powered by Spring AI & Ollama (LLaMA 3.2), semantic vector search (pgvector), offline speech-to-text voice control (Vosk), a self-healing TMDB v3 API facade, 7 layers of automated testing, full observability (ELK, Zipkin, Prometheus, Grafana), and automated multi-cloud deployment to Azure AKS and AWS k3s.
 
 🌐 **Live Demo (Frontend):** [lmdb.dev](https://lmdb.dev) *(or [www.lmdb.dev](https://www.lmdb.dev))* • [Vercel Deployment](https://filmpire-microservices-tan.vercel.app/)  
+👤 **Architect Portfolio:** [liviuionesi.com](https://liviuionesi.com) • [LinkedIn](https://www.linkedin.com/in/liviuionesi/)  
 📊 **Live Project Analytics & Code Statistics:** [docs/reports/PROJECT_METRICS.md](docs/reports/PROJECT_METRICS.md)
 
 ---
@@ -523,7 +524,7 @@ Visit **`http://localhost:5173`** (or `http://localhost:3000`) in your browser t
 ## 12. Data Attribution & TMDB Compliance
 
 ### Brand Name & Developer Attribution
-**LMDB** stands for **Live Movies Database** as well as a creator namesake for its software architect, **Liviu Ionesi** (*Liviu's Movie Database* / *LI Movies DB*).
+**LMDB** stands for **Live Movies Database** as well as a creator namesake for its software architect, **[Liviu Ionesi](https://liviuionesi.com)** ([LinkedIn Profile](https://www.linkedin.com/in/liviuionesi/)).
 
 ### Official Data Source: The Movie Database (TMDB)
 Movie metadata, plot synopses, cast filmographies, high-resolution poster artwork, and video trailer references are provided by **[The Movie Database (TMDB)](https://www.themoviedb.org/)** via their public v3 REST API.

@@ -17,7 +17,7 @@ describe('About Page Component', () => {
     expect(websiteLink).toHaveAttribute('href', 'https://liviuionesi.com');
 
     const linkedInLink = screen.getByTestId('creator-linkedin-link');
-    expect(linkedInLink).toHaveAttribute('href', 'https://www.linkedin.com/in/liviu-ionesi/');
+    expect(linkedInLink).toHaveAttribute('href', 'https://www.linkedin.com/in/liviuionesi/');
 
     const githubLink = screen.getByTestId('project-github-link');
     expect(githubLink).toHaveAttribute('href', 'https://github.com/pehlivanu/filmpire-microservices');

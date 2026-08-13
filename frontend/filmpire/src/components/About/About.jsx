@@ -87,7 +87,7 @@ function About() {
             startIcon={<LinkedInIcon />}
             endIcon={<OpenInNewIcon fontSize="small" />}
             component="a"
-            href="https://www.linkedin.com/in/liviu-ionesi/"
+            href="https://www.linkedin.com/in/liviuionesi/"
             target="_blank"
             rel="noopener noreferrer"
             data-testid="creator-linkedin-link"
