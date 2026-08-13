@@ -13,6 +13,9 @@
   "java.configuration.updateBuildConfiguration": "automatic",
   "java.import.gradle.enabled": true,
   "java.import.gradle.wrapper.enabled": true,
+  // Lets the Protobuf Gradle plugin register generated source dirs (like
+  // build/generated/sources/proto) into the project model on every import.
+  "java.import.gradle.annotationProcessorSupport": true,
   "java.import.gradle.java.home": "/home/liviu/.sdkman/candidates/java/current",
 
   "java.jdt.ls.java.home": "/home/liviu/.sdkman/candidates/java/current",
@@ -31,8 +34,14 @@
   "java.preferences.compiler.pb.deprecation": "ignore",
 
   "files.watcherExclude": {
+    // Keep the Gradle daemon/cache dirs out of the watcher — they are huge
+    // and change constantly. build/generated is intentionally NOT excluded:
+    // the Java LSP must see proto stubs land there to auto-reload.
     "**/.gradle/**": true,
-    "**/build/**": true,
+    "**/build/classes/**": true,
+    "**/build/tmp/**": true,
+    "**/build/libs/**": true,
+    "**/build/reports/**": true,
     "**/bin/**": true
   },
   "files.exclude": {
