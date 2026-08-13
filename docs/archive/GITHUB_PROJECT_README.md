@@ -1,6 +1,6 @@
-# 🎬 LMDB Microservices — Product Delivery & Agile Governance Board
+# 🎬 LMDB.DEV — Product Delivery & Agile Governance Board
 
-This GitHub Project board tracks the end-to-end product delivery lifecycle for **LMDB** — a full-stack monorepo featuring a **Spring Boot 4.1.0 & Java 25** polyglot microservices backend and an integrated **React frontend application** (`frontend/lmdb` with CRA, Redux Toolkit Query, Material UI, and native AI voice / Speech-to-Text integration powered by `ai-service` and local Ollama).
+This GitHub Project board tracks the end-to-end product delivery lifecycle for **LMDB.DEV** — a full-stack monorepo featuring a **Spring Boot 4.1.0 & Java 25** polyglot microservices backend and an integrated **React frontend application** (`frontend/lmdb` with Vite, Redux Toolkit Query, Material UI, and native AI voice / Speech-to-Text integration powered by `ai-service` and local Ollama).
 
 ---
 
@@ -43,7 +43,7 @@ Work on this board is governed by strict Scrum engineering standards:
 
 Rather than repeating technical specs on this board, complete system documentation lives in the repository:
 
-- 🎨 **Monorepo Frontend**: Integrated React app (`frontend/lmdb` — CRA, Redux Toolkit Query, Material UI, Speech-to-Text & AI Voice Assistant) running drop-in against the backend gateway (**[ADR-013](https://github.com/pehlivanu/lmdb.dev/blob/develop/docs/architecture/adr/013-frontend-merged-into-monorepo.md)**).
+- 🎨 **Monorepo Frontend**: Integrated React app (`frontend/lmdb` — Vite, Redux Toolkit Query, Material UI, Speech-to-Text & AI Voice Assistant) running drop-in against the backend gateway (**[ADR-013](https://github.com/pehlivanu/lmdb.dev/blob/develop/docs/architecture/adr/013-frontend-merged-into-monorepo.md)**).
 - 🏗️ **Microservices System Architecture**: 8 microservices (`api-gateway`, `discovery-service`, `config-service`, `movie-service`, `user-service`, `actor-service`, `ai-service`, `media-service`). Detailed in **[ARCHITECTURE.md](https://github.com/pehlivanu/lmdb.dev/blob/develop/docs/architecture/ARCHITECTURE.md)**.
 - 🤖 **Spring AI & Local LLM**: REST + gRPC `ai-service` paired with local Ollama models, Speech-to-Text voice interface, and PostgreSQL + `pgvector` semantic taste search (**[ADR-012](https://github.com/pehlivanu/lmdb.dev/blob/develop/docs/architecture/adr/012-ai-service-postgresql-pgvector.md)**).
 - 🔄 **Self-Healing Catalog**: Automatic eviction & TMDB sync on schema drift (**[ADR-011](https://github.com/pehlivanu/lmdb.dev/blob/develop/docs/architecture/adr/011-self-healing-read-through-on-schema-drift.md)**).
