@@ -14,3 +14,5 @@ export { default as FeaturedMovie } from './FeaturedMovie/FeaturedMovie';
 export { default as BackendStandbyModal } from './BackendStandby/BackendStandbyModal';
 export { default as Footer } from './Footer/Footer';
 export { default as LMDBLogo } from './Logo/LMDBLogo';
+export { default as AboutDialog } from './About/AboutDialog';
+export { default as TMDBLogo } from './About/TMDBLogo';

@@ -2,11 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { Box, Typography } from '@mui/material';
 import useStyles from './styles';
 import { resolveApiUrl } from '../../utils/apiUrl';
+import AboutDialog from '../About/AboutDialog';
 
 function Footer() {
   const { classes } = useStyles();
   const [providerLabel, setProviderLabel] = useState('Microsoft Azure (AKS)');
   const [status, setStatus] = useState('up'); // 'up' | 'standby'
+  const [aboutOpen, setAboutOpen] = useState(false);
 
   useEffect(() => {
     // Resolve once on mount without periodic polling
@@ -56,9 +58,35 @@ function Footer() {
         </Typography>
       </Box>
 
+      {/* TMDB TOS Compliance & About Dialog Trigger */}
+      <Box className={classes.attributionSection}>
+        <button
+          type="button"
+          className={classes.creditsLink}
+          onClick={() => setAboutOpen(true)}
+          data-testid="about-credits-button"
+        >
+          About LMDB & TMDB Credits
+        </button>
+        <Typography className={classes.disclaimerText}>
+          Movie data and imagery provided by{' '}
+          <a
+            href="https://www.themoviedb.org/"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: 'inherit', fontWeight: 600 }}
+          >
+            TMDB
+          </a>
+          . This product uses the TMDB API but is not endorsed or certified by TMDB.
+        </Typography>
+      </Box>
+
       <Typography className={classes.copyrightText}>
-        © {new Date().getFullYear()} LMDB (Liviu Movies Database) • Multi-Cloud Architecture
+        © {new Date().getFullYear()} LMDB (Live Movies Database) • Multi-Cloud Architecture
       </Typography>
+
+      <AboutDialog open={aboutOpen} onClose={() => setAboutOpen(false)} />
     </footer>
   );
 }

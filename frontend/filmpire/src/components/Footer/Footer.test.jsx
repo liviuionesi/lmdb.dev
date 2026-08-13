@@ -17,7 +17,7 @@ describe('Footer Component', () => {
   it('renders default provider badge and copyright', () => {
     renderWithProviders(<Footer />);
     expect(screen.getByText(/Powered by Microsoft Azure/i)).toBeInTheDocument();
-    expect(screen.getByText(/LMDB \(Liviu Movies Database\) • Multi-Cloud Architecture/i)).toBeInTheDocument();
+    expect(screen.getByText(/LMDB \(Live Movies Database\) • Multi-Cloud Architecture/i)).toBeInTheDocument();
   });
 
   it('updates provider label when actuator endpoint answers with a different cloud', async () => {
@@ -41,10 +41,12 @@ describe('Footer Component', () => {
     });
   });
 
-  it('does not render uptime, time to sleep, or modal dialog elements', () => {
+  it('renders TMDB attribution and opens About dialog when clicked', async () => {
     renderWithProviders(<Footer />);
-    expect(screen.queryByText(/Uptime/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/Auto-sleep/i)).not.toBeInTheDocument();
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByText(/Movie data and imagery provided by/i)).toBeInTheDocument();
+    expect(screen.getByText(/This product uses the TMDB API but is not endorsed or certified by TMDB/i)).toBeInTheDocument();
+
+    const creditsBtn = screen.getByTestId('about-credits-button');
+    expect(creditsBtn).toBeInTheDocument();
   });
 });

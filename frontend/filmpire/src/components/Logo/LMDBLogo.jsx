@@ -2,7 +2,7 @@ import React from 'react';
 import { useTheme } from '@mui/material/styles';
 
 /**
- * LMDB (Liviu Movies Database) vector brandmark.
+ * LMDB (Live Movies Database) vector brandmark.
  *
  * @param {Object} props
  * @param {number|string} [props.width=180]
@@ -46,7 +46,7 @@ function LMDBLogo({ width = 180, height = 44, className = '', variant = 'full' }
       xmlns="http://www.w3.org/2000/svg"
       className={className}
       data-testid="lmdb-logo"
-      aria-label="LMDB - Liviu Movies Database"
+      aria-label="LMDB - Live Movies Database"
     >
       <defs>
         <linearGradient id="lmdbGoldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -94,7 +94,7 @@ function LMDBLogo({ width = 180, height = 44, className = '', variant = 'full' }
         LMDB
       </text>
 
-      {/* Right Brand Text: LIVIU / MOVIES DB */}
+      {/* Right Brand Text: LIVE / MOVIES DB */}
       <text
         x="118"
         y="23"
@@ -102,9 +102,9 @@ function LMDBLogo({ width = 180, height = 44, className = '', variant = 'full' }
         fontWeight="800"
         fontSize="14"
         fill={textColor}
-        letterSpacing="1.2"
+        letterSpacing="1.5"
       >
-        LIVIU
+        LIVE
       </text>
       <text
         x="118"

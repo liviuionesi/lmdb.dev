@@ -1,4 +1,4 @@
-# LMDB — Liviu Movies Database (Enterprise Microservices Platform)
+# LMDB — Live Movies Database (Enterprise Microservices Platform)
 
 [![Backend CI](https://github.com/pehlivanu/filmpire-microservices/actions/workflows/backend-ci.yml/badge.svg?branch=main)](https://github.com/pehlivanu/filmpire-microservices/actions/workflows/backend-ci.yml)
 [![Frontend CI](https://github.com/pehlivanu/filmpire-microservices/actions/workflows/frontend-ci.yml/badge.svg?branch=main)](https://github.com/pehlivanu/filmpire-microservices/actions/workflows/frontend-ci.yml)
@@ -11,7 +11,7 @@
 [![Project Analytics](https://img.shields.io/badge/Project%20Metrics-Dynamic%20Report-purple.svg)](docs/reports/PROJECT_METRICS.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-> **LMDB (Liviu Movies Database)** is a production-grade, event-driven movie streaming & recommendation microservices platform. Featuring an AI assistant powered by Spring AI & Ollama (LLaMA 3.2), semantic vector search (pgvector), offline speech-to-text voice control (Vosk), a self-healing TMDB v3 API facade, 7 layers of automated testing, full observability (ELK, Zipkin, Prometheus, Grafana), and automated multi-cloud deployment to Azure AKS and AWS k3s.
+> **LMDB (Live Movies Database)** is an enterprise-grade, event-driven cinema streaming and AI recommendation platform architected by **Liviu Ionesi** (where the name stands for *Live Movies Database* as well as *Liviu's Movie Database*). Featuring an AI assistant powered by Spring AI & Ollama (LLaMA 3.2), semantic vector search (pgvector), offline speech-to-text voice control (Vosk), a self-healing TMDB v3 API facade, 7 layers of automated testing, full observability (ELK, Zipkin, Prometheus, Grafana), and automated multi-cloud deployment to Azure AKS and AWS k3s.
 
 🌐 **Live Demo (Frontend):** [filmpire-microservices-tan.vercel.app](https://filmpire-microservices-tan.vercel.app/)  
 📊 **Live Project Analytics & Code Statistics:** [docs/reports/PROJECT_METRICS.md](docs/reports/PROJECT_METRICS.md)
@@ -32,12 +32,13 @@
 9. [CI/CD Pipelines & Code Management](#9-cicd-pipelines--code-management)
 10. [Local Quick Start Guide](#10-local-quick-start-guide)
 11. [Master Documentation Index](#11-master-documentation-index)
+12. [Data Attribution & TMDB Compliance](#12-data-attribution--tmdb-compliance)
 
 ---
 
 ## 1. Executive Overview & Capabilities
 
-**LMDB (Liviu Movies Database)** is an end-to-end cloud-native microservices ecosystem that transforms a movie catalog frontend into a full-scale distributed streaming and discovery platform. Rather than acting as a simple proxy to third-party APIs, LMDB operates an independent, self-populating data platform with polyglot persistence, local AI inference, asynchronous event streaming, and multi-cloud orchestration.
+**LMDB (Live Movies Database)** is an end-to-end cloud-native microservices ecosystem that transforms a movie catalog frontend into a full-scale distributed streaming and discovery platform. Rather than acting as a simple proxy to third-party APIs, LMDB operates an independent, self-populating data platform with polyglot persistence, local AI inference, asynchronous event streaming, and multi-cloud orchestration.
 
 ```
 React 18 / Vite SPA (Vercel)
@@ -516,6 +517,31 @@ Visit **`http://localhost:5173`** (or `http://localhost:3000`) in your browser t
 * [Snapshot: 2026-08-10 Architecture Report](graphify-out/2026-08-10/GRAPH_REPORT.md)
 * [Snapshot: 2026-08-05 Architecture Report](graphify-out/2026-08-05/GRAPH_REPORT.md)
 * [Snapshot: 2026-08-04 Architecture Report](graphify-out/2026-08-04/GRAPH_REPORT.md)
+
+---
+
+## 12. Data Attribution & TMDB Compliance
+
+### Brand Name & Developer Attribution
+**LMDB** stands for **Live Movies Database** as well as a creator namesake for its software architect, **Liviu Ionesi** (*Liviu's Movie Database* / *LI Movies DB*).
+
+### Official Data Source: The Movie Database (TMDB)
+Movie metadata, plot synopses, cast filmographies, high-resolution poster artwork, and video trailer references are provided by **[The Movie Database (TMDB)](https://www.themoviedb.org/)** via their public v3 REST API.
+
+<p align="left">
+  <a href="https://www.themoviedb.org/">
+    <img src="https://www.themoviedb.org/assets/2/v4/logos/v2/blue_short-8e7b30f73a4020692ccca9c88bafe5dcb6f8a62a4c6bc55cd9ba82bb2cd95f6c.svg" alt="The Movie Database (TMDB) Logo" width="120" />
+  </a>
+</p>
+
+> **Mandatory TMDB Legal Notice:**  
+> *"This product uses the TMDB API but is not endorsed or certified by TMDB."*
+
+### Independent Architecture & Self-Healing Facade
+LMDB does not act as a mere pass-through proxy. It implements a self-populating catalog architecture ([ADR-010](docs/architecture/adr/010-tmdb-facade-mapped-persisted-schema.md), [ADR-011](docs/architecture/adr/011-self-healing-read-through-on-schema-drift.md)):
+1. **Facade Mapping:** External TMDB payloads are mapped to strongly-typed local MongoDB documents on first request.
+2. **Local Caching:** Hot queries are cached in Redis for sub-millisecond response times.
+3. **Local Vector AI:** Synopses and genres feed an independent `pgvector` database powering local Spring AI (Ollama LLaMA 3.2) semantic discovery with $0 external API fees.
 
 ---
 

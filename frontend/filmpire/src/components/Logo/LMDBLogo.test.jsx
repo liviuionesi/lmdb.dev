@@ -5,12 +5,12 @@ import LMDBLogo from './LMDBLogo';
 import { renderWithProviders } from '../../test-utils/render';
 
 describe('LMDBLogo Component', () => {
-  it('renders full brandmark logo with LIVIU MOVIES DB text', () => {
+  it('renders full brandmark logo with LIVE MOVIES DB text', () => {
     renderWithProviders(<LMDBLogo />);
     const logo = screen.getByTestId('lmdb-logo');
     expect(logo).toBeInTheDocument();
     expect(screen.getByText('LMDB')).toBeInTheDocument();
-    expect(screen.getByText('LIVIU')).toBeInTheDocument();
+    expect(screen.getByText('LIVE')).toBeInTheDocument();
     expect(screen.getByText('MOVIES DB')).toBeInTheDocument();
   });
 
