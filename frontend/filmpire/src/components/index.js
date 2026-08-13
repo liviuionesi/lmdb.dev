@@ -13,3 +13,4 @@ export { default as RatedCards } from './RatedCards/RatedCards';
 export { default as FeaturedMovie } from './FeaturedMovie/FeaturedMovie';
 export { default as BackendStandbyModal } from './BackendStandby/BackendStandbyModal';
 export { default as Footer } from './Footer/Footer';
+export { default as LIMDbLogo } from './Logo/LIMDbLogo';

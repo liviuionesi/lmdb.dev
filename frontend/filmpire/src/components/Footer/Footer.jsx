@@ -57,7 +57,7 @@ function Footer() {
       </Box>
 
       <Typography className={classes.copyrightText}>
-        © {new Date().getFullYear()} Filmpire Microservices • Multi-Cloud Architecture
+        © {new Date().getFullYear()} LIMDb (Liviu Ionesi Movies Database) • Multi-Cloud Architecture
       </Typography>
     </footer>
   );

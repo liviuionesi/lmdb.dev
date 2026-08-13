@@ -1,6 +1,6 @@
 {
-  "short_name": "Filmpire",
-  "name": "The Filmpire movies app",
+  "short_name": "LIMDb",
+  "name": "LIMDb - Liviu Ionesi Movies Database",
   "icons": [
     {
       "src": "favicon.ico",

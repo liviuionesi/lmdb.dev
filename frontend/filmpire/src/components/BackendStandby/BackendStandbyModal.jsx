@@ -11,8 +11,7 @@ import CloseIcon from '@mui/icons-material/Close';
 
 import { useBackendWakeup } from './useBackendWakeup';
 import { getStandbyTrailerId } from '../../utils/trailer';
-
-const FILMPIRE_LOGO_RED = 'https://fontmeme.com/permalink/210930/8531c658a743debe1e1aa1a2fc82006e.png';
+import LIMDbLogo from '../Logo/LIMDbLogo';
 
 const logoGlow = keyframes`
   0%, 100% {
@@ -35,7 +34,7 @@ const subtitleFade = keyframes`
 `;
 
 const SUBTITLES = [
-  'Welcome to Filmpire Theaters. Getting your movie experience ready...',
+  'Welcome to LIMDb Theaters. Getting your movie experience ready...',
   'Preparing top blockbuster trailers and theater collections...',
   'Bringing together thousands of movies, cast spotlights, and reviews...',
   'Dimming the lights. Enjoy the show...',
@@ -145,7 +144,7 @@ function BackendStandbyModal({ onBackendReady }) {
       <DialogContent sx={{ p: 0, position: 'relative', bgcolor: '#000000' }}>
         {showLogoReveal ? (
           <Box
-            data-testid="filmpire-logo-reveal"
+            data-testid="limdb-logo-reveal"
             sx={{
               width: '100%',
               aspectRatio: '16/9',
@@ -161,15 +160,14 @@ function BackendStandbyModal({ onBackendReady }) {
             }}
           >
             <Box
-              component="img"
-              src={FILMPIRE_LOGO_RED}
-              alt="Filmpire Logo Reveal"
               sx={{
-                width: { xs: '65%', sm: '48%' },
-                maxWidth: 380,
                 animation: `${logoGlow} 2s infinite ease-in-out`,
+                display: 'flex',
+                justifyContent: 'center',
               }}
-            />
+            >
+              <LIMDbLogo width={280} height={70} />
+            </Box>
             <Typography
               variant="subtitle1"
               sx={{
@@ -235,7 +233,7 @@ function BackendStandbyModal({ onBackendReady }) {
               width="100%"
               height="100%"
               src={`https://www.youtube.com/embed/${trailerId}?autoplay=1&mute=1&controls=1&rel=0&modestbranding=1&loop=1&playlist=${trailerId}&enablejsapi=1`}
-              title="Filmpire Pre-Show Trailer"
+              title="LIMDb Pre-Show Trailer"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
               allowFullScreen
               style={{

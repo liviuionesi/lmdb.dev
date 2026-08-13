@@ -36,7 +36,7 @@ describe('LoginDialog', () => {
     useRegisterMutation.mockReturnValue([vi.fn(), { isLoading: false, error: undefined }]);
     renderWithProviders(<LoginDialog open={false} onClose={() => {}} />, { store: buildStore() });
 
-    expect(screen.queryByText('Filmpire account')).not.toBeInTheDocument();
+    expect(screen.queryByText('LIMDb Account')).not.toBeInTheDocument();
   });
 
   it('shows the Register fields only after switching tabs', async () => {

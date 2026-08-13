@@ -54,7 +54,7 @@ function LoginDialog({ open, onClose }) {
 
   return (
     <Dialog open={open} onClose={handleClose} fullWidth maxWidth="xs">
-      <DialogTitle>Filmpire account</DialogTitle>
+      <DialogTitle>LIMDb Account</DialogTitle>
       <Tabs value={tab} onChange={(event, value) => setTab(value)} variant="fullWidth">
         <Tab label="Login" value="login" />
         <Tab label="Register" value="register" />

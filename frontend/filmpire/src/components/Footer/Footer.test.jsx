@@ -17,7 +17,7 @@ describe('Footer Component', () => {
   it('renders default provider badge and copyright', () => {
     renderWithProviders(<Footer />);
     expect(screen.getByText(/Powered by Microsoft Azure/i)).toBeInTheDocument();
-    expect(screen.getByText(/Filmpire Microservices • Multi-Cloud Architecture/i)).toBeInTheDocument();
+    expect(screen.getByText(/LIMDb \(Liviu Ionesi Movies Database\) • Multi-Cloud Architecture/i)).toBeInTheDocument();
   });
 
   it('updates provider label when actuator endpoint answers with a different cloud', async () => {

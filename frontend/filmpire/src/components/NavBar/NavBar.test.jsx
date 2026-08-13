@@ -71,7 +71,7 @@ describe('NavBar', () => {
     renderNavBar({ store: buildStore() });
     await userEvent.click(screen.getByRole('button', { name: /login/i }));
 
-    expect(screen.getByText('Filmpire account')).toBeInTheDocument();
+    expect(screen.getByText('LIMDb Account')).toBeInTheDocument();
   });
 
   it('shows the "My Movies" link and avatar initial when authenticated without custom avatar', () => {
