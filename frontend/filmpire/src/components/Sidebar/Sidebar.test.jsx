@@ -93,4 +93,9 @@ describe('Sidebar', () => {
     expect(screen.getByText('Popular').closest('.MuiListItemButton-root')).toHaveClass('Mui-selected');
     expect(screen.getByText('Top Rated').closest('.MuiListItemButton-root')).not.toHaveClass('Mui-selected');
   });
+
+  it('renders About & Credits platform link in the sidebar', () => {
+    renderWithProviders(<Sidebar setMobileOpen={() => {}} />, { store: buildStore() });
+    expect(screen.getByText('About & Credits')).toBeInTheDocument();
+  });
 });

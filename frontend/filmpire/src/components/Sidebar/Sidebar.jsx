@@ -17,6 +17,8 @@ const categories = [
   { label: 'Upcoming', value: 'upcoming' },
 ];
 
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+
 function Sidebar({ setMobileOpen }) {
   const { genreIdOrCategoryName } = useSelector((state) => state.currentGenreOrCategory);
   const theme = useTheme();
@@ -75,6 +77,18 @@ function Sidebar({ setMobileOpen }) {
             </Link>
           );
         })}
+      </List>
+      <Divider />
+      <List>
+        <ListSubheader>Platform</ListSubheader>
+        <Link className={classes.links} to="/about">
+          <ListItemButton onClick={() => setMobileOpen(false)}>
+            <ListItemIcon>
+              <InfoOutlinedIcon color="primary" />
+            </ListItemIcon>
+            <ListItemText primary="About & Credits" />
+          </ListItemButton>
+        </Link>
       </List>
     </>
   );

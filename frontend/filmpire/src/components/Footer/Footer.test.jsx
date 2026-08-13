@@ -41,12 +41,13 @@ describe('Footer Component', () => {
     });
   });
 
-  it('renders TMDB attribution and opens About dialog when clicked', async () => {
+  it('renders TMDB attribution and provides link to /about page', () => {
     renderWithProviders(<Footer />);
     expect(screen.getByText(/Movie data and imagery provided by/i)).toBeInTheDocument();
     expect(screen.getByText(/This product uses the TMDB API but is not endorsed or certified by TMDB/i)).toBeInTheDocument();
 
-    const creditsBtn = screen.getByTestId('about-credits-button');
-    expect(creditsBtn).toBeInTheDocument();
+    const creditsLink = screen.getByTestId('about-credits-link');
+    expect(creditsLink).toBeInTheDocument();
+    expect(creditsLink).toHaveAttribute('href', '/about');
   });
 });

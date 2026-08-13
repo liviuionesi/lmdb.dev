@@ -1,14 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { Box, Typography } from '@mui/material';
+import { Link } from 'react-router-dom';
 import useStyles from './styles';
 import { resolveApiUrl } from '../../utils/apiUrl';
-import AboutDialog from '../About/AboutDialog';
 
 function Footer() {
   const { classes } = useStyles();
   const [providerLabel, setProviderLabel] = useState('Microsoft Azure (AKS)');
   const [status, setStatus] = useState('up'); // 'up' | 'standby'
-  const [aboutOpen, setAboutOpen] = useState(false);
 
   useEffect(() => {
     // Resolve once on mount without periodic polling
@@ -58,16 +57,11 @@ function Footer() {
         </Typography>
       </Box>
 
-      {/* TMDB TOS Compliance & About Dialog Trigger */}
+      {/* TMDB TOS Compliance & About Page Navigation */}
       <Box className={classes.attributionSection}>
-        <button
-          type="button"
-          className={classes.creditsLink}
-          onClick={() => setAboutOpen(true)}
-          data-testid="about-credits-button"
-        >
+        <Link to="/about" className={classes.creditsLink} data-testid="about-credits-link">
           About LMDB & TMDB Credits
-        </button>
+        </Link>
         <Typography className={classes.disclaimerText}>
           Movie data and imagery provided by{' '}
           <a
@@ -85,8 +79,6 @@ function Footer() {
       <Typography className={classes.copyrightText}>
         © {new Date().getFullYear()} LMDB (Live Movies Database) • Multi-Cloud Architecture
       </Typography>
-
-      <AboutDialog open={aboutOpen} onClose={() => setAboutOpen(false)} />
     </footer>
   );
 }

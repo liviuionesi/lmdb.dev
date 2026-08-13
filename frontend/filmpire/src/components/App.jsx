@@ -8,6 +8,7 @@ import VoiceControl from './VoiceControl/VoiceControl';
 import { tmdbApi } from '../services/TMDB';
 
 import {
+  About,
   Actors,
   AdminDashboard,
   BackendStandbyModal,
@@ -37,6 +38,7 @@ function App() {
           <Route path="/movie/:id" element={<MovieInformation />} />
           <Route path="/actors/:id" element={<Actors />} />
           <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/about" element={<About />} />
           <Route path="/" element={<Movies />} />
           <Route path="/profile/:id" element={<Profile />} />
         </Routes>
