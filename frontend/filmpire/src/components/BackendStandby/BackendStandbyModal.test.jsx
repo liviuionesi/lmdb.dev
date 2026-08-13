@@ -40,7 +40,7 @@ describe('BackendStandbyModal User-Oriented Subtitles & Pure Trailer', () => {
 
     const subtitle = screen.getByTestId('standby-subtitle');
     expect(subtitle).toBeInTheDocument();
-    expect(screen.getByText('Welcome to LIMDb Theaters. Getting your movie experience ready...')).toBeInTheDocument();
+    expect(screen.getByText('Welcome to LMDB Theaters. Getting your movie experience ready...')).toBeInTheDocument();
   });
 
   it('advances user-friendly subtitles every 5 seconds and disappears after all finish', () => {
@@ -50,7 +50,7 @@ describe('BackendStandbyModal User-Oriented Subtitles & Pure Trailer', () => {
 
     renderWithProviders(<BackendStandbyModal />);
 
-    expect(screen.getByText('Welcome to LIMDb Theaters. Getting your movie experience ready...')).toBeInTheDocument();
+    expect(screen.getByText('Welcome to LMDB Theaters. Getting your movie experience ready...')).toBeInTheDocument();
 
     // Advance 5 seconds
     act(() => {
@@ -77,7 +77,7 @@ describe('BackendStandbyModal User-Oriented Subtitles & Pure Trailer', () => {
     expect(screen.queryByTestId('standby-subtitle')).not.toBeInTheDocument();
   });
 
-  it('displays LIMDb logo reveal when onReady callback is invoked', () => {
+  it('displays LMDB logo reveal when onReady callback is invoked', () => {
     let capturedOnReady;
     useBackendWakeup.mockImplementation(({ onReady }) => {
       capturedOnReady = onReady;
@@ -96,7 +96,7 @@ describe('BackendStandbyModal User-Oriented Subtitles & Pure Trailer', () => {
       capturedOnReady();
     });
 
-    expect(screen.getByTestId('limdb-logo-reveal')).toBeInTheDocument();
+    expect(screen.getByTestId('lmdb-logo-reveal')).toBeInTheDocument();
     expect(screen.getByText(/Now Showing/)).toBeInTheDocument();
     expect(onBackendReadyMock).toHaveBeenCalled();
   });

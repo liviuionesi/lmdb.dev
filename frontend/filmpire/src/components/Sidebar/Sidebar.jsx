@@ -9,7 +9,7 @@ import { useGetGenresQuery } from '../../services/TMDB';
 import useStyles from './styles';
 import genreIcons from '../../assets/genres';
 
-import LIMDbLogo from '../Logo/LIMDbLogo';
+import LMDBLogo from '../Logo/LMDBLogo';
 
 const categories = [
   { label: 'Popular', value: 'popular' },
@@ -31,7 +31,7 @@ function Sidebar({ setMobileOpen }) {
   return (
     <>
       <Link to="/" className={classes.imageLink} onClick={() => dispatch(selectGenreOrCategory('popular'))}>
-        <LIMDbLogo width={190} height={46} className={classes.image} />
+        <LMDBLogo width={185} height={46} className={classes.image} />
       </Link>
       <Divider />
       <List>

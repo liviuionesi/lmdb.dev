@@ -1,4 +1,4 @@
-# LIMDb — Liviu Ionesi Movies Database (Enterprise Microservices Platform)
+# LMDB — Liviu Movies Database (Enterprise Microservices Platform)
 
 [![Backend CI](https://github.com/pehlivanu/filmpire-microservices/actions/workflows/backend-ci.yml/badge.svg?branch=main)](https://github.com/pehlivanu/filmpire-microservices/actions/workflows/backend-ci.yml)
 [![Frontend CI](https://github.com/pehlivanu/filmpire-microservices/actions/workflows/frontend-ci.yml/badge.svg?branch=main)](https://github.com/pehlivanu/filmpire-microservices/actions/workflows/frontend-ci.yml)
@@ -11,7 +11,7 @@
 [![Project Analytics](https://img.shields.io/badge/Project%20Metrics-Dynamic%20Report-purple.svg)](docs/reports/PROJECT_METRICS.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-> **LIMDb (Liviu Ionesi Movies Database)** is a production-grade, event-driven movie streaming & recommendation microservices platform. Featuring an AI assistant powered by Spring AI & Ollama (LLaMA 3.2), semantic vector search (pgvector), offline speech-to-text voice control (Vosk), a self-healing TMDB v3 API facade, 7 layers of automated testing, full observability (ELK, Zipkin, Prometheus, Grafana), and automated multi-cloud deployment to Azure AKS and AWS k3s.
+> **LMDB (Liviu Movies Database)** is a production-grade, event-driven movie streaming & recommendation microservices platform. Featuring an AI assistant powered by Spring AI & Ollama (LLaMA 3.2), semantic vector search (pgvector), offline speech-to-text voice control (Vosk), a self-healing TMDB v3 API facade, 7 layers of automated testing, full observability (ELK, Zipkin, Prometheus, Grafana), and automated multi-cloud deployment to Azure AKS and AWS k3s.
 
 🌐 **Live Demo (Frontend):** [filmpire-microservices-tan.vercel.app](https://filmpire-microservices-tan.vercel.app/)  
 📊 **Live Project Analytics & Code Statistics:** [docs/reports/PROJECT_METRICS.md](docs/reports/PROJECT_METRICS.md)
@@ -37,7 +37,7 @@
 
 ## 1. Executive Overview & Capabilities
 
-**LIMDb (Liviu Ionesi Movies Database)** is an end-to-end cloud-native microservices ecosystem that transforms a movie catalog frontend into a full-scale distributed streaming and discovery platform. Rather than acting as a simple proxy to third-party APIs, LIMDb operates an independent, self-populating data platform with polyglot persistence, local AI inference, asynchronous event streaming, and multi-cloud orchestration.
+**LMDB (Liviu Movies Database)** is an end-to-end cloud-native microservices ecosystem that transforms a movie catalog frontend into a full-scale distributed streaming and discovery platform. Rather than acting as a simple proxy to third-party APIs, LMDB operates an independent, self-populating data platform with polyglot persistence, local AI inference, asynchronous event streaming, and multi-cloud orchestration.
 
 ```
 React 18 / Vite SPA (Vercel)
