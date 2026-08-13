@@ -1,7 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { Box, Typography } from '@mui/material';
-import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import BedtimeIcon from '@mui/icons-material/Bedtime';
 import useStyles from './styles';
 import { resolveApiUrl } from '../../utils/apiUrl';
 
@@ -56,22 +54,6 @@ function Footer() {
         <Typography component="span" className={classes.providerText}>
           Powered by {providerLabel}
         </Typography>
-
-        <span className={classes.divider} />
-        <Box className={classes.metaItem}>
-          <AccessTimeIcon sx={{ fontSize: 13 }} />
-          <Typography component="span" variant="caption">
-            Uptime: On-Demand
-          </Typography>
-        </Box>
-
-        <span className={classes.divider} />
-        <Box className={classes.metaItem}>
-          <BedtimeIcon sx={{ fontSize: 13 }} />
-          <Typography component="span" variant="caption">
-            Auto-sleep: 1h idle
-          </Typography>
-        </Box>
       </Box>
 
       <Typography className={classes.copyrightText}>

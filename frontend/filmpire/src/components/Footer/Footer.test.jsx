@@ -5,7 +5,7 @@ import Footer from './Footer';
 import { renderWithProviders } from '../../test-utils/render';
 import * as apiUrlModule from '../../utils/apiUrl';
 
-describe('Footer Component (Static Telemetry)', () => {
+describe('Footer Component', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -14,15 +14,13 @@ describe('Footer Component (Static Telemetry)', () => {
     vi.restoreAllMocks();
   });
 
-  it('renders default static provider, uptime spec, and auto-sleep policy', () => {
+  it('renders default provider badge and copyright', () => {
     renderWithProviders(<Footer />);
     expect(screen.getByText(/Powered by Microsoft Azure/i)).toBeInTheDocument();
-    expect(screen.getByText(/Uptime: On-Demand/i)).toBeInTheDocument();
-    expect(screen.getByText(/Auto-sleep: 1h idle/i)).toBeInTheDocument();
     expect(screen.getByText(/Filmpire Microservices • Multi-Cloud Architecture/i)).toBeInTheDocument();
   });
 
-  it('updates provider label once on mount when actuator endpoint answers', async () => {
+  it('updates provider label when actuator endpoint answers with a different cloud', async () => {
     vi.spyOn(apiUrlModule, 'resolveApiUrl').mockResolvedValue('http://localhost:8080');
 
     const mockTelemetry = {
@@ -43,10 +41,10 @@ describe('Footer Component (Static Telemetry)', () => {
     });
   });
 
-  it('does not render modal or interactive switcher elements', () => {
+  it('does not render uptime, time to sleep, or modal dialog elements', () => {
     renderWithProviders(<Footer />);
+    expect(screen.queryByText(/Uptime/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Auto-sleep/i)).not.toBeInTheDocument();
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect(screen.queryByText('Backend Cloud Provider')).not.toBeInTheDocument();
-    expect(screen.queryByText('Apply Target')).not.toBeInTheDocument();
   });
 });

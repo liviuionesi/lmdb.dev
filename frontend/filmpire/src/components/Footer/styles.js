@@ -16,7 +16,7 @@ export default makeStyles()((theme) => ({
   statusBadge: {
     display: 'inline-flex',
     alignItems: 'center',
-    gap: '0.75rem',
+    gap: '0.5rem',
     padding: '0.35rem 0.85rem',
     borderRadius: '20px',
     backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.03)',
@@ -43,18 +43,6 @@ export default makeStyles()((theme) => ({
     fontWeight: 600,
     color: theme.palette.text.primary,
     fontSize: '0.8rem',
-  },
-  metaItem: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '0.3rem',
-    fontSize: '0.76rem',
-    color: theme.palette.text.secondary,
-  },
-  divider: {
-    width: '1px',
-    height: '12px',
-    backgroundColor: theme.palette.divider,
   },
   copyrightText: {
     marginTop: '0.6rem',
