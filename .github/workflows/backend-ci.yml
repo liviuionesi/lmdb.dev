@@ -101,7 +101,7 @@ jobs:
 
       - name: Restore OWASP Dependency-Check NVD database cache
         id: dc-cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: .dependency-check-data
           # v2 (#109): bumped from the old unversioned key to bust a
@@ -173,7 +173,7 @@ jobs:
         # killed/wiped or corrupted run (#109). If the scan above wiped
         # .dependency-check-data, this step just finds nothing to save.
         if: success()
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: .dependency-check-data
           key: ${{ steps.dc-cache.outputs.cache-primary-key }}
