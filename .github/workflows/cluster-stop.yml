@@ -51,6 +51,9 @@ jobs:
       ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Validate Lifecycle Passphrase
         env:
           INPUT_PASSPHRASE: ${{ github.event.inputs.passphrase }}
@@ -65,9 +68,6 @@ jobs:
             exit 1
           fi
           echo "✅ Authorization passphrase validated."
-
-      - name: Checkout code
-        uses: actions/checkout@v4
 
       - name: Azure login (OIDC)
         uses: azure/login@v3
@@ -165,6 +165,9 @@ jobs:
       AWS_REGION: ${{ vars.AWS_REGION }}
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Validate Lifecycle Passphrase
         env:
           INPUT_PASSPHRASE: ${{ github.event.inputs.passphrase }}
@@ -179,9 +182,6 @@ jobs:
             exit 1
           fi
           echo "✅ Authorization passphrase validated."
-
-      - name: Checkout code
-        uses: actions/checkout@v4
 
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v6

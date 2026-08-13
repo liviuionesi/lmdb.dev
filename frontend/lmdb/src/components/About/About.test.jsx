@@ -25,7 +25,7 @@ describe('About Page Component', () => {
     // Verify TMDB legal attribution
     expect(screen.getByText(/The Movie Database \(TMDB\) public API/i)).toBeInTheDocument();
     expect(
-      screen.getByText(/"This product uses the TMDB API but is not endorsed or certified by TMDB\."/i)
+      screen.getByText(/"This product uses the TMDB API but is not endorsed or certified by TMDB\."/i),
     ).toBeInTheDocument();
     expect(screen.getByTestId('tmdb-logo')).toBeInTheDocument();
     expect(screen.getByTestId('lmdb-logo')).toBeInTheDocument();

@@ -1,9 +1,9 @@
 import React, { useEffect } from 'react';
 import { Divider, List, ListItemButton, ListItemText, ListSubheader, ListItemIcon, Box, CircularProgress } from '@mui/material';
 import { Link } from 'react-router-dom';
-import { useTheme } from '@mui/material/styles';
 import { useDispatch, useSelector } from 'react-redux';
 
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { selectGenreOrCategory } from '../../features/currentGenreOrCategory';
 import { useGetGenresQuery } from '../../services/TMDB';
 import useStyles from './styles';
@@ -17,11 +17,8 @@ const categories = [
   { label: 'Upcoming', value: 'upcoming' },
 ];
 
-import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
-
 function Sidebar({ setMobileOpen }) {
   const { genreIdOrCategoryName } = useSelector((state) => state.currentGenreOrCategory);
-  const theme = useTheme();
   const { classes } = useStyles();
   const { data, isFetching } = useGetGenresQuery();
   const dispatch = useDispatch();

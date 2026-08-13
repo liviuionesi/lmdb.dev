@@ -60,7 +60,7 @@ function About() {
 
         <Typography variant="body1" sx={{ mt: 2, lineHeight: 1.7 }}>
           <strong>LMDB</strong> represents both <em>Live Movies Database</em> and a creator namesake tribute for{' '}
-          <strong>Liviu Ionesi</strong> (<em>LI Movies DB / Liviu's Movie Database</em>). Designed from the ground up
+          <strong>Liviu Ionesi</strong> (<em>LI Movies DB / Liviu&apos;s Movie Database</em>). Designed from the ground up
           to demonstrate modern production software engineering, LMDB operates an independent, polyglot microservices
           ecosystem with local AI inference, asynchronous event streaming, and zero-touch multi-cloud orchestration.
         </Typography>
@@ -148,7 +148,7 @@ function About() {
             Official TMDB Terms of Service Notice:
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-            "This product uses the TMDB API but is not endorsed or certified by TMDB."
+            &quot;This product uses the TMDB API but is not endorsed or certified by TMDB.&quot;
           </Typography>
         </Box>
       </Paper>

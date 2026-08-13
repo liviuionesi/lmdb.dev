@@ -87,7 +87,7 @@ resource "aws_security_group" "k3s" {
   }
 
   ingress {
-    description = "Caddy HTTP-01 ACME challenge for Let's Encrypt TLS"
+    description = "Caddy HTTP-01 ACME challenge for Lets Encrypt TLS"
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
