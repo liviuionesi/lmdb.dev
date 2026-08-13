@@ -9,7 +9,7 @@
 
 Since the TMDB-facade pivot (ADR-010), the product's actual frontend has
 been the pre-existing LMDB React app — originally a standalone project
-at `~/Desktop/lmdb` (github.com/pehlivanu/lmdb), unrelated in
+at `~/Desktop/lmdb` (github.com/liviuionesi/lmdb), unrelated in
 origin to this backend and predating it. The two repos evolved in lockstep
 in practice (issue #34 required a frontend code change — reading
 `REACT_APP_API_URL` instead of hardcoding TMDB's base URL — to consume this

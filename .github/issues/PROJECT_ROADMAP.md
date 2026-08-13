@@ -43,7 +43,7 @@ backend/encryption missing, runs native-mode), #13 gateway ✓, #14 shared-lib
 integration testing (open), #20 SonarQube (open).
 
 ### 🔄 Phase 4: TMDB v3 Facade & React App Integration — **THE CORE PRODUCT**
-**Issues:** [#30](https://github.com/pehlivanu/lmdb.dev/issues/30) (Epic), #31–#34.
+**Issues:** [#30](https://github.com/liviuionesi/lmdb.dev/issues/30) (Epic), #31–#34.
 - #31 TMDB-shaped movie/genre/search/discover endpoints, read-through/save-through (movie-service)
 - #32 TMDB-shaped person + discover-by-cast endpoints (actor-service, extends #18)
 - #33 Gateway facade routing + auth/account proxy to real TMDB
@@ -81,7 +81,7 @@ Actions workflow, ADR-018 documenting stop-not-destroy decision.
 Issues #1–#20 were created from the `.github/issues/PHASE*.md` specs via
 `.github/scripts/create-phase*-issues.sh`. Issues #22–#38 were created
 directly with `gh issue create` on 2026-07-21 and added to the
-[LMDB Microservices project board](https://github.com/users/pehlivanu/projects/1).
+[LMDB Microservices project board](https://github.com/users/liviuionesi/projects/1).
 The board is the single source of truth for remaining work.
 
 ## 🗺️ Architecture → Issue Coverage Matrix (v1.2.0)

@@ -317,7 +317,7 @@ def generate_markdown_report(git_stats, lang_stats, mod_stats, arch_stats, test_
     lines.append("# 📊 LMDB Microservices — Project Analytics & Metrics Report")
     lines.append("")
     lines.append(f"> **Dynamically Generated:** `{now_str}`  ")
-    lines.append(f"> **Git Status:** Branch `{git_stats['branch']}` | Commit [`{git_stats['commit_hash']}`](https://github.com/pehlivanu/lmdb.dev/commit/{git_stats['commit_hash']})  ")
+    lines.append(f"> **Git Status:** Branch `{git_stats['branch']}` | Commit [`{git_stats['commit_hash']}`](https://github.com/liviuionesi/lmdb.dev/commit/{git_stats['commit_hash']})  ")
     lines.append("> **Auto-Update Trigger:** Executes automatically on each push and via `./gradlew projectStats`")
     lines.append("")
     lines.append("---")

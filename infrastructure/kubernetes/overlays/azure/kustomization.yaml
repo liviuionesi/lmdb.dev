@@ -62,19 +62,19 @@ configMapGenerator:
 
 images:
   - name: lmdb/api-gateway
-    newName: ghcr.io/pehlivanu/lmdb-api-gateway
+    newName: ghcr.io/liviuionesi/lmdb-api-gateway
     newTag: latest # docker-publish.yml (#28) pushes both :latest and :${GIT_SHA}; deploy always rolls out :latest
   - name: lmdb/movie-service
-    newName: ghcr.io/pehlivanu/lmdb-movie-service
+    newName: ghcr.io/liviuionesi/lmdb-movie-service
     newTag: latest
   - name: lmdb/actor-service
-    newName: ghcr.io/pehlivanu/lmdb-actor-service
+    newName: ghcr.io/liviuionesi/lmdb-actor-service
     newTag: latest
   - name: lmdb/user-service
-    newName: ghcr.io/pehlivanu/lmdb-user-service
+    newName: ghcr.io/liviuionesi/lmdb-user-service
     newTag: latest
   - name: lmdb/ai-service
-    newName: ghcr.io/pehlivanu/lmdb-ai-service
+    newName: ghcr.io/liviuionesi/lmdb-ai-service
     newTag: latest
 
 patches:

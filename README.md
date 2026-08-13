@@ -1,9 +1,9 @@
 # LMDB — Live Movies Database (Enterprise Microservices Platform)
 
-[![Backend CI](https://github.com/pehlivanu/lmdb.dev/actions/workflows/backend-ci.yml/badge.svg?branch=main)](https://github.com/pehlivanu/lmdb.dev/actions/workflows/backend-ci.yml)
-[![Frontend CI](https://github.com/pehlivanu/lmdb.dev/actions/workflows/frontend-ci.yml/badge.svg?branch=main)](https://github.com/pehlivanu/lmdb.dev/actions/workflows/frontend-ci.yml)
-[![Docker Publish](https://github.com/pehlivanu/lmdb.dev/actions/workflows/docker-publish.yml/badge.svg?branch=main)](https://github.com/pehlivanu/lmdb.dev/actions/workflows/docker-publish.yml)
-[![Terraform Plan](https://github.com/pehlivanu/lmdb.dev/actions/workflows/terraform-plan.yml/badge.svg?branch=main)](https://github.com/pehlivanu/lmdb.dev/actions/workflows/terraform-plan.yml)
+[![Backend CI](https://github.com/liviuionesi/lmdb.dev/actions/workflows/backend-ci.yml/badge.svg?branch=main)](https://github.com/liviuionesi/lmdb.dev/actions/workflows/backend-ci.yml)
+[![Frontend CI](https://github.com/liviuionesi/lmdb.dev/actions/workflows/frontend-ci.yml/badge.svg?branch=main)](https://github.com/liviuionesi/lmdb.dev/actions/workflows/frontend-ci.yml)
+[![Docker Publish](https://github.com/liviuionesi/lmdb.dev/actions/workflows/docker-publish.yml/badge.svg?branch=main)](https://github.com/liviuionesi/lmdb.dev/actions/workflows/docker-publish.yml)
+[![Terraform Plan](https://github.com/liviuionesi/lmdb.dev/actions/workflows/terraform-plan.yml/badge.svg?branch=main)](https://github.com/liviuionesi/lmdb.dev/actions/workflows/terraform-plan.yml)
 [![Java 25](https://img.shields.io/badge/Java-25-orange.svg)](https://openjdk.org/projects/jdk/25/)
 [![Spring Boot 4.1.0](https://img.shields.io/badge/Spring%20Boot-4.1.0-brightgreen.svg)](https://spring.io/projects/spring-boot)
 [![Spring Cloud 2025.1.2](https://img.shields.io/badge/Spring%20Cloud-2025.1.2-blue.svg)](https://spring.io/projects/spring-cloud)
@@ -376,7 +376,7 @@ LMDB incorporates a complete observability stack spanning structured logging, di
 |---|---|---|
 | [`backend-ci.yml`](.github/workflows/backend-ci.yml) | Push/PR to `main`, `develop` | Compiles Java 25 modules, executes Spotless/Checkstyle, runs JUnit & Testcontainers suites, verifies SonarQube Quality Gate. |
 | [`frontend-ci.yml`](.github/workflows/frontend-ci.yml) | Push/PR to `main`, `develop` | Runs ESLint, Prettier, and Vitest component suite with code coverage validation. |
-| [`docker-publish.yml`](.github/workflows/docker-publish.yml) | Chained to green Backend CI on `main` | Builds multi-stage container images for all 8 microservices and publishes to GitHub Container Registry (`ghcr.io/pehlivanu/lmdb-*`). |
+| [`docker-publish.yml`](.github/workflows/docker-publish.yml) | Chained to green Backend CI on `main` | Builds multi-stage container images for all 8 microservices and publishes to GitHub Container Registry (`ghcr.io/liviuionesi/lmdb-*`). |
 | [`terraform-plan.yml`](.github/workflows/terraform-plan.yml) | Changes to `infrastructure/terraform/**` | Validates HCL syntax, runs `terraform fmt`, and generates speculative execution plans for Azure and AWS. |
 
 ### Code Quality & Maintenance Tooling
@@ -401,7 +401,7 @@ LMDB incorporates a complete observability stack spanning structured logging, di
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/pehlivanu/lmdb.dev.git
+git clone https://github.com/liviuionesi/lmdb.dev.git
 cd lmdb.dev
 
 # 2. Configure environment variables

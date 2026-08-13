@@ -4,7 +4,7 @@
 
 set -e
 
-REPO="pehlivanu/lmdb.dev"
+REPO="liviuionesi/lmdb.dev"
 
 echo "🔒 Configuring branch protection rules for $REPO..."
 

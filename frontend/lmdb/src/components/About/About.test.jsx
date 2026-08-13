@@ -20,7 +20,7 @@ describe('About Page Component', () => {
     expect(linkedInLink).toHaveAttribute('href', 'https://www.linkedin.com/in/liviuionesi/');
 
     const githubLink = screen.getByTestId('project-github-link');
-    expect(githubLink).toHaveAttribute('href', 'https://github.com/pehlivanu/lmdb.dev');
+    expect(githubLink).toHaveAttribute('href', 'https://github.com/liviuionesi/lmdb.dev');
 
     // Verify TMDB legal attribution
     expect(screen.getByText(/The Movie Database \(TMDB\) public API/i)).toBeInTheDocument();

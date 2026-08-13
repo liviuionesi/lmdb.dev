@@ -18,7 +18,7 @@ metadata:
 data:
   Caddyfile: |
     {
-      email pehlivanu@gmail.com
+      email liviuionesi@gmail.com
     }
 
     api.lmdb.dev {

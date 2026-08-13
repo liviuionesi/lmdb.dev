@@ -180,7 +180,7 @@ plus origin *patterns* for `*.vercel.app`/`*.trycloudflare.com`/
 `*.duckdns.org` are already in there. If you ever change the Vercel
 domain, that's the file to update.
 
-**Image freshness:** the deployed image is whatever `ghcr.io/pehlivanu/
+**Image freshness:** the deployed image is whatever `ghcr.io/liviuionesi/
 lmdb-*:latest` was at the last successful `Docker Publish` run — which
 only fires after a **green Backend CI on `main`**
 (`.github/workflows/docker-publish.yml`). If CI is red, deploys silently

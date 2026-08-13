@@ -156,7 +156,7 @@ after a short wait rather than assuming something's wrong.
 
 **CI — GitHub OIDC, not a stored secret (what's actually wired up):** an
 Azure AD App Registration trusts GitHub's OIDC issuer for
-`repo:pehlivanu/lmdb.dev:ref:refs/heads/main` specifically —
+`repo:liviuionesi/lmdb.dev:ref:refs/heads/main` specifically —
 only workflow runs from a push to `main` in this exact repo can mint a
 token as this identity. No `ARM_CLIENT_SECRET` exists anywhere; nothing to
 rotate or leak. Set up once:
@@ -168,7 +168,7 @@ az ad sp create --id "$APP_ID"
 az ad app federated-credential create --id "$APP_ID" --parameters '{
   "name": "lmdb-main-push",
   "issuer": "https://token.actions.githubusercontent.com",
-  "subject": "repo:pehlivanu/lmdb.dev:ref:refs/heads/main",
+  "subject": "repo:liviuionesi/lmdb.dev:ref:refs/heads/main",
   "audiences": ["api://AzureADTokenExchange"]
 }'
 
@@ -280,7 +280,7 @@ real `apply` against a real subscription:
 
 Also found live, not yet fixed (out of scope for that issue, noted for
 whoever picks them up): `api-gateway`/`movie-service` can't actually start
-on a fresh apply — their images (`ghcr.io/pehlivanu/lmdb-*:latest`)
+on a fresh apply — their images (`ghcr.io/liviuionesi/lmdb-*:latest`)
 have never been published, since #28 (CI/CD image publish) doesn't exist
 yet. `mongodb` also crash-looped for a separate, not-yet-diagnosed reason
 (exits cleanly — `lastState.terminated.reason: Completed`, not
@@ -429,7 +429,7 @@ bucket/table from step 1.
 **CI — GitHub OIDC, not a stored secret (same pattern as Azure's, adapted
 for AWS):** an IAM OIDC identity provider trusts GitHub's token issuer, and
 an IAM role trusts that provider for
-`repo:pehlivanu/lmdb.dev:ref:refs/heads/main` specifically.
+`repo:liviuionesi/lmdb.dev:ref:refs/heads/main` specifically.
 Set up once:
 
 ```bash
@@ -647,7 +647,7 @@ demand.
   before treating stop/start as a safe operation on this node.
 - Not wired into `.github/workflows/terraform-plan.yml` — that workflow
   currently only plans the Azure side.
-- `docker-publish.yml` (#28) publishes `ghcr.io/pehlivanu/lmdb-*:latest`
+- `docker-publish.yml` (#28) publishes `ghcr.io/liviuionesi/lmdb-*:latest`
   on every green `main` build, but as of this live run Backend CI itself
   has been failing on every push to `main` (Mongo Testcontainers timing
   out in the CI environment specifically — passes locally, a separate,

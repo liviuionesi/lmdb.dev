@@ -1,7 +1,7 @@
 # 📊 LMDB Microservices — Project Analytics & Metrics Report
 
 > **Dynamically Generated:** `2026-08-13 13:21:53 UTC`  
-> **Git Status:** Branch `develop` | Commit [`447b685`](https://github.com/pehlivanu/lmdb.dev/commit/447b685)  
+> **Git Status:** Branch `develop` | Commit [`447b685`](https://github.com/liviuionesi/lmdb.dev/commit/447b685)  
 > **Auto-Update Trigger:** Executes automatically on each push and via `./gradlew projectStats`
 
 ---

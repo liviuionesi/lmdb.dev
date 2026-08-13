@@ -1,7 +1,7 @@
 # Copy to terraform.tfvars (gitignored) before running `terraform apply`.
 # See ../README.md for the full bootstrap + apply/destroy walkthrough.
 
-alert_emails = ["pehlivanu@gmail.com"]
+alert_emails = ["liviuionesi@gmail.com"]
 
 # Contents of your SSH public key, e.g.:
 #   ssh_public_key = "$(cat ~/.ssh/id_ed25519.pub)"

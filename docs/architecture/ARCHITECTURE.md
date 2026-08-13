@@ -90,7 +90,7 @@ the existing LMDB React app is the only frontend.
 
 The frontend is the pre-existing LMDB application, now living at
 `frontend/lmdb/` in this repo. It was originally a standalone project
-(`~/Desktop/lmdb`, github.com/pehlivanu/lmdb) and was folded into
+(`~/Desktop/lmdb`, github.com/liviuionesi/lmdb) and was folded into
 this repo as a monorepo on 2026-07-30 — its full commit history (44 commits,
 authorship intact) was preserved via `git filter-repo` (to relocate every
 commit's paths under `frontend/lmdb/`) followed by a
@@ -2372,7 +2372,7 @@ push to main
   `movie-service`, `user-service`, `actor-service`, `ai-service`) from the
   repo root as build context (every Dockerfile does `COPY backend backend`
   for the multi-module Gradle build) and pushes each to
-  `ghcr.io/pehlivanu/lmdb-<service>` tagged both `${GIT_SHA}` and
+  `ghcr.io/liviuionesi/lmdb-<service>` tagged both `${GIT_SHA}` and
   `latest`. Check `gh run list --workflow="Backend CI"` before assuming a
   fresh deploy actually has your latest changes.
 - `deploy.yml`/`destroy.yml` (`workflow_dispatch`, cloud picker) still
