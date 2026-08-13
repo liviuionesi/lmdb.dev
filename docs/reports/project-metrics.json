@@ -1,15 +1,15 @@
 {
-  "generated_at": "2026-08-11T14:43:16.183259",
+  "generated_at": "2026-08-13T09:19:44.023547",
   "git": {
-    "commit_count": 399,
+    "commit_count": 401,
     "first_commit": "2024-03-14 (2 years, 5 months ago)",
-    "latest_commit": "2026-08-11 (12 seconds ago)",
-    "commit_hash": "70b54b0",
+    "latest_commit": "2026-08-13 (19 seconds ago)",
+    "commit_hash": "0afb959",
     "branch": "develop",
-    "insertions": 267355,
-    "deletions": 191153,
-    "total_churn": 458508,
-    "net_growth": 76202,
+    "insertions": 268015,
+    "deletions": 191284,
+    "total_churn": 459299,
+    "net_growth": 76731,
     "authors_count": 6
   },
   "languages": {
@@ -22,31 +22,31 @@
     },
     "JavaScript / React (JSX)": {
       "files": 87,
-      "total": 7283,
-      "blank": 947,
-      "comment": 549,
-      "code": 5787
+      "total": 7353,
+      "blank": 951,
+      "comment": 585,
+      "code": 5817
     },
     "Documentation (Markdown)": {
-      "files": 68,
-      "total": 18211,
-      "blank": 3737,
+      "files": 69,
+      "total": 18384,
+      "blank": 3760,
       "comment": 1,
-      "code": 14473
+      "code": 14623
     },
     "Kubernetes & CI/CD (YAML)": {
-      "files": 81,
-      "total": 5250,
-      "blank": 263,
-      "comment": 661,
-      "code": 4326
+      "files": 82,
+      "total": 5344,
+      "blank": 264,
+      "comment": 682,
+      "code": 4398
     },
     "Terraform & Cloud (HCL)": {
       "files": 26,
-      "total": 1056,
-      "blank": 136,
-      "comment": 153,
-      "code": 767
+      "total": 1084,
+      "blank": 138,
+      "comment": 157,
+      "code": 789
     },
     "Shell Automation (Bash)": {
       "files": 30,
@@ -155,20 +155,20 @@
     },
     "frontend (React 19 / MUI 9 / Vite 8)": {
       "files": 90,
-      "total": 7457,
-      "code": 5978,
-      "comment": 502
+      "total": 7527,
+      "code": 6008,
+      "comment": 538
     },
     "infrastructure (Terraform, K8s, Scripts)": {
-      "files": 120,
-      "total": 8068,
-      "code": 6457,
-      "comment": 883
+      "files": 121,
+      "total": 8190,
+      "code": 6551,
+      "comment": 908
     },
     "docs (Architecture, Guides, ADRs)": {
-      "files": 49,
-      "total": 16023,
-      "code": 13433,
+      "files": 50,
+      "total": 16196,
+      "code": 13583,
       "comment": 55
     },
     "e2e (Postman & Newman Regression)": {
@@ -199,7 +199,7 @@
     "react_components": 42,
     "redux_slices": 4,
     "custom_hooks": 6,
-    "adr_count": 18,
+    "adr_count": 19,
     "adr_files": [
       "001-microservices-architecture",
       "002-database-per-service",
@@ -218,7 +218,8 @@
       "015-local-only-deploy-trigger",
       "016-dynamic-backend-resolution",
       "017-full-cloud-service-parity",
-      "018-cloud-lifecycle-stop-not-destroy"
+      "018-cloud-lifecycle-stop-not-destroy",
+      "019-azure-zero-touch-auto-wake-sleep"
     ]
   },
   "tests": {
