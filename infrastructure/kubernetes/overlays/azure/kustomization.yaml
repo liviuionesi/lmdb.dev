@@ -9,6 +9,8 @@ kind: Kustomization
 # Eureka/Config Server's role; Kafka/Zipkin are internal observability, not
 # a user-facing feature). Needs Standard_D4ls_v7 (infrastructure/terraform/
 # azure/variables.tf) — the smaller D2ls_v7 only fit the movie-only slice.
+# Plus caddy-tls.yaml (ADR-019): TLS termination for the gateway's plain-HTTP
+# NodePort, since this overlay has no LoadBalancer/ingress-nginx.
 resources:
   - ../../base/api-gateway
   - ../../base/movie-service
@@ -19,6 +21,7 @@ resources:
   - ../../base/postgres
   - ../../base/redis
   - ../../base/ollama
+  - caddy-tls.yaml
 
 secretGenerator:
   - name: filmpire-secrets

@@ -1,0 +1,164 @@
+name: Cluster Idle Auto-Stop
+
+# Scheduled watchdog (ADR-019): every 10 minutes, asks the live gateway how
+# long it's been idle and stops whichever cloud is currently running once
+# that crosses 1 hour. Replaces infrastructure/scripts/auto-stop-watchdog.sh
+# (orphaned — nothing ever invoked it) with something that actually runs.
+#
+# Cron triggers can't be reached by an external actor, so — unlike
+# deploy.yml/cluster-stop.yml's human-dispatch paths — this doesn't go
+# through the DEPLOY_PASSPHRASE gate. It does NOT destroy anything: same
+# az aks stop / aws ec2 stop-instances as cluster-stop.yml, data on
+# PVCs/EBS is preserved (ADR-018).
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch: {}
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  check:
+    name: Check gateway idle time
+    runs-on: ubuntu-latest
+    outputs:
+      should_stop: ${{ steps.eval.outputs.should_stop }}
+      idle_seconds: ${{ steps.eval.outputs.idle_seconds }}
+    steps:
+      - name: Probe /actuator/activity
+        id: eval
+        env:
+          GATEWAY_URL: https://filmpire-api.duckdns.org
+          IDLE_THRESHOLD_SECONDS: 3600
+        run: |
+          HTTP_CODE="$(curl -s -o /tmp/activity.json -w "%{http_code}" --max-time 8 "${GATEWAY_URL}/actuator/activity" || echo "000")"
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "ℹ️ Gateway unreachable (HTTP ${HTTP_CODE}) — already stopped or never started. Nothing to do."
+            echo "should_stop=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          IDLE_SECONDS="$(grep -o '"idleSeconds":[0-9]*' /tmp/activity.json | grep -o '[0-9]*' || echo "")"
+          if [ -z "$IDLE_SECONDS" ]; then
+            echo "⚠️ Activity endpoint reachable but idleSeconds missing from response. Skipping this run."
+            echo "should_stop=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "📊 Idle for ${IDLE_SECONDS}s / ${IDLE_THRESHOLD_SECONDS}s threshold."
+          echo "idle_seconds=${IDLE_SECONDS}" >> "$GITHUB_OUTPUT"
+          if [ "$IDLE_SECONDS" -ge "$IDLE_THRESHOLD_SECONDS" ]; then
+            echo "should_stop=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_stop=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  stop-azure:
+    name: Stop AKS (if idle and running)
+    needs: check
+    if: needs.check.outputs.should_stop == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infrastructure/terraform/azure
+    env:
+      ARM_USE_OIDC: "true"
+      ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+      ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: "~1.15"
+
+      - name: Terraform init (read state only)
+        run: |
+          terraform init -input=false \
+            -backend-config="resource_group_name=${{ vars.TF_STATE_RESOURCE_GROUP }}" \
+            -backend-config="storage_account_name=${{ vars.TF_STATE_STORAGE_ACCOUNT }}" \
+            -backend-config="container_name=${{ vars.TF_STATE_CONTAINER }}"
+
+      - name: Resolve cluster coordinates from state
+        id: tf
+        run: |
+          echo "rg=$(terraform output -raw resource_group_name 2>/dev/null || echo '')" >> "$GITHUB_OUTPUT"
+          echo "cluster=$(terraform output -raw cluster_name 2>/dev/null || echo '')" >> "$GITHUB_OUTPUT"
+
+      - name: Stop AKS cluster if running
+        if: steps.tf.outputs.rg != '' && steps.tf.outputs.cluster != ''
+        run: |
+          STATE=$(az aks show \
+            --resource-group "${{ steps.tf.outputs.rg }}" \
+            --name "${{ steps.tf.outputs.cluster }}" \
+            --query "powerState.code" -o tsv 2>/dev/null || echo "Unknown")
+          if [ "$STATE" == "Running" ]; then
+            az aks stop \
+              --resource-group "${{ steps.tf.outputs.rg }}" \
+              --name "${{ steps.tf.outputs.cluster }}"
+            echo "🛑 AKS stopped after ${{ needs.check.outputs.idle_seconds }}s idle. Compute cost: \$0. Data preserved on PVCs."
+          else
+            echo "ℹ️ AKS power state is '${STATE}', not Running — nothing to stop."
+          fi
+
+  stop-aws:
+    name: Stop EC2 (if idle and running)
+    needs: check
+    if: needs.check.outputs.should_stop == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infrastructure/terraform/aws
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: "~1.15"
+
+      - name: Terraform init (read state only)
+        run: |
+          terraform init -input=false \
+            -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
+            -backend-config="region=${{ vars.AWS_REGION }}" \
+            -backend-config="dynamodb_table=${{ vars.TF_STATE_TABLE }}"
+
+      - name: Resolve instance ID from state
+        id: tf
+        run: |
+          echo "instance_id=$(terraform output -raw instance_id 2>/dev/null || echo '')" >> "$GITHUB_OUTPUT"
+
+      - name: Stop EC2 instance if running
+        if: steps.tf.outputs.instance_id != ''
+        run: |
+          STATE=$(aws ec2 describe-instances \
+            --instance-ids "${{ steps.tf.outputs.instance_id }}" \
+            --query "Reservations[0].Instances[0].State.Name" \
+            --output text 2>/dev/null || echo "unknown")
+          if [ "$STATE" == "running" ]; then
+            aws ec2 stop-instances --instance-ids "${{ steps.tf.outputs.instance_id }}"
+            echo "🛑 EC2 stopped after ${{ needs.check.outputs.idle_seconds }}s idle. Data preserved on EBS volume."
+          else
+            echo "ℹ️ EC2 state is '${STATE}', not running — nothing to stop."
+          fi

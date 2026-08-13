@@ -1,7 +1,7 @@
 # 📊 Filmpire Microservices — Project Analytics & Metrics Report
 
-> **Dynamically Generated:** `2026-08-11 14:43:37 UTC`  
-> **Git Status:** Branch `main` | Commit [`62c163b`](https://github.com/pehlivanu/filmpire-microservices/commit/62c163b)  
+> **Dynamically Generated:** `2026-08-13 09:19:44 UTC`  
+> **Git Status:** Branch `develop` | Commit [`0afb959`](https://github.com/pehlivanu/filmpire-microservices/commit/0afb959)  
 > **Auto-Update Trigger:** Executes automatically on each push and via `./gradlew projectStats`
 
 ---
@@ -11,12 +11,12 @@
 | Metric | Value | Category | Significance |
 |---|---|---|---|
 | **Total Git Commits** | **401** | Git Velocity | Evolutionary depth across 2.5+ years of active development |
-| **Total Code Churn** | **458,610 LOC** (+267,406 / -191,204) | Git Velocity | Continuous refactoring and enterprise hardening |
-| **Total Codebase Lines** | **66,957 LOC** (47,832 code / 10,580 comments) | Codebase Volume | Full-stack polyglot microservice ecosystem |
+| **Total Code Churn** | **459,299 LOC** (+268,015 / -191,284) | Git Velocity | Continuous refactoring and enterprise hardening |
+| **Total Codebase Lines** | **67,322 LOC** (48,106 code / 10,641 comments) | Codebase Volume | Full-stack polyglot microservice ecosystem |
 | **Total Automated Tests** | **667 Tests** (474 Backend + 193 Frontend) | Quality & Reliability | 100% Green Unit, Slice, Contract & Integration suites |
 | **Total REST Endpoints** | **60 Endpoints** (39 GET, 14 POST, 2 PUT, 5 DELETE) | API Surface | Microservice REST surface exposed via API Gateway |
 | **Database Migrations** | **6 Flyway SQL Scripts** | Persistence | Versioned, reproducible relational schemas |
-| **Architecture Decisions** | **18 ADRs** Documented | Governance | Comprehensive decision records (ADR-001 through ADR-018) |
+| **Architecture Decisions** | **19 ADRs** Documented | Governance | Comprehensive decision records (ADR-001 through ADR-018) |
 | **Cloud Deployment Targets** | **3 Targets** (Azure AKS, AWS EC2 k3s, Local Minikube) | Multi-Cloud | $0-budget tripwire protected infrastructure |
 | **Known Vulnerabilities** | **0 CVEs** | Security | Proactive BOM security overrides in `gradle.properties` |
 
@@ -24,12 +24,12 @@
 
 ## 📈 1. Git Velocity & Lifecycle Churn
 
-- **Development Timeline:** `2024-03-14 (2 years, 5 months ago)` ➔ `2026-08-11 (19 seconds ago)`
+- **Development Timeline:** `2024-03-14 (2 years, 5 months ago)` ➔ `2026-08-13 (19 seconds ago)`
 - **Total Commits:** `401`
-- **Total Lines Added (+):** `267,406`
-- **Total Lines Deleted / Refactored (-):** `191,204`
-- **Total Churn Volume (Add + Del):** `458,610` lines processed
-- **Net Repository Growth:** `+76,202` lines
+- **Total Lines Added (+):** `268,015`
+- **Total Lines Deleted / Refactored (-):** `191,284`
+- **Total Churn Volume (Add + Del):** `459,299` lines processed
+- **Net Repository Growth:** `+76,731` lines
 
 ---
 
@@ -37,14 +37,14 @@
 
 | Technology / Language | Files | Code LOC | Comment LOC | Blank LOC | Total LOC | Share of Project |
 |---|---|---|---|---|---|---|
-| **Java (Spring Boot / gRPC)** | 229 | 15,640 | 8,794 | 2,886 | **27,320** | `[██████░░░░░░░░░]  40.8%` |
-| **Documentation (Markdown)** | 68 | 14,473 | 1 | 3,737 | **18,211** | `[████░░░░░░░░░░░]  27.2%` |
-| **JavaScript / React (JSX)** | 87 | 5,787 | 549 | 947 | **7,283** | `[██░░░░░░░░░░░░░]  10.9%` |
-| **Kubernetes & CI/CD (YAML)** | 81 | 4,326 | 661 | 263 | **5,250** | `[█░░░░░░░░░░░░░░]   7.8%` |
-| **JSON Data** | 18 | 3,664 | 0 | 1 | **3,665** | `[█░░░░░░░░░░░░░░]   5.5%` |
+| **Java (Spring Boot / gRPC)** | 229 | 15,640 | 8,794 | 2,886 | **27,320** | `[██████░░░░░░░░░]  40.6%` |
+| **Documentation (Markdown)** | 69 | 14,623 | 1 | 3,760 | **18,384** | `[████░░░░░░░░░░░]  27.3%` |
+| **JavaScript / React (JSX)** | 87 | 5,817 | 585 | 951 | **7,353** | `[██░░░░░░░░░░░░░]  10.9%` |
+| **Kubernetes & CI/CD (YAML)** | 82 | 4,398 | 682 | 264 | **5,344** | `[█░░░░░░░░░░░░░░]   7.9%` |
+| **JSON Data** | 18 | 3,664 | 0 | 1 | **3,665** | `[█░░░░░░░░░░░░░░]   5.4%` |
 | **Shell Automation (Bash)** | 30 | 1,853 | 386 | 360 | **2,599** | `[█░░░░░░░░░░░░░░]   3.9%` |
 | **Build & Config (Gradle/Properties)** | 14 | 1,039 | 24 | 172 | **1,235** | `[░░░░░░░░░░░░░░░]   1.8%` |
-| **Terraform & Cloud (HCL)** | 26 | 767 | 153 | 136 | **1,056** | `[░░░░░░░░░░░░░░░]   1.6%` |
+| **Terraform & Cloud (HCL)** | 26 | 789 | 157 | 138 | **1,084** | `[░░░░░░░░░░░░░░░]   1.6%` |
 | **SQL & DB Migrations** | 6 | 145 | 0 | 20 | **165** | `[░░░░░░░░░░░░░░░]   0.2%` |
 | **XML & HTML** | 3 | 95 | 6 | 12 | **113** | `[░░░░░░░░░░░░░░░]   0.2%` |
 | **Protocol Buffers (Proto3)** | 1 | 31 | 6 | 8 | **45** | `[░░░░░░░░░░░░░░░]   0.1%` |
@@ -56,13 +56,13 @@
 
 | Microservice / Module | Files | Code LOC | Comment LOC | Total LOC | Share of Project |
 |---|---|---|---|---|---|
-| **`docs (Architecture, Guides, ADRs)`** | 49 | 13,433 | 55 | **16,023** | `[████░░░░░░░░░░░]  23.9%` |
+| **`docs (Architecture, Guides, ADRs)`** | 50 | 13,583 | 55 | **16,196** | `[████░░░░░░░░░░░]  24.1%` |
 | **`movie-service (Port 8081)`** | 71 | 6,424 | 2,527 | **10,069** | `[██░░░░░░░░░░░░░]  15.0%` |
-| **`infrastructure (Terraform, K8s, Scripts)`** | 120 | 6,457 | 883 | **8,068** | `[██░░░░░░░░░░░░░]  12.0%` |
-| **`frontend (React 19 / MUI 9 / Vite 8)`** | 90 | 5,978 | 502 | **7,457** | `[██░░░░░░░░░░░░░]  11.1%` |
-| **`api-gateway (Port 8080)`** | 44 | 4,318 | 1,689 | **6,936** | `[██░░░░░░░░░░░░░]  10.4%` |
-| **`shared-library (Common DTOs & Mappers)`** | 33 | 2,343 | 1,464 | **4,406** | `[█░░░░░░░░░░░░░░]   6.6%` |
-| **`actor-service (Port 8083)`** | 30 | 1,929 | 1,071 | **3,329** | `[█░░░░░░░░░░░░░░]   5.0%` |
+| **`infrastructure (Terraform, K8s, Scripts)`** | 121 | 6,551 | 908 | **8,190** | `[██░░░░░░░░░░░░░]  12.2%` |
+| **`frontend (React 19 / MUI 9 / Vite 8)`** | 90 | 6,008 | 538 | **7,527** | `[██░░░░░░░░░░░░░]  11.2%` |
+| **`api-gateway (Port 8080)`** | 44 | 4,318 | 1,689 | **6,936** | `[██░░░░░░░░░░░░░]  10.3%` |
+| **`shared-library (Common DTOs & Mappers)`** | 33 | 2,343 | 1,464 | **4,406** | `[█░░░░░░░░░░░░░░]   6.5%` |
+| **`actor-service (Port 8083)`** | 30 | 1,929 | 1,071 | **3,329** | `[█░░░░░░░░░░░░░░]   4.9%` |
 | **`ai-service (Port 8084 / gRPC 9090)`** | 40 | 1,734 | 724 | **2,756** | `[█░░░░░░░░░░░░░░]   4.1%` |
 | **`user-service (Port 8082)`** | 30 | 1,638 | 813 | **2,753** | `[█░░░░░░░░░░░░░░]   4.1%` |
 | **`config-service (Spring Config 8888)`** | 19 | 946 | 303 | **1,496** | `[░░░░░░░░░░░░░░░]   2.2%` |
@@ -110,7 +110,7 @@
 
 ## 🏛️ 6. Architectural Decision Records (ADRs)
 
-The repository includes **18 formal Architectural Decision Records** in `docs/architecture/adr/`:
+The repository includes **19 formal Architectural Decision Records** in `docs/architecture/adr/`:
 
 | ADR ID & Title | Status | Scope |
 |---|---|---|
@@ -132,6 +132,7 @@ The repository includes **18 formal Architectural Decision Records** in `docs/ar
 | [`016-dynamic-backend-resolution`](../architecture/adr/016-dynamic-backend-resolution.md) | **Accepted** | Architecture Decision |
 | [`017-full-cloud-service-parity`](../architecture/adr/017-full-cloud-service-parity.md) | **Accepted** | Architecture Decision |
 | [`018-cloud-lifecycle-stop-not-destroy`](../architecture/adr/018-cloud-lifecycle-stop-not-destroy.md) | **Accepted** | Architecture Decision |
+| [`019-azure-zero-touch-auto-wake-sleep`](../architecture/adr/019-azure-zero-touch-auto-wake-sleep.md) | **Accepted** | Architecture Decision |
 
 ---
 

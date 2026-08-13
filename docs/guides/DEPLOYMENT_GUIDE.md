@@ -154,28 +154,24 @@ service set — gateway, movie/actor/user/ai-service, MongoDB, Postgres,
 Redis, Ollama) → waits for full 9-workload rollout → auto-updates DuckDNS
 (`filmpire-api.duckdns.org`).
 
-The gateway is exposed as a **NodePort** (`:30080`, no load balancer — see
-`infrastructure/terraform/README.md`) at that raw IP, over plain HTTP.
-Same mixed-content problem as §4: you can `curl` it directly, but a
-browser on the deployed HTTPS frontend can't. **Front it with a tunnel the
-same way:**
+The gateway itself is exposed as a **NodePort** (`:30080`, no load balancer —
+see `infrastructure/terraform/README.md`) at that raw IP, over plain HTTP —
+same mixed-content problem as §4, a browser on the deployed HTTPS frontend
+can't call it directly. Unlike AWS/local, **Azure no longer needs a manual
+tunnel for this** (ADR-019): `infrastructure/kubernetes/overlays/azure/
+caddy-tls.yaml` deploys a Caddy pod bound to the node's own (static) public
+IP as the 10th workload, alongside the other 9, which gets a real Let's
+Encrypt certificate for `filmpire-api.duckdns.org` automatically and
+reverse-proxies to the gateway. `deploy-azure.sh` rolling out that manifest
+and `cluster-stop.yml`'s start action re-pointing DuckDNS is the whole
+bridge — no tunnel, no hand-published URL, nothing to redo per session.
 
-```bash
-docker run -d --name filmpire-azure-tunnel --network host \
-  docker.io/cloudflare/cloudflared:latest \
-  tunnel --no-autoupdate --url http://<NODE_IP>:30080
-docker logs filmpire-azure-tunnel | grep -o 'https://[a-zA-Z0-9-]*\.trycloudflare\.com'
-```
-
-Then publish that URL the same way `start-tunnel.sh` does:
-
-```bash
-echo "<tunnel-url>" > infrastructure/tunnel-url.txt
-git add infrastructure/tunnel-url.txt && git commit -m "chore: publish Azure tunnel URL (#151)" && git push origin develop
-```
-
-(This manual step isn't yet folded into `deploy-azure.sh` — worth adding
-if Azure becomes the routine target rather than an occasional demo.)
+Visiting `https://filmpire-microservices-tan.vercel.app/` with the backend
+asleep is itself enough to wake it: `frontend/filmpire/api/wakeup.js`
+health-checks on every hit and dispatches `cluster-stop.yml`'s start action
+if the backend doesn't answer, while `BackendStandbyModal` plays a trailer
+during the ~2-3 min AKS resume. See ADR-019 for the full mechanism and the
+tradeoff it knowingly makes with ADR-015.
 
 **CORS note:** the gateway's allow-list
 (`backend/api-gateway/.../SecurityConfig.java`) has to include the

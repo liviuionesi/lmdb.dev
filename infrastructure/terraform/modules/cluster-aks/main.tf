@@ -95,6 +95,34 @@ resource "azurerm_network_security_rule" "allow_gateway_nodeport_on_node_nsg" {
   network_security_group_name = data.azurerm_resources.node_nsg.resources[0].name
 }
 
+resource "azurerm_network_security_rule" "allow_caddy_http_acme_on_node_nsg" {
+  name                        = "allow-caddy-http-acme"
+  priority                    = 110
+  direction                   = "Inbound"
+  access                      = "Allow"
+  protocol                    = "Tcp"
+  source_port_range           = "*"
+  destination_port_range      = "80"
+  source_address_prefix       = "Internet"
+  destination_address_prefix  = "*"
+  resource_group_name         = azurerm_kubernetes_cluster.this.node_resource_group
+  network_security_group_name = data.azurerm_resources.node_nsg.resources[0].name
+}
+
+resource "azurerm_network_security_rule" "allow_caddy_https_on_node_nsg" {
+  name                        = "allow-caddy-https"
+  priority                    = 111
+  direction                   = "Inbound"
+  access                      = "Allow"
+  protocol                    = "Tcp"
+  source_port_range           = "*"
+  destination_port_range      = "443"
+  source_address_prefix       = "Internet"
+  destination_address_prefix  = "*"
+  resource_group_name         = azurerm_kubernetes_cluster.this.node_resource_group
+  network_security_group_name = data.azurerm_resources.node_nsg.resources[0].name
+}
+
 # Deliberately NOT trying to output the node's public IP via Terraform.
 # Tried data.azurerm_public_ips (plural) first — wrong tool: it only
 # enumerates standalone Microsoft.Network/publicIPAddresses resources, so
