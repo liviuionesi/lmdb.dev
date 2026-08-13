@@ -1,0 +1,91 @@
+# Caddy TLS-terminating reverse proxy for the Azure overlay (ADR-019).
+#
+# Azure's gateway Service is NodePort-only, plain HTTP (no Standard LB — see
+# the NSG comment in infrastructure/terraform/modules/network/main.tf), but
+# the Vercel frontend is HTTPS and browsers block that mixed content. This
+# pod bridges the gap without adding a billable Azure resource: it runs
+# hostNetwork on the node's existing *static* public IP (verified static via
+# `az vmss list-instance-public-ips` — survives `az aks stop`/`start`) and
+# gets a real Let's Encrypt certificate for filmpire-api.duckdns.org
+# automatically, then reverse-proxies to the gateway's ClusterIP Service.
+#
+# /data is a PVC so the issued cert survives pod restarts and cluster
+# stop/start cycles instead of hitting Let's Encrypt's rate limit every time.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: caddy-config
+data:
+  Caddyfile: |
+    {
+      email pehlivanu@gmail.com
+    }
+
+    filmpire-api.duckdns.org {
+      reverse_proxy api-gateway.default.svc.cluster.local:8080
+    }
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: caddy-data
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 256Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: caddy-tls
+  labels:
+    app: caddy-tls
+spec:
+  replicas: 1
+  strategy:
+    # hostNetwork + a single node means a RollingUpdate would try to bind
+    # :80/:443 twice on the same node at once and both pods would fail to
+    # start — replace the old pod first instead.
+    type: Recreate
+  selector:
+    matchLabels:
+      app: caddy-tls
+  template:
+    metadata:
+      labels:
+        app: caddy-tls
+    spec:
+      # Binds directly to the node's public IP/interface instead of a
+      # cluster-internal pod IP — required to receive real Internet traffic
+      # on 80/443 without a LoadBalancer Service.
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      containers:
+        - name: caddy
+          image: caddy:2-alpine
+          ports:
+            - containerPort: 80
+            - containerPort: 443
+          volumeMounts:
+            - name: config
+              mountPath: /etc/caddy/Caddyfile
+              subPath: Caddyfile
+            - name: data
+              mountPath: /data
+          resources:
+            requests:
+              cpu: 20m
+              memory: 32Mi
+              ephemeral-storage: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+              ephemeral-storage: 128Mi
+      volumes:
+        - name: config
+          configMap:
+            name: caddy-config
+        - name: data
+          persistentVolumeClaim:
+            claimName: caddy-data

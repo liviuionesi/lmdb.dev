@@ -216,6 +216,7 @@ Significant decisions are recorded in [`adr/`](adr/):
 | [016](adr/016-dynamic-backend-resolution.md) | Frontend resolves its backend per-request (local → cloud → published tunnel fallback, health-checked), fronted by an ephemeral Cloudflare tunnel for HTTPS — one Vercel deploy works against any live backend, no redeploy needed |
 | [017](adr/017-full-cloud-service-parity.md) | Cloud overlays deploy the full local application service set (incl. Ollama), not a movie-only slice — re-sized nodes once verified live pricing showed the cost difference was negligible for ephemeral demo usage |
 | [018](adr/018-cloud-lifecycle-stop-not-destroy.md) | Stop cloud compute (not destroy) between demo sessions — de-allocate the VM to zero the dominant compute charge while PVCs/EBS preserve all database state; `terraform destroy` reserved for long breaks or state rebuilds |
+| [019](adr/019-azure-zero-touch-auto-wake-sleep.md) | Azure gets a Caddy hostNetwork pod for zero-cost real HTTPS, a fixed `/api/wakeup` that actually dispatches `cluster-stop.yml`'s start action, and a scheduled workflow enforcing the 1-hour idle auto-stop — closes gaps ADR-018 left open; knowingly narrows (not reverses) ADR-015's "no public cloud-spend trigger" rule |
 
 ### 2.4 Failure-Mode Matrix
 
@@ -2473,7 +2474,11 @@ outright, no override available to the user. A Cloudflare quick tunnel
 (`cloudflared`, `docker run ... tunnel --url http://<node-ip>:30080`) gives
 a real HTTPS endpoint with no certificate to provision and no Cloudflare
 account needed — the same mechanism fronts whichever backend is currently
-live, local machine or either cloud.
+live, local machine or either cloud. **Azure is the one exception** (ADR-019):
+it runs its own always-there Caddy pod (`infrastructure/kubernetes/overlays/
+azure/caddy-tls.yaml`) terminating real HTTPS on the node's static public IP,
+so `filmpire-api.duckdns.org` works directly with no tunnel step at all — the
+tunnel/pointer-file mechanism below remains how AWS and local expose HTTPS.
 
 **Why a published pointer file, not a fixed hostname:** a quick tunnel's
 hostname is randomly regenerated on every restart — there is no stable
@@ -2510,11 +2515,23 @@ and GitHub Actions workflows — no manual cloud portal clicks required.
 | `./gradlew stopAws` (`stop-aws.sh`) | Stops AWS EC2 k3s instance ($0 compute spend, preserves EBS volume data) |
 | `./gradlew stopAllClouds` (`stop-all-clouds.sh`) | Detects and stops whichever cloud(s) are running (Azure, AWS, Minikube) |
 | `stop-all-clouds.sh --dry-run` | Prints what would be stopped without acting |
-| `./gradlew autoStopWatchdog` (`auto-stop-watchdog.sh`) | Checks inactivity via `/actuator/activity`; stops compute if idle > 1h |
+| `./gradlew autoStopWatchdog` (`auto-stop-watchdog.sh`) | Manual/local equivalent of `cluster-idle-stop.yml` below — same idle check, run by hand instead of on a schedule |
 | `./gradlew statusInfra` (`status-infra.sh`) | Health check across Local, Tunnel, Azure, and AWS endpoints |
 | `.github/workflows/deploy.yml` | **Smart Deploy**: Password-gated, auto-wakes stopped clusters or auto-provisions if destroyed, verifies 9 workloads |
-| `.github/workflows/cluster-stop.yml` | Remote start/stop from GitHub Actions UI (protected by `DEPLOY_PASSPHRASE`) |
+| `.github/workflows/cluster-stop.yml` | Remote start/stop from GitHub Actions UI (protected by `DEPLOY_PASSPHRASE`) — also what `/api/wakeup` dispatches (start action) when a visitor hits the site with the backend asleep |
+| `.github/workflows/cluster-idle-stop.yml` | **Scheduled** (every 10 min, ADR-019): checks `/actuator/activity`, stops whichever cloud is running once idle ≥ 1h. The actual mechanism behind the "auto-sleep after an hour" promise — no passphrase needed since cron can't be dispatched externally |
 | `.github/workflows/destroy.yml` | Full `terraform destroy` — password-gated, requires confirmation `DESTROY` |
+
+**Zero-touch Azure wake/sleep (ADR-019):** `frontend/filmpire/api/wakeup.js`
+(Vercel serverless) is what makes visiting the deployed frontend alone enough
+to wake a stopped Azure backend — no push, no shell, no manual trigger. It
+health-checks the gateway on every hit; if unreachable, it dispatches
+`cluster-stop.yml`'s `start` action (server-side `DEPLOY_PASSPHRASE` mirror,
+never shipped to the browser). `BackendStandbyModal` plays a curated trailer
+client-side while `useBackendWakeup` polls health every 4s until the backend
+answers. This is a deliberate, narrow exception to ADR-015's "no public
+cloud-spend trigger" rule — see ADR-019's "Relationship to ADR-015" section
+for why.
 
 **Typical day lifecycle:**
 
