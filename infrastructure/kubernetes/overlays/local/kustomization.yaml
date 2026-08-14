@@ -7,7 +7,6 @@ resources:
   - kafka.yaml
   - zipkin.yaml
 
-
 # secrets.env is gitignored — copy secrets.env.example to secrets.env first
 # (see that file). Kustomize's name-suffix-hash keeps this in sync: every
 # base Deployment/StatefulSet references the plain name `lmdb-secrets`
@@ -22,3 +21,76 @@ configMapGenerator:
     behavior: merge
     literals:
       - CLOUD_PROVIDER=minikube
+  - name: movie-service-config
+    behavior: merge
+    literals:
+      - SPRING_KAFKA_LISTENER_AUTO_STARTUP=false
+  - name: actor-service-config
+    behavior: merge
+    literals:
+      - EUREKA_CLIENT_ENABLED=false
+  - name: user-service-config
+    behavior: merge
+    literals:
+      - EUREKA_CLIENT_ENABLED=false
+  - name: ai-service-config
+    behavior: merge
+    literals:
+      - EUREKA_CLIENT_ENABLED=false
+      - MOVIE_SERVICE_BASE_URL=http://movie-service:8081
+
+# Remap the base placeholder image names to the published GHCR images.
+# Matches the same pattern used in overlays/aws and overlays/azure.
+images:
+  - name: lmdb/api-gateway
+    newName: ghcr.io/liviuionesi/lmdb-api-gateway
+    newTag: latest
+  - name: lmdb/movie-service
+    newName: ghcr.io/liviuionesi/lmdb-movie-service
+    newTag: latest
+  - name: lmdb/actor-service
+    newName: ghcr.io/liviuionesi/lmdb-actor-service
+    newTag: latest
+  - name: lmdb/user-service
+    newName: ghcr.io/liviuionesi/lmdb-user-service
+    newTag: latest
+  - name: lmdb/ai-service
+    newName: ghcr.io/liviuionesi/lmdb-ai-service
+    newTag: latest
+
+patches:
+  - target:
+      kind: Deployment
+      name: api-gateway
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Always
+  - target:
+      kind: Deployment
+      name: movie-service
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Always
+  - target:
+      kind: Deployment
+      name: actor-service
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Always
+  - target:
+      kind: Deployment
+      name: user-service
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Always
+  - target:
+      kind: Deployment
+      name: ai-service
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Always
