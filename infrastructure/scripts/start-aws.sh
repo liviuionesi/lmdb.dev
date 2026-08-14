@@ -32,7 +32,7 @@ fi
 INSTANCE_ID="${AWS_INSTANCE_ID:-$(terraform output -raw instance_id 2>/dev/null || true)}"
 if [ -z "$INSTANCE_ID" ]; then
   # Fallback query by tag
-  INSTANCE_ID="$(aws ec2 describe-instances --filters "Name=tag:Name,Values=lmdb-k3s-demo,filmpire-k3s,lmdb-k3s" "Name=instance-state-name,Values=running,stopped" --query "Reservations[0].Instances[0].InstanceId" --output text 2>/dev/null || echo "")"
+  INSTANCE_ID="$(aws ec2 describe-instances --filters "Name=tag:Name,Values=lmdb-k3s-demo,lmdb-k3s" "Name=instance-state-name,Values=running,stopped" --query "Reservations[0].Instances[0].InstanceId" --output text 2>/dev/null || echo "")"
 fi
 
 if [ -z "$INSTANCE_ID" ] || [ "$INSTANCE_ID" == "None" ]; then
