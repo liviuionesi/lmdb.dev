@@ -34,8 +34,6 @@ jobs:
   plan:
     name: Plan (azure)
     runs-on: ubuntu-latest
-    environment:
-      name: azure-cloud
     defaults:
       run:
         working-directory: infrastructure/terraform/azure
