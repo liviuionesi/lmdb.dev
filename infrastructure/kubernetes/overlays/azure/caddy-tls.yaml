@@ -21,7 +21,7 @@ data:
       email liviuionesi@gmail.com
     }
 
-    api.lmdb.dev {
+    api.lmdb.dev, lmdb-api.duckdns.org {
       reverse_proxy api-gateway.default.svc.cluster.local:8080
     }
 ---
