@@ -219,3 +219,66 @@ describe('createDynamicBaseQuery URL joining', () => {
     expect(requestUrl).toBe('http://localhost:8080/genre/movie/list?api_key=abc');
   });
 });
+
+describe('triggerBackendWakeup and status subscribers', () => {
+  beforeEach(() => {
+    vi.resetModules();
+    localStorage.clear();
+  });
+
+  afterEach(() => {
+    localStorage.clear();
+    delete global.fetch;
+    vi.unstubAllEnvs();
+  });
+
+  it('triggers wakeup and notifies subscribers on success', async () => {
+    const { triggerBackendWakeup, subscribeBackendStatus } = await import('./apiUrl');
+    const listener = vi.fn();
+    const unsubscribe = subscribeBackendStatus(listener);
+
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ status: 'WAKING_UP', targetCloud: 'aws' }),
+    });
+
+    const result = await triggerBackendWakeup('aws');
+    expect(result.status).toBe('WAKING_UP');
+    expect(listener).toHaveBeenCalledWith('WAKING_UP', expect.objectContaining({ targetCloud: 'aws' }));
+
+    unsubscribe();
+  });
+
+  it('handles wakeup error responses gracefully', async () => {
+    const { triggerBackendWakeup } = await import('./apiUrl');
+
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+    });
+
+    const result = await triggerBackendWakeup('azure');
+    expect(result.status).toBe('ERROR');
+  });
+
+  it('handles network exceptions during wakeup', async () => {
+    const { triggerBackendWakeup } = await import('./apiUrl');
+
+    global.fetch = vi.fn().mockRejectedValue(new Error('Network failure'));
+
+    const result = await triggerBackendWakeup('azure');
+    expect(result.status).toBe('ERROR');
+    expect(result.message).toContain('Network error');
+  });
+
+  it('invalidates resolution cache on request', async () => {
+    const { resolveApiUrl, invalidateResolutionCache } = await import('./apiUrl');
+    global.fetch = vi.fn().mockResolvedValue({ ok: true });
+
+    await resolveApiUrl();
+    invalidateResolutionCache();
+    await resolveApiUrl();
+
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+  });
+});

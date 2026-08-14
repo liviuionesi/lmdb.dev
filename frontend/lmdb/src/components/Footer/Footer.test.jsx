@@ -14,9 +14,9 @@ describe('Footer Component', () => {
     vi.restoreAllMocks();
   });
 
-  it('renders default provider badge and copyright', () => {
+  it('renders standby provider badge and copyright by default', () => {
     renderWithProviders(<Footer />);
-    expect(screen.getByText(/Powered by Microsoft Azure/i)).toBeInTheDocument();
+    expect(screen.getByText(/^Backend in Standby$/i)).toBeInTheDocument();
     expect(screen.getByText(/LMDB \(Live Movies Database\) • Multi-Cloud Architecture/i)).toBeInTheDocument();
   });
 
