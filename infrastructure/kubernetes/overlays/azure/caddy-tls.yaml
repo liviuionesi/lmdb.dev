@@ -61,6 +61,7 @@ spec:
       # on 80/443 without a LoadBalancer Service.
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
+      automountServiceAccountToken: false
       containers:
         - name: caddy
           image: caddy:2-alpine
