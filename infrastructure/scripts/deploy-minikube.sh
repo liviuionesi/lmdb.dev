@@ -97,10 +97,10 @@ if [ -n "$TUNNEL_URL" ]; then
     echo "ℹ️  Tunnel URL unchanged in git."
   else
     git add infrastructure/tunnel-url.txt
-    git commit -m "chore(infra): publish minikube tunnel url [skip ci]" || true
+    git commit -m "chore(infra): publish minikube tunnel url (#151) [skip ci]" || true
     git push origin "$CURRENT_BRANCH" || true
     if [ "$CURRENT_BRANCH" != "main" ]; then
-      git checkout main && git merge "$CURRENT_BRANCH" -m "Merge branch '$CURRENT_BRANCH' into main [skip ci]" && git push origin main && git checkout "$CURRENT_BRANCH" || true
+      git checkout main && git merge "$CURRENT_BRANCH" -m "Merge branch '$CURRENT_BRANCH' into main (#151) [skip ci]" && git push origin main && git checkout "$CURRENT_BRANCH" || true
     fi
     echo "✅ Published updated tunnel URL to GitHub."
   fi
