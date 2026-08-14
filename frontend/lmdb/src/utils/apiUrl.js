@@ -1,6 +1,7 @@
 import { fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 
 const CLOUD_API_URL = 'https://api.lmdb.dev';
+const CLOUD_DUCKDNS_API_URL = 'https://lmdb-api.duckdns.org';
 const LOCAL_API_URL = 'http://localhost:8080';
 // Published by infrastructure/scripts/start-tunnel.sh or cloud deployment -
 // provides instant HTTPS endpoint bypassing any ISP DNS caching.
@@ -194,6 +195,12 @@ export async function resolveApiUrl() {
   if (await checkBackendHealth(CLOUD_API_URL)) {
     resolutionCache = { url: CLOUD_API_URL, expiresAt: now + RESOLUTION_TTL_MS };
     return CLOUD_API_URL;
+  }
+
+  // Try DuckDNS dynamic DNS fallback
+  if (await checkBackendHealth(CLOUD_DUCKDNS_API_URL)) {
+    resolutionCache = { url: CLOUD_DUCKDNS_API_URL, expiresAt: now + RESOLUTION_TTL_MS };
+    return CLOUD_DUCKDNS_API_URL;
   }
 
   // Fallback to published HTTPS tunnel

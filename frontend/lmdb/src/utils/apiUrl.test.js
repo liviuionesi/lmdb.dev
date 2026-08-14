@@ -116,9 +116,24 @@ describe('apiUrl health-checked waterfall (non-localhost)', () => {
     );
   });
 
-  it('falls back to the published tunnel URL when the cloud health check fails and the tunnel is healthy', async () => {
+  it('falls back to the DuckDNS URL when the primary cloud health check fails and DuckDNS is healthy', async () => {
     global.fetch = vi.fn().mockImplementation((url) => {
       if (url.startsWith('https://api.lmdb.dev')) {
+        return Promise.reject(new Error('unreachable'));
+      }
+      if (url.startsWith('https://lmdb-api.duckdns.org')) {
+        return Promise.resolve({ ok: true });
+      }
+      throw new Error(`unexpected fetch: ${url}`);
+    });
+    const { resolveApiUrl } = await import('./apiUrl');
+
+    await expect(resolveApiUrl()).resolves.toBe('https://lmdb-api.duckdns.org');
+  });
+
+  it('falls back to the published tunnel URL when both cloud health checks fail and the tunnel is healthy', async () => {
+    global.fetch = vi.fn().mockImplementation((url) => {
+      if (url.startsWith('https://api.lmdb.dev') || url.startsWith('https://lmdb-api.duckdns.org')) {
         return Promise.reject(new Error('unreachable'));
       }
       if (url.startsWith('https://raw.githubusercontent.com')) {
