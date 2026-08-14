@@ -1,43 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<suppressions xmlns="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.4.xsd">
-    <!-- Add a <suppress> entry here only for a specific CVE that's a real
-         false positive or an accepted, reasoned risk — never to
-         blanket-silence a finding. -->
-
-    <suppress>
-        <notes><![CDATA[
-            CVE-2026-53914 is a Kotlin compiler/build-cache deserialization
-            vulnerability (unsafe deserialization of build-cache metadata,
-            exploitable via IDE/CI tooling that reads the cache).
-            kotlin-stdlib is a pure runtime library with no build-cache code
-            path, so it cannot be affected. Here it's a transitive dependency
-            of resilience4j-core (Kotlin-authored) in api-gateway, present
-            only as a runtime library, not the compiler. No kotlin-stdlib
-            release addressing this CPE match exists on Maven Central to
-            upgrade to. (#105)
-        ]]></notes>
-        <packageUrl regex="true">^pkg:maven/org\.jetbrains\.kotlin/kotlin\-stdlib.*@.*$</packageUrl>
-        <cve>CVE-2026-53914</cve>
-    </suppress>
-
-    <suppress>
-        <notes><![CDATA[
-            CVE-2026-41717 (SpEL injection via @Query capture-all
-            placeholder) and CVE-2026-41696 (regex-binding injection via
-            @Query), both Spring Data MongoDB advisories, are flagged against
-            org.springframework.boot:spring-boot-data-mongodb:4.1.0 — a thin
-            Spring Boot autoconfiguration wrapper whose version tracks Spring
-            Boot's own release train, not Spring Data MongoDB's. Both
-            CPE-match the vulnerable spring_data_mongodb ranges purely by
-            coincidence of the version number (both list a "4.1.0-4.1.14"
-            affected range). The actual
-            org.springframework.data:spring-data-mongodb artifact this
-            wrapper pulls in resolves to 5.1.0, outside every affected range
-            in both advisories (5.0.0-5.0.5 is the highest affected 5.x
-            line for either). (#105)
-        ]]></notes>
-        <packageUrl regex="true">^pkg:maven/org\.springframework\.boot/spring\-boot\-data\-mongodb@.*$</packageUrl>
-        <cve>CVE-2026-41717</cve>
-        <cve>CVE-2026-41696</cve>
-    </suppress>
+<suppressions xmlns="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.2.xsd">
+    <!-- Add suppression entries here if needed -->
 </suppressions>
