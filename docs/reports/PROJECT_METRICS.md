@@ -1,7 +1,7 @@
 # 📊 LMDB Microservices — Project Analytics & Metrics Report
 
-> **Dynamically Generated:** `2026-08-13 13:21:53 UTC`  
-> **Git Status:** Branch `develop` | Commit [`447b685`](https://github.com/liviuionesi/lmdb.dev/commit/447b685)  
+> **Dynamically Generated:** `2026-08-14 21:15:32 UTC`  
+> **Git Status:** Branch `develop` | Commit [`bb93f30`](https://github.com/liviuionesi/lmdb.dev/commit/bb93f30)  
 > **Auto-Update Trigger:** Executes automatically on each push and via `./gradlew projectStats`
 
 ---
@@ -10,12 +10,12 @@
 
 | Metric | Value | Category | Significance |
 |---|---|---|---|
-| **Total Git Commits** | **405** | Git Velocity | Evolutionary depth across 2.5+ years of active development |
-| **Total Code Churn** | **460,102 LOC** (+268,722 / -191,380) | Git Velocity | Continuous refactoring and enterprise hardening |
-| **Total Codebase Lines** | **67,931 LOC** (48,632 code / 10,677 comments) | Codebase Volume | Full-stack polyglot microservice ecosystem |
-| **Total Automated Tests** | **671 Tests** (474 Backend + 197 Frontend) | Quality & Reliability | 100% Green Unit, Slice, Contract & Integration suites |
+| **Total Git Commits** | **445** | Git Velocity | Evolutionary depth across 2.5+ years of active development |
+| **Total Code Churn** | **466,055 LOC** (+271,907 / -194,148) | Git Velocity | Continuous refactoring and enterprise hardening |
+| **Total Codebase Lines** | **68,474 LOC** (49,090 code / 10,714 comments) | Codebase Volume | Full-stack polyglot microservice ecosystem |
+| **Total Automated Tests** | **679 Tests** (478 Backend + 201 Frontend) | Quality & Reliability | 100% Green Unit, Slice, Contract & Integration suites |
 | **Total REST Endpoints** | **60 Endpoints** (39 GET, 14 POST, 2 PUT, 5 DELETE) | API Surface | Microservice REST surface exposed via API Gateway |
-| **Database Migrations** | **6 Flyway SQL Scripts** | Persistence | Versioned, reproducible relational schemas |
+| **Database Migrations** | **12 Flyway SQL Scripts** | Persistence | Versioned, reproducible relational schemas |
 | **Architecture Decisions** | **19 ADRs** Documented | Governance | Comprehensive decision records (ADR-001 through ADR-018) |
 | **Cloud Deployment Targets** | **3 Targets** (Azure AKS, AWS EC2 k3s, Local Minikube) | Multi-Cloud | $0-budget tripwire protected infrastructure |
 | **Known Vulnerabilities** | **0 CVEs** | Security | Proactive BOM security overrides in `gradle.properties` |
@@ -24,12 +24,12 @@
 
 ## 📈 1. Git Velocity & Lifecycle Churn
 
-- **Development Timeline:** `2024-03-14 (2 years, 5 months ago)` ➔ `2026-08-13 (11 seconds ago)`
-- **Total Commits:** `405`
-- **Total Lines Added (+):** `268,722`
-- **Total Lines Deleted / Refactored (-):** `191,380`
-- **Total Churn Volume (Add + Del):** `460,102` lines processed
-- **Net Repository Growth:** `+77,342` lines
+- **Development Timeline:** `2024-03-14 (2 years, 5 months ago)` ➔ `2026-08-14 (18 minutes ago)`
+- **Total Commits:** `445`
+- **Total Lines Added (+):** `271,907`
+- **Total Lines Deleted / Refactored (-):** `194,148`
+- **Total Churn Volume (Add + Del):** `466,055` lines processed
+- **Net Repository Growth:** `+77,759` lines
 
 ---
 
@@ -37,14 +37,14 @@
 
 | Technology / Language | Files | Code LOC | Comment LOC | Blank LOC | Total LOC | Share of Project |
 |---|---|---|---|---|---|---|
-| **Java (Spring Boot / gRPC)** | 229 | 15,676 | 8,812 | 2,891 | **27,379** | `[██████░░░░░░░░░]  40.3%` |
-| **Documentation (Markdown)** | 69 | 14,630 | 1 | 3,761 | **18,392** | `[████░░░░░░░░░░░]  27.1%` |
-| **JavaScript / React (JSX)** | 90 | 6,175 | 592 | 986 | **7,753** | `[██░░░░░░░░░░░░░]  11.4%` |
-| **Kubernetes & CI/CD (YAML)** | 83 | 4,483 | 693 | 266 | **5,442** | `[█░░░░░░░░░░░░░░]   8.0%` |
+| **Java (Spring Boot / gRPC)** | 229 | 15,683 | 8,808 | 2,891 | **27,382** | `[██████░░░░░░░░░]  40.0%` |
+| **Documentation (Markdown)** | 69 | 14,650 | 1 | 3,768 | **18,419** | `[████░░░░░░░░░░░]  26.9%` |
+| **JavaScript / React (JSX)** | 96 | 6,533 | 611 | 1,014 | **8,158** | `[██░░░░░░░░░░░░░]  11.9%` |
+| **Kubernetes & CI/CD (YAML)** | 83 | 4,488 | 693 | 266 | **5,447** | `[█░░░░░░░░░░░░░░]   8.0%` |
 | **JSON Data** | 18 | 3,664 | 0 | 1 | **3,665** | `[█░░░░░░░░░░░░░░]   5.4%` |
-| **Shell Automation (Bash)** | 30 | 1,853 | 386 | 360 | **2,599** | `[█░░░░░░░░░░░░░░]   3.8%` |
-| **Build & Config (Gradle/Properties)** | 14 | 1,039 | 24 | 172 | **1,235** | `[░░░░░░░░░░░░░░░]   1.8%` |
-| **Terraform & Cloud (HCL)** | 26 | 829 | 157 | 142 | **1,128** | `[░░░░░░░░░░░░░░░]   1.7%` |
+| **Shell Automation (Bash)** | 30 | 1,871 | 386 | 361 | **2,618** | `[█░░░░░░░░░░░░░░]   3.8%` |
+| **Build & Config (Gradle/Properties)** | 17 | 1,083 | 46 | 184 | **1,313** | `[░░░░░░░░░░░░░░░]   1.9%` |
+| **Terraform & Cloud (HCL)** | 28 | 835 | 157 | 142 | **1,134** | `[░░░░░░░░░░░░░░░]   1.7%` |
 | **SQL & DB Migrations** | 6 | 145 | 0 | 20 | **165** | `[░░░░░░░░░░░░░░░]   0.2%` |
 | **XML & HTML** | 3 | 95 | 6 | 12 | **113** | `[░░░░░░░░░░░░░░░]   0.2%` |
 | **Protocol Buffers (Proto3)** | 1 | 31 | 6 | 8 | **45** | `[░░░░░░░░░░░░░░░]   0.1%` |
@@ -56,15 +56,15 @@
 
 | Microservice / Module | Files | Code LOC | Comment LOC | Total LOC | Share of Project |
 |---|---|---|---|---|---|
-| **`docs (Architecture, Guides, ADRs)`** | 50 | 13,590 | 55 | **16,204** | `[████░░░░░░░░░░░]  23.9%` |
-| **`movie-service (Port 8081)`** | 71 | 6,424 | 2,527 | **10,069** | `[██░░░░░░░░░░░░░]  14.8%` |
-| **`infrastructure (Terraform, K8s, Scripts)`** | 122 | 6,676 | 919 | **8,332** | `[██░░░░░░░░░░░░░]  12.3%` |
-| **`frontend (React 19 / MUI 9 / Vite 8)`** | 93 | 6,366 | 545 | **7,927** | `[██░░░░░░░░░░░░░]  11.7%` |
-| **`api-gateway (Port 8080)`** | 44 | 4,354 | 1,707 | **6,995** | `[██░░░░░░░░░░░░░]  10.3%` |
-| **`shared-library (Common DTOs & Mappers)`** | 33 | 2,343 | 1,464 | **4,406** | `[█░░░░░░░░░░░░░░]   6.5%` |
-| **`actor-service (Port 8083)`** | 30 | 1,929 | 1,071 | **3,329** | `[█░░░░░░░░░░░░░░]   4.9%` |
-| **`ai-service (Port 8084 / gRPC 9090)`** | 40 | 1,734 | 724 | **2,756** | `[█░░░░░░░░░░░░░░]   4.1%` |
-| **`user-service (Port 8082)`** | 30 | 1,638 | 813 | **2,753** | `[█░░░░░░░░░░░░░░]   4.1%` |
+| **`docs (Architecture, Guides, ADRs)`** | 50 | 13,590 | 55 | **16,204** | `[████░░░░░░░░░░░]  23.7%` |
+| **`movie-service (Port 8081)`** | 71 | 6,424 | 2,526 | **10,068** | `[██░░░░░░░░░░░░░]  14.7%` |
+| **`infrastructure (Terraform, K8s, Scripts)`** | 127 | 6,726 | 941 | **8,415** | `[██░░░░░░░░░░░░░]  12.3%` |
+| **`frontend (React 19 / MUI 9 / Vite 8)`** | 99 | 6,724 | 564 | **8,332** | `[██░░░░░░░░░░░░░]  12.2%` |
+| **`api-gateway (Port 8080)`** | 44 | 4,364 | 1,707 | **7,005** | `[██░░░░░░░░░░░░░]  10.2%` |
+| **`shared-library (Common DTOs & Mappers)`** | 33 | 2,343 | 1,464 | **4,406** | `[█░░░░░░░░░░░░░░]   6.4%` |
+| **`actor-service (Port 8083)`** | 30 | 1,929 | 1,070 | **3,328** | `[█░░░░░░░░░░░░░░]   4.9%` |
+| **`ai-service (Port 8084 / gRPC 9090)`** | 40 | 1,753 | 722 | **2,775** | `[█░░░░░░░░░░░░░░]   4.1%` |
+| **`user-service (Port 8082)`** | 30 | 1,638 | 813 | **2,753** | `[█░░░░░░░░░░░░░░]   4.0%` |
 | **`config-service (Spring Config 8888)`** | 19 | 946 | 303 | **1,496** | `[░░░░░░░░░░░░░░░]   2.2%` |
 | **`media-service (Port 8085)`** | 17 | 873 | 286 | **1,305** | `[░░░░░░░░░░░░░░░]   1.9%` |
 | **`discovery-service (Eureka 8761)`** | 8 | 374 | 196 | **671** | `[░░░░░░░░░░░░░░░]   1.0%` |
@@ -75,21 +75,21 @@
 ## 🏗️ 4. Architecture & Object Topology
 
 ### Backend Architecture (Spring Boot & Java 25)
-- **Total Java Type Declarations:** `162`
-  - Classes (`public class`): `93`
+- **Total Java Type Declarations:** `175`
+  - Classes (`public class`): `100`
   - Records (`public record` DTOs/Value Objects): `51`
-  - Interfaces (`public interface` Contracts/Clients): `14`
+  - Interfaces (`public interface` Contracts/Clients): `20`
   - Enums (`public enum`): `4`
 - **REST Controllers:** `16` (`@RestController`)
 - **Business Services & Handlers:** `22` (`@Service`)
 - **Spring Data Repositories:** `10` (Postgres JPA + MongoDB)
 - **Persistence Entities:** `11` (`@Entity` + `@Document`)
-- **Flyway Database Migrations:** `6` versioned SQL migration scripts
+- **Flyway Database Migrations:** `12` versioned SQL migration scripts
 - **Spring Cloud Contract Tests:** `8` stubs/verifier tests
 - **gRPC & Protobuf Schemas:** `1` (`.proto`)
 
 ### Frontend Architecture (React 19, MUI 9, Redux Toolkit)
-- **React Components:** `44` (`.jsx`)
+- **React Components:** `49` (`.jsx`)
 - **Redux State Slices:** `4` (`createSlice`)
 - **Custom React Hooks:** `6`
 
@@ -99,9 +99,9 @@
 
 | Test Category | Test Count | Test Files | Tooling & Test Slices |
 |---|---|---|---|
-| **Backend Test Suite** | **474** | 78 | JUnit 5, Mockito, Testcontainers (Postgres/Mongo/Kafka), WireMock, Contract Verifier, Gatling |
-| **Frontend Test Suite** | **197** | 32 | Vitest, React Testing Library, jsdom |
-| **Combined Test Coverage** | **671** | 110 | **100% Passing Test Matrix** |
+| **Backend Test Suite** | **478** | 82 | JUnit 5, Mockito, Testcontainers (Postgres/Mongo/Kafka), WireMock, Contract Verifier, Gatling |
+| **Frontend Test Suite** | **201** | 34 | Vitest, React Testing Library, jsdom |
+| **Combined Test Coverage** | **679** | 116 | **100% Passing Test Matrix** |
 
 - **Test-to-Production Code Ratio:** `13.8` automated tests per 1,000 lines of production code.
 - **Security & Dependency Centralization:** 100% of versions managed via `gradle.properties` with proactive CVE security overrides.

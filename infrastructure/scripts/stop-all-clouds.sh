@@ -38,15 +38,14 @@ SKIPPED=0
 
 # ── Azure AKS ────────────────────────────────────────────────────────────────
 echo -e "\n${BLUE}── Azure AKS ──────────────────────────────────────${NC}"
-if command -v az >/dev/null 2>&1 && [ -d "$TF_AZURE/.terraform" ]; then
-  cd "$TF_AZURE"
-  RG_NAME="$(terraform output -raw resource_group_name 2>/dev/null || echo "")"
-  CLUSTER_NAME="$(terraform output -raw cluster_name 2>/dev/null || echo "")"
-
-  if [ -n "$RG_NAME" ] && [ -n "$CLUSTER_NAME" ]; then
+if command -v az >/dev/null 2>&1; then
+  READ_AKS="$(az aks list --query "[0].[resourceGroup, name]" -o tsv 2>/dev/null || echo "")"
+  if [ -n "$READ_AKS" ]; then
+    RG_NAME="$(echo "$READ_AKS" | sed -n '1p')"
+    CLUSTER_NAME="$(echo "$READ_AKS" | sed -n '2p')"
     STATE="$(az aks show --resource-group "$RG_NAME" --name "$CLUSTER_NAME" \
       --query "powerState.code" -o tsv 2>/dev/null || echo "Unknown")"
-    echo -e "  Cluster ${YELLOW}${CLUSTER_NAME}${NC} — Power State: ${YELLOW}${STATE}${NC}"
+    echo -e "  Cluster ${YELLOW}${CLUSTER_NAME}${NC} (RG: ${YELLOW}${RG_NAME}${NC}) — Power State: ${YELLOW}${STATE}${NC}"
 
     if [ "$STATE" == "Stopped" ]; then
       echo -e "  ${GREEN}✅ Already stopped — no action needed.${NC}"
@@ -64,25 +63,22 @@ if command -v az >/dev/null 2>&1 && [ -d "$TF_AZURE/.terraform" ]; then
       fi
     fi
   else
-    echo -e "  ${YELLOW}⚠️  Terraform state exists but cluster outputs are empty — skipping.${NC}"
+    echo -e "  ${YELLOW}ℹ️  No AKS cluster found in Azure subscription — skipping.${NC}"
     SKIPPED=$((SKIPPED + 1))
   fi
 else
-  echo -e "  ${YELLOW}ℹ️  Azure not configured or Terraform not initialised — skipping.${NC}"
+  echo -e "  ${YELLOW}ℹ️  Azure CLI not installed or not authenticated — skipping.${NC}"
   SKIPPED=$((SKIPPED + 1))
 fi
 
 # ── AWS k3s ───────────────────────────────────────────────────────────────────
 echo -e "\n${BLUE}── AWS k3s ────────────────────────────────────────${NC}"
-if command -v aws >/dev/null 2>&1 && [ -d "$TF_AWS/.terraform" ]; then
-  cd "$TF_AWS"
-  INSTANCE_ID="$(terraform output -raw instance_id 2>/dev/null || echo "")"
+if command -v aws >/dev/null 2>&1; then
+  INSTANCE_ID="$(aws ec2 describe-instances --filters "Name=tag:Name,Values=lmdb-k3s-demo,lmdb-k3s" "Name=instance-state-name,Values=running,stopped" --query "Reservations[0].Instances[0].InstanceId" --output text 2>/dev/null || echo "")"
 
-  if [ -n "$INSTANCE_ID" ]; then
-    AWS_REGION="${AWS_REGION:-$(terraform output -raw region 2>/dev/null || echo "us-east-1")}"
+  if [ -n "$INSTANCE_ID" ] && [ "$INSTANCE_ID" != "None" ]; then
     STATE="$(aws ec2 describe-instances --instance-ids "$INSTANCE_ID" \
-      --region "$AWS_REGION" \
-      --query "Reservations[0].Instances[0].State.Name" -o text 2>/dev/null || echo "unknown")"
+      --query "Reservations[0].Instances[0].State.Name" --output text 2>/dev/null || echo "unknown")"
     echo -e "  Instance ${YELLOW}${INSTANCE_ID}${NC} — State: ${YELLOW}${STATE}${NC}"
 
     if [ "$STATE" == "stopped" ]; then
@@ -93,7 +89,7 @@ if command -v aws >/dev/null 2>&1 && [ -d "$TF_AWS/.terraform" ]; then
         echo -e "  ${CYAN}[DRY RUN] Would stop: aws ec2 stop-instances --instance-ids $INSTANCE_ID${NC}"
       else
         echo -e "  ${BLUE}🛑 Stopping AWS k3s instance...${NC}"
-        aws ec2 stop-instances --instance-ids "$INSTANCE_ID" --region "$AWS_REGION" >/dev/null
+        aws ec2 stop-instances --instance-ids "$INSTANCE_ID" >/dev/null
         echo -e "  ${GREEN}✅ Stop signal sent. Data preserved (EBS volume).${NC}"
         STOPPED_COUNT=$((STOPPED_COUNT + 1))
       fi
@@ -102,11 +98,11 @@ if command -v aws >/dev/null 2>&1 && [ -d "$TF_AWS/.terraform" ]; then
       SKIPPED=$((SKIPPED + 1))
     fi
   else
-    echo -e "  ${YELLOW}ℹ️  AWS Terraform state found but no instance_id output — not provisioned.${NC}"
+    echo -e "  ${YELLOW}ℹ️  No LMDB EC2 instance found in AWS — skipping.${NC}"
     SKIPPED=$((SKIPPED + 1))
   fi
 else
-  echo -e "  ${YELLOW}ℹ️  AWS CLI not configured or Terraform not initialised — skipping.${NC}"
+  echo -e "  ${YELLOW}ℹ️  AWS CLI not installed or not configured — skipping.${NC}"
   SKIPPED=$((SKIPPED + 1))
 fi
 

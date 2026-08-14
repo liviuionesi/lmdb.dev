@@ -29,8 +29,19 @@ if [ ! -d ".terraform" ]; then
   terraform init -backend-config=backend.hcl -input=false
 fi
 
-RG_NAME="${AZURE_RESOURCE_GROUP:-$(terraform output -raw resource_group_name 2>/dev/null || echo "lmdb-demo")}"
-CLUSTER_NAME="${AZURE_CLUSTER_NAME:-$(terraform output -raw cluster_name 2>/dev/null || echo "lmdb-aks")}"
+RG_NAME="${AZURE_RESOURCE_GROUP:-$(terraform output -raw resource_group_name 2>/dev/null || echo "")}"
+CLUSTER_NAME="${AZURE_CLUSTER_NAME:-$(terraform output -raw cluster_name 2>/dev/null || echo "")}"
+
+if [ -z "$RG_NAME" ] || [ -z "$CLUSTER_NAME" ]; then
+  READ_AKS="$(az aks list --query "[0].[resourceGroup, name]" -o tsv 2>/dev/null || echo "")"
+  if [ -n "$READ_AKS" ]; then
+    RG_NAME="${RG_NAME:-$(echo "$READ_AKS" | sed -n '1p')}"
+    CLUSTER_NAME="${CLUSTER_NAME:-$(echo "$READ_AKS" | sed -n '2p')}"
+  else
+    RG_NAME="${RG_NAME:-lmdb-demo}"
+    CLUSTER_NAME="${CLUSTER_NAME:-lmdb-aks}"
+  fi
+fi
 
 echo -e "\n${BLUE}🔍 Checking current AKS cluster power state for ${CLUSTER_NAME}...${NC}"
 CURRENT_STATE="$(az aks show --resource-group "$RG_NAME" --name "$CLUSTER_NAME" --query "powerState.code" -o tsv 2>/dev/null || echo "NotFound")"
@@ -43,7 +54,18 @@ elif [ "$CURRENT_STATE" == "Stopped" ]; then
   az aks start --resource-group "$RG_NAME" --name "$CLUSTER_NAME" --no-wait
   
   echo -e "${BLUE}⏳ Waiting for cluster to reach Running state...${NC}"
-  az aks wait --resource-group "$RG_NAME" --name "$CLUSTER_NAME" --custom "powerState.code=='Running'" --timeout 240
+  TIMEOUT=300
+  ELAPSED=0
+  while [ "$ELAPSED" -lt "$TIMEOUT" ]; do
+    STATE="$(az aks show --resource-group "$RG_NAME" --name "$CLUSTER_NAME" \
+      --query "powerState.code" -o tsv 2>/dev/null || echo "Unknown")"
+    if [ "$STATE" == "Running" ]; then
+      break
+    fi
+    sleep 10
+    ELAPSED=$((ELAPSED + 10))
+    echo -e "  ... still ${STATE} (${ELAPSED}s elapsed)"
+  done
 else
   echo -e "\n${BLUE}🚀 Provisioning AKS Cluster with Terraform...${NC}"
   terraform apply -auto-approve -input=false
@@ -51,8 +73,15 @@ fi
 
 # Fetch credentials & deploy Kubernetes manifests
 if command -v kubectl >/dev/null 2>&1; then
-  echo -e "\n${BLUE}🔑 Refreshing AKS credentials...${NC}"
+  echo -e "\n${BLUE}🔑 Refreshing AKS credentials & connecting to API server...${NC}"
   az aks get-credentials --resource-group "$RG_NAME" --name "$CLUSTER_NAME" --overwrite-existing
+
+  for i in {1..30}; do
+    if kubectl get nodes >/dev/null 2>&1; then
+      break
+    fi
+    sleep 2
+  done
 
   if [ -d "$REPO_ROOT/infrastructure/kubernetes/overlays/azure" ]; then
     echo -e "${BLUE}📦 Applying Kubernetes manifests (overlays/azure)...${NC}"

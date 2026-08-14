@@ -19,7 +19,7 @@ data:
       email liviuionesi@gmail.com
     }
 
-    api.lmdb.dev {
+    api.lmdb.dev, lmdb-api.duckdns.org {
       reverse_proxy api-gateway.default.svc.cluster.local:8080
     }
 ---
@@ -53,6 +53,7 @@ spec:
     spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
+      automountServiceAccountToken: false
       containers:
         - name: caddy
           image: caddy:2-alpine

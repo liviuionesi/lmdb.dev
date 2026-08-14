@@ -34,8 +34,19 @@ if [ ! -d ".terraform" ]; then
   echo -e "${BLUE}⚙️  Initialising Terraform backend to read state...${NC}"
   terraform init -backend-config=backend.hcl -input=false -reconfigure >/dev/null 2>&1
 fi
-RG_NAME="${AZURE_RESOURCE_GROUP:-$(terraform output -raw resource_group_name 2>/dev/null || echo "lmdb-demo")}"
-CLUSTER_NAME="${AZURE_CLUSTER_NAME:-$(terraform output -raw cluster_name 2>/dev/null || echo "lmdb-aks")}"
+RG_NAME="${AZURE_RESOURCE_GROUP:-$(terraform output -raw resource_group_name 2>/dev/null || echo "")}"
+CLUSTER_NAME="${AZURE_CLUSTER_NAME:-$(terraform output -raw cluster_name 2>/dev/null || echo "")}"
+
+if [ -z "$RG_NAME" ] || [ -z "$CLUSTER_NAME" ]; then
+  READ_AKS="$(az aks list --query "[0].[resourceGroup, name]" -o tsv 2>/dev/null || echo "")"
+  if [ -n "$READ_AKS" ]; then
+    RG_NAME="${RG_NAME:-$(echo "$READ_AKS" | sed -n '1p')}"
+    CLUSTER_NAME="${CLUSTER_NAME:-$(echo "$READ_AKS" | sed -n '2p')}"
+  else
+    RG_NAME="${RG_NAME:-lmdb-demo}"
+    CLUSTER_NAME="${CLUSTER_NAME:-lmdb-aks}"
+  fi
+fi
 
 # 3. Check current power state
 echo -e "\n${BLUE}🔍 Checking power state for cluster: ${YELLOW}${CLUSTER_NAME}${BLUE} in RG ${YELLOW}${RG_NAME}${NC}"
