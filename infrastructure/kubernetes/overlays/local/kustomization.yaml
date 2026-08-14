@@ -6,6 +6,7 @@ resources:
   - ../../base
   - kafka.yaml
   - zipkin.yaml
+  - cloudflare-tunnel.yaml
 
 
 # secrets.env is gitignored — copy secrets.env.example to secrets.env first
@@ -22,3 +23,44 @@ configMapGenerator:
     behavior: merge
     literals:
       - CLOUD_PROVIDER=minikube
+  - name: movie-service-config
+    behavior: merge
+    literals:
+      - SPRING_KAFKA_LISTENER_AUTO_STARTUP=false
+  - name: actor-service-config
+    behavior: merge
+    literals:
+      - EUREKA_CLIENT_ENABLED=false
+  - name: user-service-config
+    behavior: merge
+    literals:
+      - EUREKA_CLIENT_ENABLED=false
+  - name: ai-service-config
+    behavior: merge
+    literals:
+      - EUREKA_CLIENT_ENABLED=false
+      - MOVIE_SERVICE_BASE_URL=http://movie-service:8081
+
+images:
+  - name: lmdb/api-gateway
+    newName: localhost/api-gateway
+    newTag: local
+  - name: lmdb/movie-service
+    newName: localhost/movie-service
+    newTag: local
+  - name: lmdb/actor-service
+    newName: localhost/actor-service
+    newTag: local
+  - name: lmdb/user-service
+    newName: localhost/user-service
+    newTag: local
+  - name: lmdb/ai-service
+    newName: localhost/ai-service
+    newTag: local
+  - name: docker.io/library/mongo
+    newName: localhost/mongo
+    newTag: local
+  - name: docker.io/library/redis
+    newName: localhost/redis
+    newTag: local
+

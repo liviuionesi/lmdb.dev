@@ -399,14 +399,32 @@ tasks.register('stopTunnel', Exec) {
 
 tasks.register('deployLocal', Exec) {
     group = 'deployment'
-    description = 'Starts local microservices infrastructure and databases via Docker/Podman Compose'
-    commandLine './infrastructure/scripts/start-infrastructure.sh'
+    description = 'Deploys microservices to local Minikube cluster and connects to lmdb.dev via Cloudflare Tunnel'
+    commandLine './infrastructure/scripts/deploy-minikube.sh'
 }
 
 tasks.register('stopLocal', Exec) {
     group = 'deployment'
-    description = 'Stops all local microservices infrastructure and containers'
-    commandLine './infrastructure/scripts/stop-infrastructure.sh'
+    description = 'Stops local Minikube cluster and microservices'
+    commandLine './infrastructure/scripts/stop-minikube.sh'
+}
+
+tasks.register('deployMinikube', Exec) {
+    group = 'deployment'
+    description = 'Starts local Minikube cluster, applies local Kubernetes overlay, and publishes Cloudflare Tunnel'
+    commandLine './infrastructure/scripts/deploy-minikube.sh'
+}
+
+tasks.register('startMinikube', Exec) {
+    group = 'deployment'
+    description = 'Starts local Minikube cluster and rolls out local microservices stack'
+    commandLine './infrastructure/scripts/deploy-minikube.sh'
+}
+
+tasks.register('stopMinikube', Exec) {
+    group = 'deployment'
+    description = 'Stops local Minikube cluster'
+    commandLine './infrastructure/scripts/stop-minikube.sh'
 }
 
 tasks.register('startAzure', Exec) {
