@@ -79,6 +79,11 @@ echo -e "\n${BLUE}🧠 Pulling Ollama models (llama3.2, nomic-embed-text) - this
 kubectl exec statefulset/ollama -- ollama pull llama3.2
 kubectl exec statefulset/ollama -- ollama pull nomic-embed-text
 
+if [ -f "$REPO_ROOT/infrastructure/scripts/update-duckdns.sh" ] && [ -n "${DUCKDNS_TOKEN:-}" ]; then
+  echo -e "\n${BLUE}🦆 Updating DuckDNS domain record (lmdb-api.duckdns.org → ${PUBLIC_IP})...${NC}"
+  "$REPO_ROOT/infrastructure/scripts/update-duckdns.sh" "$PUBLIC_IP" || true
+fi
+
 echo -e "\n${GREEN}=====================================================${NC}"
 echo -e "${GREEN}  🎉 AWS k3s Backend Deployed Successfully!         ${NC}"
 echo -e "${GREEN}=====================================================${NC}"

@@ -87,6 +87,11 @@ for i in {1..12}; do
   sleep 2
 done
 
+if [ -n "$NODE_IP" ] && [ -f "$REPO_ROOT/infrastructure/scripts/update-duckdns.sh" ] && [ -n "${DUCKDNS_TOKEN:-}" ]; then
+  echo -e "\n${BLUE}🦆 Updating DuckDNS domain record (lmdb-api.duckdns.org → ${NODE_IP})...${NC}"
+  "$REPO_ROOT/infrastructure/scripts/update-duckdns.sh" "$NODE_IP" || true
+fi
+
 echo -e "\n${GREEN}=====================================================${NC}"
 echo -e "${GREEN}  🎉 Azure Backend Deployed Successfully!            ${NC}"
 echo -e "${GREEN}=====================================================${NC}"
