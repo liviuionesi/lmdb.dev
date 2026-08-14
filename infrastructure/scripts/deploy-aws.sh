@@ -35,7 +35,23 @@ PORT="$(terraform output -raw demo_inbound_port || echo 30080)"
 
 echo -e "\n${BLUE}🔑 Fetching kubeconfig from k3s node (${SSH_USER}@${PUBLIC_IP})...${NC}"
 TEMP_KUBECONFIG="$(mktemp)"
-ssh -o StrictHostKeyChecking=accept-new "${SSH_USER}@${PUBLIC_IP}" "sudo cat /etc/rancher/k3s/k3s.yaml" > "$TEMP_KUBECONFIG"
+MAX_ATTEMPTS=30
+ATTEMPT=0
+while [ "$ATTEMPT" -lt "$MAX_ATTEMPTS" ]; do
+  if ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=5 "${SSH_USER}@${PUBLIC_IP}" "sudo test -f /etc/rancher/k3s/k3s.yaml" 2>/dev/null; then
+    ssh -o StrictHostKeyChecking=accept-new "${SSH_USER}@${PUBLIC_IP}" "sudo cat /etc/rancher/k3s/k3s.yaml" > "$TEMP_KUBECONFIG"
+    break
+  fi
+  ATTEMPT=$((ATTEMPT + 1))
+  echo -e "  ... waiting for k3s initialization on node (${ATTEMPT}/${MAX_ATTEMPTS})..."
+  sleep 5
+done
+
+if [ ! -s "$TEMP_KUBECONFIG" ]; then
+  echo -e "${RED}❌ Could not retrieve kubeconfig from k3s node after ${MAX_ATTEMPTS} attempts.${NC}" >&2
+  exit 1
+fi
+
 sed -i "s/127.0.0.1/${PUBLIC_IP}/g" "$TEMP_KUBECONFIG"
 export KUBECONFIG="$TEMP_KUBECONFIG"
 
@@ -51,6 +67,7 @@ kubectl rollout status deployment/movie-service --timeout=180s
 kubectl rollout status deployment/actor-service --timeout=180s
 kubectl rollout status deployment/user-service --timeout=180s
 kubectl rollout status deployment/ai-service --timeout=180s
+kubectl rollout status deployment/caddy-tls --timeout=180s
 kubectl rollout status statefulset/mongodb --timeout=180s
 kubectl rollout status statefulset/postgres --timeout=180s
 kubectl rollout status statefulset/redis --timeout=180s

@@ -13,22 +13,37 @@ echo "=================================================="
 echo "  Starting Cloudflare Tunnel for Local Gateway"
 echo "=================================================="
 
+GATEWAY_URL="${1:-}"
+if [ -z "$GATEWAY_URL" ]; then
+  if curl -s -o /dev/null -m 2 http://localhost:8080/actuator/health; then
+    GATEWAY_URL="http://localhost:8080"
+  else
+    AWS_IP="$(aws ec2 describe-instances --filters "Name=tag:Name,Values=lmdb-k3s-demo,lmdb-k3s" "Name=instance-state-name,Values=running" --query "Reservations[0].Instances[0].PublicIpAddress" --output text 2>/dev/null || echo "")"
+    if [ -n "$AWS_IP" ] && [ "$AWS_IP" != "None" ] && curl -s -o /dev/null -m 3 "http://${AWS_IP}:30080/actuator/health"; then
+      GATEWAY_URL="http://${AWS_IP}:30080"
+    else
+      GATEWAY_URL="http://localhost:8080"
+    fi
+  fi
+fi
+
 # 1. Stop any existing tunnel container
 $DOCKER_CMD rm -f "$CONTAINER_NAME" >/dev/null 2>&1 || true
 
-# 2. Check if API Gateway is responding locally
-if ! curl -s -o /dev/null -m 2 http://localhost:8080/actuator/health; then
-  echo "⚠️ Warning: API Gateway does not appear to be running on http://localhost:8080."
-  echo "Make sure to run ./infrastructure/scripts/start-infrastructure.sh first."
+# 2. Check if API Gateway is responding
+if ! curl -s -o /dev/null -m 3 "${GATEWAY_URL}/actuator/health"; then
+  echo "⚠️ Warning: API Gateway does not appear to be responding on ${GATEWAY_URL}."
+else
+  echo "✅ Target Gateway verified: ${GATEWAY_URL}"
 fi
 
 # 3. Launch cloudflared container in host network mode
-echo "🚀 Launching cloudflared container..."
+echo "🚀 Launching cloudflared container targeting ${GATEWAY_URL}..."
 $DOCKER_CMD run -d \
   --name "$CONTAINER_NAME" \
   --network host \
   docker.io/cloudflare/cloudflared:latest \
-  tunnel --no-autoupdate --url http://localhost:8080 >/dev/null
+  tunnel --no-autoupdate --url "$GATEWAY_URL" >/dev/null
 
 # 4. Wait for the public trycloudflare.com URL to be generated
 echo "⏳ Waiting for public HTTPS tunnel URL..."
