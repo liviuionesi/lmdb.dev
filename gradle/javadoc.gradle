@@ -27,10 +27,7 @@ subprojects {
             def indexFile = file("${tasks.named('javadoc').get().destinationDir}/index.html")
             if (indexFile.exists()) {
                 if (System.getProperty('os.name').toLowerCase().contains('linux')) {
-                    exec {
-                        commandLine 'xdg-open', indexFile.absolutePath
-                        ignoreExitValue = true
-                    }
+                    new ProcessBuilder("xdg-open", indexFile.absolutePath).start()
                 } else if (java.awt.Desktop.isDesktopSupported() && java.awt.Desktop.desktop.isSupported(java.awt.Desktop.Action.BROWSE)) {
                     java.awt.Desktop.desktop.browse(indexFile.toURI())
                 }
@@ -257,10 +254,7 @@ tasks.register('openJavadoc') {
         def dashboardFile = file("${rootDir}/build/docs/index.html")
         if (dashboardFile.exists()) {
             if (System.getProperty('os.name').toLowerCase().contains('linux')) {
-                exec {
-                    commandLine 'xdg-open', dashboardFile.absolutePath
-                    ignoreExitValue = true
-                }
+                new ProcessBuilder("xdg-open", dashboardFile.absolutePath).start()
             } else if (java.awt.Desktop.isDesktopSupported() && java.awt.Desktop.desktop.isSupported(java.awt.Desktop.Action.BROWSE)) {
                 java.awt.Desktop.desktop.browse(dashboardFile.toURI())
             }
