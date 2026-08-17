@@ -301,8 +301,6 @@ tasks.register('openAggregateJavadoc') {
             }
         }
     }
-}
-
 tasks.register('openJavadoc') {
     group = 'documentation'
     description = 'Generates Javadoc for all microservices and opens the unified hub in your browser'
@@ -317,5 +315,28 @@ tasks.register('openJavadoc') {
             }
         }
     }
+}
+
+tasks.register('exportDocSchema', Exec) {
+    group = 'documentation'
+    description = 'Extracts AST & Javadoc schema from all Java microservices into JSON'
+    workingDir "${rootDir}/tools/javadoc-portal"
+    commandLine 'node', 'scripts/extract-java-schema.js', '--src', '../../backend', '--out', 'src/data/default-schema.json'
+}
+
+tasks.register('buildDocPortal', Exec) {
+    group = 'documentation'
+    description = 'Builds the React.dev-styled Next.js documentation portal'
+    dependsOn 'exportDocSchema'
+    workingDir "${rootDir}/tools/javadoc-portal"
+    commandLine 'npm', 'run', 'build'
+}
+
+tasks.register('startDocPortal', Exec) {
+    group = 'documentation'
+    description = 'Starts the Next.js React.dev-style documentation portal on http://localhost:3000'
+    dependsOn 'exportDocSchema'
+    workingDir "${rootDir}/tools/javadoc-portal"
+    commandLine 'npm', 'run', 'dev'
 }
 
