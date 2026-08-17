@@ -217,6 +217,18 @@ def generateJavadocDashboardTask = tasks.register('generateJavadocDashboard') {
                 <input type="text" id="searchInput" placeholder="Search microservices or keywords..." onkeyup="filterCards()">
             </div>
         </header>
+        <div style="margin-bottom: 25px;">
+            <a href="aggregate/index.html" class="card" style="border: 2px solid #58a6ff; background: linear-gradient(135deg, #161b22 0%, #172338 100%);">
+                <div class="card-header">
+                    <div class="card-title" style="font-size: 1.35rem; color: #58a6ff;">🚀 Complete Monorepo Codebase Navigator</div>
+                    <span class="badge badge-success">Unified Search + Source View</span>
+                </div>
+                <p class="card-desc" style="font-size: 1rem; margin-top: 8px; color: #c9d1d9;">
+                    Browse and search <strong>every class, record, method, and package across all 9 microservices</strong> in one unified tree, with built-in hyperlinked Java source code viewing.
+                </p>
+                <div class="card-footer" style="font-size: 1rem; margin-top: 10px;">Explore Entire Codebase in One View &rarr;</div>
+            </a>
+        </div>
         <div class="grid" id="cardGrid">
             ${cardsHtml}
         </div>
@@ -242,14 +254,58 @@ def generateJavadocDashboardTask = tasks.register('generateJavadocDashboard') {
     }
 }
 
+// Master Aggregate Javadoc across ALL microservices with hyperlinked source code (-linksource)
+def aggregateJavadocTask = tasks.register('aggregateJavadoc', Javadoc) {
+    group = 'documentation'
+    description = 'Generates an aggregated, searchable Javadoc website containing all code and linked source code across all microservices'
+    
+    def javaProjects = subprojects.findAll { it.plugins.hasPlugin('java') }
+    source javaProjects.collect { it.sourceSets.main.allJava }
+    classpath = files(javaProjects.collect { it.sourceSets.main.compileClasspath })
+    destinationDir = file("${rootDir}/build/docs/aggregate")
+    
+    options.addStringOption('Xdoclint:none', '-quiet')
+    options.encoding = 'UTF-8'
+    options.charSet = 'UTF-8'
+    options.addBooleanOption('linksource', true)
+    options.windowTitle = 'LMDB.dev - Complete Codebase API & Source'
+    options.docTitle = 'LMDB Microservices Monorepo - Comprehensive Source & API Reference'
+    
+    doLast {
+        def indexFile = file("${destinationDir}/index.html")
+        if (indexFile.exists()) {
+            println("\n" + ("=" * 80))
+            println("  [Aggregate Javadoc] Complete codebase documentation generated at:")
+            println("  file://${indexFile.absolutePath}")
+            println(("=" * 80) + "\n")
+        }
+    }
+}
+
 tasks.named('javadoc') {
-    dependsOn generateJavadocDashboardTask
+    dependsOn generateJavadocDashboardTask, aggregateJavadocTask
+}
+
+tasks.register('openAggregateJavadoc') {
+    group = 'documentation'
+    description = 'Generates aggregated Javadoc with linked source code and opens it in your browser'
+    dependsOn aggregateJavadocTask
+    doLast {
+        def indexFile = file("${rootDir}/build/docs/aggregate/index.html")
+        if (indexFile.exists()) {
+            if (System.getProperty('os.name').toLowerCase().contains('linux')) {
+                new ProcessBuilder("xdg-open", indexFile.absolutePath).start()
+            } else if (java.awt.Desktop.isDesktopSupported() && java.awt.Desktop.desktop.isSupported(java.awt.Desktop.Action.BROWSE)) {
+                java.awt.Desktop.desktop.browse(indexFile.toURI())
+            }
+        }
+    }
 }
 
 tasks.register('openJavadoc') {
     group = 'documentation'
     description = 'Generates Javadoc for all microservices and opens the unified hub in your browser'
-    dependsOn generateJavadocDashboardTask
+    dependsOn generateJavadocDashboardTask, aggregateJavadocTask
     doLast {
         def dashboardFile = file("${rootDir}/build/docs/index.html")
         if (dashboardFile.exists()) {
@@ -261,3 +317,4 @@ tasks.register('openJavadoc') {
         }
     }
 }
+
