@@ -501,3 +501,214 @@ def cleanStsCacheTask = tasks.register('cleanStsCache', Delete) {
 tasks.named('clean') {
     dependsOn cleanStsCacheTask
 }
+
+// Unified Javadoc Portal for all microservices
+def generateJavadocDashboardTask = tasks.register('generateJavadocDashboard') {
+    group = 'documentation'
+    description = 'Generates a unified HTML dashboard indexing Javadoc for all microservices'
+    dependsOn subprojects.findAll { it.tasks.findByName('javadoc') != null }.collect { it.tasks.named('javadoc') }
+    doLast {
+        def docsDir = file("${rootDir}/build/docs")
+        docsDir.mkdirs()
+        def dashboardFile = file("${docsDir}/index.html")
+
+        def modules = [
+            [id: 'actor-service', name: 'Actor Service', port: '8083', desc: 'Actor catalog, filmography, TMDB person sync, Bucket4j rate limiting, and REST endpoints.', path: 'backend/actor-service/build/docs/javadoc/index.html'],
+            [id: 'movie-service', name: 'Movie Service', port: '8082', desc: 'Core movie catalog, recommendations, discovery, TMDB facade, and MongoDB storage.', path: 'backend/movie-service/build/docs/javadoc/index.html'],
+            [id: 'user-service', name: 'User Service', port: '8081', desc: 'User profiles, JWT auth, watchlists, ratings, and account operations.', path: 'backend/user-service/build/docs/javadoc/index.html'],
+            [id: 'ai-service', name: 'AI Service', port: '8084', desc: 'Semantic movie search, vector embeddings, and Gemini AI integration.', path: 'backend/ai-service/build/docs/javadoc/index.html'],
+            [id: 'media-service', name: 'Media Service', port: '8085', desc: 'Video streaming and MinIO S3 object storage for movie assets.', path: 'backend/media-service/build/docs/javadoc/index.html'],
+            [id: 'api-gateway', name: 'API Gateway', port: '8080', desc: 'Spring Cloud Gateway routing, token verification, rate limiting, and CORS.', path: 'backend/api-gateway/build/docs/javadoc/index.html'],
+            [id: 'discovery-service', name: 'Discovery Service', port: '8761', desc: 'Netflix Eureka service discovery and registry.', path: 'backend/discovery-service/build/docs/javadoc/index.html'],
+            [id: 'config-service', name: 'Config Service', port: '8888', desc: 'Spring Cloud Config centralized configuration server.', path: 'backend/config-service/build/docs/javadoc/index.html'],
+            [id: 'shared-library', name: 'Shared Library', port: 'N/A', desc: 'Common DTOs (ApiResponse, HalResource), exceptions, and security filters.', path: 'backend/shared-library/build/docs/javadoc/index.html']
+        ]
+
+        def cardsHtml = modules.collect { mod ->
+            def targetFile = file("${rootDir}/${mod.path}")
+            def exists = targetFile.exists()
+            def statusBadge = exists ? '<span class="badge badge-success">Generated</span>' : '<span class="badge badge-muted">Not Generated</span>'
+            def linkAttr = exists ? "href=\"../../${mod.path}\"" : 'class="card-disabled"'
+            """
+            <a ${linkAttr} class="card">
+                <div class="card-header">
+                    <div class="card-title">${mod.name}</div>
+                    ${statusBadge}
+                </div>
+                <div class="card-port">Port: <code>${mod.port}</code></div>
+                <p class="card-desc">${mod.desc}</p>
+                <div class="card-footer">Explore Javadocs &rarr;</div>
+            </a>
+            """
+        }.join('\n')
+
+        def htmlContent = """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LMDB Microservices - Javadoc Documentation Hub</title>
+    <style>
+        :root {
+            --bg: #0d1117;
+            --card-bg: #161b22;
+            --card-hover: #1f242c;
+            --border: #30363d;
+            --text: #c9d1d9;
+            --text-heading: #f0f6fc;
+            --primary: #58a6ff;
+            --primary-glow: rgba(88, 166, 255, 0.15);
+            --success: #3fb950;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            padding: 40px 20px;
+        }
+        .container { max-width: 1100px; margin: 0 auto; }
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 30px;
+            border-bottom: 1px solid var(--border);
+        }
+        h1 {
+            color: var(--text-heading);
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+            background: linear-gradient(90deg, #58a6ff, #bc8cff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .subtitle { font-size: 1.1rem; color: #8b949e; }
+        .search-box {
+            width: 100%;
+            max-width: 500px;
+            margin: 25px auto 0;
+            position: relative;
+        }
+        .search-box input {
+            width: 100%;
+            padding: 12px 20px;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.2s;
+        }
+        .search-box input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-glow);
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 20px;
+        }
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 24px;
+            text-decoration: none;
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            transition: all 0.2s ease-in-out;
+        }
+        .card:hover {
+            transform: translateY(-3px);
+            border-color: var(--primary);
+            box-shadow: 0 8px 24px var(--primary-glow);
+            background: var(--card-hover);
+        }
+        .card-disabled { opacity: 0.6; pointer-events: none; }
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-heading);
+        }
+        .card-port {
+            font-size: 0.85rem;
+            color: #8b949e;
+            margin-bottom: 12px;
+        }
+        .card-port code {
+            background: #21262d;
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: var(--primary);
+        }
+        .card-desc {
+            font-size: 0.95rem;
+            color: #8b949e;
+            flex-grow: 1;
+            margin-bottom: 16px;
+        }
+        .card-footer {
+            font-size: 0.9rem;
+            color: var(--primary);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+        }
+        .badge {
+            font-size: 0.75rem;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-weight: 600;
+        }
+        .badge-success { background: rgba(63, 185, 80, 0.15); color: var(--success); }
+        .badge-muted { background: rgba(139, 148, 158, 0.15); color: #8b949e; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Filmpire Microservices Javadoc Hub</h1>
+            <p class="subtitle">Unified API & Domain Model Documentation across all backend services</p>
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Search microservices or keywords..." onkeyup="filterCards()">
+            </div>
+        </header>
+        <div class="grid" id="cardGrid">
+            ${cardsHtml}
+        </div>
+    </div>
+    <script>
+        function filterCards() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const cards = document.querySelectorAll('.card');
+            cards.forEach(card => {
+                const text = card.textContent.toLowerCase();
+                card.style.display = text.includes(query) ? 'flex' : 'none';
+            });
+        }
+    </script>
+</body>
+</html>
+"""
+        dashboardFile.text = htmlContent
+        println("\n" + ("=" * 80))
+        println("  [Javadoc Hub] Unified documentation portal generated at:")
+        println("  file://${dashboardFile.absolutePath}")
+        println(("=" * 80) + "\n")
+    }
+}
+
+tasks.named('javadoc') {
+    dependsOn generateJavadocDashboardTask
+}
+
