@@ -270,6 +270,7 @@ def aggregateJavadocTask = tasks.register('aggregateJavadoc', Javadoc) {
     options.addBooleanOption('linksource', true)
     options.windowTitle = 'LMDB.dev - Complete Codebase API & Source'
     options.docTitle = 'LMDB Microservices Monorepo - Comprehensive Source & API Reference'
+    options.header = '<a href="../index.html" style="font-weight:bold;color:#2c7be5;text-decoration:none;padding:4px 8px;border:1px solid #2c7be5;border-radius:4px;">&larr; Back to Hub</a>'
     
     doLast {
         def indexFile = file("${destinationDir}/index.html")
