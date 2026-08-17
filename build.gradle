@@ -270,6 +270,34 @@ subprojects {
         options.addStringOption('Xdoclint:none', '-quiet')
         options.encoding = 'UTF-8'
         options.charSet = 'UTF-8'
+        doLast {
+            def indexFile = file("${destinationDir}/index.html")
+            if (indexFile.exists()) {
+                println("\n" + ("=" * 80))
+                println("  [Javadoc] ${project.name} documentation generated:")
+                println("  file://${indexFile.absolutePath}")
+                println(("=" * 80) + "\n")
+            }
+        }
+    }
+
+    tasks.register('openJavadoc') {
+        group = 'documentation'
+        description = 'Generates Javadoc and opens the HTML documentation in your default browser.'
+        dependsOn javadoc
+        doLast {
+            def indexFile = file("${javadoc.destinationDir}/index.html")
+            if (indexFile.exists()) {
+                if (System.getProperty('os.name').toLowerCase().contains('linux')) {
+                    exec {
+                        commandLine 'xdg-open', indexFile.absolutePath
+                        ignoreExitValue = true
+                    }
+                } else if (java.awt.Desktop.isDesktopSupported() && java.awt.Desktop.desktop.isSupported(java.awt.Desktop.Action.BROWSE)) {
+                    java.awt.Desktop.desktop.browse(indexFile.toURI())
+                }
+            }
+        }
     }
 
     // Coverage-verification exclusions (#108) — same rationale as
