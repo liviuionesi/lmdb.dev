@@ -55,12 +55,11 @@ dependencies {
     implementation "com.bucket4j:bucket4j-core:${bucket4jVersion}"
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
     testImplementation 'org.springframework.cloud:spring-cloud-starter-contract-verifier'
     testImplementation 'io.rest-assured:rest-assured'
     testImplementation 'io.rest-assured:spring-mock-mvc'
 
-
-    testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
     testImplementation 'org.springframework.boot:spring-boot-testcontainers'
     testImplementation "org.wiremock:wiremock-standalone:${wiremockVersion}"
     testImplementation 'org.testcontainers:testcontainers-postgresql'

@@ -18,11 +18,12 @@ import dev.lmdb.actor.repository.ActorRepository;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -52,6 +53,8 @@ public class ActorService {
   private final TmdbPersonClient tmdbPersonClient;
   private final ActorRepository actorRepository;
   private final ActorMapper actorMapper;
+  private final Clock clock;
+  private final CacheManager cacheManager;
 
   /**
    * Fetches an actor profile, read-through/save-through against PostgreSQL.
@@ -71,19 +74,21 @@ public class ActorService {
    *
    * <p>Results are cached in Redis ({@code actors} cache region) so that repeated lookups for the
    * same person skip both PostgreSQL and TMDB entirely. The cache is evicted when an upsert
-   * modifies the entity (see {@link #upsertFromSearchResult}).
+   * modifies the entity (see {@link #upsertFromSearchResult}). Single-flight {@code sync = true}
+   * prevents cache stampedes on concurrent misses.
    *
    * @param tmdbId TMDB person id
    * @return the persisted (or freshly fetched-and-saved) actor entity
    */
-  @Transactional
-  @Cacheable(value = "actors", key = "#tmdbId")
+  @Cacheable(value = "actors", key = "#tmdbId", sync = true)
   public Actor getOrFetchActorEntity(Long tmdbId) {
     return fetchActorEntity(tmdbId);
   }
 
   /**
    * Internal unannotated helper method for fetching actor entity to avoid proxy self-invocation.
+   * Direct {@code this.} calls bypass the Spring AOP proxy, so {@code @Cacheable} is left to public
+   * entry points.
    */
   private Actor fetchActorEntity(Long tmdbId) {
     // Consult local database first; if missing, fetch from upstream TMDB client and persist
@@ -105,23 +110,14 @@ public class ActorService {
    * @return cast credits sorted by release date descending
    */
   public List<FilmographyEntryDto> getFilmography(Long tmdbId) {
-    // Map raw cast credits to native DTO entries, substituting empty string for missing release
-    // dates.
+    // Map raw cast credits to native DTO entries via MapStruct and sort newest release first.
     List<FilmographyEntryDto> entries =
-        getFilmographyRaw(tmdbId).cast().stream()
-            .map(
-                c ->
-                    new FilmographyEntryDto(
-                        c.id(),
-                        c.title(),
-                        c.character(),
-                        c.releaseDate() != null ? c.releaseDate() : "",
-                        c.posterPath(),
-                        c.voteAverage()))
-            .collect(Collectors.toCollection(ArrayList::new));
+        new ArrayList<>(actorMapper.toFilmographyEntryDtos(getFilmographyRaw(tmdbId).cast()));
 
     // Newest releases first; undated entries sink to the end.
-    entries.sort((a, b) -> b.releaseDate().compareTo(a.releaseDate()));
+    entries.sort(
+        Comparator.comparing(
+            FilmographyEntryDto::releaseDate, Comparator.nullsLast(Comparator.reverseOrder())));
     return entries;
   }
 
@@ -160,33 +156,21 @@ public class ActorService {
    */
   @Transactional
   public List<ActorImageDto> getImages(Long tmdbId) {
-    // Transform domain profile image entities into DTO representations inside the active
-    // transaction.
-    return fetchImages(tmdbId).stream()
-        .map(
-            i ->
-                new ActorImageDto(
-                    i.getFilePath(),
-                    i.getAspectRatio(),
-                    i.getHeight(),
-                    i.getWidth(),
-                    i.getIso6391(),
-                    i.getVoteAverage(),
-                    i.getVoteCount()))
-        .toList();
+    // Transform domain profile image entities into DTO representations via MapStruct.
+    return actorMapper.toImageDtos(fetchImages(tmdbId));
   }
 
   /**
    * Core read-through/save-through image lookup shared by the native API and the facade. An actor
    * row with no persisted images triggers one TMDB fetch, which is then saved onto the actor.
    *
-   * <p>Results are cached in Redis ({@code actor-images} cache region).
+   * <p>Results are cached in Redis ({@code actor-images} cache region) with single-flight {@code
+   * sync = true}.
    *
    * @param tmdbId TMDB person id
    * @return persisted profile images (empty if TMDB has none)
    */
-  @Transactional
-  @Cacheable(value = "actor-images", key = "#tmdbId")
+  @Cacheable(value = "actor-images", key = "#tmdbId", sync = true)
   public List<ActorProfileImage> getOrFetchImages(Long tmdbId) {
     return fetchImages(tmdbId);
   }
@@ -206,19 +190,7 @@ public class ActorService {
     List<ActorProfileImage> images =
         response.profiles() == null
             ? List.of()
-            : response.profiles().stream()
-                .map(
-                    p ->
-                        ActorProfileImage.builder()
-                            .filePath(p.filePath())
-                            .aspectRatio(p.aspectRatio())
-                            .height(p.height())
-                            .width(p.width())
-                            .iso6391(p.iso6391())
-                            .voteAverage(p.voteAverage())
-                            .voteCount(p.voteCount())
-                            .build())
-                .toList();
+            : actorMapper.toProfileImageEntities(response.profiles());
 
     // Update the actor entity with the fetched images and save back to PostgreSQL.
     actor.setProfileImages(new ArrayList<>(images));
@@ -234,7 +206,6 @@ public class ActorService {
    * @param page TMDB page (1-based)
    * @return paged summaries
    */
-  @Transactional
   public ActorSearchResponse getPopular(int page) {
     // Map raw TMDB popular response into native ActorSearchResponse envelope.
     return toSearchResponse(getPopularRaw(page), page);
@@ -246,7 +217,6 @@ public class ActorService {
    * @param page page number
    * @return raw TMDB popular-people response
    */
-  @Transactional
   public TmdbPersonSearchResponse getPopularRaw(int page) {
     log.info("Fetching popular actors: page={}", page);
     // Call TMDB popular persons endpoint and upsert each returned actor summary.
@@ -277,7 +247,6 @@ public class ActorService {
    * @param page TMDB page (1-based)
    * @return paged summaries
    */
-  @Transactional
   public ActorSearchResponse search(String query, int page) {
     // Execute raw TMDB search and map output to native search response DTO.
     return toSearchResponse(searchRaw(query, page), page);
@@ -293,9 +262,8 @@ public class ActorService {
    */
   private ActorSearchResponse toSearchResponse(
       TmdbPersonSearchResponse response, int requestedPage) {
-    // Convert list of TmdbPersonSummary items into ActorSummaryDto instances.
-    List<ActorSummaryDto> actors =
-        response.results().stream().map(actorMapper::toSummaryDto).toList();
+    // Convert list of TmdbPersonSummary items into ActorSummaryDto instances via MapStruct.
+    List<ActorSummaryDto> actors = actorMapper.toSummaryDtos(response.results());
     return new ActorSearchResponse(
         response.page() != null ? response.page() : requestedPage,
         response.totalPages() != null ? response.totalPages() : 0,
@@ -310,7 +278,6 @@ public class ActorService {
    * @param page page number
    * @return raw TMDB person-search response
    */
-  @Transactional
   public TmdbPersonSearchResponse searchRaw(String query, int page) {
     log.info("Searching actors: query={}, page={}", query, page);
     // Call TMDB search endpoint and upsert each returned actor summary to database.
@@ -330,7 +297,6 @@ public class ActorService {
    *
    * @param summary a single result from a TMDB person-list endpoint
    */
-  @CacheEvict(value = "actors", key = "#summary.id()")
   private void upsertFromSearchResult(TmdbPersonSearchResponse.TmdbPersonSummary summary) {
     // Retrieve existing actor entity if present to prevent clobbering existing detailed fields.
     Actor actor =
@@ -342,20 +308,28 @@ public class ActorService {
                   fresh.setTmdbId(summary.id());
                   return fresh;
                 });
-    actor.setName(summary.name());
-    actor.setProfilePath(summary.profilePath());
-    actor.setPopularity(summary.popularity());
-    if (summary.knownForDepartment() != null) {
-      actor.setKnownForDepartment(summary.knownForDepartment());
-    }
-    if (summary.gender() != null) {
-      actor.setGender(summary.gender());
-    }
-    if (summary.adult() != null) {
-      actor.setAdult(summary.adult());
-    }
-    actor.setSyncedAt(LocalDateTime.now(Clock.systemUTC()));
+
+    // Partially update present summary attributes on the entity via MapStruct.
+    actorMapper.updateEntityFromSummary(summary, actor);
+    actor.setSyncedAt(LocalDateTime.now(clock));
     actorRepository.save(actor);
+
+    // Evict cached entity from Redis so subsequent reads fetch the updated profile.
+    evictActorCache(summary.id());
+  }
+
+  /**
+   * Programmatically evicts an actor from Redis cache if a cache manager is active.
+   *
+   * @param tmdbId TMDB person id to evict
+   */
+  private void evictActorCache(Long tmdbId) {
+    if (cacheManager != null) {
+      Cache cache = cacheManager.getCache("actors");
+      if (cache != null) {
+        cache.evict(tmdbId);
+      }
+    }
   }
 
   /**
@@ -367,6 +341,7 @@ public class ActorService {
   private Actor convertAndSaveActor(TmdbPersonResponse r) {
     // Map fields from TmdbPersonResponse record into new Actor entity via ActorMapper.
     Actor actor = actorMapper.toEntity(r);
+    actor.setSyncedAt(LocalDateTime.now(clock));
     Actor saved = actorRepository.save(actor);
     log.debug("Actor {} ('{}') synced to typed store", saved.getTmdbId(), saved.getName());
     return saved;

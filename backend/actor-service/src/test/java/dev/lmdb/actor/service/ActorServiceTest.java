@@ -66,6 +66,15 @@ class ActorServiceTest {
 
   @Mock private ActorRepository actorRepository;
 
+  @Mock private org.springframework.cache.CacheManager cacheManager;
+
+  @Mock private org.springframework.cache.Cache cache;
+
+  @org.mockito.Spy
+  private java.time.Clock clock =
+      java.time.Clock.fixed(
+          java.time.Instant.parse("2026-08-17T09:00:00Z"), java.time.ZoneOffset.UTC);
+
   @org.mockito.Spy
   private dev.lmdb.actor.mapper.ActorMapper actorMapper =
       org.mapstruct.factory.Mappers.getMapper(dev.lmdb.actor.mapper.ActorMapper.class);
@@ -342,20 +351,33 @@ class ActorServiceTest {
   void searchUpsertPreservesExistingDetail() {
     // Given: a fully-detailed actor already persisted from a prior detail fetch
     Actor existing = persistedActor();
+    // Summary with null profilePath, popularity, and department
+    TmdbPersonSearchResponse.TmdbPersonSummary sparseSummary =
+        new TmdbPersonSearchResponse.TmdbPersonSummary(
+            BRAD_PITT_ID, "Brad Pitt Updated", null, null, null, null, null);
+
     when(tmdbPersonClient.searchPersons("pitt", 1))
-        .thenReturn(
-            new TmdbPersonSearchResponse(1, 1, 1L, List.of(summary(BRAD_PITT_ID, "Brad Pitt"))));
+        .thenReturn(new TmdbPersonSearchResponse(1, 1, 1L, List.of(sparseSummary)));
     when(actorRepository.findById(BRAD_PITT_ID)).thenReturn(Optional.of(existing));
     when(actorRepository.save(any(Actor.class))).thenAnswer(inv -> inv.getArgument(0));
+    when(cacheManager.getCache("actors")).thenReturn(cache);
 
     // When
     actorService.search("pitt", 1);
 
-    // Then: biography and birth date survive the stub upsert
+    // Then: biography, birth date, profile path, and popularity survive the stub upsert
     ArgumentCaptor<Actor> saved = ArgumentCaptor.forClass(Actor.class);
     verify(actorRepository).save(saved.capture());
+    assertThat(saved.getValue().getName()).isEqualTo("Brad Pitt Updated");
     assertThat(saved.getValue().getBiography()).isEqualTo("An actor.");
     assertThat(saved.getValue().getBirthDate()).isEqualTo(LocalDate.of(1963, Month.DECEMBER, 18));
+    assertThat(saved.getValue().getProfilePath()).isEqualTo("/profile.jpg");
+    assertThat(saved.getValue().getPopularity()).isEqualTo(50.0);
+    assertThat(saved.getValue().getSyncedAt())
+        .isEqualTo(LocalDateTime.of(2026, Month.AUGUST, 17, 9, 0, 0));
+
+    // Cache eviction verified
+    verify(cache).evict(BRAD_PITT_ID);
   }
 
   /**

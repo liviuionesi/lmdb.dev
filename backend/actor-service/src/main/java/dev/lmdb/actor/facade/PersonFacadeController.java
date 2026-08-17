@@ -98,20 +98,8 @@ public class PersonFacadeController {
     }
 
     long personId = Long.parseLong(id);
-    // Map persisted images into TMDB facade profile image DTOs.
-    var profiles =
-        actorService.getOrFetchImages(personId).stream()
-            .map(
-                i ->
-                    new TmdbPersonImagesResponse.TmdbProfileImage(
-                        i.getFilePath(),
-                        i.getAspectRatio(),
-                        i.getHeight(),
-                        i.getWidth(),
-                        i.getIso6391(),
-                        i.getVoteAverage(),
-                        i.getVoteCount()))
-            .toList();
+    // Map persisted images into TMDB facade profile image DTOs via MapStruct.
+    var profiles = actorMapper.toTmdbProfileImages(actorService.getOrFetchImages(personId));
     return ResponseEntity.ok(new TmdbPersonImagesResponse(personId, profiles));
   }
 
@@ -193,7 +181,7 @@ public class PersonFacadeController {
    * @param statusCode TMDB's numeric status code (not the HTTP status)
    * @param statusMessage human-readable message
    */
-  private record TmdbErrorResponse(
+  record TmdbErrorResponse(
       boolean success,
       @JsonProperty("status_code") int statusCode,
       @JsonProperty("status_message") String statusMessage) {}

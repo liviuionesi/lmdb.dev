@@ -1,9 +1,11 @@
 package dev.lmdb.actor;
 
+import java.time.Clock;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 import org.springframework.cache.annotation.EnableCaching;
+import org.springframework.context.annotation.Bean;
 
 /**
  * Actor Service Application. Manages actor/cast information, biographies, and filmographies, and
@@ -25,5 +27,15 @@ public class ActorServiceApplication {
   public static void main(String[] args) {
     // Launch the Spring Boot application context and initialize all configured beans.
     SpringApplication.run(ActorServiceApplication.class, args);
+  }
+
+  /**
+   * Provides a UTC {@link Clock} bean for time-dependent operations.
+   *
+   * @return standard UTC system clock
+   */
+  @Bean
+  public Clock clock() {
+    return Clock.systemUTC();
   }
 }
