@@ -1,6 +1,7 @@
 package dev.lmdb.movie.facade;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import dev.lmdb.movie.client.TmdbClient;
 import dev.lmdb.movie.client.dto.TmdbCreditsResponse;
 import dev.lmdb.movie.client.dto.TmdbGenresResponse;
 import dev.lmdb.movie.client.dto.TmdbMovieListResponse;
