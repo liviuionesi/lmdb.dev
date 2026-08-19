@@ -301,6 +301,8 @@ tasks.register('openAggregateJavadoc') {
             }
         }
     }
+}
+
 tasks.register('openJavadoc') {
     group = 'documentation'
     description = 'Generates Javadoc for all microservices and opens the unified hub in your browser'
