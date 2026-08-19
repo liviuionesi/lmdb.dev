@@ -14,31 +14,20 @@ destroy anything.
 
 Every real request from the React app goes through
 [`frontend/lmdb/src/utils/apiUrl.js`](../../frontend/lmdb/src/utils/apiUrl.js),
-which resolves a backend URL in this order, **every time, automatically —
-no manual step in any of the scenarios below unless noted**:
-
-1. `localStorage.lmdb_api_url` — a manual pin. Nothing sets this
-   automatically anymore; only useful if you open devtools and set it
-   yourself to force a specific backend.
-2. `VITE_API_URL` — a build-time env var. Unset in Vercel today.
-3. `http://localhost:8080` — if the code itself is running on `localhost`
-   (i.e. you're running `npm run dev` locally).
-4. `https://api.lmdb.dev` — the cloud default, **only if it
-   passes a health check** (`GET /actuator/health`).
-5. Whatever URL is published in [`infrastructure/tunnel-url.txt`](../../infrastructure/tunnel-url.txt)
-   — **only if that also passes a health check.** This file is
-   auto-published by `start-tunnel.sh`/`deploy-azure.sh` on every run (see
-   §2 and §3) and read by the frontend from
-   `raw.githubusercontent.com/.../develop/infrastructure/tunnel-url.txt`,
-   so a fresh push makes it visible within seconds, no redeploy needed.
-6. The cloud URL anyway, as a last resort (so the app fails predictably
-   instead of silently).
+which resolves a backend URL automatically, every time — no manual step in
+any of the scenarios below unless noted. The exact tier order (manual
+override → localhost → cloud default → DuckDNS fallback → published
+tunnel) is documented once, in
+[ARCHITECTURE.md §11.6](../architecture/ARCHITECTURE.md#116-dynamic-backend-resolution-one-frontend-deploy-any-live-backend) —
+not repeated here to avoid the two drifting apart, which is what happened
+before this pass (this section and two other docs each described a
+different, and in one case wrong, tier order for the same code).
 
 Resolution is cached 30s per browser tab so it isn't re-probed on every
-request. **Consequence:** whichever backend is actually reachable when the
-above runs wins — you don't "point" the frontend at Azure vs AWS vs local,
-you just make sure the right one is the one currently answering health
-checks.
+request. **Consequence:** whichever backend is actually reachable when
+resolution runs wins — you don't "point" the frontend at Azure vs AWS vs
+local, you just make sure the right one is the one currently answering
+health checks.
 
 ## 2. Prerequisites
 

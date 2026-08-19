@@ -1,13 +1,13 @@
 # LMDB Frontend
 
-A modern, responsive movie streaming & discovery application built with React 18, Vite, Material-UI, Redux Toolkit Query, and Vosk offline voice recognition.
+A modern, responsive movie streaming & discovery application built with React 19, Vite, Material-UI, Redux Toolkit Query, and Vosk offline voice recognition.
 
 ## Tech Stack
 
-- **Framework**: React 18.3.1 (Vite Build Tooling)
-- **UI Components**: Material-UI v5 (MUI) + Emotion
+- **Framework**: React 19 (Vite Build Tooling)
+- **UI Components**: Material-UI v9 (MUI) + Emotion
 - **State Management & Caching**: Redux Toolkit & RTK Query
-- **Routing**: React Router DOM v6
+- **Routing**: React Router DOM v7
 - **Voice Control**: Vosk Speech-to-Text integration via `ai-service`
 - **Testing**: Vitest 4 + React Testing Library (180+ tests)
 - **Code Quality**: ESLint + Prettier
