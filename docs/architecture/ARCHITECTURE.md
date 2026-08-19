@@ -1,20 +1,20 @@
 # LMDB Microservices - Enterprise Software Architecture Document
 
-**Version:** 1.8.0  
+**Version:** 1.8.0
 **Date:** August 11, 2026 (#160: cloud lifecycle — ADR-018, §11.5 stop-not-destroy, §11.7 lifecycle management; #151: bug closed — resolveApiUrl null sentinel verified live)
-**Author:** Liviu Ionesi  
-**Purpose:** Portfolio project demonstrating enterprise-grade full-stack development for a movie platform
+**Author:** Liviu Ionesi
+**Purpose:** Portfolio project demonstrating full-stack microservices development for a movie platform
 
 ---
 
 ## Executive Summary
 
-This document outlines the complete architecture for LMDB, a production-ready microservices-based movie platform.
+This document outlines the architecture for LMDB, a microservices-based movie platform.
 
 **Core product goal:** clone the TMDB v3 API in Spring so that the existing
 **LMDB React application** (`frontend/lmdb` — merged into this repo
 as a monorepo on 2026-07-30, full original commit history preserved; was
-previously the separate `~/Desktop/lmdb` project. CRA + Redux Toolkit
+previously the separate `~/Desktop/lmdb` project. Vite + Redux Toolkit
 Query + MUI + Vosk voice control) can consume this backend as a **drop-in replacement**
 for `https://api.themoviedb.org/3` — the React app changes only its base URL.
 Requests are served read-through: **Redis cache → MongoDB → real TMDB API
@@ -35,7 +35,6 @@ the existing LMDB React app is the only frontend.
 
 ## Table of Contents
 
-- [📊 Project Metrics & Analytics Report](../reports/PROJECT_METRICS.md)
 - [1. Technology Stack](#1-technology-stack)
 - [2. System Architecture](#2-system-architecture)
 - [3. Microservices Design](#3-microservices-design)
@@ -44,11 +43,12 @@ the existing LMDB React app is the only frontend.
 - [6. Security Architecture](#6-security-architecture)
 - [7. Development Environment Setup](#7-development-environment-setup)
 - [8. Version Management](#8-version-management)
-- [9. Enterprise Development Process](#9-enterprise-development-process)
+- [9. Development Process](#9-development-process)
 - [10. Testing Strategy](#10-testing-strategy)
 - [11. Deployment Architecture](#11-deployment-architecture) — Terraform, Kubernetes, AWS & Azure free tier
 - [12. Monitoring & Observability](#12-monitoring--observability) — Prometheus/Grafana, ELK stack
 - [13. Success Criteria](#13-success-criteria)
+- [14. Project Metrics & Analytics Report](../reports/PROJECT_METRICS.md)
 - [Appendix A: Project Structure](#appendix-a-project-structure)
 - [Appendix B: Spring Boot 4.1.x + Java 25 Best Practices](#appendix-b-spring-boot-41x--java-25-best-practices)
 
@@ -62,7 +62,7 @@ the existing LMDB React app is the only frontend.
 |------------|---------|---------------------|---------|
 | Java | 25 | SDKMAN | Programming language |
 | Spring Boot | 4.1.0 | Gradle | Framework (Framework 7, Jackson 3, Jakarta EE 11 — see ADR-009) |
-| Gradle | 9.6.1 | Wrapper / SDKMAN | Build tool |
+| Gradle | 9.7.0 | Wrapper / SDKMAN | Build tool |
 | Spring Cloud | 2025.1.2 | Gradle | Microservices infrastructure |
 | Spring AI | 2.0.0 | Gradle | AI/ML integration (implemented in ai-service — see §3.7) |
 | PostgreSQL | 17 (pgvector) | Docker/Podman | Relational database (`pgvector/pgvector:pg17` for ai-service embeddings per ADR-012) |
@@ -81,7 +81,7 @@ the existing LMDB React app is the only frontend.
 | TestContainers | 2.0.5 | Gradle | Integration testing (Postgres/Redis stable; MongoDB saw transient flakiness under podman — see ADR-009) |
 | WireMock | 3.9.1 | Gradle | Fake-TMDB HTTP stubbing in tests |
 | Bucket4j | 8.10.1 | Gradle | Gateway rate limiting (`bucket4j-core`, not deprecated starter — see §11) |
-| Springdoc OpenAPI | 3.0.3 | Gradle | API documentation |
+| Springdoc OpenAPI | 3.1.0 | Gradle | API documentation |
 | JaCoCo | 0.8.14 | Gradle | Code coverage |
 | OpenRewrite | 7.37.0 | Gradle | Standing framework-migration tool (see ADR-009) |
 | SonarQube Plugin | 6.2.0.5505 | Gradle | Static code analysis Gradle plugin (#20) |
@@ -101,14 +101,14 @@ backend without frontend logic changes beyond configuration — see
 
 | Technology | Version | Notes |
 |------------|---------|-------|
-| React (CRA) | 17.0.2 | `react-scripts` 5.0.1 |
-| Redux Toolkit | 1.6.2 | `@reduxjs/toolkit` 1.6.2 (`react-redux` 7.2.5) — TMDB calls in `src/services/TMDB.js` |
+| React | 19.2.8 | Vite build (migrated off CRA, #125-127 — `react-scripts` no longer used) |
+| Redux Toolkit | 2.12.0 | `@reduxjs/toolkit` 2.12.0 (`react-redux` 9.3.0) — TMDB calls in `src/services/TMDB.js` |
 | axios | 1.6.8 | Auth calls in `src/utils/index.js` |
-| Material UI | 5.15.18 | `@mui/material` & `@mui/styles` 5.15.18, `@mui/icons-material` 5.0.3 |
+| Material UI | 9.3.1 | `@mui/material` & `@mui/icons-material` 9.3.1 |
 | Emotion | 11.4.1 / 11.3.0 | `@emotion/react` 11.4.1, `@emotion/styled` 11.3.0 |
 | Vosk Speech-to-Text | Latest | Offline voice control via `ai-service` SpeechToTextService |
-| React Router DOM | 5.3.0 | Client-side routing |
-| TMDB API contract | v3 | Base URL `https://api.themoviedb.org/3` → becomes this backend's gateway via `REACT_APP_API_URL` |
+| React Router DOM | 7.18.2 | Client-side routing |
+| TMDB API contract | v3 | Base URL `https://api.themoviedb.org/3` → becomes this backend's gateway via `VITE_API_URL` (build-time) or dynamic resolution — see §11.6 |
 
 > A dedicated Next.js web app and React Native mobile apps were part of
 > earlier drafts and are **descoped** as of v1.2.0 — they were never
@@ -1256,29 +1256,22 @@ public class JwtTokenProvider {
 }
 ```
 
-### 6.3 Security Checklist
+### 6.3 Security Posture
 
-- [ ] HTTPS enforced in production
-- [ ] JWT tokens with 1-hour expiration
-- [ ] Refresh tokens with 7-day expiration
-- [ ] Password hashing with BCrypt (strength 12)
-- [ ] SQL injection prevention (Prepared Statements)
-- [ ] XSS protection (Content Security Policy)
-- [ ] CSRF protection disabled (stateless JWT)
-- [ ] Rate limiting (100 requests/minute per IP)
-- [ ] CORS configuration (whitelist origins)
-- [ ] Input validation with Bean Validation
-- [ ] API versioning (/api/v1/)
-- [ ] Sensitive data encryption at rest
-- [ ] Secrets management (Spring Cloud Config + Vault)
-- [ ] Security headers (X-Frame-Options, X-Content-Type-Options)
-- [ ] Dependency vulnerability scanning (Snyk, OWASP)
+This was originally an aspirational checklist; it's now a pointer to where each item is actually implemented, so it can't drift out of sync with reality the way an unchecked list does:
+
+- **Rate limiting & DDoS mitigation** (IP-based limits, per-route thresholds, connection limits, IP blacklist/whitelist): [`docs/security/DDOS_PROTECTION_IMPLEMENTED.md`](../security/DDOS_PROTECTION_IMPLEMENTED.md).
+- **JWT auth, password hashing (BCrypt), CSRF/CORS config:** `SecurityConfig.java` in each service — see §6.1/§6.2 above and `backend/api-gateway/.../SecurityConfig.java`.
+- **Secrets management:** `backend/config-service/SECURITY.md`.
+- **Dependency vulnerability scanning:** SonarQube Quality Gate in `backend-ci.yml` (§9 below).
+
+Items not yet implemented (tracked as open backlog, not silently dropped): security headers (X-Frame-Options, X-Content-Type-Options), encryption at rest for sensitive data, and API-gateway-level Bean Validation on all routes.
 
 ---
 
 ## 7. Development Environment Setup
 
-### 7.1 Prerequisites Installation (Fedora Core 43)
+### 7.1 Prerequisites Installation (Fedora Linux 44 Workstation Edition)
 
 ```bash
 # Step 1: Install SDKMAN
@@ -1291,7 +1284,7 @@ sdk install java 25-open
 sdk default java 25-open
 java -version
 
-# Gradle is managed via wrapper (gradle-9.6.1)
+# Gradle is managed via wrapper (gradle-9.7.0)
 # No need to install separately
 gradle -version
 
@@ -1337,9 +1330,9 @@ cd movie-service
 # Frontend (existing LMDB React app — now frontend/lmdb, merged into
 # this repo as a monorepo; see docs/guides/RUN_WITH_LMDB_APP.md)
 cd frontend/lmdb
-echo "REACT_APP_API_URL=http://localhost:8080" >> .env.local  # point at gateway
+echo "VITE_API_URL=http://localhost:8080" >> .env.local  # point at gateway (Vite only reads VITE_*, not REACT_APP_*)
 npm install
-npm start
+npm run dev
 ```
 
 ### 7.3 Docker Compose for Local Development
@@ -1609,132 +1602,21 @@ Automated checking and refactoring tools integrated in `frontend/lmdb/package.js
 
 ---
 
-## 9. Enterprise Development Process
+## 9. Development Process
 
-### 9.1 Project Management
+The real, current process — Scrum cadence, branch flow (`develop` → `main`),
+commit conventions, Definition of Ready/Done, autonomous-run rules — is
+defined once in [`CLAUDE.md`](../../CLAUDE.md) and [`docs/process/`](../process/)
+and deliberately not restated here; this section used to carry its own
+copy (a fixed 12-week sprint plan, a "2 reviewers approved" DoD, a
+`main`/`develop`/`feature/*`/`release/*` branching diagram) and it drifted
+out of sync with the real workflow as the project evolved. Pointers:
 
-**GitHub Projects Setup:**
-- Kanban board with swim lanes: Backlog, To Do, In Progress, Review, Done
-- Issue templates: Bug, Feature, Task, Question
-- PR templates with checklist
-- Milestones for sprints
-- Labels: priority, type, service, status
+- **Sprints & backlog:** [`docs/process/METHODOLOGY.md`](../process/METHODOLOGY.md) — Epic → Story → Task hierarchy, weekly GitHub Milestones.
+- **Definition of Ready / Done:** [`docs/process/DEFINITION_OF_READY.md`](../process/DEFINITION_OF_READY.md), [`docs/process/DEFINITION_OF_DONE.md`](../process/DEFINITION_OF_DONE.md).
+- **Branch flow, commit format, code review steps:** [`CLAUDE.md`](../../CLAUDE.md) — `develop` is where task work happens and gets pushed; `main` receives a Story only once it's fully verified and closed. Commits reference an issue number (`feat: Add AI recommendation (#36)`), enforced by a commit-msg hook. This is a single-collaborator repo, so review is a second independent pass (subagent or reviewer skill), not a second human approver.
 
-**Sprint Structure (2-week sprints):**
-
-| Sprint | Duration | Focus | Deliverables |
-|--------|----------|-------|--------------|
-| 0 | 1 week | Project setup | Repo, CI/CD, docs templates |
-| 1-2 | 2 weeks | Infrastructure | Eureka, Config, Gateway, DB |
-| 3-5 | 3 weeks | Core services | Movie, User, Actor services |
-| 6-7 | 2 weeks | TMDB Facade | TMDB v3 facade + React app integration |
-| 8-9 | 2 weeks | Advanced | AI Service, Media Service |
-| 10 | 1 week | Testing | E2E (React app), performance, security |
-| 11-12 | 2 weeks | Observability & Deploy | Prometheus/ELK, Terraform, K8s cloud |
-
-**Total Timeline:** 12 weeks (~3 months)
-
-### 9.2 Definition of Done (DoD)
-
-Every task must meet these criteria:
-
-✅ **Code Quality**
-- Code follows Clean Code principles
-- SOLID principles applied
-- Design patterns used appropriately
-- No code smells (SonarQube)
-
-✅ **Testing**
-- Unit tests written (min 85% coverage)
-- Integration tests written
-- All tests passing
-- No flaky tests
-
-✅ **Code Review**
-- PR created with description
-- 2 reviewers approved
-- All comments addressed
-- CI/CD pipeline passing
-
-✅ **Documentation**
-- Javadoc/JSDoc complete
-- README updated
-- Wiki updated
-- OpenAPI spec updated
-- ADR created (if architectural decision)
-
-✅ **Quality Gates**
-- SonarQube quality gate passed
-- No security vulnerabilities
-- Performance benchmarks met
-- Accessibility standards met (web/mobile)
-
-✅ **Deployment**
-- Deployed to dev environment
-- Manual testing completed
-- Acceptance criteria verified
-- Product owner approval
-
-### 9.3 Development Workflow
-
-> **Actual workflow (see `CLAUDE.md`'s "Where work happens"), not what's
-> sketched below:** this is a single-collaborator repo — commits go
-> straight to `main`, no `develop` branch, no feature branches, no PRs (the
-> sole collaborator can't approve their own PR, so opening one is pure
-> friction). **Branch protection is deliberately OFF** — a decision, not a
-> gap: protection rules (required reviews, status checks before merge)
-> exist to gate PRs into a shared branch, and there are no PRs to gate. The
-> daily workflow, branching diagram, and PR-based steps below describe a
-> multi-contributor process this project was drafted against early on but
-> has never actually run — kept here as the original planning reference,
-> not current practice. Revisit if a second collaborator joins.
-
-**Daily Workflow (aspirational — see the note above for what actually happens):**
-1. Pull latest changes from main
-2. Review assigned GitHub issues
-3. Create feature branch: `feature/ISSUE-123-description`
-4. TDD: Write test → Implement → Refactor
-5. Commit with conventional commits: `feat(movie): add search endpoint`
-6. Push and create PR
-7. Request code reviews
-8. Address feedback
-9. Merge after CI passes and approvals
-10. Update documentation
-
-**Branching Strategy:**
-```
-main (production)
-  ├── develop (integration)
-  │   ├── feature/ISSUE-123-movie-search
-  │   ├── feature/ISSUE-124-user-auth
-  │   └── feature/ISSUE-125-ai-recommendations
-  ├── release/v1.0.0
-  └── hotfix/critical-security-patch
-```
-
-**Commit Message Format (Conventional Commits):**
-```
-<type>(<scope>): <subject>
-
-<body>
-
-<footer>
-```
-
-Types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`
-
-Example:
-```
-feat(movie): add genre-based movie discovery
-
-Implement endpoint GET /api/v1/movies/discover?genre={id}
-to allow users to filter movies by genre. Includes caching
-and fallback to TMDB API.
-
-Closes #123
-```
-
-### 9.4 Code Review Guidelines
+### 9.1 Code Review Guidelines
 
 **Reviewer Checklist:**
 - [ ] Code follows style guide
@@ -2403,8 +2285,8 @@ primary target. When either cloud is up, all 9 workloads are deployed:
 | Stopped (`az aks stop`) | Disks (~16 GiB) + public IP only | ~$0.01/hr | ~**$0.25/day** |
 | Destroyed (`terraform destroy`) | Nothing | $0 | $0 |
 
-`az aks stop` de-allocates the VM while preserving all 5 PVCs (Postgres,
-MongoDB ×2, Redis, Ollama). Credits last ~10–20× longer than always-on.
+`az aks stop` de-allocates the VM while preserving all 4 PVCs (Postgres,
+MongoDB, Redis, Ollama — one StatefulSet replica each). Credits last ~10–20× longer than always-on.
 Terraform destroy is reserved for end-of-semester or region migration.
 
 **PVC reclaim policy:** All PVCs use the AKS `default` StorageClass (Azure
@@ -2456,10 +2338,15 @@ resolves the backend URL **per request**, in priority order:
 4. The default cloud target (`api.lmdb.dev`), **only if it
    passes a live health check** — not assumed reachable just because it's
    configured.
-5. Whichever URL is currently published in `infrastructure/tunnel-url.txt`
+5. The DuckDNS fallback hostname (`lmdb-api.duckdns.org`), same health-check
+   gate, in case `api.lmdb.dev` itself is unresolvable but the DuckDNS
+   record was updated more recently.
+6. Whichever URL is currently published in `infrastructure/tunnel-url.txt`
    — **also only if it passes a health check.**
-6. The cloud default anyway, as a last resort, so failure is visible
-   rather than silent.
+7. If every tier above failed its health check, resolution returns nothing
+   reachable; the synchronous `getApiUrl()` wrapper other call sites use
+   falls back to the cloud default anyway at that point, so a request is
+   attempted (and fails visibly) rather than silently not firing.
 
 Resolved results are cached 30s per browser tab so this isn't a network
 round-trip on every single request, and re-checked automatically once that
@@ -2623,7 +2510,7 @@ pods stdout (JSON) ─► Filebeat (DaemonSet) ─► Logstash ─► Elasticsea
 **Service log format** — all services log JSON to stdout via
 logstash-logback-encoder:
 ```groovy
-implementation 'net.logstash.logback:logstash-logback-encoder:8.0'
+implementation 'net.logstash.logback:logstash-logback-encoder:8.1'
 ```
 ```xml
 <!-- logback-spring.xml -->
@@ -2804,7 +2691,7 @@ lmdb.dev/
 ├── docs/
 │   ├── architecture/
 │   │   ├── ARCHITECTURE.md
-│   │   ├── adr/                 # 001-017, see §2.3 for the full index
+│   │   ├── adr/                 # 001-019, see §2.3 for the full index
 │   │   └── PORT_MAPPING.md
 │   ├── process/                 # Scrum artifacts — DoR/DoD/NFRs, product goal, methodology
 │   ├── api/                     # Postman collection
@@ -2812,18 +2699,16 @@ lmdb.dev/
 │       ├── RUN_WITH_LMDB_APP.md  # pointing the frontend at this backend
 │       └── DEPLOYMENT_GUIDE.md       # local/Azure/AWS deploy + FE-binding runbook
 ├── .github/
-│   ├── workflows/
-│   │   ├── backend-ci-cd.yml
-│   │   ├── frontend-ci-cd.yml
-│   │   └── mobile-ci-cd.yml
+│   ├── workflows/                # backend-ci.yml, frontend-ci.yml, docker-publish.yml,
+│   │                              # terraform-plan.yml, deploy.yml, cluster-stop.yml, destroy.yml,
+│   │                              # e2e-playwright.yml, e2e-smoke.yml — no mobile pipeline (mobile was descoped, §1.2)
 │   ├── ISSUE_TEMPLATE/
 │   └── PULL_REQUEST_TEMPLATE.md
 ├── .gitignore
-├── VERSIONS.md
-├── CHANGELOG.md
-├── CONTRIBUTING.md
 └── README.md
 ```
+
+No `VERSIONS.md`, `CHANGELOG.md`, or `CONTRIBUTING.md` exist at the repo root — §8.2's "Version Documentation" list below describes an aspirational process, not files present today.
 
 ---
 
@@ -2972,7 +2857,7 @@ public class TmdbClient {
 
 ---
 
-**Document Version:** 1.7.3  
-**Last Updated:** August 1, 2026  
-**Status:** Living Document — Discovery/Config/Gateway/Movie/Actor/User/AI services implemented and running on Spring Boot 4.1; Media service remaining stub (see §2.3 ADRs and per-service sections for current status)
+**Document Version:** 1.8.0
+**Last Updated:** August 11, 2026 — matches the header above; this footer previously lagged it (was 1.7.3 / August 1) and is now the same single version number, not a second one to keep in sync by hand.
+**Status:** Living Document — Discovery/Config/Gateway/Movie/Actor/User/AI services implemented, running, and deployed to both cloud overlays. Media service is fully implemented locally (§3.8) but has no Kubernetes manifests yet, so it's local-only, not a stub (see §2.3 ADRs and per-service sections for current status).
 
