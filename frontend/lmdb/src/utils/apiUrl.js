@@ -122,7 +122,7 @@ export async function checkBackendHealth(url) {
  * @param {string} [cloud='azure'] - Target cloud provider ('azure' or 'aws')
  * @returns {Promise<Object>} The response from the serverless wakeup handler
  */
-export async function triggerBackendWakeup(cloud = 'azure') {
+export async function triggerBackendWakeup(cloud = getBackendTarget()) {
   try {
     const res = await fetch('/api/wakeup', {
       method: 'POST',
