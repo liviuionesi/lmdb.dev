@@ -116,6 +116,7 @@ def generateJavadocDashboardTask = tasks.register('generateJavadocDashboard') {
             font-weight: 700;
             background: linear-gradient(90deg, #58a6ff, #bc8cff);
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
         }
         .subtitle { font-size: 1.1rem; color: #8b949e; }
@@ -211,7 +212,7 @@ def generateJavadocDashboardTask = tasks.register('generateJavadocDashboard') {
 <body>
     <div class="container">
         <header>
-            <h1>Filmpire Microservices Javadoc Hub</h1>
+            <h1>lmdb.dev Javadoc Hub</h1>
             <p class="subtitle">Unified API & Domain Model Documentation across all backend services</p>
             <div class="search-box">
                 <input type="text" id="searchInput" placeholder="Search microservices or keywords..." onkeyup="filterCards()">

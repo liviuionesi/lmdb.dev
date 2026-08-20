@@ -11,14 +11,14 @@ import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
 /**
  * gRPC surface for recommendations and chat (defined by {@code ai_service.proto}), delegating to
  * the same {@link RecommendationService} and {@link ChatAssistantService} the REST controller uses
  * — one set of business logic, two transports.
  */
-@Component
+@Service
 @Slf4j
 public class AiGrpcService extends AIServiceGrpc.AIServiceImplBase {
 
