@@ -45,6 +45,24 @@ PORT="$(terraform output -raw demo_inbound_port || echo 30080)"
 echo -e "\n${BLUE}🔑 Fetching AKS cluster credentials...${NC}"
 az aks get-credentials --resource-group "$RG_NAME" --name "$CLUSTER_NAME" --overwrite-existing
 
+# 4b. Update DuckDNS *before* any pod (Caddy included) starts — Caddy
+# requests its TLS cert immediately on boot, so DNS must already point here
+# or the ACME challenge fails and Caddy won't retry for a while (#175). The
+# node exists as soon as the cluster does, so its external IP is already
+# resolvable here without waiting on a workload rollout.
+NODE_IP=""
+for i in {1..12}; do
+  NODE_IP="$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="ExternalIP")].address}' 2>/dev/null || true)"
+  if [ -n "$NODE_IP" ]; then
+    break
+  fi
+  sleep 2
+done
+if [ -n "$NODE_IP" ] && [ -f "$REPO_ROOT/infrastructure/scripts/update-duckdns.sh" ] && [ -n "${DUCKDNS_TOKEN:-}" ]; then
+  echo -e "\n${BLUE}🦆 Updating DuckDNS domain record (lmdb-api.duckdns.org → ${NODE_IP})...${NC}"
+  "$REPO_ROOT/infrastructure/scripts/update-duckdns.sh" "$NODE_IP" || true
+fi
+
 # 5. Apply Kubernetes Overlays
 echo -e "\n${BLUE}🚀 Deploying Kubernetes services (${K8S_OVERLAY})...${NC}"
 cd "$REPO_ROOT"
@@ -76,20 +94,22 @@ echo -e "\n${BLUE}🧠 Pulling Ollama models (llama3.2, nomic-embed-text) - this
 kubectl exec statefulset/ollama -- ollama pull llama3.2
 kubectl exec statefulset/ollama -- ollama pull nomic-embed-text
 
-# 7. Extract Node External IP
-echo -e "\n${BLUE}🌐 Discovering AKS Node Public IP...${NC}"
-NODE_IP=""
-for i in {1..12}; do
-  NODE_IP="$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="ExternalIP")].address}' 2>/dev/null || true)"
-  if [ -n "$NODE_IP" ]; then
-    break
+# 7. Re-confirm Node External IP (DuckDNS was already updated in step 4b,
+# before any pod started — this just re-resolves it in case that early
+# lookup came back empty while the cluster was still settling).
+if [ -z "$NODE_IP" ]; then
+  echo -e "\n${BLUE}🌐 Discovering AKS Node Public IP...${NC}"
+  for i in {1..12}; do
+    NODE_IP="$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="ExternalIP")].address}' 2>/dev/null || true)"
+    if [ -n "$NODE_IP" ]; then
+      break
+    fi
+    sleep 2
+  done
+  if [ -n "$NODE_IP" ] && [ -f "$REPO_ROOT/infrastructure/scripts/update-duckdns.sh" ] && [ -n "${DUCKDNS_TOKEN:-}" ]; then
+    echo -e "\n${BLUE}🦆 Updating DuckDNS domain record (lmdb-api.duckdns.org → ${NODE_IP})...${NC}"
+    "$REPO_ROOT/infrastructure/scripts/update-duckdns.sh" "$NODE_IP" || true
   fi
-  sleep 2
-done
-
-if [ -n "$NODE_IP" ] && [ -f "$REPO_ROOT/infrastructure/scripts/update-duckdns.sh" ] && [ -n "${DUCKDNS_TOKEN:-}" ]; then
-  echo -e "\n${BLUE}🦆 Updating DuckDNS domain record (lmdb-api.duckdns.org → ${NODE_IP})...${NC}"
-  "$REPO_ROOT/infrastructure/scripts/update-duckdns.sh" "$NODE_IP" || true
 fi
 
 echo -e "\n${GREEN}=====================================================${NC}"

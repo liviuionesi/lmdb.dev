@@ -117,6 +117,14 @@ if command -v kubectl >/dev/null 2>&1; then
         "$REPO_ROOT/infrastructure/scripts/update-duckdns.sh" "$NODE_IP" && \
           echo -e "${GREEN}✅ DuckDNS updated: api.lmdb.dev → ${NODE_IP}${NC}" || \
           echo -e "${YELLOW}⚠️  DuckDNS update failed — check DUCKDNS_TOKEN${NC}"
+
+        # Pods (Caddy included) already came back up above, as soon as the
+        # cluster resumed — likely before DNS was updated. Caddy requests
+        # its TLS cert the moment it starts, so a cold resume can win that
+        # race and leave Caddy holding a failed cert it won't retry for a
+        # while. Force one fresh attempt now that DNS is correct (#175).
+        echo -e "${BLUE}🔁 Restarting caddy-tls to retry its TLS cert against current DNS...${NC}"
+        kubectl rollout restart deployment/caddy-tls >/dev/null 2>&1 || true
       else
         echo -e "${YELLOW}⚠️  DUCKDNS_TOKEN not set — DuckDNS NOT updated. Export it and re-run:${NC}"
         echo -e "     ${CYAN}export DUCKDNS_TOKEN=your-token${NC}"
