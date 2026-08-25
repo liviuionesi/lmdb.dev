@@ -4,7 +4,7 @@
 # type entirely (aws_budgets_budget vs. azurerm_consumption_budget_subscription),
 # hence a separate module rather than one shared across providers.
 resource "aws_budgets_budget" "zero_spend" {
-  name         = "lmdb-zero-spend-guard"
+  name         = "lmdb.dev budget guard"
   budget_type  = "COST"
   limit_amount = tostring(var.budget_amount)
   limit_unit   = "USD"

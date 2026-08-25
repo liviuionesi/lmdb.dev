@@ -33,7 +33,7 @@ $DOCKER_CMD run -d \
 # 4. Wait for the public trycloudflare.com URL to be generated
 echo "⏳ Waiting for public HTTPS tunnel URL..."
 TUNNEL_URL=""
-for i in {1..20}; do
+for i in {1..40}; do
   LOGS=$($DOCKER_CMD logs "$CONTAINER_NAME" 2>&1 || true)
   URL_MATCH=$(echo "$LOGS" | grep -o 'https://[a-zA-Z0-9-]*\.trycloudflare\.com' | head -n 1 || true)
   if [ -n "$URL_MATCH" ]; then
@@ -66,6 +66,8 @@ if [ -n "$TUNNEL_URL" ]; then
   echo "  the Admin Dashboard and select 'Local Tunnel'."
   echo "=================================================="
   echo "  To stop the tunnel, run: ./infrastructure/scripts/stop-tunnel.sh"
+  echo "  For auto-reconnect on drop, run the watchdog alongside:"
+  echo "    nohup ./infrastructure/scripts/idle-stop-guard.sh &"
   echo "=================================================="
 else
   echo "❌ Error: Could not retrieve tunnel URL. View logs with: $DOCKER_CMD logs $CONTAINER_NAME" >&2

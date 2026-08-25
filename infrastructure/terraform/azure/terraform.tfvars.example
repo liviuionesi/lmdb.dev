@@ -1,7 +1,7 @@
 # Copy to terraform.tfvars (gitignored) before running `terraform apply`.
 # See ../README.md for the full bootstrap + apply/destroy walkthrough.
 
-alert_emails = ["liviuionesi@gmail.com"]
+alert_emails = ["pehlivanu@gmail.com"]
 
 # Must be the FIRST DAY of the current month, RFC3339. Compute it fresh at
 # apply time rather than hardcoding a date here — see modules/budget-guard:
