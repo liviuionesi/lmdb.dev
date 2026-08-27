@@ -72,9 +72,9 @@ class SpeechToTextServiceTest {
   /**
    * Given the service has already been destroyed, when {@code transcribe} is called with a valid
    * audio file, then it throws {@link ServiceUnavailableException} with a shutdown message rather
-   * than crashing with an NPE or SIGSEGV from a freed native handle. Verifies the
-   * {@link java.util.concurrent.locks.ReadWriteLock} in {@link SpeechToTextService} correctly
-   * prevents use-after-free.
+   * than crashing with an NPE or SIGSEGV from a freed native handle. Verifies the {@link
+   * java.util.concurrent.locks.ReadWriteLock} in {@link SpeechToTextService} correctly prevents
+   * use-after-free.
    */
   @Test
   @DisplayName("transcribe after destroy() throws ServiceUnavailableException, not a crash")

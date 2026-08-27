@@ -67,9 +67,9 @@ public class ChatAssistantService {
     // the ones this service actually emitted.
     List<org.springframework.ai.chat.messages.Message> history =
         conversation.getMessages().stream().map(ChatAssistantService::toModelMessage).toList();
-    
+
     if (history.size() > 20) {
-        history = history.subList(history.size() - 20, history.size());
+      history = history.subList(history.size() - 20, history.size());
     }
 
     String reply = chatClient.prompt().system(SYSTEM_PROMPT).messages(history).call().content();

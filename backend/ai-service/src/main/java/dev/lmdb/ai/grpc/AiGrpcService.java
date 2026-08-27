@@ -76,14 +76,18 @@ public class AiGrpcService extends AIServiceGrpc.AIServiceImplBase {
       responseObserver.onNext(response.build());
       responseObserver.onCompleted();
     } catch (ResourceNotFoundException e) {
-      responseObserver.onError(Status.NOT_FOUND.withDescription(e.getMessage()).asRuntimeException());
+      responseObserver.onError(
+          Status.NOT_FOUND.withDescription(e.getMessage()).asRuntimeException());
     } catch (ServiceUnavailableException e) {
-      responseObserver.onError(Status.UNAVAILABLE.withDescription(e.getMessage()).asRuntimeException());
+      responseObserver.onError(
+          Status.UNAVAILABLE.withDescription(e.getMessage()).asRuntimeException());
     } catch (ValidationException | IllegalArgumentException e) {
-      responseObserver.onError(Status.INVALID_ARGUMENT.withDescription(e.getMessage()).asRuntimeException());
+      responseObserver.onError(
+          Status.INVALID_ARGUMENT.withDescription(e.getMessage()).asRuntimeException());
     } catch (Exception e) {
       log.error("Internal error in getRecommendations", e);
-      responseObserver.onError(Status.INTERNAL.withDescription("Internal error").asRuntimeException());
+      responseObserver.onError(
+          Status.INTERNAL.withDescription("Internal error").asRuntimeException());
     }
   }
 
@@ -117,15 +121,14 @@ public class AiGrpcService extends AIServiceGrpc.AIServiceImplBase {
 
     if (request.getMessage().trim().isEmpty()) {
       responseObserver.onError(
-          Status.INVALID_ARGUMENT
-              .withDescription("Message cannot be blank")
-              .asRuntimeException());
+          Status.INVALID_ARGUMENT.withDescription("Message cannot be blank").asRuntimeException());
       return;
     }
 
     try {
       ChatResponseDto result =
-          chatAssistantService.chat(new ChatRequestDto(userId, conversationId, request.getMessage()));
+          chatAssistantService.chat(
+              new ChatRequestDto(userId, conversationId, request.getMessage()));
 
       responseObserver.onNext(
           ChatResponse.newBuilder()
@@ -134,14 +137,18 @@ public class AiGrpcService extends AIServiceGrpc.AIServiceImplBase {
               .build());
       responseObserver.onCompleted();
     } catch (ResourceNotFoundException e) {
-      responseObserver.onError(Status.NOT_FOUND.withDescription(e.getMessage()).asRuntimeException());
+      responseObserver.onError(
+          Status.NOT_FOUND.withDescription(e.getMessage()).asRuntimeException());
     } catch (ServiceUnavailableException e) {
-      responseObserver.onError(Status.UNAVAILABLE.withDescription(e.getMessage()).asRuntimeException());
+      responseObserver.onError(
+          Status.UNAVAILABLE.withDescription(e.getMessage()).asRuntimeException());
     } catch (ValidationException | IllegalArgumentException e) {
-      responseObserver.onError(Status.INVALID_ARGUMENT.withDescription(e.getMessage()).asRuntimeException());
+      responseObserver.onError(
+          Status.INVALID_ARGUMENT.withDescription(e.getMessage()).asRuntimeException());
     } catch (Exception e) {
       log.error("Internal error in chatWithAssistant", e);
-      responseObserver.onError(Status.INTERNAL.withDescription("Internal error").asRuntimeException());
+      responseObserver.onError(
+          Status.INTERNAL.withDescription("Internal error").asRuntimeException());
     }
   }
 }

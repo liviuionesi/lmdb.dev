@@ -495,9 +495,9 @@ class AiServiceIntegrationTest {
   }
 
   /**
-   * Verifies that the @Min/@Max constraints on the `k` parameter are enforced, and that 
-   * the GlobalExceptionHandler correctly translates the resulting ConstraintViolationException 
-   * into a 400 Bad Request.
+   * Verifies that the @Min/@Max constraints on the `k` parameter are enforced, and that the
+   * GlobalExceptionHandler correctly translates the resulting ConstraintViolationException into a
+   * 400 Bad Request.
    *
    * @throws Exception if the MockMvc request fails to execute
    */
@@ -531,9 +531,9 @@ class AiServiceIntegrationTest {
   }
 
   /**
-   * Given a non-numeric k, when semantic search is called, then it returns 400 rather than 500
-   * — proving the {@link dev.lmdb.ai.controller.GlobalExceptionHandler#handleTypeMismatch}
-   * handler works.
+   * Given a non-numeric k, when semantic search is called, then it returns 400 rather than 500 —
+   * proving the {@link dev.lmdb.ai.controller.GlobalExceptionHandler#handleTypeMismatch} handler
+   * works.
    *
    * @throws Exception if the MockMvc request fails to execute
    */
@@ -612,8 +612,7 @@ class AiServiceIntegrationTest {
                 """)));
 
     String body =
-        objectMapper.writeValueAsString(
-            Map.of("recentMovies", List.of("Se7en"), "count", 100));
+        objectMapper.writeValueAsString(Map.of("recentMovies", List.of("Se7en"), "count", 100));
 
     mockMvc
         .perform(
@@ -627,9 +626,9 @@ class AiServiceIntegrationTest {
 
   /**
    * Simulates a 25-turn conversation, then verifies the 26th turn still succeeds — the 20-message
-   * window in {@link dev.lmdb.ai.service.ChatAssistantService#chat} must keep the prompt within
-   * the model's context limit. Without the window, this would eventually fail with a context
-   * overflow or with the system prompt being truncated.
+   * window in {@link dev.lmdb.ai.service.ChatAssistantService#chat} must keep the prompt within the
+   * model's context limit. Without the window, this would eventually fail with a context overflow
+   * or with the system prompt being truncated.
    *
    * @throws Exception if the MockMvc request fails to execute
    */
@@ -690,9 +689,7 @@ class AiServiceIntegrationTest {
     verify(chatModel, org.mockito.Mockito.atLeastOnce()).call(promptCaptor.capture());
     Prompt lastPrompt = promptCaptor.getValue();
     long nonSystemMessages =
-        lastPrompt.getInstructions().stream()
-            .filter(m -> !(m instanceof SystemMessage))
-            .count();
+        lastPrompt.getInstructions().stream().filter(m -> !(m instanceof SystemMessage)).count();
     assertThat(nonSystemMessages)
         .as("History messages sent to the model should be capped at 20")
         .isLessThanOrEqualTo(20);
@@ -721,12 +718,10 @@ class AiServiceIntegrationTest {
                  "first":true,"last":true,"hasNext":false,"hasPrevious":false,"numberOfElements":0}
                 """)));
     // Override the default zero-vector stub with a wrong-dimension vector.
-    when(embeddingModel.embed(org.mockito.ArgumentMatchers.anyString()))
-        .thenReturn(new float[384]);
+    when(embeddingModel.embed(org.mockito.ArgumentMatchers.anyString())).thenReturn(new float[384]);
 
     String body =
-        objectMapper.writeValueAsString(
-            Map.of("recentMovies", List.of("Se7en"), "count", 1));
+        objectMapper.writeValueAsString(Map.of("recentMovies", List.of("Se7en"), "count", 1));
 
     mockMvc
         .perform(

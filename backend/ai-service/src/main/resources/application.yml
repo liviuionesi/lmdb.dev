@@ -22,6 +22,18 @@ spring:
     banner-mode: "off"
   application:
     name: ai-service
+  servlet:
+    multipart:
+      # DispatcherServlet#checkMultipart runs before handler mapping, so with
+      # the default eager resolution a MaxUploadSizeExceededException is
+      # thrown while the resolved handler is still null — and
+      # GlobalExceptionHandler's @RestControllerAdvice(basePackages = ...)
+      # never matches a null handler type (#186/#187), so the oversized
+      # /api/v1/ai/speech-to-text upload would fall through to Spring's
+      # default ProblemDetail body instead of this service's ApiResponse
+      # envelope. Lazy resolution defers parsing to argument binding inside
+      # the already-resolved controller method, where the advice does apply.
+      resolve-lazily: true
   datasource:
     # Database-per-service (ADR-002): ai-service owns lmdb_ai so its
     # Flyway history never collides with user/actor-service's in the shared

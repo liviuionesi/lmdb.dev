@@ -40,9 +40,7 @@ class AiGrpcServiceTest {
   private ChatAssistantService chatAssistantService;
   private AiGrpcService aiGrpcService;
 
-  /**
-   * Initializes mock services and the gRPC service under test before each test case.
-   */
+  /** Initializes mock services and the gRPC service under test before each test case. */
   @BeforeEach
   void setUp() {
     recommendationService = mock(RecommendationService.class);
@@ -214,10 +212,7 @@ class AiGrpcServiceTest {
   @DisplayName("chatWithAssistant rejects a blank message without calling the service")
   void chatWithAssistantRejectsBlankMessage() {
     ChatRequest request =
-        ChatRequest.newBuilder()
-            .setUserId(UUID.randomUUID().toString())
-            .setMessage("   ")
-            .build();
+        ChatRequest.newBuilder().setUserId(UUID.randomUUID().toString()).setMessage("   ").build();
     @SuppressWarnings("unchecked")
     StreamObserver<ChatResponse> responseObserver = mock(StreamObserver.class);
 
@@ -234,8 +229,8 @@ class AiGrpcServiceTest {
   // ── Negative-path: exception mapping ──────────────────────────────────────────
 
   /**
-   * Given the recommendation service throws {@link ServiceUnavailableException}, when
-   * {@code getRecommendations} is called, then the observer receives gRPC {@code UNAVAILABLE}.
+   * Given the recommendation service throws {@link ServiceUnavailableException}, when {@code
+   * getRecommendations} is called, then the observer receives gRPC {@code UNAVAILABLE}.
    */
   @Test
   @DisplayName("getRecommendations maps ServiceUnavailableException to UNAVAILABLE")
@@ -260,8 +255,8 @@ class AiGrpcServiceTest {
   }
 
   /**
-   * Given the recommendation service throws {@link ValidationException}, when
-   * {@code getRecommendations} is called, then the observer receives gRPC {@code INVALID_ARGUMENT}.
+   * Given the recommendation service throws {@link ValidationException}, when {@code
+   * getRecommendations} is called, then the observer receives gRPC {@code INVALID_ARGUMENT}.
    */
   @Test
   @DisplayName("getRecommendations maps ValidationException to INVALID_ARGUMENT")
@@ -286,9 +281,9 @@ class AiGrpcServiceTest {
   }
 
   /**
-   * Given the recommendation service throws an unexpected {@link RuntimeException}, when
-   * {@code getRecommendations} is called, then the observer receives gRPC {@code INTERNAL} — never
-   * {@code UNKNOWN}, which is what an unmapped exception would produce.
+   * Given the recommendation service throws an unexpected {@link RuntimeException}, when {@code
+   * getRecommendations} is called, then the observer receives gRPC {@code INTERNAL} — never {@code
+   * UNKNOWN}, which is what an unmapped exception would produce.
    */
   @Test
   @DisplayName("getRecommendations maps unexpected RuntimeException to INTERNAL")
