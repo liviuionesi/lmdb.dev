@@ -46,6 +46,7 @@ public class SpeechToTextService implements DisposableBean {
   private final String modelPath;
   private final ObjectMapper objectMapper;
   private volatile Model model;
+  private volatile boolean destroyed;
   private final ReadWriteLock lock = new ReentrantReadWriteLock();
 
   /**
@@ -96,12 +97,18 @@ public class SpeechToTextService implements DisposableBean {
    * @throws ServiceUnavailableException the model directory is missing or unreadable
    */
   private Model getOrLoadModel() {
+    if (destroyed) {
+      return null;
+    }
     Model loaded = model;
     if (loaded != null) {
       return loaded;
     }
 
     synchronized (this) {
+      if (destroyed) {
+        return null;
+      }
       if (model == null) {
         log.info("Loading Vosk speech-to-text model from {}", modelPath);
         LibVosk.setLogLevel(LogLevel.WARNINGS);
@@ -170,6 +177,7 @@ public class SpeechToTextService implements DisposableBean {
   public void destroy() {
     lock.writeLock().lock();
     try {
+      destroyed = true;
       if (model != null) {
         model.close();
         model = null;

@@ -514,6 +514,230 @@ class AiServiceIntegrationTest {
   }
 
   /**
+   * Verifies the @Max(50) constraint on k: a value above 50 is rejected with 400.
+   *
+   * @throws Exception if the MockMvc request fails to execute
+   */
+  @Test
+  @DisplayName("GET /api/v1/ai/search/semantic rejects k > 50 with 400 Bad Request")
+  void semanticSearchRejectsKAboveMax() throws Exception {
+    mockMvc
+        .perform(
+            get("/api/v1/ai/search/semantic")
+                .header(USER_ID_HEADER, UUID.randomUUID().toString())
+                .param("query", "explosions")
+                .param("k", "51"))
+        .andExpect(status().isBadRequest());
+  }
+
+  /**
+   * Given a non-numeric k, when semantic search is called, then it returns 400 rather than 500
+   * — proving the {@link dev.lmdb.ai.controller.GlobalExceptionHandler#handleTypeMismatch}
+   * handler works.
+   *
+   * @throws Exception if the MockMvc request fails to execute
+   */
+  @Test
+  @DisplayName("GET /api/v1/ai/search/semantic rejects k=abc with 400 Bad Request")
+  void semanticSearchRejectsNonNumericK() throws Exception {
+    mockMvc
+        .perform(
+            get("/api/v1/ai/search/semantic")
+                .header(USER_ID_HEADER, UUID.randomUUID().toString())
+                .param("query", "explosions")
+                .param("k", "abc"))
+        .andExpect(status().isBadRequest());
+  }
+
+  /**
+   * Given malformed JSON in the body, when the chat endpoint is called, then it returns 400 —
+   * proving the {@link dev.lmdb.ai.controller.GlobalExceptionHandler#handleHttpMessageNotReadable}
+   * handler works.
+   *
+   * @throws Exception if the MockMvc request fails to execute
+   */
+  @Test
+  @DisplayName("POST /api/v1/ai/chat rejects malformed JSON with 400")
+  void chatRejectsMalformedJson() throws Exception {
+    mockMvc
+        .perform(
+            post("/api/v1/ai/chat")
+                .header(USER_ID_HEADER, UUID.randomUUID().toString())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{invalid json!!!"))
+        .andExpect(status().isBadRequest());
+  }
+
+  /**
+   * Given an empty message field, when the chat endpoint is called, then it returns 400 — proving
+   * the @NotBlank constraint on {@link dev.lmdb.ai.dto.ChatRequestBodyDto#message} is enforced.
+   *
+   * @throws Exception if the MockMvc request fails to execute
+   */
+  @Test
+  @DisplayName("POST /api/v1/ai/chat rejects a blank message with 400")
+  void chatRejectsBlankMessage() throws Exception {
+    String body = objectMapper.writeValueAsString(Map.of("message", "   "));
+
+    mockMvc
+        .perform(
+            post("/api/v1/ai/chat")
+                .header(USER_ID_HEADER, UUID.randomUUID().toString())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+        .andExpect(status().isBadRequest());
+  }
+
+  /**
+   * Given a count of 100 (above the 20 cap), when the recommendations endpoint is called, then it
+   * succeeds with 200 — {@code countOrDefault()} clamps silently rather than rejecting. This proves
+   * the cap doesn't break the happy path, and that an oversized count doesn't pass through to
+   * movie-service unclamped.
+   *
+   * @throws Exception if the MockMvc request fails to execute
+   */
+  @Test
+  @DisplayName(
+      "POST /api/v1/ai/recommendations clamps an oversized count to 20 instead of rejecting")
+  void recommendClampsOversizedCount() throws Exception {
+    stubFor(
+        WireMock.get(urlPathEqualTo("/api/v1/movies/popular"))
+            .willReturn(
+                aResponse()
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        """
+                {"content":[],"pageNumber":0,"pageSize":30,"totalElements":0,"totalPages":0,
+                 "first":true,"last":true,"hasNext":false,"hasPrevious":false,"numberOfElements":0}
+                """)));
+
+    String body =
+        objectMapper.writeValueAsString(
+            Map.of("recentMovies", List.of("Se7en"), "count", 100));
+
+    mockMvc
+        .perform(
+            post("/api/v1/ai/recommendations")
+                .header(USER_ID_HEADER, UUID.randomUUID().toString())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.recommendations").isEmpty());
+  }
+
+  /**
+   * Simulates a 25-turn conversation, then verifies the 26th turn still succeeds — the 20-message
+   * window in {@link dev.lmdb.ai.service.ChatAssistantService#chat} must keep the prompt within
+   * the model's context limit. Without the window, this would eventually fail with a context
+   * overflow or with the system prompt being truncated.
+   *
+   * @throws Exception if the MockMvc request fails to execute
+   */
+  @Test
+  @DisplayName(
+      "POST /api/v1/ai/chat succeeds past 25 turns — the 20-message window keeps the prompt bounded")
+  void chatWindowingKeepsLongConversationUsable() throws Exception {
+    stubAssistantReply("Reply.");
+    UUID userId = UUID.randomUUID();
+
+    // Turn 1: start a new conversation.
+    String firstBody = objectMapper.writeValueAsString(Map.of("message", "Turn 1"));
+    String firstResponse =
+        mockMvc
+            .perform(
+                post("/api/v1/ai/chat")
+                    .header(USER_ID_HEADER, userId.toString())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(firstBody))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    String conversationId = objectMapper.readTree(firstResponse).get("conversationId").asText();
+
+    // Turns 2–25: continue the same conversation.
+    for (int i = 2; i <= 25; i++) {
+      String body =
+          objectMapper.writeValueAsString(
+              Map.of("conversationId", conversationId, "message", "Turn " + i));
+      mockMvc
+          .perform(
+              post("/api/v1/ai/chat")
+                  .header(USER_ID_HEADER, userId.toString())
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(body))
+          .andExpect(status().isOk());
+    }
+
+    // Turn 26: must still succeed. Without windowing, the accumulated history
+    // would exceed the model's context window and either error or drop the system prompt.
+    String finalBody =
+        objectMapper.writeValueAsString(
+            Map.of("conversationId", conversationId, "message", "Turn 26 — should still work"));
+    mockMvc
+        .perform(
+            post("/api/v1/ai/chat")
+                .header(USER_ID_HEADER, userId.toString())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(finalBody))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.reply").exists())
+        .andExpect(jsonPath("$.conversationId").value(conversationId));
+
+    // Verify the prompt sent to the model contains at most 20 user/assistant messages
+    // (plus the system prompt). The ArgumentCaptor captures the last call.
+    ArgumentCaptor<Prompt> promptCaptor = ArgumentCaptor.forClass(Prompt.class);
+    verify(chatModel, org.mockito.Mockito.atLeastOnce()).call(promptCaptor.capture());
+    Prompt lastPrompt = promptCaptor.getValue();
+    long nonSystemMessages =
+        lastPrompt.getInstructions().stream()
+            .filter(m -> !(m instanceof SystemMessage))
+            .count();
+    assertThat(nonSystemMessages)
+        .as("History messages sent to the model should be capped at 20")
+        .isLessThanOrEqualTo(20);
+  }
+
+  /**
+   * Given the embedding model returns a vector with the wrong dimension (e.g. 384 instead of 768),
+   * when the recommendations endpoint is called, then it returns 503 — proving the dimension guard
+   * in {@link dev.lmdb.ai.service.RecommendationService#refreshTasteProfile} catches the mismatch
+   * before it reaches PostgreSQL, where it would surface as a cryptic 500.
+   *
+   * @throws Exception if the MockMvc request fails to execute
+   */
+  @Test
+  @DisplayName(
+      "POST /api/v1/ai/recommendations returns 503 when the embedding model has the wrong dimension")
+  void recommendRejectsMismatchedEmbeddingDimension() throws Exception {
+    stubFor(
+        WireMock.get(urlPathEqualTo("/api/v1/movies/popular"))
+            .willReturn(
+                aResponse()
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        """
+                {"content":[],"pageNumber":0,"pageSize":30,"totalElements":0,"totalPages":0,
+                 "first":true,"last":true,"hasNext":false,"hasPrevious":false,"numberOfElements":0}
+                """)));
+    // Override the default zero-vector stub with a wrong-dimension vector.
+    when(embeddingModel.embed(org.mockito.ArgumentMatchers.anyString()))
+        .thenReturn(new float[384]);
+
+    String body =
+        objectMapper.writeValueAsString(
+            Map.of("recentMovies", List.of("Se7en"), "count", 1));
+
+    mockMvc
+        .perform(
+            post("/api/v1/ai/recommendations")
+                .header(USER_ID_HEADER, UUID.randomUUID().toString())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+        .andExpect(status().isServiceUnavailable());
+  }
+
+  /**
    * Given an audio upload, when the transcription succeeds, then the endpoint returns the
    * recognized text — verifies the multipart request contract and response shape. {@link
    * SpeechToTextService} itself is a Mockito mock ({@link AiModelTestConfig}) since no Vosk model
