@@ -22,6 +22,22 @@ spring:
     banner-mode: "off"
   application:
     name: ai-service
+  http:
+    clients:
+      # Bounds the Ollama chat/embedding calls (#189) — Spring AI's own
+      # OllamaApi is built from Boot's ambient, auto-configured
+      # RestClient.Builder (confirmed against OllamaApiAutoConfiguration's
+      # bytecode: it injects ObjectProvider<RestClient.Builder> and falls
+      # onto whichever one Boot supplies), and that ambient builder is
+      # exactly what these two properties configure — real, bound Boot 4.1
+      # properties (HttpClientsProperties), unlike
+      # spring.ai.ollama.chat.options.timeout below, which doesn't exist as
+      # a property on OllamaChatProperties and was silently ignored.
+      # MovieCatalogClient is unaffected: RestClientConfig deliberately
+      # builds its RestClient outside this ambient builder (see its own
+      # Javadoc) specifically so it isn't swept up in changes like this one.
+      connect-timeout: 5s
+      read-timeout: 60s
   servlet:
     multipart:
       # DispatcherServlet#checkMultipart runs before handler mapping, so with
@@ -73,8 +89,6 @@ spring:
       base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
       chat:
         model: ${OLLAMA_CHAT_MODEL:llama3.2}
-        options:
-          timeout: 60s
       embedding:
         # 768-dimensional — must match the `vector(768)` column in
         # V2__init_ai_schema.sql. Changing this model requires a new

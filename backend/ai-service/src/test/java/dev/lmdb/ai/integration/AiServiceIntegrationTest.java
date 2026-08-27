@@ -5,6 +5,8 @@ import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -18,8 +20,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import dev.lmdb.ai.config.AiModelTestConfig;
+import dev.lmdb.ai.grpc.AiGrpcService;
+import dev.lmdb.ai.grpc.ChatRequest;
 import dev.lmdb.ai.repository.ConversationRepository;
 import dev.lmdb.ai.service.SpeechToTextService;
+import io.grpc.stub.StreamObserver;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -103,6 +108,8 @@ class AiServiceIntegrationTest {
   @Autowired private EmbeddingModel embeddingModel;
 
   @Autowired private SpeechToTextService speechToTextService;
+
+  @Autowired private AiGrpcService aiGrpcService;
 
   /**
    * No leftover mock stubbing between tests. DB isolation comes from the class-level
@@ -226,6 +233,60 @@ class AiServiceIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(intruderBody))
         .andExpect(status().isNotFound());
+  }
+
+  /**
+   * Given an existing conversation, when the gRPC transport continues it — calling {@link
+   * AiGrpcService#chatWithAssistant} directly, with no Spring MVC request scope and, unlike every
+   * other test in this class, no ambient test transaction either ({@code NOT_SUPPORTED} suspends
+   * the class-level {@code @Transactional} for just this method) — then it succeeds without
+   * throwing.
+   *
+   * <p>This is defense-in-depth, not a bug repro: {@link
+   * dev.lmdb.ai.repository.ConversationRepository#findByIdAndUserId} carries
+   * {@code @EntityGraph(attributePaths = "messages")}, which eagerly loads the lazy {@code
+   * Conversation.messages} collection as part of that query regardless of transaction state, so the
+   * gRPC path never actually depended on an ambient transaction to read history safely. This test
+   * pins that property down directly instead of leaving it implicit in an annotation on an
+   * unrelated file — if the {@code @EntityGraph} were ever removed without a replacement, this is
+   * the test that would catch it, on the one transport that has no Open-Session-In-View safety net
+   * under it.
+   *
+   * @throws Exception if the request fails to execute
+   */
+  @Test
+  @org.springframework.transaction.annotation.Transactional(
+      propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
+  @DisplayName(
+      "gRPC chatWithAssistant continues an existing conversation with no ambient transaction")
+  void grpcContinuesExistingConversationWithNoAmbientTransaction() throws Exception {
+    stubAssistantReply("Sure — continuing over gRPC.");
+    UUID userId = UUID.randomUUID();
+    String conversationId = startConversation(userId, "first turn, over REST");
+
+    try {
+      ChatRequest request =
+          ChatRequest.newBuilder()
+              .setUserId(userId.toString())
+              .setConversationId(conversationId)
+              .setMessage("second turn, over gRPC")
+              .build();
+      @SuppressWarnings("unchecked")
+      StreamObserver<dev.lmdb.ai.grpc.ChatResponse> responseObserver = mock(StreamObserver.class);
+
+      aiGrpcService.chatWithAssistant(request, responseObserver);
+
+      ArgumentCaptor<dev.lmdb.ai.grpc.ChatResponse> responseCaptor =
+          ArgumentCaptor.forClass(dev.lmdb.ai.grpc.ChatResponse.class);
+      verify(responseObserver).onNext(responseCaptor.capture());
+      verify(responseObserver, never()).onError(any());
+      assertThat(responseCaptor.getValue().getReply()).isEqualTo("Sure — continuing over gRPC.");
+    } finally {
+      // This method runs outside the class-level transaction (that's the point), so its writes
+      // don't auto-rollback — clean up explicitly so later tests' unscoped findAll() assertions
+      // see only their own data, on the Postgres container this class shares across all its tests.
+      conversationRepository.deleteById(UUID.fromString(conversationId));
+    }
   }
 
   /**
