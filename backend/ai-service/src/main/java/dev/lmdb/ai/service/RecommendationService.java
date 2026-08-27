@@ -7,6 +7,7 @@ import dev.lmdb.ai.dto.RecommendationRequestDto;
 import dev.lmdb.ai.dto.RecommendationResponseDto;
 import dev.lmdb.ai.model.UserTasteProfile;
 import dev.lmdb.ai.repository.UserTasteProfileRepository;
+import dev.lmdb.ai.security.PromptSanitizer;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -81,12 +82,19 @@ public class RecommendationService {
       return new RecommendationResponseDto(List.of());
     }
 
+    // Catalog text is ultimately TMDB-sourced free text, not something this service authored, so
+    // it gets the same treatment as caller-supplied input: flattened to one line so it cannot open
+    // a new field, and quote-escaped so it cannot close the one it sits in.
     String candidateList =
         candidates.stream()
             .map(
                 c ->
                     "id=%d title=\"%s\" overview=\"%s\" voteAverage=%s"
-                        .formatted(c.tmdbId(), c.title(), c.overview(), c.voteAverage()))
+                        .formatted(
+                            c.tmdbId(),
+                            promptField(c.title()),
+                            promptField(c.overview()),
+                            c.voteAverage()))
             .reduce("", (a, b) -> a + b + "\n");
 
     String userPrompt =
@@ -97,8 +105,7 @@ public class RecommendationService {
             Return exactly %d recommendations.
             """
             .formatted(
-                String.join(
-                    ", ", request.recentMovies() == null ? List.of() : request.recentMovies()),
+                String.join(", ", PromptSanitizer.sanitizeAll(request.recentMovies())),
                 candidateList,
                 request.countOrDefault());
 
@@ -114,6 +121,17 @@ public class RecommendationService {
   }
 
   /**
+   * Prepares one piece of catalog text for interpolation into a quoted prompt field.
+   *
+   * @param value the catalog text, possibly {@code null}
+   * @return the value flattened to a single line and with double quotes replaced by single ones, so
+   *     it can neither break out of its own {@code key="value"} field nor start a new line
+   */
+  private static String promptField(String value) {
+    return PromptSanitizer.sanitize(value).replace('"', '\'');
+  }
+
+  /**
    * Embeds the user's recent-movies text and upserts it as their taste profile — the persisted
    * artifact semantic search runs its ANN query against. Does nothing if the request carries no
    * recent movies to embed.
@@ -121,10 +139,11 @@ public class RecommendationService {
    * @param request the recommendation request whose {@code recentMovies} are embedded
    */
   private void refreshTasteProfile(RecommendationRequestDto request) {
-    if (request.recentMovies() == null || request.recentMovies().isEmpty()) {
+    List<String> recentMovies = PromptSanitizer.sanitizeAll(request.recentMovies());
+    if (recentMovies.isEmpty()) {
       return;
     }
-    float[] embedding = embeddingModel.embed(String.join(", ", request.recentMovies()));
+    float[] embedding = embeddingModel.embed(String.join(", ", recentMovies));
     UserTasteProfile profile =
         UserTasteProfile.builder()
             .userId(request.userId())

@@ -8,9 +8,11 @@ import dev.lmdb.ai.model.Message;
 import dev.lmdb.ai.repository.ConversationRepository;
 import dev.lmdb.shared.exception.ResourceNotFoundException;
 import java.time.Instant;
-import java.util.stream.Collectors;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.messages.AssistantMessage;
+import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -61,12 +63,14 @@ public class ChatAssistantService {
         Message.builder().role("user").content(request.message()).timestamp(Instant.now()).build();
     conversation.addMessage(userMessage);
 
-    String history =
-        conversation.getMessages().stream()
-            .map(m -> m.getRole() + ": " + m.getContent())
-            .collect(Collectors.joining("\n"));
+    // Hand the history to the model as typed messages rather than one concatenated "role: content"
+    // string. Concatenation would let a user's own message text contain a line break followed by a
+    // role prefix, forging turns — including system turns — that the model cannot tell apart from
+    // the ones this service actually emitted.
+    List<org.springframework.ai.chat.messages.Message> history =
+        conversation.getMessages().stream().map(ChatAssistantService::toModelMessage).toList();
 
-    String reply = chatClient.prompt().system(SYSTEM_PROMPT).user(history).call().content();
+    String reply = chatClient.prompt().system(SYSTEM_PROMPT).messages(history).call().content();
     reply = reply == null ? "" : reply;
 
     Message assistantMessage =
@@ -76,6 +80,23 @@ public class ChatAssistantService {
     conversationRepository.save(conversation);
 
     return new ChatResponseDto(conversation.getId(), reply);
+  }
+
+  /**
+   * Translates one persisted turn into the Spring AI message type that carries its role
+   * structurally, so the role travels as metadata the caller cannot spoof rather than as text
+   * inside the prompt.
+   *
+   * @param message a persisted conversation turn
+   * @return an {@link AssistantMessage} for the assistant's own turns, a {@link UserMessage}
+   *     otherwise — an unrecognised role is treated as untrusted user input, never as a system
+   *     instruction
+   */
+  private static org.springframework.ai.chat.messages.Message toModelMessage(Message message) {
+    String content = message.getContent() == null ? "" : message.getContent();
+    return "assistant".equalsIgnoreCase(message.getRole())
+        ? new AssistantMessage(content)
+        : new UserMessage(content);
   }
 
   /**

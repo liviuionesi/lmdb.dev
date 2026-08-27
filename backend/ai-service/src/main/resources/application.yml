@@ -7,6 +7,13 @@ server:
 grpc:
   server:
     port: 9084
+    # Shared service token every RPC must present as `x-service-token`
+    # (GrpcAuthInterceptor). Nothing routes through api-gateway to reach this
+    # port, so its JWT chain never applies here — this is the only thing
+    # standing in front of the chat and recommendation logic on the gRPC side.
+    # Unset means fail-closed: every call is rejected, rather than every call
+    # being allowed.
+    auth-token: ${AI_SERVICE_GRPC_TOKEN:}
 
 spring:
   main:

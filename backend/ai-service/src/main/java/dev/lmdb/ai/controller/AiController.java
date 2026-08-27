@@ -1,11 +1,14 @@
 package dev.lmdb.ai.controller;
 
+import dev.lmdb.ai.dto.ChatRequestBodyDto;
 import dev.lmdb.ai.dto.ChatRequestDto;
 import dev.lmdb.ai.dto.ChatResponseDto;
+import dev.lmdb.ai.dto.RecommendationRequestBodyDto;
 import dev.lmdb.ai.dto.RecommendationRequestDto;
 import dev.lmdb.ai.dto.RecommendationResponseDto;
 import dev.lmdb.ai.dto.SimilarUserDto;
 import dev.lmdb.ai.dto.TranscriptionResponseDto;
+import dev.lmdb.ai.security.CallerIdentity;
 import dev.lmdb.ai.service.ChatAssistantService;
 import dev.lmdb.ai.service.RecommendationService;
 import dev.lmdb.ai.service.SemanticSearchService;
@@ -22,6 +25,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -32,6 +36,11 @@ import org.springframework.web.multipart.MultipartFile;
  * assistant, semantic search over user taste profiles, and offline speech-to-text for the
  * frontend's voice control (#68). The recommendation and chat features are also exposed over gRPC
  * by {@link dev.lmdb.ai.grpc.AiGrpcService}.
+ *
+ * <p>Every user-scoped endpoint here takes the caller's identity from the gateway-issued {@code
+ * X-User-Id} header via {@link CallerIdentity} — never from the request body or a query parameter,
+ * which the caller controls. Speech-to-text is the one exception: it is not user-scoped and is
+ * {@code permitAll} at the gateway, so it reads no identity at all.
  */
 @RestController
 @RequestMapping("/api/v1/ai")
@@ -48,9 +57,11 @@ public class AiController {
   private final SpeechToTextService speechToTextService;
 
   /**
-   * Generates ranked, explained movie recommendations from LMDB's own catalog.
+   * Generates ranked, explained movie recommendations from LMDB's own catalog for the authenticated
+   * caller, and refreshes that caller's taste profile as a side effect.
    *
-   * @param request the user, their recent movies, and how many recommendations to return
+   * @param callerId the authenticated caller, from the gateway-issued {@code X-User-Id} header
+   * @param body the caller's recent movies and how many recommendations to return
    * @return the ranked recommendation list
    */
   @PostMapping("/recommendations")
@@ -58,31 +69,42 @@ public class AiController {
       summary = "Get movie recommendations",
       description = "Recommendations computed from LMDB's own catalog, not TMDB")
   public ResponseEntity<RecommendationResponseDto> recommend(
-      @Valid @RequestBody RecommendationRequestDto request) {
-    log.info("POST /api/v1/ai/recommendations - userId={}", request.userId());
-    return ResponseEntity.ok(recommendationService.recommend(request));
+      @RequestHeader(name = CallerIdentity.USER_ID_HEADER, required = false) String callerId,
+      @Valid @RequestBody RecommendationRequestBodyDto body) {
+    UUID userId = CallerIdentity.require(callerId);
+    log.info("POST /api/v1/ai/recommendations - userId={}", userId);
+    return ResponseEntity.ok(
+        recommendationService.recommend(
+            new RecommendationRequestDto(userId, body.recentMovies(), body.count())));
   }
 
   /**
-   * Continues (or starts) a conversation with the chat assistant.
+   * Continues (or starts) a conversation with the chat assistant, as the authenticated caller.
    *
-   * @param request the user's message, and optionally an existing conversation to continue
+   * @param callerId the authenticated caller, from the gateway-issued {@code X-User-Id} header
+   * @param body the caller's message, and optionally an existing conversation to continue
    * @return the assistant's reply and the conversation id
    */
   @PostMapping("/chat")
   @Operation(
       summary = "Chat with the assistant",
       description = "Persists the conversation; omit conversationId to start a new one")
-  public ResponseEntity<ChatResponseDto> chat(@Valid @RequestBody ChatRequestDto request) {
-    log.info("POST /api/v1/ai/chat - userId={}", request.userId());
-    return ResponseEntity.ok(chatAssistantService.chat(request));
+  public ResponseEntity<ChatResponseDto> chat(
+      @RequestHeader(name = CallerIdentity.USER_ID_HEADER, required = false) String callerId,
+      @Valid @RequestBody ChatRequestBodyDto body) {
+    UUID userId = CallerIdentity.require(callerId);
+    log.info("POST /api/v1/ai/chat - userId={}", userId);
+    return ResponseEntity.ok(
+        chatAssistantService.chat(
+            new ChatRequestDto(userId, body.conversationId(), body.message())));
   }
 
   /**
    * Finds users whose taste embedding is nearest to a free-text query.
    *
+   * @param callerId the authenticated caller, from the gateway-issued {@code X-User-Id} header;
+   *     excluded from its own results
    * @param query free-text description of a taste
-   * @param userId the caller, excluded from its own results
    * @param k how many neighbours to return (default 5)
    * @return the nearest users, closest first
    */
@@ -91,15 +113,17 @@ public class AiController {
       summary = "Semantic search",
       description = "ANN search over user taste embeddings (pgvector)")
   public ResponseEntity<List<SimilarUserDto>> semanticSearch(
+      @RequestHeader(name = CallerIdentity.USER_ID_HEADER, required = false) String callerId,
       @RequestParam String query,
-      @RequestParam UUID userId,
       @RequestParam(defaultValue = "5") int k) {
+    UUID userId = CallerIdentity.require(callerId);
     log.info("GET /api/v1/ai/search/semantic - userId={}, k={}", userId, k);
     return ResponseEntity.ok(semanticSearchService.findSimilarUsers(query, userId, k));
   }
 
   /**
-   * Transcribes an uploaded voice-command audio clip via Vosk (#68).
+   * Transcribes an uploaded voice-command audio clip via Vosk (#68). Not user-scoped — the clip is
+   * transcribed and discarded, nothing is read or written per user.
    *
    * @param audio a WAV (PCM) recording of the spoken command
    * @return the recognized text

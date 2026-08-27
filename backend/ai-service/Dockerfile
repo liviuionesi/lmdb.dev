@@ -53,7 +53,17 @@ WORKDIR /app
 # here so it's present identically everywhere, matching VOSK_MODEL_PATH's
 # own default (./models/vosk-model-small-en-us-0.15, relative to this
 # WORKDIR) — same URL infrastructure/scripts/download-vosk-model.sh uses.
-RUN curl -L -o /tmp/vosk-model.zip https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip \
+#
+# The archive is pinned by SHA-256 and verified before it is unpacked. Vosk
+# loads native code out of this directory via JNI, so unverified content here
+# executes inside the service process — a compromised upstream, a hijacked
+# mirror, or a MITM on the build network would otherwise be baked into the
+# image and pushed to ghcr.io as a normal release. `--fail` matters for the
+# same reason: without it curl writes an HTTP error page to the output file
+# and the build carries on treating it as an archive.
+ARG VOSK_MODEL_SHA256=30f26242c4eb449f948e42cb302dd7a686cb29a3423a8367f99ff41780942498
+RUN curl -fsSL -o /tmp/vosk-model.zip https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip \
+    && echo "${VOSK_MODEL_SHA256}  /tmp/vosk-model.zip" | sha256sum -c - \
     && unzip -q /tmp/vosk-model.zip -d models \
     && rm /tmp/vosk-model.zip
 

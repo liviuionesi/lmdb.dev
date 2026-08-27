@@ -3,6 +3,7 @@ package dev.lmdb.ai.controller;
 import dev.lmdb.shared.dto.ApiResponse;
 import dev.lmdb.shared.exception.ResourceNotFoundException;
 import dev.lmdb.shared.exception.ServiceUnavailableException;
+import dev.lmdb.shared.exception.UnauthorizedException;
 import dev.lmdb.shared.exception.ValidationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -29,6 +30,21 @@ public class GlobalExceptionHandler {
   @ExceptionHandler(ResourceNotFoundException.class)
   public ResponseEntity<ApiResponse<Void>> handleNotFound(ResourceNotFoundException e) {
     return error(HttpStatus.NOT_FOUND, e.getMessage());
+  }
+
+  /**
+   * The caller reached a user-scoped endpoint without a usable gateway-issued identity header (see
+   * {@link dev.lmdb.ai.security.CallerIdentity}) → 401. Reaching this in production means the
+   * request bypassed api-gateway, since the gateway rejects an unauthenticated call to {@code
+   * /api/v1/ai/**} before it is ever routed here.
+   *
+   * @param e missing-or-unusable caller identity
+   * @return 401 error envelope
+   */
+  @ExceptionHandler(UnauthorizedException.class)
+  public ResponseEntity<ApiResponse<Void>> handleUnauthorized(UnauthorizedException e) {
+    log.warn("Rejected unauthenticated request to a user-scoped endpoint");
+    return error(HttpStatus.UNAUTHORIZED, e.getMessage());
   }
 
   /**
