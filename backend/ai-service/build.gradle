@@ -58,9 +58,16 @@ dependencies {
     // Offline speech-to-text (#68). No paid STT provider.  
     implementation "com.alphacephei:vosk:${voskVersion}"
 
-    implementation "io.grpc:grpc-netty-shaded:${grpcVersion}"
-    implementation "io.grpc:grpc-protobuf:${grpcVersion}"
-    implementation "io.grpc:grpc-stub:${grpcVersion}"
+    // Versionless on purpose: Spring Boot's BOM imports io.grpc:grpc-bom and so
+    // manages the whole gRPC family. Pinning these three to our own version
+    // overrode the BOM for them alone, leaving grpc-api/grpc-core on the BOM's
+    // version — a split classpath that isn't a build failure but an
+    // AbstractMethodError when the gRPC server starts, taking ai-service's
+    // application context down with it. Letting the BOM manage all of them keeps
+    // them consistent across any future Spring Boot upgrade.
+    implementation 'io.grpc:grpc-netty-shaded'
+    implementation 'io.grpc:grpc-protobuf'
+    implementation 'io.grpc:grpc-stub'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.cloud:spring-cloud-starter-contract-verifier'
@@ -73,7 +80,7 @@ dependencies {
     testImplementation "org.wiremock:wiremock-standalone:${wiremockVersion}"
     testImplementation 'org.testcontainers:testcontainers-postgresql'
     testImplementation 'org.testcontainers:testcontainers-junit-jupiter'
-    testImplementation "io.grpc:grpc-testing:${grpcVersion}"
+    testImplementation 'io.grpc:grpc-testing'
 }
 
 dependencyManagement {
@@ -89,7 +96,10 @@ protobuf {
     }
     plugins {
         grpc {
-            artifact = "io.grpc:protoc-gen-grpc-java:${grpcVersion}"
+            // Same version the BOM manages for the runtime artifacts above, read
+            // from it rather than restated, so the generated stubs can never
+            // target a different gRPC version than they run against.
+            artifact = "io.grpc:protoc-gen-grpc-java:${dependencyManagement.managedVersions['io.grpc:grpc-api']}"
         }
     }
     generateProtoTasks {
