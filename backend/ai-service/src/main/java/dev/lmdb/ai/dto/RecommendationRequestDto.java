@@ -23,6 +23,7 @@ import java.util.UUID;
 public record RecommendationRequestDto(UUID userId, List<String> recentMovies, Integer count) {
   /** Applies the default page size when the caller omits {@code count}. */
   public int countOrDefault() {
-    return count == null || count <= 0 ? 10 : count;
+    int c = count == null || count <= 0 ? 10 : count;
+    return Math.min(c, 20);
   }
 }

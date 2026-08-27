@@ -38,6 +38,9 @@ class AiGrpcServiceTest {
   private ChatAssistantService chatAssistantService;
   private AiGrpcService aiGrpcService;
 
+  /**
+   * Initializes mock services and the gRPC service under test before each test case.
+   */
   @BeforeEach
   void setUp() {
     recommendationService = mock(RecommendationService.class);

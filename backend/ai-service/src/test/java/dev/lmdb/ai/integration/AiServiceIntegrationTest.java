@@ -495,6 +495,25 @@ class AiServiceIntegrationTest {
   }
 
   /**
+   * Verifies that the @Min/@Max constraints on the `k` parameter are enforced, and that 
+   * the GlobalExceptionHandler correctly translates the resulting ConstraintViolationException 
+   * into a 400 Bad Request.
+   *
+   * @throws Exception if the MockMvc request fails to execute
+   */
+  @Test
+  @DisplayName("GET /api/v1/ai/search/semantic rejects k < 1 with 400 Bad Request")
+  void semanticSearchRejectsOutOfBoundsK() throws Exception {
+    mockMvc
+        .perform(
+            get("/api/v1/ai/search/semantic")
+                .header(USER_ID_HEADER, UUID.randomUUID().toString())
+                .param("query", "explosions")
+                .param("k", "0"))
+        .andExpect(status().isBadRequest());
+  }
+
+  /**
    * Given an audio upload, when the transcription succeeds, then the endpoint returns the
    * recognized text — verifies the multipart request contract and response shape. {@link
    * SpeechToTextService} itself is a Mockito mock ({@link AiModelTestConfig}) since no Vosk model

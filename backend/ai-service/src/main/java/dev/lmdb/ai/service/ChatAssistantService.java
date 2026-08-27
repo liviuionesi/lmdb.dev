@@ -14,7 +14,6 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 /**
  * The conversational assistant feature: a user's back-and-forth with the AI, persisted as a {@link
@@ -55,7 +54,6 @@ public class ChatAssistantService {
    * @throws ResourceNotFoundException if {@code request.conversationId()} doesn't exist or isn't
    *     owned by {@code request.userId()}
    */
-  @Transactional
   public ChatResponseDto chat(ChatRequestDto request) {
     Conversation conversation = resolveConversation(request);
 
@@ -69,6 +67,10 @@ public class ChatAssistantService {
     // the ones this service actually emitted.
     List<org.springframework.ai.chat.messages.Message> history =
         conversation.getMessages().stream().map(ChatAssistantService::toModelMessage).toList();
+    
+    if (history.size() > 20) {
+        history = history.subList(history.size() - 20, history.size());
+    }
 
     String reply = chatClient.prompt().system(SYSTEM_PROMPT).messages(history).call().content();
     reply = reply == null ? "" : reply;

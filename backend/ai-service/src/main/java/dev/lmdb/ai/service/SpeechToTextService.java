@@ -10,6 +10,8 @@ import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.UnsupportedAudioFileException;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.annotation.Value;
@@ -44,6 +46,7 @@ public class SpeechToTextService implements DisposableBean {
   private final String modelPath;
   private final ObjectMapper objectMapper;
   private volatile Model model;
+  private final ReadWriteLock lock = new ReentrantReadWriteLock();
 
   /**
    * @param modelPath filesystem path to an unzipped Vosk model directory
@@ -67,13 +70,21 @@ public class SpeechToTextService implements DisposableBean {
   public String transcribe(MultipartFile audioFile) {
     // Validate the (cheap) client input before paying the model-load cost.
     byte[] pcm = toPcm16Mono16kHz(audioFile);
-    Model loadedModel = getOrLoadModel();
 
-    try (Recognizer recognizer = new Recognizer(loadedModel, SAMPLE_RATE_HZ)) {
-      recognizer.acceptWaveForm(pcm, pcm.length);
-      return extractText(recognizer.getFinalResult());
-    } catch (IOException e) {
-      throw new ServiceUnavailableException("speech-to-text", "recognizer failed to start", e);
+    lock.readLock().lock();
+    try {
+      Model loadedModel = getOrLoadModel();
+      if (loadedModel == null) {
+        throw new ServiceUnavailableException("speech-to-text", "service is shutting down");
+      }
+      try (Recognizer recognizer = new Recognizer(loadedModel, SAMPLE_RATE_HZ)) {
+        recognizer.acceptWaveForm(pcm, pcm.length);
+        return extractText(recognizer.getFinalResult());
+      } catch (IOException e) {
+        throw new ServiceUnavailableException("speech-to-text", "recognizer failed to start", e);
+      }
+    } finally {
+      lock.readLock().unlock();
     }
   }
 
@@ -157,8 +168,14 @@ public class SpeechToTextService implements DisposableBean {
    */
   @Override
   public void destroy() {
-    if (model != null) {
-      model.close();
+    lock.writeLock().lock();
+    try {
+      if (model != null) {
+        model.close();
+        model = null;
+      }
+    } finally {
+      lock.writeLock().unlock();
     }
   }
 }

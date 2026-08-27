@@ -7,6 +7,9 @@ import dev.lmdb.ai.dto.RecommendationRequestDto;
 import dev.lmdb.ai.dto.RecommendationResponseDto;
 import dev.lmdb.ai.service.ChatAssistantService;
 import dev.lmdb.ai.service.RecommendationService;
+import dev.lmdb.shared.exception.ResourceNotFoundException;
+import dev.lmdb.shared.exception.ServiceUnavailableException;
+import dev.lmdb.shared.exception.ValidationException;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import java.util.UUID;
@@ -55,22 +58,33 @@ public class AiGrpcService extends AIServiceGrpc.AIServiceImplBase {
       return;
     }
 
-    RecommendationResponseDto result =
-        recommendationService.recommend(
-            new RecommendationRequestDto(
-                userId, request.getRecentMoviesList(), request.getCount()));
+    try {
+      RecommendationResponseDto result =
+          recommendationService.recommend(
+              new RecommendationRequestDto(
+                  userId, request.getRecentMoviesList(), request.getCount()));
 
-    RecommendationResponse.Builder response = RecommendationResponse.newBuilder();
-    for (MovieRecommendationDto rec : result.recommendations()) {
-      response.addRecommendations(
-          MovieRecommendation.newBuilder()
-              .setMovieId(rec.movieId())
-              .setScore(rec.score())
-              .setReason(rec.reason())
-              .build());
+      RecommendationResponse.Builder response = RecommendationResponse.newBuilder();
+      for (MovieRecommendationDto rec : result.recommendations()) {
+        response.addRecommendations(
+            MovieRecommendation.newBuilder()
+                .setMovieId(rec.movieId())
+                .setScore(rec.score())
+                .setReason(rec.reason())
+                .build());
+      }
+      responseObserver.onNext(response.build());
+      responseObserver.onCompleted();
+    } catch (ResourceNotFoundException e) {
+      responseObserver.onError(Status.NOT_FOUND.withDescription(e.getMessage()).asRuntimeException());
+    } catch (ServiceUnavailableException e) {
+      responseObserver.onError(Status.UNAVAILABLE.withDescription(e.getMessage()).asRuntimeException());
+    } catch (ValidationException | IllegalArgumentException e) {
+      responseObserver.onError(Status.INVALID_ARGUMENT.withDescription(e.getMessage()).asRuntimeException());
+    } catch (Exception e) {
+      log.error("Internal error in getRecommendations", e);
+      responseObserver.onError(Status.INTERNAL.withDescription("Internal error").asRuntimeException());
     }
-    responseObserver.onNext(response.build());
-    responseObserver.onCompleted();
   }
 
   /**
@@ -101,14 +115,33 @@ public class AiGrpcService extends AIServiceGrpc.AIServiceImplBase {
       return;
     }
 
-    ChatResponseDto result =
-        chatAssistantService.chat(new ChatRequestDto(userId, conversationId, request.getMessage()));
+    if (request.getMessage().trim().isEmpty()) {
+      responseObserver.onError(
+          Status.INVALID_ARGUMENT
+              .withDescription("Message cannot be blank")
+              .asRuntimeException());
+      return;
+    }
 
-    responseObserver.onNext(
-        ChatResponse.newBuilder()
-            .setConversationId(result.conversationId().toString())
-            .setReply(result.reply())
-            .build());
-    responseObserver.onCompleted();
+    try {
+      ChatResponseDto result =
+          chatAssistantService.chat(new ChatRequestDto(userId, conversationId, request.getMessage()));
+
+      responseObserver.onNext(
+          ChatResponse.newBuilder()
+              .setConversationId(result.conversationId().toString())
+              .setReply(result.reply())
+              .build());
+      responseObserver.onCompleted();
+    } catch (ResourceNotFoundException e) {
+      responseObserver.onError(Status.NOT_FOUND.withDescription(e.getMessage()).asRuntimeException());
+    } catch (ServiceUnavailableException e) {
+      responseObserver.onError(Status.UNAVAILABLE.withDescription(e.getMessage()).asRuntimeException());
+    } catch (ValidationException | IllegalArgumentException e) {
+      responseObserver.onError(Status.INVALID_ARGUMENT.withDescription(e.getMessage()).asRuntimeException());
+    } catch (Exception e) {
+      log.error("Internal error in chatWithAssistant", e);
+      responseObserver.onError(Status.INTERNAL.withDescription("Internal error").asRuntimeException());
+    }
   }
 }

@@ -16,12 +16,15 @@ import dev.lmdb.ai.service.SpeechToTextService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -44,6 +47,7 @@ import org.springframework.web.multipart.MultipartFile;
  */
 @RestController
 @RequestMapping("/api/v1/ai")
+@Validated
 @RequiredArgsConstructor
 @Slf4j
 @Tag(
@@ -115,7 +119,7 @@ public class AiController {
   public ResponseEntity<List<SimilarUserDto>> semanticSearch(
       @RequestHeader(name = CallerIdentity.USER_ID_HEADER, required = false) String callerId,
       @RequestParam String query,
-      @RequestParam(defaultValue = "5") int k) {
+      @RequestParam(defaultValue = "5") @Min(1) @Max(50) int k) {
     UUID userId = CallerIdentity.require(callerId);
     log.info("GET /api/v1/ai/search/semantic - userId={}, k={}", userId, k);
     return ResponseEntity.ok(semanticSearchService.findSimilarUsers(query, userId, k));

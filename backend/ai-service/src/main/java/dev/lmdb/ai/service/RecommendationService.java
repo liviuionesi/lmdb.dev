@@ -16,7 +16,6 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Movie recommendations computed from LMDB's own catalog — never proxied from TMDB's own
@@ -71,7 +70,6 @@ public class RecommendationService {
    * @param request the user, their recent movies, and how many recommendations to return
    * @return the ranked recommendation list; empty if movie-service has no candidates to offer
    */
-  @Transactional
   public RecommendationResponseDto recommend(RecommendationRequestDto request) {
     List<CandidateMovie> candidates =
         movieCatalogClient.fetchCandidates(request.countOrDefault() * 3);
@@ -144,6 +142,10 @@ public class RecommendationService {
       return;
     }
     float[] embedding = embeddingModel.embed(String.join(", ", recentMovies));
+    if (embedding.length != 768) {
+      throw new dev.lmdb.shared.exception.ServiceUnavailableException(
+          "Embedding dimension mismatch: expected 768, got " + embedding.length);
+    }
     UserTasteProfile profile =
         UserTasteProfile.builder()
             .userId(request.userId())
