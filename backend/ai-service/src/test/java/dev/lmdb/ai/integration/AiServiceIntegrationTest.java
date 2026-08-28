@@ -1,8 +1,11 @@
 package dev.lmdb.ai.integration;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -58,22 +61,26 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 
 /**
  * Integration tests for ai-service: full controller → service → PostgreSQL (pgvector) →
- * (WireMock-simulated) movie-service stack.
+ * (WireMock-simulated) movie-service/actor-service stack.
  *
  * <p>{@link ChatModel} and {@link EmbeddingModel} are Mockito mocks ({@link AiModelTestConfig})
  * standing in for Ollama, which isn't reachable in CI — everything else (Flyway migration, JPA
  * mapping, the ANN query, the REST contract) runs against real infrastructure via Testcontainers (a
- * {@code pgvector/pgvector} PostgreSQL container) and WireMock stands in for movie-service. {@link
- * dev.lmdb.ai.client.MovieCatalogClient} keeps the real load-balanced {@link
- * org.springframework.web.client.RestClient} from {@link dev.lmdb.ai.config.RestClientConfig} —
- * {@code movie-service.base-url} stays at its default {@code lb://movie-service}, and Spring
- * Cloud's {@code SimpleDiscoveryClient} (registered below) resolves it to WireMock, so these tests
- * exercise the same {@code lb://} resolution path production goes through, not a plain-HTTP bypass.
+ * {@code pgvector/pgvector} PostgreSQL container) and WireMock stands in for movie-service AND
+ * actor-service (#203) — one WireMock server, since their path prefixes ({@code /api/v1/movies/**}
+ * vs {@code /api/v1/actors/**}) never collide. {@link dev.lmdb.ai.client.MovieCatalogClient}/{@link
+ * dev.lmdb.ai.client.ActorCatalogClient} keep their real load-balanced {@link
+ * org.springframework.web.client.RestClient}s from {@link dev.lmdb.ai.config.RestClientConfig} —
+ * {@code movie-service.base-url}/{@code actor-service.base-url} stay at their {@code lb://}
+ * defaults, and Spring Cloud's {@code SimpleDiscoveryClient} (registered below) resolves both to
+ * WireMock, so these tests exercise the same {@code lb://} resolution path production goes through,
+ * not a plain-HTTP bypass.
  */
 @SpringBootTest(
     properties = {
       "spring.cloud.discovery.enabled=true",
-      "spring.cloud.discovery.client.simple.instances.movie-service[0].uri=http://localhost:9992"
+      "spring.cloud.discovery.client.simple.instances.movie-service[0].uri=http://localhost:9992",
+      "spring.cloud.discovery.client.simple.instances.actor-service[0].uri=http://localhost:9992"
     })
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
@@ -1089,6 +1096,454 @@ class AiServiceIntegrationTest {
         .andExpect(jsonPath("$.collaborators").isEmpty())
         .andExpect(jsonPath("$.negated").isArray())
         .andExpect(jsonPath("$.negated").isEmpty());
+  }
+
+  /**
+   * Given a query that parses to a plain title, when it's executed, then the result comes straight
+   * from movie-service's existing title search, unmodified — #198 AC3, #203 AC4.
+   *
+   * @throws Exception if the MockMvc request fails to execute
+   */
+  @Test
+  @DisplayName(
+      "POST /api/v1/ai/search/execute delegates a plain-title query to movie-service search")
+  void executeSearchDelegatesPlainTitleToMovieServiceSearch() throws Exception {
+    stubAssistantReply(
+        """
+        {"personName":null,"role":null,"yearFrom":null,"yearTo":null,
+         "collaborators":[],"genre":null,"negated":[],"plainTitle":"Inception"}
+        """);
+    stubFor(
+        WireMock.get(urlPathEqualTo("/api/v1/movies/search"))
+            .withQueryParam("query", WireMock.equalTo("Inception"))
+            .willReturn(
+                aResponse()
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        """
+                {"content":[{"tmdbId":27205,"title":"Inception","overview":"A thief...",
+                 "releaseDate":"2010-07-16","posterPath":"/c.jpg","voteAverage":8.4}],
+                 "pageNumber":0,"pageSize":200,"totalElements":1,"totalPages":1,
+                 "first":true,"last":true,"hasNext":false,"hasPrevious":false,"numberOfElements":1}
+                """)));
+
+    String body = objectMapper.writeValueAsString(Map.of("query", "Inception"));
+    mockMvc
+        .perform(
+            post("/api/v1/ai/search/execute").contentType(MediaType.APPLICATION_JSON).content(body))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.results.length()").value(1))
+        .andExpect(jsonPath("$.results[0].movieId").value(27205))
+        .andExpect(jsonPath("$.results[0].title").value("Inception"));
+
+    // Proves this is a true short-circuit, not "coincidentally also calls actor-service and gets
+    // nothing back" — no stub is registered for /api/v1/actors/**, so a stray call here would
+    // hit WireMock's unmatched-request fault, which ActorCatalogClient's own try/catch would
+    // otherwise silently swallow into an empty result, masking a real regression.
+    WireMock.verify(0, getRequestedFor(urlPathMatching("/api/v1/actors/.*")));
+  }
+
+  /**
+   * The multi-service, multi-constraint scenario #203 AC5 requires end to end: "movies Tom Hanks
+   * directed between 2000 and 2010." Resolves the person via actor-service search, fetches his
+   * DIRECTED crew credits (#217), and intersects against movie-service's year-range discover (#218)
+   * — the movie outside the range must be dropped even though it's one of his real directing
+   * credits, proving the intersection (not just the actor-service list) drives the final result.
+   *
+   * @throws Exception if the MockMvc request fails to execute
+   */
+  @Test
+  @DisplayName(
+      "POST /api/v1/ai/search/execute resolves person+role+year-range across actor-service and"
+          + " movie-service")
+  void executeSearchResolvesPersonRoleAndYearRangeAcrossServices() throws Exception {
+    stubAssistantReply(
+        """
+        {"personName":"Tom Hanks","role":"DIRECTED","yearFrom":2000,"yearTo":2010,
+         "collaborators":[],"genre":null,"negated":[],"plainTitle":null}
+        """);
+    stubFor(
+        WireMock.get(urlPathEqualTo("/api/v1/actors/search"))
+            .withQueryParam("query", WireMock.equalTo("Tom Hanks"))
+            .willReturn(okJson(personSearchResponse(31L, "Tom Hanks"))));
+    stubFor(
+        WireMock.get(urlPathEqualTo("/api/v1/actors/31/crew"))
+            .withQueryParam("job", WireMock.equalTo("Director"))
+            .willReturn(
+                aResponse()
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        """
+                {"success":true,"message":"ok","statusCode":200,"data":[
+                 {"movieId":95,"title":"That Thing You Do!","job":"Director",
+                  "department":"Directing","releaseDate":"1996-10-04",
+                  "posterPath":"/t.jpg","voteAverage":6.9},
+                 {"movieId":97,"title":"The Great Buck Howard","job":"Director",
+                  "department":"Directing","releaseDate":"2008-03-28",
+                  "posterPath":"/g.jpg","voteAverage":6.1}]}
+                """)));
+    stubFor(
+        WireMock.get(urlPathEqualTo("/api/v1/movies/discover"))
+            .withQueryParam("yearFrom", WireMock.equalTo("2000"))
+            .withQueryParam("yearTo", WireMock.equalTo("2010"))
+            .willReturn(
+                aResponse()
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        """
+                {"content":[{"tmdbId":97,"title":"The Great Buck Howard","overview":"",
+                 "releaseDate":"2008-03-28","posterPath":"/g.jpg","voteAverage":6.1}],
+                 "pageNumber":0,"pageSize":200,"totalElements":1,"totalPages":1,
+                 "first":true,"last":true,"hasNext":false,"hasPrevious":false,"numberOfElements":1}
+                """)));
+
+    String body =
+        objectMapper.writeValueAsString(
+            Map.of("query", "movies Tom Hanks directed between 2000 and 2010"));
+    mockMvc
+        .perform(
+            post("/api/v1/ai/search/execute").contentType(MediaType.APPLICATION_JSON).content(body))
+        .andExpect(status().isOk())
+        // Only movie 97 (2008, in range) survives — 95 (1996) is a real directing credit but
+        // outside the year range, proving the discover intersection actually filtered it out.
+        .andExpect(jsonPath("$.results.length()").value(1))
+        .andExpect(jsonPath("$.results[0].movieId").value(97));
+  }
+
+  /**
+   * Given a query naming a primary person and a collaborator, when executed, then only movies
+   * credited to BOTH survive — AND semantics, #203 AC2.
+   *
+   * @throws Exception if the MockMvc request fails to execute
+   */
+  @Test
+  @DisplayName("POST /api/v1/ai/search/execute narrows results by a collaborator (AND semantics)")
+  void executeSearchNarrowsByCollaborator() throws Exception {
+    stubAssistantReply(
+        """
+        {"personName":"Tom Hanks","role":null,"yearFrom":null,"yearTo":null,
+         "collaborators":["Meg Ryan","Rita Wilson"],"genre":null,"negated":[],"plainTitle":null}
+        """);
+    stubFor(
+        WireMock.get(urlPathEqualTo("/api/v1/actors/search"))
+            .withQueryParam("query", WireMock.equalTo("Tom Hanks"))
+            .willReturn(okJson(personSearchResponse(31L, "Tom Hanks"))));
+    stubFor(
+        WireMock.get(urlPathEqualTo("/api/v1/actors/search"))
+            .withQueryParam("query", WireMock.equalTo("Meg Ryan"))
+            .willReturn(okJson(personSearchResponse(44L, "Meg Ryan"))));
+    stubFor(
+        WireMock.get(urlPathEqualTo("/api/v1/actors/search"))
+            .withQueryParam("query", WireMock.equalTo("Rita Wilson"))
+            .willReturn(okJson(personSearchResponse(77L, "Rita Wilson"))));
+    // Deliberately arranged so applying only the FIRST or only the LAST collaborator (a possible
+    // "loop only applies one constraint" bug, #203 AC2's "multiple collaborators" wording) would
+    // each yield a different, wrong 2-movie result — only the true 3-way intersection lands on
+    // exactly {551}.
+    stubFor(
+        WireMock.get(urlPathEqualTo("/api/v1/actors/31/movies"))
+            .willReturn(
+                okJson(
+                    filmographyPageResponse(
+                        movieCredit(550L, "Movie A", "1998-01-01"),
+                        movieCredit(551L, "Sleepless in Seattle", "1993-06-25"),
+                        movieCredit(560L, "Movie B", "1999-01-01"),
+                        movieCredit(561L, "Movie D", "2000-01-01")))));
+    stubFor(
+        WireMock.get(urlPathEqualTo("/api/v1/actors/44/movies"))
+            .willReturn(
+                okJson(
+                    filmographyPageResponse(
+                        movieCredit(551L, "Sleepless in Seattle", "1993-06-25"),
+                        movieCredit(560L, "Movie B", "1999-01-01"),
+                        movieCredit(570L, "Movie E", "2002-01-01")))));
+    stubFor(
+        WireMock.get(urlPathEqualTo("/api/v1/actors/77/movies"))
+            .willReturn(
+                okJson(
+                    filmographyPageResponse(
+                        movieCredit(551L, "Sleepless in Seattle", "1993-06-25"),
+                        movieCredit(561L, "Movie D", "2000-01-01"),
+                        movieCredit(580L, "Movie F", "2003-01-01")))));
+
+    String body =
+        objectMapper.writeValueAsString(
+            Map.of("query", "movies Tom Hanks, Meg Ryan, and Rita Wilson all appeared in"));
+    mockMvc
+        .perform(
+            post("/api/v1/ai/search/execute").contentType(MediaType.APPLICATION_JSON).content(body))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.results.length()").value(1))
+        .andExpect(jsonPath("$.results[0].movieId").value(551));
+  }
+
+  /**
+   * Given a query negating the role ("movies Clint Eastwood didn't direct"), when executed, then
+   * the movie he both acted in AND directed is excluded, while the one he only acted in survives —
+   * negation actually excludes matching movies rather than being ignored, #203 AC3.
+   *
+   * @throws Exception if the MockMvc request fails to execute
+   */
+  @Test
+  @DisplayName("POST /api/v1/ai/search/execute excludes movies matching a negated role")
+  void executeSearchExcludesMoviesMatchingNegatedRole() throws Exception {
+    stubAssistantReply(
+        """
+        {"personName":"Clint Eastwood","role":"DIRECTED","yearFrom":null,"yearTo":null,
+         "collaborators":[],"genre":null,"negated":["role"],"plainTitle":null}
+        """);
+    stubFor(
+        WireMock.get(urlPathEqualTo("/api/v1/actors/search"))
+            .withQueryParam("query", WireMock.equalTo("Clint Eastwood"))
+            .willReturn(okJson(personSearchResponse(190L, "Clint Eastwood"))));
+    stubFor(
+        WireMock.get(urlPathEqualTo("/api/v1/actors/190/movies"))
+            .willReturn(
+                okJson(
+                    filmographyPageResponse(
+                        movieCredit(100L, "In the Line of Fire", "1993-07-09"),
+                        movieCredit(101L, "Unforgiven", "1992-08-07")))));
+    stubFor(
+        WireMock.get(urlPathEqualTo("/api/v1/actors/190/crew"))
+            .withQueryParam("job", WireMock.equalTo("Director"))
+            .willReturn(
+                aResponse()
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        """
+                {"success":true,"message":"ok","statusCode":200,"data":[
+                 {"movieId":101,"title":"Unforgiven","job":"Director","department":"Directing",
+                  "releaseDate":"1992-08-07","posterPath":"/u.jpg","voteAverage":8.2}]}
+                """)));
+
+    String body =
+        objectMapper.writeValueAsString(Map.of("query", "movies Clint Eastwood didn't direct"));
+    mockMvc
+        .perform(
+            post("/api/v1/ai/search/execute").contentType(MediaType.APPLICATION_JSON).content(body))
+        .andExpect(status().isOk())
+        // Unforgiven (101, both acted AND directed) is excluded; In the Line of Fire (100,
+        // acted only) survives.
+        .andExpect(jsonPath("$.results.length()").value(1))
+        .andExpect(jsonPath("$.results[0].movieId").value(100));
+  }
+
+  /**
+   * Given a query naming a person actor-service has no record of, when executed, then the result is
+   * an empty list with 200, not an error — an unresolvable person degrades to "no matches," the
+   * same posture {@link dev.lmdb.ai.client.MovieCatalogClient} takes toward a flaky dependency.
+   *
+   * @throws Exception if the MockMvc request fails to execute
+   */
+  @Test
+  @DisplayName("POST /api/v1/ai/search/execute returns an empty list for an unresolvable person")
+  void executeSearchReturnsEmptyForUnresolvablePerson() throws Exception {
+    stubAssistantReply(
+        """
+        {"personName":"Nobody Nonexistent","role":null,"yearFrom":null,"yearTo":null,
+         "collaborators":[],"genre":null,"negated":[],"plainTitle":null}
+        """);
+    stubFor(
+        WireMock.get(urlPathEqualTo("/api/v1/actors/search"))
+            .withQueryParam("query", WireMock.equalTo("Nobody Nonexistent"))
+            .willReturn(
+                okJson(
+                    """
+                {"success":true,"message":"ok","statusCode":200,"data":{"results":[]}}
+                """)));
+
+    String body =
+        objectMapper.writeValueAsString(Map.of("query", "movies with Nobody Nonexistent"));
+    mockMvc
+        .perform(
+            post("/api/v1/ai/search/execute").contentType(MediaType.APPLICATION_JSON).content(body))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.results").isArray())
+        .andExpect(jsonPath("$.results").isEmpty());
+  }
+
+  /**
+   * Given a query naming a person and role {@code PRODUCED} (not just {@code DIRECTED}), when
+   * executed, then their Producer crew credits (#217) come back — #203 AC1 names all three roles
+   * ("acted/directed/produced") explicitly, and only {@code DIRECTED} had coverage before this
+   * test; an independent review found the {@code job=Producer} mapping was completely unverified.
+   *
+   * @throws Exception if the MockMvc request fails to execute
+   */
+  @Test
+  @DisplayName("POST /api/v1/ai/search/execute resolves a PRODUCED role")
+  void executeSearchResolvesProducedRole() throws Exception {
+    stubAssistantReply(
+        """
+        {"personName":"Kathleen Kennedy","role":"PRODUCED","yearFrom":null,"yearTo":null,
+         "collaborators":[],"genre":null,"negated":[],"plainTitle":null}
+        """);
+    stubFor(
+        WireMock.get(urlPathEqualTo("/api/v1/actors/search"))
+            .withQueryParam("query", WireMock.equalTo("Kathleen Kennedy"))
+            .willReturn(okJson(personSearchResponse(488L, "Kathleen Kennedy"))));
+    stubFor(
+        WireMock.get(urlPathEqualTo("/api/v1/actors/488/crew"))
+            .withQueryParam("job", WireMock.equalTo("Producer"))
+            .willReturn(
+                okJson(
+                    """
+                {"success":true,"message":"ok","statusCode":200,"data":[
+                 {"movieId":140607,"title":"Star Wars: The Force Awakens","job":"Producer",
+                  "department":"Production","releaseDate":"2015-12-18",
+                  "posterPath":"/f.jpg","voteAverage":7.3}]}
+                """)));
+
+    String body =
+        objectMapper.writeValueAsString(Map.of("query", "movies Kathleen Kennedy produced"));
+    mockMvc
+        .perform(
+            post("/api/v1/ai/search/execute").contentType(MediaType.APPLICATION_JSON).content(body))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.results.length()").value(1))
+        .andExpect(jsonPath("$.results[0].movieId").value(140607));
+  }
+
+  /**
+   * Given a query negating {@code ACTED} ("not starring X"), when executed, then the result is
+   * empty and neither the cast nor crew credit endpoints are ever called — actor-service has no
+   * "movies X is absent from" signal, so the correct, honest answer is "unresolvable," not X's
+   * unfiltered filmography (the actual bug an independent review caught in an earlier version of
+   * {@link dev.lmdb.ai.service.QueryAggregationService#resolvePersonCredits}). Asserting zero
+   * requests to the credit endpoints (not just the response body) proves this returns early rather
+   * than fetching credits and coincidentally emptying them some other way.
+   *
+   * @throws Exception if the MockMvc request fails to execute
+   */
+  @Test
+  @DisplayName(
+      "POST /api/v1/ai/search/execute returns empty for a negated ACTED role, not a"
+          + " service error")
+  void executeSearchReturnsEmptyForNegatedActedRole() throws Exception {
+    stubAssistantReply(
+        """
+        {"personName":"Tom Hanks","role":"ACTED","yearFrom":null,"yearTo":null,
+         "collaborators":[],"genre":null,"negated":["role"],"plainTitle":null}
+        """);
+    stubFor(
+        WireMock.get(urlPathEqualTo("/api/v1/actors/search"))
+            .withQueryParam("query", WireMock.equalTo("Tom Hanks"))
+            .willReturn(okJson(personSearchResponse(31L, "Tom Hanks"))));
+
+    String body = objectMapper.writeValueAsString(Map.of("query", "movies not starring Tom Hanks"));
+    mockMvc
+        .perform(
+            post("/api/v1/ai/search/execute").contentType(MediaType.APPLICATION_JSON).content(body))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.results").isArray())
+        .andExpect(jsonPath("$.results").isEmpty());
+
+    WireMock.verify(0, getRequestedFor(urlPathMatching("/api/v1/actors/31/(movies|crew)")));
+  }
+
+  /**
+   * Given actor-service returns a 5xx while resolving the primary person, when executed, then the
+   * request still returns 200 with an empty result rather than a 500 — {@link
+   * dev.lmdb.ai.client.ActorCatalogClient}'s exception-path degradation, distinct from (and until
+   * now untested alongside) its empty-result-path degradation exercised by {@link
+   * #executeSearchReturnsEmptyForUnresolvablePerson}.
+   *
+   * @throws Exception if the MockMvc request fails to execute
+   */
+  @Test
+  @DisplayName("POST /api/v1/ai/search/execute returns empty, not 500, when actor-service errors")
+  void executeSearchReturnsEmptyWhenActorServiceErrors() throws Exception {
+    stubAssistantReply(
+        """
+        {"personName":"Tom Hanks","role":null,"yearFrom":null,"yearTo":null,
+         "collaborators":[],"genre":null,"negated":[],"plainTitle":null}
+        """);
+    stubFor(
+        WireMock.get(urlPathEqualTo("/api/v1/actors/search"))
+            .withQueryParam("query", WireMock.equalTo("Tom Hanks"))
+            .willReturn(aResponse().withStatus(500)));
+
+    String body = objectMapper.writeValueAsString(Map.of("query", "movies with Tom Hanks"));
+    mockMvc
+        .perform(
+            post("/api/v1/ai/search/execute").contentType(MediaType.APPLICATION_JSON).content(body))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.results").isArray())
+        .andExpect(jsonPath("$.results").isEmpty());
+  }
+
+  /**
+   * Given actor-service responds 200 but with a {@code null} {@code data} field (a valid envelope
+   * shape {@link dev.lmdb.shared.dto.ApiResponse} allows), when executed, then the request still
+   * returns 200 with an empty result rather than an NPE-turned-500 — {@link
+   * dev.lmdb.ai.client.ActorCatalogClient}'s null-data guard, new deserialization logic this Task
+   * introduced and an independent review flagged as unexercised by any other test.
+   *
+   * @throws Exception if the MockMvc request fails to execute
+   */
+  @Test
+  @DisplayName(
+      "POST /api/v1/ai/search/execute returns empty, not 500, when actor-service's data is null")
+  void executeSearchReturnsEmptyWhenActorServiceDataIsNull() throws Exception {
+    stubAssistantReply(
+        """
+        {"personName":"Tom Hanks","role":null,"yearFrom":null,"yearTo":null,
+         "collaborators":[],"genre":null,"negated":[],"plainTitle":null}
+        """);
+    stubFor(
+        WireMock.get(urlPathEqualTo("/api/v1/actors/search"))
+            .withQueryParam("query", WireMock.equalTo("Tom Hanks"))
+            .willReturn(
+                okJson(
+                    """
+                {"success":true,"message":"ok","statusCode":200,"data":null}
+                """)));
+
+    String body = objectMapper.writeValueAsString(Map.of("query", "movies with Tom Hanks"));
+    mockMvc
+        .perform(
+            post("/api/v1/ai/search/execute").contentType(MediaType.APPLICATION_JSON).content(body))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.results").isArray())
+        .andExpect(jsonPath("$.results").isEmpty());
+  }
+
+  /**
+   * @param tmdbId the person's TMDB id
+   * @param name the person's name
+   * @return an actor-service {@code ApiResponse<ActorSearchResponse>} body with one matching result
+   */
+  private static String personSearchResponse(long tmdbId, String name) {
+    return """
+        {"success":true,"message":"ok","statusCode":200,
+         "data":{"results":[{"tmdbId":%d,"name":"%s"}]}}
+        """
+        .formatted(tmdbId, name);
+  }
+
+  /**
+   * @param movieId TMDB movie id
+   * @param title movie title
+   * @param releaseDate release date string
+   * @return one cast-credit JSON fragment for {@link #filmographyPageResponse}
+   */
+  private static String movieCredit(long movieId, String title, String releaseDate) {
+    return """
+        {"movieId":%d,"title":"%s","character":"Self","releaseDate":"%s",\
+        "posterPath":"/p.jpg","voteAverage":7.0}"""
+        .formatted(movieId, title, releaseDate);
+  }
+
+  /**
+   * @param credits credit JSON fragments from {@link #movieCredit}
+   * @return an actor-service {@code ApiResponse<FilmographyPageDto>} body wrapping them
+   */
+  private static String filmographyPageResponse(String... credits) {
+    return """
+        {"success":true,"message":"ok","statusCode":200,
+         "data":{"page":1,"totalPages":1,"totalItems":%d,"results":[%s]}}
+        """
+        .formatted(credits.length, String.join(",", credits));
   }
 
   /**
