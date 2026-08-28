@@ -1553,11 +1553,11 @@ class AiServiceIntegrationTest {
   /**
    * Given a nonsense query the model can't read as the target schema at all, when it's executed,
    * then {@link dev.lmdb.ai.service.QueryParsingService#parse} degrades to a plain-title fallback
-   * carrying the raw query text, and {@link
-   * dev.lmdb.ai.service.QueryAggregationService#search} resolves it as a
-   * literal movie-service title search rather than surfacing an error — #206's "nonsense query"
-   * edge case, exercised end to end through {@code /search/execute}, not just {@code /search/query}
-   * (already covered by {@link #parseQueryFallsBackToPlainTitleWhenModelResponseIsUnparseable}).
+   * carrying the raw query text, and {@link dev.lmdb.ai.service.QueryAggregationService#search}
+   * resolves it as a literal movie-service title search rather than surfacing an error — #206's
+   * "nonsense query" edge case, exercised end to end through {@code /search/execute}, not just
+   * {@code /search/query} (already covered by {@link
+   * #parseQueryFallsBackToPlainTitleWhenModelResponseIsUnparseable}).
    *
    * @throws Exception if the MockMvc request fails to execute
    */
@@ -1588,19 +1588,27 @@ class AiServiceIntegrationTest {
         .andExpect(jsonPath("$.results").isArray())
         .andExpect(jsonPath("$.results").isEmpty());
 
-    // Proves the fallback actually reached movie-service with the raw text as a literal title,
-    // rather than short-circuiting to empty without trying — the same "true short-circuit" concern
+    // Proves the fallback actually reached movie-service with the raw text as a literal title —
+    // asserting the query param, not just the path, matters here specifically: MovieCatalogClient
+    // swallows a WireMock unmatched-stub fault into an empty list the same way it swallows a real
+    // error, so "the sanitized gibberish reached movie-service intact" and "some other/garbled
+    // title was sent and the mismatched request was silently swallowed" would otherwise be
+    // observationally identical (200, empty results, one logged request against this path) — an
+    // independent review pass confirmed the path-only version of this assertion doesn't actually
+    // catch that regression. The same "true short-circuit" concern
     // executeSearchDelegatesPlainTitleToMovieServiceSearch already asserts for a real plain title.
-    WireMock.verify(1, getRequestedFor(urlPathEqualTo("/api/v1/movies/search")));
+    WireMock.verify(
+        1,
+        getRequestedFor(urlPathEqualTo("/api/v1/movies/search"))
+            .withQueryParam("query", WireMock.equalTo(gibberish)));
   }
 
   /**
    * Given the model's response is schema-valid JSON but names neither a person nor a plain title
    * (structurally possible per {@link dev.lmdb.ai.dto.StructuredQueryFilterDto}'s shape, called out
    * as an untested degrade path in {@link dev.lmdb.ai.service.QueryAggregationService}'s own class
-   * Javadoc), when
-   * executed, then the result is an empty list with 200, and neither actor-service nor
-   * movie-service is ever called — {@link
+   * Javadoc), when executed, then the result is an empty list with 200, and neither actor-service
+   * nor movie-service is ever called — {@link
    * dev.lmdb.ai.service.QueryAggregationService#executeStructuredFilter}'s "nothing to anchor a
    * lookup on" branch must return before making any downstream request, not merely end up empty
    * after one.
