@@ -10,6 +10,7 @@ import dev.lmdb.movie.model.SpokenLanguage;
 import dev.lmdb.movie.service.MovieService;
 import dev.lmdb.movie.support.TestCacheConfig;
 import dev.lmdb.shared.dto.PageResponse;
+import dev.lmdb.shared.exception.ValidationException;
 import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
@@ -96,7 +97,7 @@ class MovieControllerTest {
   void discoverMovies_ShouldReturnPaginatedMovies() throws Exception {
     // Arrange
     PageResponse<MovieListDto> pageResponse = createTestPageResponse();
-    when(movieService.discoverMovies(1, 20, null, null, null)).thenReturn(pageResponse);
+    when(movieService.discoverMovies(1, 20, null, null, null, null, null)).thenReturn(pageResponse);
 
     // Act & Assert
     mockMvc
@@ -124,7 +125,8 @@ class MovieControllerTest {
     // Arrange
     Long genreId = 28L;
     PageResponse<MovieListDto> pageResponse = createTestPageResponse();
-    when(movieService.discoverMovies(1, 20, genreId, null, null)).thenReturn(pageResponse);
+    when(movieService.discoverMovies(1, 20, genreId, null, null, null, null))
+        .thenReturn(pageResponse);
 
     // Act & Assert
     mockMvc
@@ -151,7 +153,8 @@ class MovieControllerTest {
     Integer year = 2024;
     Double minRating = 7.0;
     PageResponse<MovieListDto> pageResponse = createTestPageResponse();
-    when(movieService.discoverMovies(1, 20, null, year, minRating)).thenReturn(pageResponse);
+    when(movieService.discoverMovies(1, 20, null, year, null, null, minRating))
+        .thenReturn(pageResponse);
 
     // Act & Assert
     mockMvc
@@ -163,6 +166,63 @@ class MovieControllerTest {
                 .param("minRating", minRating.toString())
                 .contentType(MediaType.APPLICATION_JSON))
         .andExpect(status().isOk());
+  }
+
+  /**
+   * The {@code yearFrom}/{@code yearTo} params must bind and reach the service as the year-range
+   * pair, distinct from the exact {@code year} filter — #218's actual HTTP surface.
+   *
+   * @throws Exception if the mock request fails
+   */
+  @Test
+  @DisplayName("GET /api/v1/movies/discover - Should bind and apply a year range")
+  void discoverMovies_WithYearRange_ShouldReturnFilteredMovies() throws Exception {
+    // Arrange
+    PageResponse<MovieListDto> pageResponse = createTestPageResponse();
+    when(movieService.discoverMovies(1, 20, null, null, 2000, 2010, null)).thenReturn(pageResponse);
+
+    // Act & Assert
+    mockMvc
+        .perform(
+            get("/api/v1/movies/discover")
+                .param("page", "1")
+                .param("size", "20")
+                .param("yearFrom", "2000")
+                .param("yearTo", "2010")
+                .contentType(MediaType.APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content", hasSize(2)));
+  }
+
+  /**
+   * Given both {@code year} and a range bound in the same request, when the endpoint is called,
+   * then the {@link dev.lmdb.shared.exception.ValidationException} the service throws is mapped to
+   * 400 with a clear detail message — #218 AC4, verified at the HTTP layer via {@link
+   * MovieController#handleValidation}, not just by unit-testing the service in isolation.
+   *
+   * @throws Exception if the mock request fails
+   */
+  @Test
+  @DisplayName("GET /api/v1/movies/discover - Rejects year combined with a year range with 400")
+  void discoverMovies_WithYearAndRange_ShouldReturn400() throws Exception {
+    // Arrange
+    when(movieService.discoverMovies(1, 20, null, 2024, 2000, null, null))
+        .thenThrow(
+            new ValidationException(
+                "year",
+                "year cannot be combined with yearFrom/yearTo — use one filter or the other"));
+
+    // Act & Assert
+    mockMvc
+        .perform(
+            get("/api/v1/movies/discover")
+                .param("page", "1")
+                .param("size", "20")
+                .param("year", "2024")
+                .param("yearFrom", "2000")
+                .contentType(MediaType.APPLICATION_JSON))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.detail", containsString("yearFrom")));
   }
 
   /**

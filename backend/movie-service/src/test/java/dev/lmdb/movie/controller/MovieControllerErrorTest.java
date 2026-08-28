@@ -145,13 +145,13 @@ class MovieControllerErrorTest {
   @DisplayName("Should throw ServiceUnavailableException when discover fails")
   void discoverMovies_WhenServiceFails_ShouldThrowException() {
     // Arrange
-    when(movieService.discoverMovies(anyInt(), anyInt(), any(), any(), any()))
+    when(movieService.discoverMovies(anyInt(), anyInt(), any(), any(), any(), any(), any()))
         .thenThrow(new ServiceUnavailableException("Discovery service unavailable"));
 
     // Act & Assert
     org.junit.jupiter.api.Assertions.assertThrows(
         ServiceUnavailableException.class,
-        () -> movieService.discoverMovies(1, 20, null, null, null));
+        () -> movieService.discoverMovies(1, 20, null, null, null, null, null));
   }
 
   /**

@@ -24,11 +24,19 @@ public interface TmdbClient {
   /**
    * Discover movies with filters.
    *
+   * <p>{@code yearFrom}/{@code yearTo} (#218, ADR-020) map to TMDB's own {@code
+   * primary_release_date.gte}/{@code primary_release_date.lte} — a genuinely different TMDB filter
+   * from {@code year} (exact match), not an alternate spelling of it. Callers pass either {@code
+   * year} alone or the range alone; {@link dev.lmdb.movie.service.MovieService#discoverMovies}
+   * rejects giving both before a request ever reaches here.
+   *
    * @param apiKey API key
    * @param page Page number
    * @param sortBy Sort by
    * @param genreId Genre ID filter
-   * @param year Release year filter
+   * @param year Release year filter (exact match)
+   * @param yearFrom Release-year range start, inclusive ({@code primary_release_date.gte})
+   * @param yearTo Release-year range end, inclusive ({@code primary_release_date.lte})
    * @param minRating Minimum rating filter
    * @param castId Cast member TMDB person ID filter (TMDB's {@code with_cast})
    * @return List of movies
@@ -40,6 +48,8 @@ public interface TmdbClient {
       @RequestParam(value = "sort_by", defaultValue = "popularity.desc") String sortBy,
       @RequestParam(value = "with_genres", required = false) Long genreId,
       @RequestParam(value = "year", required = false) Integer year,
+      @RequestParam(value = "primary_release_date.gte", required = false) String yearFrom,
+      @RequestParam(value = "primary_release_date.lte", required = false) String yearTo,
       @RequestParam(value = "vote_average.gte", required = false) Double minRating,
       @RequestParam(value = "with_cast", required = false) Long castId);
 
