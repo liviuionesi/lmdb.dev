@@ -22,6 +22,14 @@ import reactor.core.publisher.Mono;
  * Custom WebFilter for JWT authentication in API Gateway. Validates JWT tokens in incoming request
  * headers and populates reactive security context.
  *
+ * <p>This filter is also the sole author of the {@code X-User-*} identity headers downstream
+ * services trust (see {@code dev.lmdb.ai.security.CallerIdentity}). It therefore strips those
+ * headers off every inbound request before doing anything else — including on public paths, where
+ * no token is validated and the request would otherwise be forwarded exactly as the client sent it.
+ * Without that strip, a client could assert any identity simply by setting the header itself, and
+ * every downstream per-user ownership check would be comparing an attacker-chosen value against
+ * itself.
+ *
  * @author LMDB Development Team
  * @version 1.0.0
  */
@@ -29,6 +37,22 @@ import reactor.core.publisher.Mono;
 @Slf4j
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter implements WebFilter {
+
+  /** Header carrying the authenticated caller's user id to downstream services. */
+  private static final String USER_ID_HEADER = "X-User-Id";
+
+  /** Header carrying the authenticated caller's username to downstream services. */
+  private static final String USERNAME_HEADER = "X-Username";
+
+  /** Header carrying the authenticated caller's roles to downstream services. */
+  private static final String USER_ROLES_HEADER = "X-User-Roles";
+
+  /**
+   * Identity headers only this filter may set. Any inbound copy is a forgery attempt and is
+   * discarded before routing.
+   */
+  private static final List<String> IDENTITY_HEADERS =
+      List.of(USER_ID_HEADER, USERNAME_HEADER, USER_ROLES_HEADER);
 
   private final JwtUtil jwtUtil;
 
@@ -42,21 +66,26 @@ public class JwtAuthenticationFilter implements WebFilter {
   @Override
   @Nonnull
   public Mono<Void> filter(@Nonnull ServerWebExchange exchange, @Nonnull WebFilterChain chain) {
-    ServerHttpRequest request = exchange.getRequest();
+    // 1. Discard any client-supplied identity headers first, so every path below — public,
+    //    unauthenticated, and authenticated alike — routes onward with only the identity this
+    //    filter itself established, if any.
+    ServerWebExchange sanitizedExchange = stripClientIdentityHeaders(exchange);
+    ServerHttpRequest request = sanitizedExchange.getRequest();
     String path = request.getURI().getPath();
 
     // Skip JWT validation for public endpoints
     if (isPublicPath(path)) {
-      return chain.filter(exchange);
+      return chain.filter(sanitizedExchange);
     }
 
     // Extract Authorization header
     String authHeader = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
 
-    // If no Authorization header, continue without authentication
+    // If no Authorization header, continue without authentication — but still with the stripped
+    // request, so an unauthenticated caller cannot smuggle an identity header downstream.
     if (authHeader == null || !authHeader.startsWith("Bearer ")) {
       log.debug("No valid Authorization header found for path: {}", path);
-      return chain.filter(exchange);
+      return chain.filter(sanitizedExchange);
     }
 
     try {
@@ -92,9 +121,9 @@ public class JwtAuthenticationFilter implements WebFilter {
       ServerHttpRequest mutatedRequest =
           request
               .mutate()
-              .header("X-User-Id", userId != null ? userId : "")
-              .header("X-Username", username != null ? username : "")
-              .header("X-User-Roles", String.join(",", roles))
+              .header(USER_ID_HEADER, userId != null ? userId : "")
+              .header(USERNAME_HEADER, username != null ? username : "")
+              .header(USER_ROLES_HEADER, String.join(",", roles))
               .build();
 
       log.debug(
@@ -102,7 +131,7 @@ public class JwtAuthenticationFilter implements WebFilter {
 
       // Continue filter chain with mutated request and updated security context
       return chain
-          .filter(exchange.mutate().request(mutatedRequest).build())
+          .filter(sanitizedExchange.mutate().request(mutatedRequest).build())
           .contextWrite(ReactiveSecurityContextHolder.withAuthentication(authentication));
 
     } catch (Exception e) {
@@ -110,6 +139,27 @@ public class JwtAuthenticationFilter implements WebFilter {
       exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
       return exchange.getResponse().setComplete();
     }
+  }
+
+  /**
+   * Removes every {@link #IDENTITY_HEADERS} entry the client may have sent, returning an exchange
+   * whose request carries none of them.
+   *
+   * <p>Applied unconditionally, before the public-path check and before any token is inspected:
+   * these headers are downstream services' proof of who the caller is, so the only copy that may
+   * ever reach a downstream service is one this filter wrote after validating a JWT.
+   *
+   * @param exchange the inbound exchange
+   * @return the same exchange with the identity headers removed from its request
+   */
+  private static ServerWebExchange stripClientIdentityHeaders(ServerWebExchange exchange) {
+    ServerHttpRequest stripped =
+        exchange
+            .getRequest()
+            .mutate()
+            .headers(headers -> IDENTITY_HEADERS.forEach(headers::remove))
+            .build();
+    return exchange.mutate().request(stripped).build();
   }
 
   /**

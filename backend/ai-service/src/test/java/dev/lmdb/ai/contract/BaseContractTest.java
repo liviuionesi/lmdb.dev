@@ -9,6 +9,8 @@ import dev.lmdb.ai.dto.MovieRecommendationDto;
 import dev.lmdb.ai.dto.RecommendationRequestDto;
 import dev.lmdb.ai.dto.RecommendationResponseDto;
 import dev.lmdb.ai.service.ChatAssistantService;
+import dev.lmdb.ai.service.QueryAggregationService;
+import dev.lmdb.ai.service.QueryParsingService;
 import dev.lmdb.ai.service.RecommendationService;
 import dev.lmdb.ai.service.SemanticSearchService;
 import dev.lmdb.ai.service.SpeechToTextService;
@@ -32,6 +34,8 @@ public abstract class BaseContractTest {
     ChatAssistantService chatAssistantService = mock(ChatAssistantService.class);
     SemanticSearchService semanticSearchService = mock(SemanticSearchService.class);
     SpeechToTextService speechToTextService = mock(SpeechToTextService.class);
+    QueryParsingService queryParsingService = mock(QueryParsingService.class);
+    QueryAggregationService queryAggregationService = mock(QueryAggregationService.class);
 
     MovieRecommendationDto recommendation =
         new MovieRecommendationDto(
@@ -47,7 +51,9 @@ public abstract class BaseContractTest {
             recommendationService,
             chatAssistantService,
             semanticSearchService,
-            speechToTextService);
+            speechToTextService,
+            queryParsingService,
+            queryAggregationService);
 
     RestAssuredMockMvc.standaloneSetup(aiController);
   }

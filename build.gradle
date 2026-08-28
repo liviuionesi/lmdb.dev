@@ -445,6 +445,14 @@ tasks.register('autoStopWatchdog', Exec) {
     commandLine './infrastructure/scripts/auto-stop-watchdog.sh'
 }
 
+tasks.register('idleStopGuard', Exec) {
+    group = 'deployment'
+    description = 'Enables/disables/checks the 1-hour cloud idle auto-stop safety net. Usage: ./gradlew idleStopGuard -Paction=disable|enable|status'
+    doFirst {
+        commandLine './infrastructure/scripts/idle-stop-guard.sh', (project.findProperty('action') ?: 'status')
+    }
+}
+
 tasks.register('statusInfra', Exec) {
     group = 'deployment'
     description = 'Checks the health and status of local, tunnel, and cloud infrastructure'
@@ -467,3 +475,8 @@ def cleanStsCacheTask = tasks.register('cleanStsCache', Delete) {
 tasks.named('clean') {
     dependsOn cleanStsCacheTask
 }
+
+// Javadoc documentation hub and browser tasks (modularized in gradle/javadoc.gradle)
+apply from: rootProject.file('gradle/javadoc.gradle')
+
+

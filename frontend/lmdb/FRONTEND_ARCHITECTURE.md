@@ -6,7 +6,7 @@ Comprehensive technical specification for the LMDB web application (`frontend/lm
 
 ## 1. Architectural Overview & Design Philosophy
 
-The LMDB frontend is a single-page application (SPA) built with **React 18.3.1**, **Vite**, **Material-UI v5 (MUI)**, and **Redux Toolkit Query (RTKQ)**. 
+The LMDB frontend is a single-page application (SPA) built with **React 19**, **Vite**, **Material-UI v9 (MUI)**, and **Redux Toolkit Query (RTKQ)**. 
 
 ### Core Design Goals
 1. **TMDB Drop-in Replacement:** The frontend interacts with backend APIs using standard TMDB v3 API signatures (`/movie/{id}`, `/genre/movie/list`, `/discover/movie`, `/search/movie`, `/person/{id}`) as defined in [ADR-003](../../docs/architecture/adr/003-tmdb-raw-passthrough-facade.md) and [ADR-010](../../docs/architecture/adr/010-tmdb-facade-mapped-persisted-schema.md).
@@ -54,7 +54,7 @@ frontend/lmdb/
 
 ## 3. Dynamic Backend URL Auto-Discovery Engine
 
-To support zero-cost ephemeral cloud deployments and local tunneling without modifying production builds, [`src/utils/apiUrl.js`](src/utils/apiUrl.js) implements a 5-stage cascading resolver:
+To support zero-cost ephemeral cloud deployments and local tunneling without modifying production builds, [`src/utils/apiUrl.js`](src/utils/apiUrl.js) resolves the backend URL per request through a 7-tier cascading resolver, each tier gated behind a live `/actuator/health` check except the first two (which are explicit overrides, trusted without probing):
 
 ```mermaid
 flowchart TD
@@ -62,19 +62,26 @@ flowchart TD
     B -- Yes --> C[Use localStorage.lmdb_api_url]
     B -- No --> D{2. Static VITE_API_URL configured?}
     D -- Yes --> E[Use import.meta.env.VITE_API_URL]
-    D -- No --> F{3. Fetch Remote Tunnel URL from GitHub?}
-    F -- Healthy 200 --> G[Use dynamic trycloudflare URL]
-    F -- Error / Timeout --> H{4. Check localhost:8080 health?}
-    H -- Healthy --> I[Use http://localhost:8080]
-    H -- Unreachable --> J[Fallback: https://api.themoviedb.org/3]
+    D -- No --> F{3. Running on localhost AND :8080 healthy?}
+    F -- Yes --> G[Use http://localhost:8080]
+    F -- No --> H{4. api.lmdb.dev healthy?}
+    H -- Yes --> I[Use https://api.lmdb.dev]
+    H -- No --> J{5. lmdb-api.duckdns.org healthy?}
+    J -- Yes --> K[Use DuckDNS URL]
+    J -- No --> L{6. Published tunnel URL healthy?}
+    L -- Yes --> M[Use trycloudflare URL from tunnel-url.txt]
+    L -- No --> N[7. No tier reachable — resolveApiUrl returns null;
+                    synchronous callers fall back to api.lmdb.dev anyway,
+                    so the request fails visibly instead of not firing]
 ```
 
-### Resolution Logic
-1. **`localStorage.getItem('lmdb_api_url')`**: Developer / tester manual override.
-2. **`import.meta.env.VITE_API_URL`**: Static environment variable (e.g., provided during local testing).
-3. **`https://raw.githubusercontent.com/.../develop/infrastructure/tunnel-url.txt`**: Probes the live published Cloudflare tunnel URL updated by `start-tunnel.sh`.
-4. **`http://localhost:8080`**: Local Docker Compose / Minikube default ingress.
-5. **`https://api.themoviedb.org/3`**: Upstream fallback if all microservice backends are offline.
+This is the exact tier order implemented in `apiUrl.js` today — kept in
+one place ([ARCHITECTURE.md §11.6](../../docs/architecture/ARCHITECTURE.md#116-dynamic-backend-resolution-one-frontend-deploy-any-live-backend)
+has the same diagram with the reasoning behind each tier) rather than
+re-described independently in every doc that touches deployment, which is
+how an earlier version of this diagram drifted to a different order than
+the code (it listed the tunnel before localhost, and ended in a
+`themoviedb.org` fallback that was never implemented).
 
 ---
 

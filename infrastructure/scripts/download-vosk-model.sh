@@ -14,6 +14,10 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MODELS_DIR="$SCRIPT_DIR/../docker/models"
 MODEL_NAME="vosk-model-small-en-us-0.15"
 MODEL_URL="https://alphacephei.com/vosk/models/${MODEL_NAME}.zip"
+# Vosk dlopens native code from this directory, so unverified content here runs
+# inside ai-service. Keep in step with VOSK_MODEL_SHA256 in
+# backend/ai-service/Dockerfile, which pins the same archive for the image build.
+MODEL_SHA256="30f26242c4eb449f948e42cb302dd7a686cb29a3423a8367f99ff41780942498"
 
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -26,7 +30,10 @@ fi
 
 echo "Downloading Vosk speech-to-text model (~40MB, small English)..."
 mkdir -p "$MODELS_DIR"
-curl -L -o "/tmp/${MODEL_NAME}.zip" "$MODEL_URL"
+curl -fsSL -o "/tmp/${MODEL_NAME}.zip" "$MODEL_URL"
+
+echo "Verifying checksum..."
+echo "${MODEL_SHA256}  /tmp/${MODEL_NAME}.zip" | sha256sum -c -
 
 echo "Unzipping into $MODELS_DIR..."
 unzip -q "/tmp/${MODEL_NAME}.zip" -d "$MODELS_DIR"

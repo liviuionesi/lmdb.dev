@@ -3,6 +3,7 @@ package dev.lmdb.ai.repository;
 import dev.lmdb.ai.model.Conversation;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 /**
@@ -19,5 +20,6 @@ public interface ConversationRepository extends JpaRepository<Conversation, UUID
    * @param userId the expected owning user
    * @return the conversation if it exists and belongs to {@code userId}
    */
+  @EntityGraph(attributePaths = "messages")
   Optional<Conversation> findByIdAndUserId(UUID id, UUID userId);
 }

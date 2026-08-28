@@ -14,6 +14,8 @@ import dev.lmdb.ai.dto.RecommendationRequestDto;
 import dev.lmdb.ai.dto.RecommendationResponseDto;
 import dev.lmdb.ai.service.ChatAssistantService;
 import dev.lmdb.ai.service.RecommendationService;
+import dev.lmdb.shared.exception.ServiceUnavailableException;
+import dev.lmdb.shared.exception.ValidationException;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
@@ -38,6 +40,7 @@ class AiGrpcServiceTest {
   private ChatAssistantService chatAssistantService;
   private AiGrpcService aiGrpcService;
 
+  /** Initializes mock services and the gRPC service under test before each test case. */
   @BeforeEach
   void setUp() {
     recommendationService = mock(RecommendationService.class);
@@ -196,5 +199,141 @@ class AiGrpcServiceTest {
     assertThat(Status.fromThrowable(errorCaptor.getValue()).getCode())
         .isEqualTo(Status.Code.INVALID_ARGUMENT);
     verify(chatAssistantService, never()).chat(any());
+  }
+
+  // ── Negative-path: blank message ──────────────────────────────────────────────
+
+  /**
+   * Given a valid {@code user_id} but a blank {@code message}, when {@code chatWithAssistant} is
+   * called, then the observer receives an {@code INVALID_ARGUMENT} error and the service is never
+   * invoked — matching the guard added at {@link AiGrpcService} line 118.
+   */
+  @Test
+  @DisplayName("chatWithAssistant rejects a blank message without calling the service")
+  void chatWithAssistantRejectsBlankMessage() {
+    ChatRequest request =
+        ChatRequest.newBuilder().setUserId(UUID.randomUUID().toString()).setMessage("   ").build();
+    @SuppressWarnings("unchecked")
+    StreamObserver<ChatResponse> responseObserver = mock(StreamObserver.class);
+
+    aiGrpcService.chatWithAssistant(request, responseObserver);
+
+    ArgumentCaptor<Throwable> errorCaptor = ArgumentCaptor.forClass(Throwable.class);
+    verify(responseObserver).onError(errorCaptor.capture());
+    verify(responseObserver, never()).onNext(any());
+    assertThat(Status.fromThrowable(errorCaptor.getValue()).getCode())
+        .isEqualTo(Status.Code.INVALID_ARGUMENT);
+    verify(chatAssistantService, never()).chat(any());
+  }
+
+  // ── Negative-path: exception mapping ──────────────────────────────────────────
+
+  /**
+   * Given the recommendation service throws {@link ServiceUnavailableException}, when {@code
+   * getRecommendations} is called, then the observer receives gRPC {@code UNAVAILABLE}.
+   */
+  @Test
+  @DisplayName("getRecommendations maps ServiceUnavailableException to UNAVAILABLE")
+  void getRecommendationsMapsServiceUnavailable() {
+    when(recommendationService.recommend(any()))
+        .thenThrow(new ServiceUnavailableException("ollama", "model not loaded"));
+    RecommendationRequest request =
+        RecommendationRequest.newBuilder()
+            .setUserId(UUID.randomUUID().toString())
+            .addRecentMovies("Inception")
+            .setCount(5)
+            .build();
+    @SuppressWarnings("unchecked")
+    StreamObserver<RecommendationResponse> responseObserver = mock(StreamObserver.class);
+
+    aiGrpcService.getRecommendations(request, responseObserver);
+
+    ArgumentCaptor<Throwable> errorCaptor = ArgumentCaptor.forClass(Throwable.class);
+    verify(responseObserver).onError(errorCaptor.capture());
+    assertThat(Status.fromThrowable(errorCaptor.getValue()).getCode())
+        .isEqualTo(Status.Code.UNAVAILABLE);
+  }
+
+  /**
+   * Given the recommendation service throws {@link ValidationException}, when {@code
+   * getRecommendations} is called, then the observer receives gRPC {@code INVALID_ARGUMENT}.
+   */
+  @Test
+  @DisplayName("getRecommendations maps ValidationException to INVALID_ARGUMENT")
+  void getRecommendationsMapsValidationException() {
+    when(recommendationService.recommend(any()))
+        .thenThrow(new ValidationException("recentMovies", "cannot be empty"));
+    RecommendationRequest request =
+        RecommendationRequest.newBuilder()
+            .setUserId(UUID.randomUUID().toString())
+            .addRecentMovies("Inception")
+            .setCount(5)
+            .build();
+    @SuppressWarnings("unchecked")
+    StreamObserver<RecommendationResponse> responseObserver = mock(StreamObserver.class);
+
+    aiGrpcService.getRecommendations(request, responseObserver);
+
+    ArgumentCaptor<Throwable> errorCaptor = ArgumentCaptor.forClass(Throwable.class);
+    verify(responseObserver).onError(errorCaptor.capture());
+    assertThat(Status.fromThrowable(errorCaptor.getValue()).getCode())
+        .isEqualTo(Status.Code.INVALID_ARGUMENT);
+  }
+
+  /**
+   * Given the recommendation service throws an unexpected {@link RuntimeException}, when {@code
+   * getRecommendations} is called, then the observer receives gRPC {@code INTERNAL} — never {@code
+   * UNKNOWN}, which is what an unmapped exception would produce.
+   */
+  @Test
+  @DisplayName("getRecommendations maps unexpected RuntimeException to INTERNAL")
+  void getRecommendationsMapsUnexpectedExceptionToInternal() {
+    when(recommendationService.recommend(any()))
+        .thenThrow(new RuntimeException("something unexpected"));
+    RecommendationRequest request =
+        RecommendationRequest.newBuilder()
+            .setUserId(UUID.randomUUID().toString())
+            .addRecentMovies("Inception")
+            .setCount(5)
+            .build();
+    @SuppressWarnings("unchecked")
+    StreamObserver<RecommendationResponse> responseObserver = mock(StreamObserver.class);
+
+    aiGrpcService.getRecommendations(request, responseObserver);
+
+    ArgumentCaptor<Throwable> errorCaptor = ArgumentCaptor.forClass(Throwable.class);
+    verify(responseObserver).onError(errorCaptor.capture());
+    assertThat(Status.fromThrowable(errorCaptor.getValue()).getCode())
+        .isEqualTo(Status.Code.INTERNAL);
+  }
+
+  /**
+   * Given a negative {@code count} in the gRPC request, when {@code getRecommendations} is called,
+   * then the request still delegates to the service (because {@code countOrDefault()} clamps
+   * negative values to the default of 10) — no crash, no error.
+   */
+  @Test
+  @DisplayName("getRecommendations handles a negative count via countOrDefault() without crashing")
+  void getRecommendationsHandlesNegativeCount() {
+    when(recommendationService.recommend(any()))
+        .thenReturn(new RecommendationResponseDto(List.of()));
+    RecommendationRequest request =
+        RecommendationRequest.newBuilder()
+            .setUserId(UUID.randomUUID().toString())
+            .addRecentMovies("Inception")
+            .setCount(-5)
+            .build();
+    @SuppressWarnings("unchecked")
+    StreamObserver<RecommendationResponse> responseObserver = mock(StreamObserver.class);
+
+    aiGrpcService.getRecommendations(request, responseObserver);
+
+    verify(responseObserver).onNext(any());
+    verify(responseObserver).onCompleted();
+    verify(responseObserver, never()).onError(any());
+    ArgumentCaptor<RecommendationRequestDto> requestCaptor =
+        ArgumentCaptor.forClass(RecommendationRequestDto.class);
+    verify(recommendationService).recommend(requestCaptor.capture());
+    assertThat(requestCaptor.getValue().countOrDefault()).isEqualTo(10);
   }
 }

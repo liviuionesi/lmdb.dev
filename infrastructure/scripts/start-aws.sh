@@ -58,6 +58,17 @@ echo -e "${GREEN}✅ Node Public IP: ${PUBLIC_IP}${NC}"
 
 if [ -f "$REPO_ROOT/infrastructure/scripts/update-duckdns.sh" ] && [ -n "${DUCKDNS_TOKEN:-}" ]; then
   "$REPO_ROOT/infrastructure/scripts/update-duckdns.sh" "$PUBLIC_IP" || true
+
+  # k3s (and Caddy inside it) restarts automatically as soon as the EC2
+  # instance boots — often before this DuckDNS update above lands. Caddy
+  # requests its TLS cert the moment it starts, so a cold boot can win that
+  # race and leave Caddy holding a failed cert it won't retry for a while.
+  # Force one fresh attempt now that DNS is definitely correct (#175).
+  if command -v ssh >/dev/null 2>&1; then
+    echo -e "${BLUE}🔁 Restarting caddy-tls to retry its TLS cert against current DNS...${NC}"
+    ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=5 -o BatchMode=yes "ec2-user@${PUBLIC_IP}" \
+      "sudo k3s kubectl rollout restart deployment/caddy-tls" >/dev/null 2>&1 || true
+  fi
 fi
 
 echo -e "\n${GREEN}=====================================================${NC}"

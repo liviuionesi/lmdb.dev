@@ -1,6 +1,6 @@
 # 🎬 LMDB.DEV — Product Delivery & Agile Governance Board
 
-This GitHub Project board tracks the end-to-end product delivery lifecycle for **LMDB.DEV** — a full-stack monorepo featuring a **Spring Boot 4.1.0 & Java 25** polyglot microservices backend and an integrated **React frontend application** (`frontend/lmdb` with Vite, Redux Toolkit Query, Material UI, and native AI voice / Speech-to-Text integration powered by `ai-service` and local Ollama).
+This GitHub Project board tracks the end-to-end product delivery lifecycle for **LMDB.DEV** — a full-stack monorepo featuring a **Spring Boot 4.1.1 & Java 25** polyglot microservices backend and an integrated **React frontend application** (`frontend/lmdb` with Vite, Redux Toolkit Query, Material UI, and native AI voice / Speech-to-Text integration powered by `ai-service` and local Ollama).
 
 ---
 
@@ -29,13 +29,13 @@ Work on this board is governed by strict Scrum engineering standards:
 
 ## 🚦 Column Lifecycle
 
-| Column | Description & Criteria |
-| :--- | :--- |
-| **📋 Product Backlog** | Prioritized Epics and Stories mapped from the [Project Roadmap](https://github.com/liviuionesi/lmdb.dev/blob/develop/.github/issues/PROJECT_ROADMAP.md). |
-| **🎯 Sprint Backlog** | Stories pulled into the active Sprint Milestone satisfying the [Definition of Ready](https://github.com/liviuionesi/lmdb.dev/blob/develop/docs/process/DEFINITION_OF_READY.md). |
-| **🏃 In Progress** | Active development tasks currently being worked on (`develop` branch). |
-| **🔍 Quality Gate & Review** | Automated CI validation, SonarQube static analysis, Testcontainers/WireMock execution, and code review. |
-| **✅ Done** | Fully verified increments closed under the [Definition of Done](https://github.com/liviuionesi/lmdb.dev/blob/develop/docs/process/DEFINITION_OF_DONE.md). |
+| Column                      | Description & Criteria                                                                                                                                                          |
+| :-------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **📋 Product Backlog**       | Prioritized Epics and Stories mapped from the [Project Roadmap](https://github.com/liviuionesi/lmdb.dev/blob/develop/.github/issues/PROJECT_ROADMAP.md).                        |
+| **🎯 Sprint Backlog**        | Stories pulled into the active Sprint Milestone satisfying the [Definition of Ready](https://github.com/liviuionesi/lmdb.dev/blob/develop/docs/process/DEFINITION_OF_READY.md). |
+| **🏃 In Progress**           | Active development tasks currently being worked on (`develop` branch).                                                                                                          |
+| **🔍 Quality Gate & Review** | Automated CI validation, SonarQube static analysis, Testcontainers/WireMock execution, and code review.                                                                         |
+| **✅ Done**                  | Fully verified increments closed under the [Definition of Done](https://github.com/liviuionesi/lmdb.dev/blob/develop/docs/process/DEFINITION_OF_DONE.md).                       |
 
 ---
 

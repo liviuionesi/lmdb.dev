@@ -33,6 +33,14 @@ PUBLIC_IP="$(terraform output -raw public_ip)"
 SSH_USER="$(terraform output -raw ssh_user)"
 PORT="$(terraform output -raw demo_inbound_port || echo 30080)"
 
+# Update DuckDNS *before* k3s/Caddy ever boot — Caddy requests its TLS cert
+# the moment it starts, so DNS must already point here or the ACME
+# challenge fails and Caddy won't retry for a while (#175).
+if [ -f "$REPO_ROOT/infrastructure/scripts/update-duckdns.sh" ] && [ -n "${DUCKDNS_TOKEN:-}" ]; then
+  echo -e "\n${BLUE}🦆 Updating DuckDNS domain record (lmdb-api.duckdns.org → ${PUBLIC_IP})...${NC}"
+  "$REPO_ROOT/infrastructure/scripts/update-duckdns.sh" "$PUBLIC_IP" || true
+fi
+
 echo -e "\n${BLUE}🔑 Fetching kubeconfig from k3s node (${SSH_USER}@${PUBLIC_IP})...${NC}"
 TEMP_KUBECONFIG="$(mktemp)"
 MAX_ATTEMPTS=30
@@ -78,11 +86,6 @@ kubectl rollout status statefulset/ollama --timeout=180s
 echo -e "\n${BLUE}🧠 Pulling Ollama models (llama3.2, nomic-embed-text) - this can take a few minutes on first deploy...${NC}"
 kubectl exec statefulset/ollama -- ollama pull llama3.2
 kubectl exec statefulset/ollama -- ollama pull nomic-embed-text
-
-if [ -f "$REPO_ROOT/infrastructure/scripts/update-duckdns.sh" ] && [ -n "${DUCKDNS_TOKEN:-}" ]; then
-  echo -e "\n${BLUE}🦆 Updating DuckDNS domain record (lmdb-api.duckdns.org → ${PUBLIC_IP})...${NC}"
-  "$REPO_ROOT/infrastructure/scripts/update-duckdns.sh" "$PUBLIC_IP" || true
-fi
 
 echo -e "\n${GREEN}=====================================================${NC}"
 echo -e "${GREEN}  🎉 AWS k3s Backend Deployed Successfully!         ${NC}"

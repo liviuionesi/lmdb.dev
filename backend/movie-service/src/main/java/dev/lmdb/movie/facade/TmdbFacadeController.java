@@ -1,6 +1,7 @@
 package dev.lmdb.movie.facade;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import dev.lmdb.movie.client.TmdbClient;
 import dev.lmdb.movie.client.dto.TmdbCreditsResponse;
 import dev.lmdb.movie.client.dto.TmdbGenresResponse;
 import dev.lmdb.movie.client.dto.TmdbMovieListResponse;
@@ -170,8 +171,10 @@ public class TmdbFacadeController {
       @RequestParam(required = false) Integer year,
       @RequestParam(name = "vote_average.gte", required = false) Double minRating,
       @RequestParam(name = "with_cast", required = false) Long castId) {
+    // Facade stays exact-year-only (#218's Scope note) — yearFrom/yearTo aren't accepted here,
+    // so they're always null on this path.
     TmdbMovieListResponse response =
-        movieService.discoverMoviesRaw(page, genreId, year, minRating, castId);
+        movieService.discoverMoviesRaw(page, genreId, year, null, null, minRating, castId);
     eventProducer.publishDocumentSavedEvent(
         "discover" + PAGE_SEPARATOR + page, "DISCOVER", "/discover/movie");
     return ResponseEntity.ok(response);

@@ -463,8 +463,12 @@ services:
       dockerfile: backend/ai-service/Dockerfile
     container_name: lmdb-ai-service
     ports:
+      # gRPC (9084) is deliberately NOT published to the host: it is a
+      # service-to-service surface, nothing on the host consumes it, and
+      # api-gateway's JWT chain never sits in front of it. Reachable only
+      # from inside lmdb-network, and authenticated there by
+      # GrpcAuthInterceptor via AI_SERVICE_GRPC_TOKEN below.
       - "${AI_SERVICE_PORT:-8084}:8084"
-      - "${AI_SERVICE_GRPC_PORT:-9084}:9084"
     networks:
       - lmdb-network
     environment:
@@ -480,6 +484,9 @@ services:
       REDIS_PASSWORD: ${REDIS_PASSWORD}
       OLLAMA_BASE_URL: http://ollama:11434
       MOVIE_SERVICE_BASE_URL: lb://movie-service
+      # Shared token every gRPC caller must present (GrpcAuthInterceptor).
+      # Unset means ai-service rejects every RPC — fail-closed by design.
+      AI_SERVICE_GRPC_TOKEN: ${AI_SERVICE_GRPC_TOKEN}
       # Voice control (#68) — model fetched by scripts/download-vosk-model.sh,
       # not baked into the image; missing model degrades to 503, doesn't
       # block the rest of ai-service from starting (see SpeechToTextService).

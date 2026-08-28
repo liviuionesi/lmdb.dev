@@ -1,48 +1,47 @@
-# LMDB — Live Movies Database (Enterprise Microservices Platform)
+# LMDB — Live Movies Database (Microservices Platform)
 
 [![Backend CI](https://github.com/liviuionesi/lmdb.dev/actions/workflows/backend-ci.yml/badge.svg?branch=main)](https://github.com/liviuionesi/lmdb.dev/actions/workflows/backend-ci.yml)
 [![Frontend CI](https://github.com/liviuionesi/lmdb.dev/actions/workflows/frontend-ci.yml/badge.svg?branch=main)](https://github.com/liviuionesi/lmdb.dev/actions/workflows/frontend-ci.yml)
 [![Docker Publish](https://github.com/liviuionesi/lmdb.dev/actions/workflows/docker-publish.yml/badge.svg?branch=main)](https://github.com/liviuionesi/lmdb.dev/actions/workflows/docker-publish.yml)
 [![Terraform Plan](https://github.com/liviuionesi/lmdb.dev/actions/workflows/terraform-plan.yml/badge.svg?branch=main)](https://github.com/liviuionesi/lmdb.dev/actions/workflows/terraform-plan.yml)
 [![Java 25](https://img.shields.io/badge/Java-25-orange.svg)](https://openjdk.org/projects/jdk/25/)
-[![Spring Boot 4.1.0](https://img.shields.io/badge/Spring%20Boot-4.1.0-brightgreen.svg)](https://spring.io/projects/spring-boot)
+[![Spring Boot 4.1.1](https://img.shields.io/badge/Spring%20Boot-4.1.1-brightgreen.svg)](https://spring.io/projects/spring-boot)
 [![Spring Cloud 2025.1.2](https://img.shields.io/badge/Spring%20Cloud-2025.1.2-blue.svg)](https://spring.io/projects/spring-cloud)
-[![React 18 / Vite](https://img.shields.io/badge/React-18%20%7C%20Vite-61dafb.svg)](https://vitejs.dev/)
-[![Project Analytics](https://img.shields.io/badge/Project%20Metrics-Dynamic%20Report-purple.svg)](docs/reports/PROJECT_METRICS.md)
+[![React 19 / Vite](https://img.shields.io/badge/React-19%20%7C%20Vite-61dafb.svg)](https://vitejs.dev/)
+[![Project Metrics](https://img.shields.io/badge/Project%20Metrics-Dynamic%20Report-purple.svg)](docs/reports/PROJECT_METRICS.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-> **LMDB (Live Movies Database)** is an enterprise-grade, event-driven cinema streaming and AI recommendation platform architected by **[Liviu Ionesi](https://liviuionesi.com)** ([LinkedIn](https://www.linkedin.com/in/liviuionesi/)), where the name stands for *Live Movies Database* as well as *Liviu's Movie Database*. Featuring an AI assistant powered by Spring AI & Ollama (LLaMA 3.2), semantic vector search (pgvector), offline speech-to-text voice control (Vosk), a self-healing TMDB v3 API facade, 7 layers of automated testing, full observability (ELK, Zipkin, Prometheus, Grafana), and automated multi-cloud deployment to Azure AKS and AWS k3s.
+**LMDB** clones the TMDB v3 API in Spring, backed by its own persisted, self-healing catalog instead of a thin proxy — the existing LMDB React app talks to it as a drop-in replacement for `api.themoviedb.org`. It adds a local, $0-cost AI layer on top: a chat assistant and semantic search (Spring AI + Ollama + pgvector) and offline voice control (Vosk) — no paid API calls anywhere. Built by **[Liviu Ionesi](https://liviuionesi.com)** ([LinkedIn](https://www.linkedin.com/in/liviuionesi/)) as a portfolio project, deployable to Azure AKS or AWS k3s on a $0 cloud budget.
 
-🌐 **Live Demo (Frontend):** [lmdb.dev](https://lmdb.dev) *(or [www.lmdb.dev](https://www.lmdb.dev))* • [Vercel Deployment](https://lmdb.dev/)  
-👤 **Architect Portfolio:** [liviuionesi.com](https://liviuionesi.com) • [LinkedIn](https://www.linkedin.com/in/liviuionesi/)  
-📊 **Live Project Analytics & Code Statistics:** [docs/reports/PROJECT_METRICS.md](docs/reports/PROJECT_METRICS.md)
+🌐 **Live Demo:** [lmdb.dev](https://lmdb.dev)
+👤 **Portfolio:** [liviuionesi.com](https://liviuionesi.com) · [LinkedIn](https://www.linkedin.com/in/liviuionesi/)
+📊 **Project Metrics:** [docs/reports/PROJECT_METRICS.md](docs/reports/PROJECT_METRICS.md)
 
 ---
 
 ## Table of Contents
 
-0. [📊 Live Project Analytics & Code Metrics](docs/reports/PROJECT_METRICS.md)
-1. [Executive Overview & Capabilities](#1-executive-overview--capabilities)
-2. [Feature Catalog & Technical Implementation](#2-feature-catalog--technical-implementation)
-3. [SDLC Story: From Idea to Finished Product](#3-sdlc-story-from-idea-to-finished-product)
+1. [Executive Overview](#1-executive-overview)
+2. [Feature Catalog](#2-feature-catalog)
+3. [SDLC: How This Was Built](#3-sdlc-how-this-was-built)
 4. [System Architecture & Data Flows](#4-system-architecture--data-flows)
-5. [Codebase Organization & Repository Topology](#5-codebase-organization--repository-topology)
-6. [The 7-Layer Testing Strategy](#6-the-7-layer-testing-strategy)
-7. [Multi-Cloud Deployment & Infrastructure Topology](#7-multi-cloud-deployment--infrastructure-topology)
-8. [Observability, Logging & Telemetry](#8-observability-logging--telemetry)
-9. [CI/CD Pipelines & Code Management](#9-cicd-pipelines--code-management)
-10. [Local Quick Start Guide](#10-local-quick-start-guide)
-11. [Master Documentation Index](#11-master-documentation-index)
+5. [Codebase Layout](#5-codebase-layout)
+6. [Testing Strategy](#6-testing-strategy)
+7. [Deployment Topologies](#7-deployment-topologies)
+8. [Observability](#8-observability)
+9. [CI/CD](#9-cicd)
+10. [Local Quick Start](#10-local-quick-start)
+11. [Documentation Index](#11-documentation-index)
 12. [Data Attribution & TMDB Compliance](#12-data-attribution--tmdb-compliance)
 
 ---
 
-## 1. Executive Overview & Capabilities
+## 1. Executive Overview
 
-**LMDB (Live Movies Database)** is an end-to-end cloud-native microservices ecosystem that transforms a movie catalog frontend into a full-scale distributed streaming and discovery platform. Rather than acting as a simple proxy to third-party APIs, LMDB operates an independent, self-populating data platform with polyglot persistence, local AI inference, asynchronous event streaming, and multi-cloud orchestration.
+LMDB is an end-to-end cloud-native microservices ecosystem: not a proxy in front of TMDB, but an independent data platform that populates itself from TMDB on first request and serves everything after that from its own storage.
 
 ```
-React 18 / Vite SPA (Vercel)
+React 19 / Vite SPA (Vercel)
          │
          ▼  (HTTPS / Dynamic Auto-Discovery)
 API Gateway (Spring Cloud Gateway :8080) ──► JWT Auth · Redis Rate Limiter · Circuit Breakers
@@ -62,64 +61,37 @@ Redis                                   Ollama (LLaMA 3.2)
 
 ### Key Engineering Highlights
 
-* **Self-Healing Data Ingestion:** TMDB v3 API facade transparently persists external movie/actor records on first request and automatically repairs local schema drift upon subsequent reads ([ADR-010](docs/architecture/adr/010-tmdb-facade-mapped-persisted-schema.md), [ADR-011](docs/architecture/adr/011-self-healing-read-through-on-schema-drift.md)).
-* **Local-First AI ($0 API Cost):** AI chat assistant, semantic vector search, and content-based recommendations powered entirely by Spring AI, Ollama (`llama3.2` and `nomic-embed-text`), and `pgvector` with zero paid API dependencies ([ADR-012](docs/architecture/adr/012-ai-service-postgresql-pgvector.md)).
-* **Offline Voice Control:** Speech-to-text recognition operating entirely within the container via an embedded Vosk C++ native model (`vosk-model-small-en-us-0.15`).
-* **Multi-Cloud Parity ($0 Cost Model):** Ephemeral, reproducible cloud infrastructure codified in Terraform for both Azure AKS and AWS k3s on EC2 with automated teardown and budget guards ([ADR-004](docs/architecture/adr/004-zero-budget-cloud-strategy.md), [ADR-017](docs/architecture/adr/017-full-cloud-service-parity.md)).
-* **Dynamic Backend Resolution:** Single frontend build on Vercel dynamically discovers, health-checks, and binds to active cloud backends via GitHub raw pointer resolution without rebuilds ([ADR-016](docs/architecture/adr/016-dynamic-backend-resolution.md)).
+* **Self-Healing Data Ingestion:** the TMDB facade persists external movie/actor records on first request and repairs local schema drift on later reads ([ADR-010](docs/architecture/adr/010-tmdb-facade-mapped-persisted-schema.md), [ADR-011](docs/architecture/adr/011-self-healing-read-through-on-schema-drift.md)).
+* **Local-First AI ($0 API cost):** chat assistant, semantic search, and recommendations run entirely on Spring AI, Ollama (`llama3.2`, `nomic-embed-text`), and `pgvector` — no paid model API ([ADR-012](docs/architecture/adr/012-ai-service-postgresql-pgvector.md)).
+* **Offline Voice Control:** speech-to-text runs inside the container via an embedded Vosk model, no cloud call.
+* **Multi-Cloud Parity ($0 cost model):** ephemeral Terraform infrastructure for Azure AKS and AWS k3s, with scheduled auto-stop and budget guards ([ADR-004](docs/architecture/adr/004-zero-budget-cloud-strategy.md), [ADR-017](docs/architecture/adr/017-full-cloud-service-parity.md), [ADR-018](docs/architecture/adr/018-cloud-lifecycle-stop-not-destroy.md)).
+* **Dynamic Backend Resolution:** one Vercel frontend build finds, health-checks, and binds to whichever backend is live — no rebuild required ([ADR-016](docs/architecture/adr/016-dynamic-backend-resolution.md)).
 
 ---
 
-## 2. Feature Catalog & Technical Implementation
+## 2. Feature Catalog
 
-| Feature Area | Microservice | Storage / Tech | Implementation Details |
-|---|---|---|---|
-| **Movie Catalog & Browse** | [`movie-service`](backend/movie-service/) | MongoDB 8.0, Redis 7.4 | TMDB facade routes (`/movie/**`, `/genre/**`, `/discover/**`). Maps external payloads into typed documents, caches hot queries in Redis, and persists records locally. |
-| **User Authentication & Profiles** | [`user-service`](backend/user-service/) | PostgreSQL 17, JPA/Hibernate | BCrypt password hashing, signed JWT access/refresh token lifecycle, user profiles, favorite movies, and watchlist management. |
-| **Actor Biographies & Credits** | [`actor-service`](backend/actor-service/) | PostgreSQL 17, JPA/Hibernate | Actor profile retrieval, filmography mapping, and person discovery routes (`/person/**`, `/search/person`). |
-| **AI Assistant & Semantic Search** | [`ai-service`](backend/ai-service/) | PostgreSQL + pgvector, Ollama | Contextual movie chat via LLaMA 3.2, natural language semantic search using vector embeddings (`nomic-embed-text`), and taste-profile recommendations. |
-| **Voice Navigation** | [`ai-service`](backend/ai-service/) | Vosk native library | Speech-to-text audio processing (`POST /api/v1/ai/speech-to-text`). Translates spoken commands into category navigation, searches, and UI actions. |
-| **Media Asset Management** | [`media-service`](backend/media-service/) | MinIO (S3 API), MongoDB 8.0 | Multipart image upload, binary chunking, metadata indexing, and presigned asset streaming. |
-| **Traffic Control & Edge Routing** | [`api-gateway`](backend/api-gateway/) | Spring Cloud Gateway, Redis | Redis token-bucket rate limiting, Resilience4j circuit breakers, JWT validation filter, CORS origin pattern matching, and URL rewrites. |
-| **Web Client Application** | [`frontend/lmdb`](frontend/lmdb/) | React 18, Vite, Redux Toolkit, MUI | Responsive UI, dark/light theme toggle, speech recognition controller, movie trailer modal, and dynamic backend resolver. |
+| Feature Area                       | Microservice                              | Storage / Tech                     | Implementation Details                                                                                                                                             |
+| ---------------------------------- | ----------------------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Movie Catalog & Browse**         | [`movie-service`](backend/movie-service/) | MongoDB 8.0, Redis 7.4             | TMDB facade routes (`/movie/**`, `/genre/**`, `/discover/**`). Maps external payloads into typed documents, caches hot queries in Redis, persists records locally. |
+| **User Authentication & Profiles** | [`user-service`](backend/user-service/)   | PostgreSQL 17, JPA/Hibernate       | BCrypt password hashing, signed JWT access/refresh tokens, profiles, favorites, watchlist.                                                                         |
+| **Actor Biographies & Credits**    | [`actor-service`](backend/actor-service/) | PostgreSQL 17, JPA/Hibernate       | Actor profile retrieval, filmography mapping, person discovery routes (`/person/**`, `/search/person`).                                                            |
+| **AI Assistant & Semantic Search** | [`ai-service`](backend/ai-service/)       | PostgreSQL + pgvector, Ollama      | Contextual movie chat via LLaMA 3.2, semantic search over vector embeddings (`nomic-embed-text`), taste-profile recommendations.                                   |
+| **Voice Navigation**               | [`ai-service`](backend/ai-service/)       | Vosk (offline)                     | Speech-to-text (`POST /api/v1/ai/speech-to-text`) driving category navigation, search, and UI actions.                                                             |
+| **Media Asset Management**         | [`media-service`](backend/media-service/) | MinIO (S3 API), MongoDB 8.0        | Multipart upload, binary chunking, metadata indexing, presigned asset streaming.                                                                                   |
+| **Traffic Control & Edge Routing** | [`api-gateway`](backend/api-gateway/)     | Spring Cloud Gateway, Redis        | Redis token-bucket rate limiting, Resilience4j circuit breakers, JWT validation, CORS, URL rewrites.                                                               |
+| **Web Client Application**         | [`frontend/lmdb`](frontend/lmdb/)         | React 19, Vite, Redux Toolkit, MUI | Responsive UI, dark/light theme, speech recognition, trailer modal, dynamic backend resolver.                                                                      |
 
 ---
 
-## 3. SDLC Story: From Idea to Finished Product
+## 3. SDLC: How This Was Built
 
-LMDB was engineered following a strict **Agile/Scrum** software development lifecycle, prioritizing architectural integrity, rigorous quality gates, and automated validation at every phase.
+LMDB followed a strict Agile/Scrum lifecycle: a formal Product Goal, User Stories with Given/When/Then acceptance criteria, Definition of Ready/Done gates, and a numbered Architecture Decision Record for every significant call. See [`docs/process/`](docs/process/) for the standing definitions (not restated here) and [`docs/architecture/adr/`](docs/architecture/adr/) for all 19 ADRs — the two examples below are the ones that shaped the product most:
 
-```
-┌─────────────────┐     ┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐
-│  1. Inception   │ ──► │  2. Architecture │ ──► │ 3. Quality Gates │ ──► │ 4. Delivery &    │
-│  & Requirements │     │  & Design (ADRs) │     │    & Testing     │     │    Multi-Cloud   │
-└─────────────────┘     └──────────────────┘     └──────────────────┘     └──────────────────┘
- • Product Goal          • 17 Recorded ADRs       • Unit & Integration     • Terraform Infra
- • User Stories          • Microservices & Hex    • Contract Testing       • K8s Kustomize
- • Given/When/Then AC    • Polyglot Storage       • Playwright E2E         • Ephemeral Clusters
- • Definition of Done    • OpenAPI Contracts      • SonarQube & Spotless   • Dynamic Discovery
-```
+* [ADR-010: Facade-Mapped Persisted Schema](docs/architecture/adr/010-tmdb-facade-mapped-persisted-schema.md) — turns the TMDB facade from a proxy into a self-populating catalog.
+* [ADR-016: Dynamic Backend Resolution](docs/architecture/adr/016-dynamic-backend-resolution.md) — lets one frontend build follow whichever cloud backend is currently up.
 
-### Phase 1: Inception & Backlog Grooming
-* **Product Goal Formulation:** Established core requirements for an independent, AI-augmented movie platform ([PRODUCT_GOAL.md](docs/process/PRODUCT_GOAL.md)).
-* **Scrum Methodology:** Backlog organized into formal **Epics → User Stories → Technical Tasks** with strict acceptance criteria formulated in `Given / When / Then` syntax ([METHODOLOGY.md](docs/process/METHODOLOGY.md)).
-* **Quality Contracts:** Enforced strict [Definition of Ready (DoR)](docs/process/DEFINITION_OF_READY.md) and [Definition of Done (DoD)](docs/process/DEFINITION_OF_DONE.md) standards before any story was promoted to `main`.
-
-### Phase 2: Architecture & Decision Records
-Every significant architectural choice, pivot, and rejected alternative was formally recorded as a numbered Architectural Decision Record (ADR):
-* [ADR-001: Microservices Architecture](docs/architecture/adr/001-microservices-architecture.md) — 8 distinct bounded contexts vs. monolith.
-* [ADR-002: Database Per Service](docs/architecture/adr/002-database-per-service.md) — Polyglot persistence (PostgreSQL, MongoDB, Redis, MinIO).
-* [ADR-005: Eureka/Config vs. Native K8s](docs/architecture/adr/005-eureka-config-vs-kubernetes-native.md) — Cloud overlays leverage native K8s DNS and ConfigMaps.
-* [ADR-010: Facade-Mapped Persisted Schema](docs/architecture/adr/010-tmdb-facade-mapped-persisted-schema.md) — Self-populating local catalog.
-* [ADR-012: PostgreSQL + pgvector for AI](docs/architecture/adr/012-ai-service-postgresql-pgvector.md) — Local vector storage for RAG and embeddings.
-* [ADR-016: Dynamic Backend Resolution](docs/architecture/adr/016-dynamic-backend-resolution.md) — Seamless single-SPA cloud binding.
-* [ADR-017: Full Cloud Service Parity](docs/architecture/adr/017-full-cloud-service-parity.md) — Zero-discrepancy cloud deployments.
-*(See [Master Documentation Index](#11-master-documentation-index) for all 17 ADRs).*
-
-### Phase 3: Implementation & Clean Code Standards
-* **Java 25 & Spring Boot 4.1:** Multi-module Gradle build using modern Java features (records, pattern matching, virtual threads).
-* **Shared Library Abstraction:** Common `shared-library` module containing unified `ApiResponse<T>` wrappers, standard exception hierarchies, and distributed tracing interceptors.
-* **Javadoc & Inline Documentation:** 100% documentation contract covering all classes, methods, and test fixtures explaining architectural rationale.
+Full index: [§11 Documentation Index](#11-documentation-index).
 
 ---
 
@@ -134,7 +106,7 @@ Every significant architectural choice, pivot, and rejected alternative was form
        ▼
 [api-gateway :8080]
   ├── Filter: CorrelationId & Micrometer Trace Injection
-  ├── Filter: Redis Token Bucket Rate Limiting (10 req/s, burst 20)
+  ├── Filter: Redis Token Bucket Rate Limiting (varies by route, 5–20 req/s — see docs/security/DDOS_PROTECTION_IMPLEMENTED.md)
   ├── Filter: JWT Security Authentication & Role Check
   └── Route: Forward to http://movie-service:8081
        │
@@ -162,7 +134,7 @@ Every significant architectural choice, pivot, and rejected alternative was form
        ▼
 [ai-service :8084]
   ├── 1. Generate Query Embedding via Ollama ('nomic-embed-text')
-  ├── 2. Perform Cosine Similarity Search in PostgreSQL (pgvector cosine operator `<=>`)
+  ├── 2. Cosine Similarity Search in PostgreSQL (pgvector `<=>` operator)
   ├── 3. Retrieve Top-K Matching Movie Overviews & Metadata
   ├── 4. Construct Augmented Prompt with Movie Context
   └── 5. Stream LLM Response from Ollama ('llama3.2') back to Gateway/Client
@@ -170,190 +142,90 @@ Every significant architectural choice, pivot, and rejected alternative was form
 
 ---
 
-## 5. Codebase Organization & Repository Topology
+## 5. Codebase Layout
 
 ```
 lmdb.dev/
-├── backend/                               # 8 Java 25 / Spring Boot 4 Microservices
-│   ├── shared-library/                    # Common DTOs, security filters, error handlers, tracing
-│   ├── api-gateway/                       # Spring Cloud Gateway WebFlux, Redis rate limiter, CORS
-│   ├── discovery-service/                 # Netflix Eureka server (local dev profile)
-│   ├── config-service/                    # Spring Cloud Config server (centralized config)
-│   ├── movie-service/                     # TMDB facade, catalog persistence, MongoDB, Redis
-│   ├── user-service/                      # User auth, JWT issuance, profile, PostgreSQL
-│   ├── actor-service/                     # Actor biographies & filmographies, PostgreSQL
-│   ├── ai-service/                        # Spring AI, pgvector embeddings, Ollama, Vosk STT
-│   └── media-service/                     # Media asset management, MinIO S3 object storage
-│
-├── frontend/                              # Frontend Web Application
-│   └── lmdb/                          # React 18, Vite, Redux Toolkit Query, MUI v5
-│
-├── infrastructure/                        # Multi-Cloud & Local Infrastructure as Code
-│   ├── docker/                            # Docker Compose full-stack topology (15 containers)
-│   ├── kubernetes/                        # K8s Manifests (Kustomize)
-│   │   ├── base/                          # Base deployments, services, statefulsets
-│   │   ├── overlays/                      # Environment overlays: local, azure, aws
-│   │   └── monitoring/                    # Prometheus, Grafana, ServiceMonitors
-│   ├── terraform/                         # Infrastructure as Code
-│   │   ├── azure/                         # Azure AKS, VNet, Subnets, NSGs, Budget Tripwires
-│   │   ├── aws/                           # AWS EC2 k3s cluster, VPC, Security Groups
-│   │   └── modules/                       # Reusable cloud modules (network, compute, budget)
-│   └── scripts/                           # Automation scripts (deploy, destroy, status, tunnel)
-│
-├── e2e/                                   # Playwright browser acceptance test suite
-├── docs/                                  # Comprehensive technical documentation
-│   ├── architecture/                      # Full ARCHITECTURE.md spec + 17 ADRs
-│   ├── process/                           # Scrum framework, DoR, DoD, NFRs, Product Goals
-│   ├── guides/                            # Deployment runbooks, local quick starts
-│   └── security/                          # DDoS protection & security architecture
-│
-├── .github/                               # CI/CD Workflows & Issue Templates
-│   ├── workflows/                         # GitHub Actions pipelines (CI, CD, Docker, Terraform)
-│   └── ISSUE_TEMPLATE/                    # Agile issue templates (Epic, Story, Task, Bug)
-└── build.gradle                           # Root multi-project Gradle build configuration
+├── backend/          # 8 Java 25 / Spring Boot 4 microservices (shared-library, api-gateway,
+│                      # discovery-service, config-service, movie/user/actor/ai/media-service)
+├── frontend/lmdb/     # React 19, Vite, Redux Toolkit Query, MUI
+├── infrastructure/    # Docker Compose, Kubernetes (Kustomize), Terraform (Azure/AWS), scripts
+├── e2e/               # Playwright browser acceptance suite
+├── docs/              # architecture/ (spec + 19 ADRs), process/ (Scrum), guides/, security/
+└── .github/           # CI/CD workflows, issue templates
 ```
+
+Full annotated tree, one directory level deeper: [ARCHITECTURE.md Appendix A](docs/architecture/ARCHITECTURE.md#appendix-a-project-structure) — kept there, not duplicated here, so there's one tree to update instead of two.
 
 ---
 
-## 6. The 7-Layer Testing Strategy
+## 6. Testing Strategy
 
-LMDB implements a comprehensive testing pyramid encompassing 7 distinct testing disciplines, ensuring zero regressions across backend services, distributed data flows, contract boundaries, and frontend user journeys.
-
-```
-                  ┌──────────────────────┐
-                  │ 7. Load / Stress     │  Gatling (HTTP latency & circuit breaker trip)
-                  ├──────────────────────┤
-                  │ 6. API Regression    │  Postman / Newman Collections
-                  ├──────────────────────┤
-                  │ 5. Browser E2E       │  Playwright (Multi-browser user journeys)
-                  ├──────────────────────┤
-                  │ 4. Frontend UI/State │  Vitest 4, React Testing Library (180+ tests)
-                  ├──────────────────────┤
-                  │ 3. Contract Tests    │  Spring Cloud Contract (Consumer-Driven Contracts)
-                  ├──────────────────────┤
-                  │ 2. Integration Tests │  Testcontainers (Real Postgres, MongoDB, Redis)
-                  ├──────────────────────┤
-                  │ 1. Unit Tests        │  JUnit 5, Mockito, AssertJ (Isolated business logic)
-                  └──────────────────────┘
-```
-
-### Test Suite Execution Commands
+Seven distinct test types run across this codebase, backend unit/integration tests plus five cross-cutting layers. The authoritative table — exact tool, scope, and file location for each — lives in [ARCHITECTURE.md §10.1](docs/architecture/ARCHITECTURE.md#101-testing-pyramid); the commands below are the ones you'll actually run day to day.
 
 ```bash
-# Level 1 & 2: Unit and Testcontainers Integration Tests (all backend modules)
+# Unit + Testcontainers integration tests (all backend modules)
 ./gradlew test
 
-# Run tests for a specific microservice
+# Single service
 ./gradlew :backend:movie-service:test
-./gradlew :backend:ai-service:test
 
-# Level 3: Consumer-Driven Contract Verification
-./gradlew :backend:api-gateway:contractTest
+# Consumer-driven contract verification (movie, user, actor, ai-service — not api-gateway)
+./gradlew :backend:movie-service:contractTest
 
-# Level 4: Frontend Component & State Tests (Vitest)
+# Frontend component & state tests (Vitest)
 cd frontend/lmdb && npm test
-
-# Frontend test coverage report
 cd frontend/lmdb && npm run test:coverage
 
-# Level 5: Playwright Browser End-to-End Tests
+# Browser E2E (Playwright)
 cd e2e && npx playwright test
 
-# Level 6: Automated Postman/Newman API Smoke Test (requires running stack)
-newman run docs/api/LMDB_API.postman_collection.json -e docs/api/local_environment.json
+# API smoke test against a running stack (Postman/Newman)
+newman run docs/api/LMDB-API.postman_collection.json
 
-# Level 7: Gatling Performance & Load Simulation
-./gradlew :backend:api-gateway:gatlingRun
+# Performance/load simulation (Gatling — lives in movie-service, not api-gateway)
+./gradlew :backend:movie-service:gatlingRun
 ```
 
 ---
 
-## 7. Multi-Cloud Deployment & Infrastructure Topology
+## 7. Deployment Topologies
 
-LMDB supports four fully-codified deployment topologies with 100% feature and service parity:
+Four Terraform/Compose-codified targets, one Gradle task each:
 
-```
-┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│                                                 DEPLOYMENT TOPOLOGIES                                                  │
-├────────────────────────────┬────────────────────────────┬─────────────────────────────┬────────────────────────────────┤
-│ 1. Local Dev Stack         │ 2. Local Stack + Tunnel    │ 3. Azure AKS (Terraform)    │ 4. AWS k3s (Terraform)         │
-├────────────────────────────┼────────────────────────────┼─────────────────────────────┼────────────────────────────────┤
-│ • Full 15-container stack  │ • Local stack / Minikube   │ • Managed AKS Cluster       │ • Lightweight k3s on EC2       │
-│ • Docker / Podman Compose  │ • Cloudflare HTTPS Tunnel  │ • Standard_D4ls_v7 node     │ • t3.xlarge instance           │
-│ • Minikube local overlay   │ • Powers deployed Vercel FE│ • Native K8s DNS & Config   │ • Native K8s DNS & Config      │
-│ • Eureka + Config Server   │ • Auto-published pointer   │ • Budget tripwire guard ($1)│ • Zero-spend teardown          │
-│ • Command:                 │ • Command:                 │ • Command:                  │ • Command:                     │
-│   ./gradlew deployLocal    │   ./gradlew startTunnel    │   ./gradlew deployAzure     │   ./gradlew deployAws          │
-└────────────────────────────┴────────────────────────────┴─────────────────────────────┴────────────────────────────────┘
-```
+| Topology                 | What it is                                                                             | Command                 |
+| ------------------------ | -------------------------------------------------------------------------------------- | ----------------------- |
+| **Local Dev Stack**      | Full container stack via Docker/Podman Compose or the local K8s overlay                | `./gradlew deployLocal` |
+| **Local Stack + Tunnel** | Local/Minikube backend exposed to the deployed Vercel frontend via a Cloudflare tunnel | `./gradlew startTunnel` |
+| **Azure AKS**            | Managed AKS cluster, Terraform-provisioned                                             | `./gradlew deployAzure` |
+| **AWS k3s**              | Lightweight k3s on a single EC2 instance, Terraform-provisioned                        | `./gradlew deployAws`   |
 
-### Topology Breakdown
-
-1. **Local Development (Compose & Minikube):**
-   * Runs the complete 15-container stack locally via Docker Compose, Podman Compose, or the local Kubernetes overlay ([`infrastructure/kubernetes/overlays/local`](infrastructure/kubernetes/overlays/local)).
-   * Includes internal infrastructure helpers: Eureka (`discovery-service`), Config Server, Kafka, Zipkin, MinIO, and database UIs (Adminer, Mongo-Express, Redis-Commander).
-   * Used for daily offline development against `localhost:5173` / `localhost:3000`.
-
-2. **Local Machine / Minikube + Live Cloudflare Tunnel (Powers Vercel FE):**
-   * Allows the public **Vercel frontend** (`https://lmdb.dev`) to communicate directly with your local developer machine or Minikube cluster with $0 cloud spend.
-   * `start-tunnel.sh` launches a secure, encrypted Cloudflare quick tunnel (`https://*.trycloudflare.com`) pointing to your local Gateway (`:8080`), automatically captures the generated HTTPS hostname, commits and pushes it to [`infrastructure/tunnel-url.txt`](infrastructure/tunnel-url.txt) on GitHub `develop`.
-   * The Vercel frontend automatically discovers the updated tunnel pointer via GitHub raw URL within seconds without requiring frontend rebuilds or manual environment variable updates.
-
-3. **Azure AKS Managed Kubernetes:**
-   * Automated provisioning via Terraform ([`infrastructure/terraform/azure`](infrastructure/terraform/azure)) on a single `Standard_D4ls_v7` node with Azure CNI and NSG NodePort `30080`.
-   * Deployed via Kustomize overlay ([`infrastructure/kubernetes/overlays/azure`](infrastructure/kubernetes/overlays/azure)). Protected by a strict $1 budget guard tripwire.
-
-4. **AWS k3s on EC2:**
-   * Automated provisioning via Terraform ([`infrastructure/terraform/aws`](infrastructure/terraform/aws)) standing up a lightweight k3s cluster on a `t3.xlarge` EC2 instance.
-   * Deployed via Kustomize overlay ([`infrastructure/kubernetes/overlays/aws`](infrastructure/kubernetes/overlays/aws)).
-
-### One-Command Deployment Automation
-
-All infrastructure actions are wrapped into unified Gradle tasks and shell automation:
+Notes:
+- The tunnel scenario auto-publishes its HTTPS hostname to [`infrastructure/tunnel-url.txt`](infrastructure/tunnel-url.txt) on `develop`; the deployed frontend picks it up within seconds via GitHub raw, no rebuild.
+- Azure runs on a single `Standard_D4ls_v7` node behind a $1 budget tripwire; AWS runs k3s on a single `m7i-flex.large` instance (resized up from `t3.small` — Ollama alone needs up to 4Gi, and `t3.xlarge` was rejected outright as ineligible for the free tier — see [ARCHITECTURE.md §11.2](docs/architecture/ARCHITECTURE.md)).
+- Full runbook, including troubleshooting and the CI-driven deploy path: [docs/guides/DEPLOYMENT_GUIDE.md](docs/guides/DEPLOYMENT_GUIDE.md).
 
 ```bash
-# 1. Local Compose / Minikube development
-./gradlew deployLocal
-
-# 2. Expose local backend to the deployed Vercel frontend via Cloudflare Tunnel
-./gradlew startTunnel
-# ...or start local stack and tunnel together:
-./gradlew deployLocal --args='--tunnel'
-
-# Stop the active Cloudflare tunnel
+./gradlew deployLocal          # 1. Local Compose / Minikube
+./gradlew startTunnel          # 2. Expose local backend to the deployed frontend
 ./gradlew stopTunnel
-
-# 3. Check status of local containers, active tunnel, or cloud cluster
-./gradlew statusInfra
-
-# 4. Deploy full production stack to Azure AKS via Terraform
-./gradlew deployAzure
-
-# 5. Deploy full production stack to AWS EC2 k3s via Terraform
-./gradlew deployAws
-
-# 6. Teardown cloud environments immediately to guarantee $0 spend
-./gradlew destroyAzure
+./gradlew statusInfra          # 3. Check status of local / tunnel / cloud
+./gradlew deployAzure          # 4. Azure AKS
+./gradlew deployAws            # 5. AWS k3s
+./gradlew destroyAzure         # 6. Teardown — guarantees $0 spend
 ./gradlew destroyAws
 ```
 
-### Dynamic Runtime Frontend-to-Backend Binding
-The frontend on Vercel resolves its active backend dynamically at request time ([`apiUrl.js`](frontend/lmdb/src/utils/apiUrl.js)):
-1. Checks for a manual override in `localStorage` (`lmdb_api_url`).
-2. Checks for a build-time `VITE_API_URL`.
-3. Resolves the live Cloudflare HTTPS tunnel pointer from GitHub ([`infrastructure/tunnel-url.txt`](infrastructure/tunnel-url.txt)).
-4. Verifies candidate reachability via `/actuator/health`.
-5. Automatically routes all RTK Query requests to the reachable backend with zero manual Vercel dashboard steps.
+### Dynamic Frontend-to-Backend Binding
+The Vercel frontend resolves its live backend at request time — manual override, then localhost, then cloud, then the published tunnel, each health-checked before use. Exact resolution order and code reference: [FRONTEND_ARCHITECTURE.md §3](frontend/lmdb/FRONTEND_ARCHITECTURE.md#3-dynamic-backend-url-auto-discovery-engine).
 
 ---
 
-## 8. Observability, Logging & Telemetry
-
-LMDB incorporates a complete observability stack spanning structured logging, distributed tracing, and real-time metric visualization.
+## 8. Observability
 
 ```
                                   TELEMETRY PIPELINE
-                                  
+
  [Microservices] ──JSON stdout──► [Filebeat] ──► [Logstash] ──► [Elasticsearch] ──► [Kibana :5601]
        │                                                                               (Log Analysis)
        ├──Micrometer B3 Tracing──► [OpenZipkin :9411]
@@ -362,125 +234,88 @@ LMDB incorporates a complete observability stack spanning structured logging, di
                                                                                 (Health Dashboards)
 ```
 
-* **Structured Logging:** Standardized JSON log output via Logback and `LogstashEncoder` including timestamps, log levels, service names, thread identifiers, and active correlation IDs.
-* **Distributed Tracing:** Micrometer Tracing with OpenZipkin propagators injecting `traceId` and `spanId` headers across HTTP calls and Kafka events for end-to-end request latency profiling.
-* **Metrics & Dashboards:** Spring Boot Actuator endpoints scraped by Prometheus every 15 seconds, rendering real-time JVM memory, CPU utilization, HTTP latency percentiles, and Resilience4j circuit breaker state in pre-built Grafana dashboards.
+* **Structured Logging:** JSON via Logback + `LogstashEncoder` — timestamps, log levels, service names, correlation IDs.
+* **Distributed Tracing:** Micrometer Tracing with OpenZipkin propagators across HTTP calls and Kafka events.
+* **Metrics & Dashboards:** Actuator endpoints scraped by Prometheus every 15s; pre-built Grafana dashboards for JVM, HTTP latency, and circuit breaker state.
 
 ---
 
-## 9. CI/CD Pipelines & Code Management
+## 9. CI/CD
 
-### Automated GitHub Actions Workflows
+| Pipeline                                                     | Trigger                                  | Responsibilities                                                                                      |
+| ------------------------------------------------------------ | ---------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| [`backend-ci.yml`](.github/workflows/backend-ci.yml)         | Push/PR to `main`, `develop`             | Compiles Java 25 modules, Spotless/Checkstyle, JUnit & Testcontainers suites, SonarQube Quality Gate. |
+| [`frontend-ci.yml`](.github/workflows/frontend-ci.yml)       | Push/PR to `main`, `develop`             | ESLint, Prettier, Vitest suite with coverage.                                                         |
+| [`docker-publish.yml`](.github/workflows/docker-publish.yml) | Chained to green Backend CI on `main`    | Builds container images for all 8 microservices, publishes to `ghcr.io/liviuionesi/lmdb-*`.           |
+| [`terraform-plan.yml`](.github/workflows/terraform-plan.yml) | Changes to `infrastructure/terraform/**` | Validates HCL, `terraform fmt`, speculative plans for Azure and AWS.                                  |
 
-| Pipeline | Trigger | Responsibilities |
-|---|---|---|
-| [`backend-ci.yml`](.github/workflows/backend-ci.yml) | Push/PR to `main`, `develop` | Compiles Java 25 modules, executes Spotless/Checkstyle, runs JUnit & Testcontainers suites, verifies SonarQube Quality Gate. |
-| [`frontend-ci.yml`](.github/workflows/frontend-ci.yml) | Push/PR to `main`, `develop` | Runs ESLint, Prettier, and Vitest component suite with code coverage validation. |
-| [`docker-publish.yml`](.github/workflows/docker-publish.yml) | Chained to green Backend CI on `main` | Builds multi-stage container images for all 8 microservices and publishes to GitHub Container Registry (`ghcr.io/liviuionesi/lmdb-*`). |
-| [`terraform-plan.yml`](.github/workflows/terraform-plan.yml) | Changes to `infrastructure/terraform/**` | Validates HCL syntax, runs `terraform fmt`, and generates speculative execution plans for Azure and AWS. |
-
-### Code Quality & Maintenance Tooling
-
-* **Automated Code Modernization (OpenRewrite):** Automated recipes for Spring Boot upgrades and clean code patterns:
-  ```bash
-  ./gradlew rewriteRun
-  ```
-* **Git Commit Enforcement:** A pre-commit hook (`.githooks/pre-commit`) blocks broken builds, while a commit-msg hook (`.githooks/commit-msg`) enforces semantic commit formats linking active GitHub issues (`feat: Add AI recommendation (#36)`).
-* **Architecture Knowledge Graph (Graphify):** Generates and maintains a full AST knowledge graph in `graphify-out/` mapping cross-service dependencies and coupling.
+* **Automated modernization (OpenRewrite):** `./gradlew rewriteRun`
+* **Git hooks:** pre-commit blocks broken builds; commit-msg enforces `feat: ... (#NN)`-style messages linking a real issue.
+* **Knowledge graph (Graphify):** AST graph of cross-service dependencies in `graphify-out/`.
 
 ---
 
-## 10. Local Quick Start Guide
+## 10. Local Quick Start
 
-### Prerequisites
-* Java 25 JDK (Temurin recommended)
-* Node.js 20+ and npm
-* Docker 24+ or Podman 5+ with Compose support
-
-### Step-by-Step Launch
+**Prerequisites:** Java 25 JDK, Node.js 20+, Docker 24+ or Podman 5+ with Compose.
 
 ```bash
-# 1. Clone the repository
+# 1. Clone
 git clone https://github.com/liviuionesi/lmdb.dev.git
 cd lmdb.dev
 
-# 2. Configure environment variables
+# 2. Configure environment
 cp infrastructure/docker/.env.example infrastructure/docker/.env
-# (Optional: Add your free TMDB_API_KEY from themoviedb.org/settings/api)
+# (Optional: add your own free TMDB_API_KEY from themoviedb.org/settings/api)
 
-# 3. Launch the complete local microservices infrastructure
+# 3. Launch the local microservices stack
 ./gradlew deployLocal
 
-# 4. Pull Ollama AI models for chat and embeddings (one-time setup)
+# 4. Pull Ollama models (one-time)
 docker exec -it lmdb-ollama ollama pull llama3.2
 docker exec -it lmdb-ollama ollama pull nomic-embed-text
 
-# 5. Start the React/Vite development server
+# 5. Start the frontend dev server
 cd frontend/lmdb
 npm install
 npm run dev
 ```
 
-Visit **`http://localhost:5173`** (or `http://localhost:3000`) in your browser to interact with the application.
+Visit **`http://localhost:5173`** (or `http://localhost:3000`).
 
 ---
 
-## 11. Master Documentation Index
+## 11. Documentation Index
 
 ### Architecture & Technical Guides
-* [Dynamic Project Metrics & Analytics Report (docs/reports/PROJECT_METRICS.md)](docs/reports/PROJECT_METRICS.md) — Live self-actualizing repository metrics & code statistics
-* [System Architecture Specification (ARCHITECTURE.md)](docs/architecture/ARCHITECTURE.md) — Comprehensive 2,700+ line technical architecture
-* [Port Allocation Matrix](docs/architecture/PORT_MAPPING.md) — Local and container port assignments
-* [Event-Driven Architecture & Kafka Bus](docs/architecture/EVENT_DRIVEN_ARCHITECTURE.md) — Asynchronous event topics and schemas
-* [Code Quality & SonarQube Standards](docs/architecture/CODE_QUALITY.md) — Static analysis profiles and rules
-* [Integration Testing Strategy](docs/architecture/INTEGRATION_TESTING.md) — Multi-layer test harness
-* [Junior Developer Deep Dive Guide](docs/architecture/JUNIOR_DEVELOPER_GUIDE.md) — System walkthrough and concept guide
-* [Docker Compose Infrastructure Setup](docs/architecture/DOCKER_INFRASTRUCTURE_SETUP.md) — Local 15-container environment
-* [Gradle Multi-Module Build Architecture](docs/architecture/GRADLE_BUILD_SETUP.md) — Centralized dependency matrix
-
-### Architecture Decision Records (ADRs)
-* [ADR-001: Microservices Architecture Pattern](docs/architecture/adr/001-microservices-architecture.md)
-* [ADR-002: Database-per-Service Pattern](docs/architecture/adr/002-database-per-service.md)
-* [ADR-003: TMDB Raw Passthrough Facade](docs/architecture/adr/003-tmdb-raw-passthrough-facade.md)
-* [ADR-004: Zero-Budget Cloud Strategy](docs/architecture/adr/004-zero-budget-cloud-strategy.md)
-* [ADR-005: Eureka/Config vs. Native Kubernetes](docs/architecture/adr/005-eureka-config-vs-kubernetes-native.md)
-* [ADR-006: Apache Kafka Event Bus](docs/architecture/adr/006-kafka-event-bus.md)
-* [ADR-007: Distributed Tracing with OpenZipkin](docs/architecture/adr/007-distributed-tracing-zipkin.md)
-* [ADR-008: Consumer-Driven Contract Testing](docs/architecture/adr/008-contract-testing.md)
-* [ADR-009: OpenRewrite Spring Boot Modernization](docs/architecture/adr/009-openrewrite-spring-boot-4-migration.md)
-* [ADR-010: Facade-Mapped Persisted Catalog Schema](docs/architecture/adr/010-tmdb-facade-mapped-persisted-schema.md)
-* [ADR-011: Self-Healing Read-Through on Schema Drift](docs/architecture/adr/011-self-healing-read-through-on-schema-drift.md)
-* [ADR-012: AI Service with PostgreSQL & pgvector](docs/architecture/adr/012-ai-service-postgresql-pgvector.md)
-* [ADR-013: Frontend Monorepo Integration](docs/architecture/adr/013-frontend-merged-into-monorepo.md)
-* [ADR-014: Media Service with S3 and MongoDB](docs/architecture/adr/014-media-service-s3-mongo-storage.md)
-* [ADR-015: Operator-Controlled Local Deploy Triggers](docs/architecture/adr/015-local-only-deploy-trigger.md)
-* [ADR-016: Dynamic Runtime Backend Resolution](docs/architecture/adr/016-dynamic-backend-resolution.md)
-* [ADR-017: Full Service Cloud Parity](docs/architecture/adr/017-full-cloud-service-parity.md)
+* [System Architecture Specification](docs/architecture/ARCHITECTURE.md) — the full spec; source of truth for tech stack, ADR list, testing pyramid, and directory layout
+* [Port Allocation Matrix](docs/architecture/PORT_MAPPING.md)
+* [Event-Driven Architecture & Kafka Bus](docs/architecture/EVENT_DRIVEN_ARCHITECTURE.md)
+* [Code Quality & SonarQube Standards](docs/architecture/CODE_QUALITY.md)
+* [Integration Testing Strategy](docs/architecture/INTEGRATION_TESTING.md)
+* [Junior Developer Deep Dive Guide](docs/architecture/JUNIOR_DEVELOPER_GUIDE.md)
+* [Docker Compose Infrastructure Setup](docs/architecture/DOCKER_INFRASTRUCTURE_SETUP.md)
+* [Gradle Multi-Module Build Architecture](docs/architecture/GRADLE_BUILD_SETUP.md)
+* [Frontend Architecture](frontend/lmdb/FRONTEND_ARCHITECTURE.md) — component hierarchy, Redux/RTK Query, dynamic backend resolution
 
 ### Scrum Process & SDLC
-* [Product Goal & Strategic Vision](docs/process/PRODUCT_GOAL.md)
-* [Agile Methodology & Scrum Process](docs/process/METHODOLOGY.md)
-* [Definition of Ready (DoR)](docs/process/DEFINITION_OF_READY.md)
-* [Definition of Done (DoD)](docs/process/DEFINITION_OF_DONE.md)
-* [Non-Functional Requirements (NFRs)](docs/process/NON_FUNCTIONAL_REQUIREMENTS.md)
-* [Scrum Events & Ceremony Protocol](docs/process/SCRUM_EVENTS.md)
+* [Product Goal](docs/process/PRODUCT_GOAL.md) · [Methodology](docs/process/METHODOLOGY.md) · [Definition of Ready](docs/process/DEFINITION_OF_READY.md) · [Definition of Done](docs/process/DEFINITION_OF_DONE.md) · [Non-Functional Requirements](docs/process/NON_FUNCTIONAL_REQUIREMENTS.md) · [Scrum Events](docs/process/SCRUM_EVENTS.md)
 
 ### Deployment, Operations & Infrastructure
-* [Multi-Cloud Deployment Runbook](docs/guides/DEPLOYMENT_GUIDE.md) — Local, Azure AKS, AWS k3s, and Vercel setup
-* [GitOps & CI/CD Cloud Automation](docs/guides/GITOPS_AND_CI_CD.md) — GitHub Actions pipelines, secrets, and zero-budget alerts
-* [Frontend Integration & Execution Guide](docs/guides/RUN_WITH_LMDB_APP.md) — Frontend runtime configuration
-* [Terraform Multi-Cloud Infrastructure](infrastructure/terraform/README.md) — Azure AKS and AWS EC2 Terraform modules
-* [Docker Compose Testing Runbook](infrastructure/docker/TESTING_GUIDE.md) — Local Compose verification workflows
-* [Kubernetes Prometheus ServiceMonitors](infrastructure/kubernetes/monitoring/service-monitors/README.md) — Monitoring scrape configs
+* [Multi-Cloud Deployment Runbook](docs/guides/DEPLOYMENT_GUIDE.md)
+* [GitOps & CI/CD Cloud Automation](docs/guides/GITOPS_AND_CI_CD.md)
+* [Running the Frontend Against This Backend](docs/guides/RUN_WITH_LMDB_APP.md)
+* [Terraform Multi-Cloud Infrastructure](infrastructure/terraform/README.md)
+* [Docker Compose Testing Runbook](infrastructure/docker/TESTING_GUIDE.md)
+* [Kubernetes Prometheus ServiceMonitors](infrastructure/kubernetes/monitoring/service-monitors/README.md)
 
-### Security Architecture & Threat Mitigation
-* [DDoS Mitigation & Rate Limiting Architecture](docs/security/DDOS_PROTECTION_IMPLEMENTED.md) — Redis rate limiter implementation
-* [Security Enhancements & Threat Model](docs/security/DDOS_PROTECTION_IMPROVEMENTS.md) — Defense-in-depth architecture
-* [Config Service Security Specification](backend/config-service/SECURITY.md) — Encryption and credential management
+### Security Architecture
+* [DDoS Mitigation & Rate Limiting](docs/security/DDOS_PROTECTION_IMPLEMENTED.md) — what's actually implemented; per-route rate limit table
+* [Config Service Security Specification](backend/config-service/SECURITY.md)
 
-### Microservice Subsystems & Module Documentation
-* [API Gateway Service](backend/api-gateway/README.md) · [Gateway Route Catalog](backend/api-gateway/ROUTES.md)
-* [Movie Catalog Service](backend/movie-service/README.md) · [Test Execution Results](backend/movie-service/TEST_EXECUTION_RESULTS.md) · [Test Summary](backend/movie-service/TEST_SUMMARY.md)
+### Microservice Subsystems
+* [API Gateway](backend/api-gateway/README.md) · [Route Catalog](backend/api-gateway/ROUTES.md)
+* [Movie Catalog Service](backend/movie-service/README.md)
 * [User & Authentication Service](backend/user-service/README.md)
 * [Actor & Cast Service](backend/actor-service/README.md)
 * [AI Assistant & Vector Service](backend/ai-service/README.md)
@@ -491,43 +326,25 @@ Visit **`http://localhost:5173`** (or `http://localhost:3000`) in your browser t
 * [Frontend Application](frontend/lmdb/README.md)
 * [End-to-End Playwright Suite](e2e/README.md)
 
-### Project Roadmap & Sprint Backlogs
-* [Project Roadmap & Narrative](.github/issues/PROJECT_ROADMAP.md)
-* [Phase 1: Project Setup & Architecture Backlog](.github/issues/PHASE1_ISSUES.md)
-* [Phase 2: Infrastructure Services Backlog](.github/issues/PHASE2_INFRASTRUCTURE_SERVICES.md)
-* [Phase 3: Core Business Services Backlog](.github/issues/PHASE3_CORE_SERVICES.md)
-* [Phase 4: Advanced AI & Media Services Backlog](.github/issues/PHASE4_ADVANCED_SERVICES.md)
+### Project Roadmap & Backlog
+GitHub Issues on `liviuionesi/lmdb.dev` are the authoritative backlog. [Project Roadmap & Narrative](.github/issues/PROJECT_ROADMAP.md) gives the phase-level story; [Phase 4 spec](.github/issues/PHASE4_ADVANCED_SERVICES.md) is still referenced by the roadmap. Phases 1–3's original seed specs are archived in [`docs/archive/`](docs/archive/) once superseded by the live issues they generated.
 
-### GitHub Governance & Issue Templates
-* [Branch Protection Standards](.github/BRANCH_PROTECTION.md)
-* [Pull Request Template](.github/PULL_REQUEST_TEMPLATE.md)
-* [Epic Issue Template](.github/ISSUE_TEMPLATE/epic.md)
-* [User Story Issue Template](.github/ISSUE_TEMPLATE/user-story.md)
-* [Task Issue Template](.github/ISSUE_TEMPLATE/task.md)
-* [Bug Issue Template](.github/ISSUE_TEMPLATE/bug.md)
+### GitHub Governance & Templates
+* [Branch Protection Standards](.github/BRANCH_PROTECTION.md) · [Pull Request Template](.github/PULL_REQUEST_TEMPLATE.md)
+* [Epic](.github/ISSUE_TEMPLATE/epic.md) · [User Story](.github/ISSUE_TEMPLATE/user-story.md) · [Task](.github/ISSUE_TEMPLATE/task.md) · [Bug](.github/ISSUE_TEMPLATE/bug.md)
 
-### Developer Agent & Autonomous Workflow Contracts
-* [Autonomous Work Contract (CLAUDE.md)](CLAUDE.md) · [Sub-contract (.claude/CLAUDE.md)](.claude/CLAUDE.md)
-* [Codemod Command Guide](.claude/commands/codemod.md)
-* [Codemod Skill Specification](.claude/skills/codemod/SKILL.md)
-* [Javadoc Quality Skill Specification](.claude/skills/javadoc/SKILL.md)
-* [Task Resync Skill Specification](.claude/skills/resync-tasks/SKILL.md)
+### Autonomous Agent Contracts
+* [Autonomous Work Contract](CLAUDE.md) · [Sub-contract](.claude/CLAUDE.md)
+* [Codemod](.claude/skills/codemod/SKILL.md) · [Javadoc Quality](.claude/skills/javadoc/SKILL.md) · [Task Resync](.claude/skills/resync-tasks/SKILL.md)
 
-### Architecture Knowledge Graph Reports (Graphify)
-* [Latest Knowledge Graph Report](graphify-out/GRAPH_REPORT.md)
-* [Snapshot: 2026-08-10 Architecture Report](graphify-out/2026-08-10/GRAPH_REPORT.md)
-* [Snapshot: 2026-08-05 Architecture Report](graphify-out/2026-08-05/GRAPH_REPORT.md)
-* [Snapshot: 2026-08-04 Architecture Report](graphify-out/2026-08-04/GRAPH_REPORT.md)
+### Architecture Knowledge Graph (Graphify)
+* [Latest Report](graphify-out/GRAPH_REPORT.md) — dated snapshots also exist under `graphify-out/<date>/`
 
 ---
 
 ## 12. Data Attribution & TMDB Compliance
 
-### Brand Name & Developer Attribution
-**LMDB** stands for **Live Movies Database** as well as a creator namesake for its software architect, **[Liviu Ionesi](https://liviuionesi.com)** ([LinkedIn Profile](https://www.linkedin.com/in/liviuionesi/)).
-
-### Official Data Source: The Movie Database (TMDB)
-Movie metadata, plot synopses, cast filmographies, high-resolution poster artwork, and video trailer references are provided by **[The Movie Database (TMDB)](https://www.themoviedb.org/)** via their public v3 REST API.
+Movie metadata, plot synopses, cast filmographies, poster artwork, and trailer references are provided by **[The Movie Database (TMDB)](https://www.themoviedb.org/)** via their public v3 API.
 
 <p align="left">
   <a href="https://www.themoviedb.org/">
@@ -535,14 +352,10 @@ Movie metadata, plot synopses, cast filmographies, high-resolution poster artwor
   </a>
 </p>
 
-> **Mandatory TMDB Legal Notice:**  
+> **Mandatory TMDB Legal Notice:**
 > *"This product uses the TMDB API but is not endorsed or certified by TMDB."*
 
-### Independent Architecture & Self-Healing Facade
-LMDB does not act as a mere pass-through proxy. It implements a self-populating catalog architecture ([ADR-010](docs/architecture/adr/010-tmdb-facade-mapped-persisted-schema.md), [ADR-011](docs/architecture/adr/011-self-healing-read-through-on-schema-drift.md)):
-1. **Facade Mapping:** External TMDB payloads are mapped to strongly-typed local MongoDB documents on first request.
-2. **Local Caching:** Hot queries are cached in Redis for sub-millisecond response times.
-3. **Local Vector AI:** Synopses and genres feed an independent `pgvector` database powering local Spring AI (Ollama LLaMA 3.2) semantic discovery with $0 external API fees.
+LMDB does not act as a pass-through proxy. It implements a self-populating catalog architecture ([ADR-010](docs/architecture/adr/010-tmdb-facade-mapped-persisted-schema.md), [ADR-011](docs/architecture/adr/011-self-healing-read-through-on-schema-drift.md)): external payloads are mapped to typed local documents on first request, hot queries are cached in Redis, and synopses/genres feed the local `pgvector` database powering semantic search — all at $0 external API cost.
 
 ---
 

@@ -18,6 +18,7 @@ import dev.lmdb.movie.model.SpokenLanguage;
 import dev.lmdb.movie.model.Video;
 import dev.lmdb.movie.repository.MovieRepository;
 import dev.lmdb.shared.dto.PageResponse;
+import dev.lmdb.shared.exception.ValidationException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Arrays;
@@ -218,27 +219,31 @@ class MovieServiceTest {
   void discoverMovies_ShouldReturnPaginatedMovies() {
     // Arrange
     TmdbMovieListResponse tmdbResponse = createTestTmdbMovieListResponse();
-    when(tmdbClient.discoverMovies(tmdbApiKey, 1, "popularity.desc", null, null, null, null))
+    when(tmdbClient.discoverMovies(
+            tmdbApiKey, 1, "popularity.desc", null, null, null, null, null, null))
         .thenReturn(tmdbResponse);
 
     // Act
-    PageResponse<MovieListDto> result = movieService.discoverMovies(1, 20, null, null, null);
+    PageResponse<MovieListDto> result =
+        movieService.discoverMovies(1, 20, null, null, null, null, null);
 
     // Assert
     assertThat(result).isNotNull();
     assertThat(result.getContent()).hasSize(2);
     assertThat(result.getTotalElements()).isEqualTo(100);
     assertThat(result.getTotalPages()).isEqualTo(5);
-    verify(tmdbClient).discoverMovies(tmdbApiKey, 1, "popularity.desc", null, null, null, null);
+    verify(tmdbClient)
+        .discoverMovies(tmdbApiKey, 1, "popularity.desc", null, null, null, null, null, null);
   }
 
   /**
    * Discover filters (genre, year, min rating) must be passed through to the TMDB client unchanged
    * — verified by matching the exact client arguments, since a dropped filter would silently widen
-   * the user's results.
+   * the user's results. This is also #218 AC3's regression test: an exact-year-only call must
+   * behave exactly as it did before the year-range filter existed (null date-range params).
    */
   @Test
-  @DisplayName("discoverMovies - Should apply filters correctly")
+  @DisplayName("discoverMovies - Should apply filters correctly (exact year, no range)")
   void discoverMovies_WithFilters_ShouldApplyFilters() {
     // Arrange
     Long genreId = 28L;
@@ -247,17 +252,77 @@ class MovieServiceTest {
     TmdbMovieListResponse tmdbResponse = createTestTmdbMovieListResponse();
 
     when(tmdbClient.discoverMovies(
-            tmdbApiKey, 1, "popularity.desc", genreId, year, minRating, null))
+            tmdbApiKey, 1, "popularity.desc", genreId, year, null, null, minRating, null))
         .thenReturn(tmdbResponse);
 
     // Act
     PageResponse<MovieListDto> result =
-        movieService.discoverMovies(1, 20, genreId, year, minRating);
+        movieService.discoverMovies(1, 20, genreId, year, null, null, minRating);
 
     // Assert
     assertThat(result).isNotNull();
     verify(tmdbClient)
-        .discoverMovies(tmdbApiKey, 1, "popularity.desc", genreId, year, minRating, null);
+        .discoverMovies(
+            tmdbApiKey, 1, "popularity.desc", genreId, year, null, null, minRating, null);
+  }
+
+  /**
+   * Given a {@code yearFrom}/{@code yearTo} range with no exact {@code year}, when movies are
+   * discovered, then the range is translated into TMDB's {@code primary_release_date.gte}/{@code
+   * .lte} bounds (start anchored to Jan 1, end to Dec 31) — #218 AC1/AC2, the actual feature this
+   * Task adds.
+   */
+  @Test
+  @DisplayName("discoverMovies - Should translate a year range into TMDB date bounds")
+  void discoverMovies_WithYearRange_ShouldTranslateToTmdbDateBounds() {
+    // Arrange
+    TmdbMovieListResponse tmdbResponse = createTestTmdbMovieListResponse();
+    when(tmdbClient.discoverMovies(
+            tmdbApiKey, 1, "popularity.desc", null, null, "2000-01-01", "2010-12-31", null, null))
+        .thenReturn(tmdbResponse);
+
+    // Act
+    PageResponse<MovieListDto> result =
+        movieService.discoverMovies(1, 20, null, null, 2000, 2010, null);
+
+    // Assert
+    assertThat(result).isNotNull();
+    verify(tmdbClient)
+        .discoverMovies(
+            tmdbApiKey, 1, "popularity.desc", null, null, "2000-01-01", "2010-12-31", null, null);
+  }
+
+  /**
+   * Given both an exact {@code year} and a range bound, when movies are discovered, then the
+   * request is rejected with a {@link ValidationException} naming the conflict, and the TMDB client
+   * is never called — #218 AC4: an ambiguous request must not silently pick one filter over the
+   * other.
+   */
+  @Test
+  @DisplayName("discoverMovies - Should reject year combined with a range start (yearFrom)")
+  void discoverMovies_WithYearAndYearFrom_ShouldRejectAsInvalid() {
+    // When / Then
+    assertThatThrownBy(() -> movieService.discoverMovies(1, 20, null, 2024, 2000, null, null))
+        .isInstanceOf(ValidationException.class)
+        .hasMessageContaining("year")
+        .hasMessageContaining("yearFrom");
+    verifyNoInteractions(tmdbClient);
+  }
+
+  /**
+   * Same conflict, but naming only {@code yearTo} (no {@code yearFrom}) — the OR-branch {@link
+   * MovieService#discoverMovies}'s validation must reject independently of {@code yearFrom}. A test
+   * that only ever combines {@code year} with {@code yearFrom} would miss a bug affecting the
+   * {@code yearTo} side of that check alone.
+   */
+  @Test
+  @DisplayName("discoverMovies - Should reject year combined with a range end (yearTo) alone")
+  void discoverMovies_WithYearAndYearTo_ShouldRejectAsInvalid() {
+    // When / Then
+    assertThatThrownBy(() -> movieService.discoverMovies(1, 20, null, 2024, null, 2010, null))
+        .isInstanceOf(ValidationException.class)
+        .hasMessageContaining("year");
+    verifyNoInteractions(tmdbClient);
   }
 
   /**

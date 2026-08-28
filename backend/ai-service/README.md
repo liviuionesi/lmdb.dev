@@ -46,9 +46,11 @@ docker run -p 8084:8084 -p 9084:9084 lmdb/ai-service:local
 | `/recommendations` | POST | Ranked, explained recommendations from LMDB's catalog |
 | `/chat` | POST | Continue (or start) a conversation with the assistant |
 | `/search/semantic` | GET | Nearest taste-profile neighbours to a free-text query |
+| `/search/query` | POST | Parse a natural-language movie query into a structured filter, or a plain-title fallback — extraction only, no execution (#202, ADR-020) |
+| `/search/execute` | POST | Parse AND execute a natural-language movie query, resolved against actor-service/movie-service (#203, ADR-020) |
 | `/speech-to-text` | POST | Transcribe WAV audio using self-hosted Vosk engine (#68) |
 
-All recommendations/chat/semantic search features are scoped to a `userId`. Voice control uses `/speech-to-text` (public endpoint at gateway).
+All recommendations/chat/semantic search features are scoped to a `userId`. Voice control uses `/speech-to-text` (public endpoint at gateway). `/search/query` and `/search/execute` are not user-scoped — they touch no per-user data — but still require a valid gateway JWT.
 
 ### 🎙️ Supported Voice Commands
 Users can speak into the microphone icon in the UI:

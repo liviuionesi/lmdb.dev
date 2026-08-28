@@ -304,7 +304,7 @@ Location: `backend/config-service/src/main/resources/config/movie-service.yml`
 ## Architecture
 
 ### Technology Stack
-- **Framework:** Spring Boot 4.1.0
+- **Framework:** Spring Boot 4.1.1
 - **Language:** Java 25
 - **Build Tool:** Gradle 9.2.0
 - **Database:** MongoDB 8.0

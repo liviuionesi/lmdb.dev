@@ -7,6 +7,7 @@ import dev.lmdb.movie.mapper.MovieMapper;
 import dev.lmdb.movie.model.*;
 import dev.lmdb.movie.repository.MovieRepository;
 import dev.lmdb.shared.dto.PageResponse;
+import dev.lmdb.shared.exception.ValidationException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -256,23 +257,55 @@ public class MovieService {
   }
 
   /**
-   * Discover movies with filters.
+   * Discover movies with filters, including an optional release-year range (#218, ADR-020)
+   * alongside the pre-existing exact-year filter.
    *
    * @param page Page number
    * @param size Page size
    * @param genreId Genre ID filter
-   * @param year Release year filter
+   * @param year Release year filter (exact match) — mutually exclusive with {@code yearFrom}/{@code
+   *     yearTo}
+   * @param yearFrom Release-year range start, inclusive; mutually exclusive with {@code year}
+   * @param yearTo Release-year range end, inclusive; mutually exclusive with {@code year}
    * @param minRating Minimum rating filter
    * @return Page of movies
+   * @throws ValidationException if both {@code year} and a range bound are given — an ambiguous
+   *     request rejected explicitly rather than silently picking one filter over the other
    */
   @Cacheable(
       value = "movieLists",
-      key = "'discover-' + #page + '-' + #size + '-' + #genreId + '-' + #year + '-' + #minRating",
+      key =
+          "'discover-' + #page + '-' + #size + '-' + #genreId + '-' + #year + '-' + #yearFrom + '-'"
+              + " + #yearTo + '-' + #minRating",
       sync = true)
   public PageResponse<MovieListDto> discoverMovies(
-      int page, int size, Long genreId, Integer year, Double minRating) {
-    TmdbMovieListResponse response = self().discoverMoviesRaw(page, genreId, year, minRating, null);
+      int page,
+      int size,
+      Long genreId,
+      Integer year,
+      Integer yearFrom,
+      Integer yearTo,
+      Double minRating) {
+    rejectConflictingYearFilters(year, yearFrom, yearTo);
+    TmdbMovieListResponse response =
+        self().discoverMoviesRaw(page, genreId, year, yearFrom, yearTo, minRating, null);
     return toPageResponse(response, page, size);
+  }
+
+  /**
+   * Rejects a request that names both the exact-year filter and a range bound, rather than letting
+   * one silently win over the other — #218 AC4.
+   *
+   * @param year the exact-year filter, or {@code null}
+   * @param yearFrom the range's start, or {@code null}
+   * @param yearTo the range's end, or {@code null}
+   * @throws ValidationException if {@code year} and either range bound are both non-null
+   */
+  private static void rejectConflictingYearFilters(Integer year, Integer yearFrom, Integer yearTo) {
+    if (year != null && (yearFrom != null || yearTo != null)) {
+      throw new ValidationException(
+          "year", "year cannot be combined with yearFrom/yearTo — use one filter or the other");
+    }
   }
 
   /**
@@ -280,9 +313,16 @@ public class MovieService {
    * React app's "movies by actor" query), returning TMDB's own response shape directly. Every
    * result is upserted.
    *
+   * <p>The year-range filter (#218) is reachable through this raw method — {@link #discoverMovies}
+   * validates then delegates its own {@code yearFrom}/{@code yearTo} here — but {@link
+   * dev.lmdb.movie.facade.TmdbFacadeController#discover} itself does not accept or pass them: the
+   * facade's own scope stays exact-year-only, per #218's Scope note.
+   *
    * @param page page number
    * @param genreId {@code with_genres} filter
-   * @param year release-year filter
+   * @param year release-year filter (exact match)
+   * @param yearFrom release-year range start, inclusive
+   * @param yearTo release-year range end, inclusive
    * @param minRating minimum vote average filter
    * @param castId {@code with_cast} filter (TMDB person id)
    * @return raw TMDB movie-list response
@@ -290,22 +330,55 @@ public class MovieService {
   @Cacheable(
       value = "movieLists",
       key =
-          "'discover-raw-' + #page + '-' + #genreId + '-' + #year + '-' + #minRating + '-' + #castId",
+          "'discover-raw-' + #page + '-' + #genreId + '-' + #year + '-' + #yearFrom + '-' + #yearTo"
+              + " + '-' + #minRating + '-' + #castId",
       sync = true)
   public TmdbMovieListResponse discoverMoviesRaw(
-      int page, Long genreId, Integer year, Double minRating, Long castId) {
+      int page,
+      Long genreId,
+      Integer year,
+      Integer yearFrom,
+      Integer yearTo,
+      Double minRating,
+      Long castId) {
     log.info(
-        "Discovering movies: page={}, genre={}, year={}, minRating={}, cast={}",
+        "Discovering movies: page={}, genre={}, year={}, yearFrom={}, yearTo={}, minRating={},"
+            + " cast={}",
         page,
         genreId,
         year,
+        yearFrom,
+        yearTo,
         minRating,
         castId);
     TmdbMovieListResponse response =
         tmdbClient.discoverMovies(
-            tmdbApiKey, page, "popularity.desc", genreId, year, minRating, castId);
+            tmdbApiKey,
+            page,
+            "popularity.desc",
+            genreId,
+            year,
+            toTmdbDateBound(yearFrom, 1, 1),
+            toTmdbDateBound(yearTo, 12, 31),
+            minRating,
+            castId);
     response.results().forEach(this::upsertFromListItem);
     return response;
+  }
+
+  /**
+   * Converts a bare year into the {@code YYYY-MM-DD} form TMDB's {@code
+   * primary_release_date.gte}/{@code primary_release_date.lte} params require — a year alone isn't
+   * a valid value for either param.
+   *
+   * @param year the year, or {@code null} if this bound wasn't given
+   * @param month the month to anchor the bound to (1 for a range start, 12 for a range end)
+   * @param day the day to anchor the bound to (1 for a range start, 31 for a range end)
+   * @return {@code "{year}-{month}-{day}"}, zero-padded, or {@code null} if {@code year} is {@code
+   *     null}
+   */
+  private static String toTmdbDateBound(Integer year, int month, int day) {
+    return year == null ? null : "%d-%02d-%02d".formatted(year, month, day);
   }
 
   /**

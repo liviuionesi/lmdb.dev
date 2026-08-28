@@ -3,13 +3,19 @@ package dev.lmdb.ai.controller;
 import dev.lmdb.shared.dto.ApiResponse;
 import dev.lmdb.shared.exception.ResourceNotFoundException;
 import dev.lmdb.shared.exception.ServiceUnavailableException;
+import dev.lmdb.shared.exception.UnauthorizedException;
 import dev.lmdb.shared.exception.ValidationException;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 /**
  * Maps ai-service's exceptions to the shared {@link ApiResponse} error envelope, mirroring
@@ -29,6 +35,21 @@ public class GlobalExceptionHandler {
   @ExceptionHandler(ResourceNotFoundException.class)
   public ResponseEntity<ApiResponse<Void>> handleNotFound(ResourceNotFoundException e) {
     return error(HttpStatus.NOT_FOUND, e.getMessage());
+  }
+
+  /**
+   * The caller reached a user-scoped endpoint without a usable gateway-issued identity header (see
+   * {@link dev.lmdb.ai.security.CallerIdentity}) → 401. Reaching this in production means the
+   * request bypassed api-gateway, since the gateway rejects an unauthenticated call to {@code
+   * /api/v1/ai/**} before it is ever routed here.
+   *
+   * @param e missing-or-unusable caller identity
+   * @return 401 error envelope
+   */
+  @ExceptionHandler(UnauthorizedException.class)
+  public ResponseEntity<ApiResponse<Void>> handleUnauthorized(UnauthorizedException e) {
+    log.warn("Rejected unauthenticated request to a user-scoped endpoint");
+    return error(HttpStatus.UNAUTHORIZED, e.getMessage());
   }
 
   /**
@@ -53,6 +74,86 @@ public class GlobalExceptionHandler {
   @ExceptionHandler(ValidationException.class)
   public ResponseEntity<ApiResponse<Void>> handleValidation(ValidationException e) {
     return error(HttpStatus.BAD_REQUEST, e.getMessage());
+  }
+
+  /**
+   * A request body failing bean validation (@Valid) → 400 naming every offending field, mirroring
+   * user-service's handler. A field error's default message alone (e.g. "must not be blank")
+   * doesn't say which field failed — the field name has to be prefixed explicitly for the response
+   * to satisfy #186/#187's "returns 400 naming the offending field".
+   *
+   * @param e the validation failure
+   * @return 400 error envelope listing the offending fields
+   */
+  @ExceptionHandler(MethodArgumentNotValidException.class)
+  public ResponseEntity<ApiResponse<Void>> handleMethodArgumentNotValid(
+      MethodArgumentNotValidException e) {
+    String errorMsg =
+        e.getBindingResult().getFieldErrors().stream()
+            .map(err -> err.getField() + ": " + err.getDefaultMessage())
+            .collect(Collectors.joining("; "));
+    return error(HttpStatus.BAD_REQUEST, errorMsg.isEmpty() ? "Validation failed" : errorMsg);
+  }
+
+  /**
+   * Malformed JSON in the request body → 400.
+   *
+   * @param e the parse failure
+   * @return 400 error envelope
+   */
+  @ExceptionHandler(HttpMessageNotReadableException.class)
+  public ResponseEntity<ApiResponse<Void>> handleHttpMessageNotReadable(
+      HttpMessageNotReadableException e) {
+    return error(HttpStatus.BAD_REQUEST, "Malformed JSON request");
+  }
+
+  /**
+   * Missing required query parameter → 400.
+   *
+   * @param e the missing parameter error
+   * @return 400 error envelope
+   */
+  @ExceptionHandler(MissingServletRequestParameterException.class)
+  public ResponseEntity<ApiResponse<Void>> handleMissingServletRequestParameter(
+      MissingServletRequestParameterException e) {
+    return error(HttpStatus.BAD_REQUEST, "Missing required parameter: " + e.getParameterName());
+  }
+
+  /**
+   * Upload size exceeds the configured maximum → 400.
+   *
+   * @param e the upload size limit exception
+   * @return 400 error envelope
+   */
+  @ExceptionHandler(MaxUploadSizeExceededException.class)
+  public ResponseEntity<ApiResponse<Void>> handleMaxUploadSizeExceeded(
+      MaxUploadSizeExceededException e) {
+    return error(HttpStatus.BAD_REQUEST, "File size exceeds the maximum allowed limit");
+  }
+
+  /**
+   * Constraint violation on a @Validated controller method parameter → 400.
+   *
+   * @param e the constraint violation
+   * @return 400 error envelope
+   */
+  @ExceptionHandler(jakarta.validation.ConstraintViolationException.class)
+  public ResponseEntity<ApiResponse<Void>> handleConstraintViolation(
+      jakarta.validation.ConstraintViolationException e) {
+    return error(HttpStatus.BAD_REQUEST, "Validation failed: " + e.getMessage());
+  }
+
+  /**
+   * Method validation failure (Spring 3.2+) → 400.
+   *
+   * @param e the validation failure
+   * @return 400 error envelope
+   */
+  @ExceptionHandler(
+      org.springframework.web.method.annotation.HandlerMethodValidationException.class)
+  public ResponseEntity<ApiResponse<Void>> handleHandlerMethodValidation(
+      org.springframework.web.method.annotation.HandlerMethodValidationException e) {
+    return error(HttpStatus.BAD_REQUEST, "Validation failed");
   }
 
   /**

@@ -70,6 +70,26 @@ class SpeechToTextServiceTest {
   }
 
   /**
+   * Given the service has already been destroyed, when {@code transcribe} is called with a valid
+   * audio file, then it throws {@link ServiceUnavailableException} with a shutdown message rather
+   * than crashing with an NPE or SIGSEGV from a freed native handle. Verifies the {@link
+   * java.util.concurrent.locks.ReadWriteLock} in {@link SpeechToTextService} correctly prevents
+   * use-after-free.
+   */
+  @Test
+  @DisplayName("transcribe after destroy() throws ServiceUnavailableException, not a crash")
+  void transcribeAfterDestroyThrowsCleanError() throws IOException {
+    SpeechToTextService service = new SpeechToTextService(MISSING_MODEL_PATH, new ObjectMapper());
+    service.destroy();
+    MockMultipartFile validWav =
+        new MockMultipartFile("audio", "clip.wav", "audio/wav", silentWav());
+
+    assertThatThrownBy(() -> service.transcribe(validWav))
+        .isInstanceOf(ServiceUnavailableException.class)
+        .hasMessageContaining("shutting down");
+  }
+
+  /**
    * Builds a tiny, valid WAV (0.1s of silence, mono 16-bit 16kHz) entirely in memory — enough to
    * pass {@code AudioSystem}'s format validation without needing a fixture file on disk.
    *

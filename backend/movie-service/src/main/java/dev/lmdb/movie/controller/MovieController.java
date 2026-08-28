@@ -7,6 +7,7 @@ import dev.lmdb.movie.dto.*;
 import dev.lmdb.movie.service.MovieService;
 import dev.lmdb.shared.dto.PageResponse;
 import dev.lmdb.shared.exception.ResourceNotFoundException;
+import dev.lmdb.shared.exception.ValidationException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -68,12 +69,17 @@ public class MovieController {
   }
 
   /**
-   * Discover movies with filters.
+   * Discover movies with filters, including an optional release-year range (#218, ADR-020)
+   * alongside the pre-existing exact-year filter — not both at once, see {@code handleValidation}
+   * below for the rejection this maps to.
    *
    * @param page Page number (1-based)
    * @param size Page size
    * @param genreId Genre ID filter
-   * @param year Release year filter
+   * @param year Release year filter (exact match); mutually exclusive with {@code yearFrom}/{@code
+   *     yearTo}
+   * @param yearFrom Release-year range start, inclusive; mutually exclusive with {@code year}
+   * @param yearTo Release-year range end, inclusive; mutually exclusive with {@code year}
    * @param minRating Minimum rating filter
    * @return Page of movies
    */
@@ -89,20 +95,30 @@ public class MovieController {
       @Parameter(description = "Genre ID filter", example = "28")
           @RequestParam(value = "genreId", required = false)
           Long genreId,
-      @Parameter(description = "Release year filter", example = "2024")
+      @Parameter(description = "Release year filter (exact match)", example = "2024")
           @RequestParam(value = "year", required = false)
           Integer year,
+      @Parameter(description = "Release-year range start, inclusive", example = "2000")
+          @RequestParam(value = "yearFrom", required = false)
+          Integer yearFrom,
+      @Parameter(description = "Release-year range end, inclusive", example = "2010")
+          @RequestParam(value = "yearTo", required = false)
+          Integer yearTo,
       @Parameter(description = "Minimum rating filter", example = "7.0")
           @RequestParam(value = "minRating", required = false)
           Double minRating) {
     log.info(
-        "GET /api/v1/movies/discover - page={}, size={}, genre={}, year={}, minRating={}",
+        "GET /api/v1/movies/discover - page={}, size={}, genre={}, year={}, yearFrom={},"
+            + " yearTo={}, minRating={}",
         page,
         size,
         genreId,
         year,
+        yearFrom,
+        yearTo,
         minRating);
-    return ResponseEntity.ok(movieService.discoverMovies(page, size, genreId, year, minRating));
+    return ResponseEntity.ok(
+        movieService.discoverMovies(page, size, genreId, year, yearFrom, yearTo, minRating));
   }
 
   /**
@@ -276,5 +292,18 @@ public class MovieController {
   @ExceptionHandler(ResourceNotFoundException.class)
   ProblemDetail handleNotFound(ResourceNotFoundException e) {
     return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, e.getMessage());
+  }
+
+  /**
+   * Maps a rejected filter combination (currently: {@code year} given together with {@code
+   * yearFrom}/{@code yearTo} on {@code /discover}, #218) to 400 Bad Request with a clear message,
+   * rather than a 500 or the request silently choosing one filter over the other.
+   *
+   * @param e the validation failure
+   * @return 400 problem detail naming the conflict
+   */
+  @ExceptionHandler(ValidationException.class)
+  ProblemDetail handleValidation(ValidationException e) {
+    return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, e.getMessage());
   }
 }

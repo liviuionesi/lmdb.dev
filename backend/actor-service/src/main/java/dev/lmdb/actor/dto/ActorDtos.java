@@ -73,6 +73,28 @@ public final class ActorDtos {
       Double voteAverage) {}
 
   /**
+   * One movie in an actor's crew credits (from TMDB movie_credits crew) — director, producer,
+   * writer, etc., never cast (#217). Same shape as {@link FilmographyEntryDto} with {@code
+   * character} replaced by the {@code job}/{@code department} that earns the credit.
+   *
+   * @param movieId TMDB movie id (hydrate details via the TMDB facade)
+   * @param title movie title
+   * @param job the specific job credited (e.g. "Director", "Producer"), as TMDB reports it
+   * @param department the TMDB department this job belongs to (e.g. "Directing", "Production")
+   * @param releaseDate release date string as TMDB serves it, may be empty
+   * @param posterPath TMDB poster path, may be null
+   * @param voteAverage TMDB vote average
+   */
+  public record CrewCreditDto(
+      Long movieId,
+      String title,
+      String job,
+      String department,
+      String releaseDate,
+      String posterPath,
+      Double voteAverage) {}
+
+  /**
    * Paged search result.
    *
    * @param page current page (TMDB 1-based)

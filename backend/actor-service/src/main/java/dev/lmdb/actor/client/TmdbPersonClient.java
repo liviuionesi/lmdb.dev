@@ -14,8 +14,9 @@ import org.springframework.web.service.annotation.HttpExchange;
  * and the TMDB-shaped facade (ADR-010) — there is one client and one persisted dataset behind both,
  * matching movie-service's pattern.
  *
- * <p>The TMDB API key is injected transparently by the {@link RestClient} interceptor configured in
- * {@link TmdbClientConfig}, so these method signatures carry only business-relevant parameters.
+ * <p>The TMDB API key is injected transparently by the {@link
+ * org.springframework.web.client.RestClient} interceptor configured in {@link TmdbClientConfig}, so
+ * these method signatures carry only business-relevant parameters.
  */
 @HttpExchange
 public interface TmdbPersonClient {

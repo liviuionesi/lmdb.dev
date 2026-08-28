@@ -16,12 +16,14 @@ import genreOrCategoryReducer from '../../features/currentGenreOrCategory';
 import authReducer from '../../features/auth';
 import { renderWithProviders } from '../../test-utils/render';
 import { useGetGenresQuery } from '../../services/TMDB';
+import { useExecuteSearchMutation } from '../../services/AI';
 import { encodeToWav } from '../../utils/wavEncoder';
 import { parseVoiceCommand } from '../../utils/voiceCommands';
 import { clearAuthTokens } from '../../utils';
 import { ColorModeContext } from '../../utils/ToggleColorMode';
 
 vi.mock('../../services/TMDB', () => ({ useGetGenresQuery: vi.fn() }));
+vi.mock('../../services/AI', () => ({ useExecuteSearchMutation: vi.fn() }));
 vi.mock('../../utils/wavEncoder', () => ({ encodeToWav: vi.fn() }));
 vi.mock('../../utils/voiceCommands', () => ({ parseVoiceCommand: vi.fn() }));
 // Vitest hoists vi.mock calls above imports, so the real module is fetched
@@ -97,6 +99,7 @@ describe('VoiceControl', () => {
     useGetGenresQuery.mockReturnValue({
       data: { genres: [{ id: 28, name: 'Action' }, { id: 35, name: 'Comedy' }] },
     });
+    useExecuteSearchMutation.mockReturnValue([vi.fn().mockResolvedValue({ results: [] })]);
     encodeToWav.mockResolvedValue(new Blob(['wav']));
     getUserMedia = vi.fn().mockResolvedValue({ getTracks: () => [{ stop: vi.fn() }] });
     Object.defineProperty(global.navigator, 'mediaDevices', {
@@ -196,15 +199,33 @@ describe('VoiceControl', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/');
   });
 
-  it('dispatches searchMovie with the parsed query on a "search" command', async () => {
-    global.fetch.mockResolvedValue({ ok: true, json: async () => ({ text: 'search batman' }) });
-    parseVoiceCommand.mockReturnValue({ command: 'search', query: 'batman' });
+  it('dispatches AI search flow with the parsed query on a "search" command', async () => {
+    global.fetch.mockResolvedValue({ ok: true, json: async () => ({ text: 'movies directed by nolan' }) });
+    parseVoiceCommand.mockReturnValue({ command: 'search', query: 'movies directed by nolan' });
+    
+    const mockExecuteSearch = vi.fn().mockReturnValue({
+      unwrap: () => Promise.resolve({ results: [{ movieId: 123, title: 'Inception' }] })
+    });
+    useExecuteSearchMutation.mockReturnValue([mockExecuteSearch]);
+    
     const { store } = renderVoiceControl();
 
     await recordAndStop();
 
-    await waitFor(() => expect(store.getState().currentGenreOrCategory.searchQuery).toBe('batman'));
+    await waitFor(() => expect(store.getState().currentGenreOrCategory.aiSearchStatus).toBe('succeeded'));
+    expect(store.getState().currentGenreOrCategory.aiSearchQuery).toBe('movies directed by nolan');
     expect(mockNavigate).toHaveBeenCalledWith('/');
+    expect(store.getState().currentGenreOrCategory.aiSearchResults).toEqual({
+      results: [{
+        id: 123,
+        title: 'Inception',
+        overview: undefined,
+        poster_path: undefined,
+        backdrop_path: undefined,
+        release_date: undefined,
+        vote_average: undefined
+      }]
+    });
   });
 
   it('shows an info message when transcribed text matches no known command', async () => {

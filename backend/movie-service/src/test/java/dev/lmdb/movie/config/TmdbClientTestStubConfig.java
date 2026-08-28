@@ -77,8 +77,8 @@ public class TmdbClientTestStubConfig {
       }
 
       /**
-       * Ignores every filter (sort, genre, year, rating, cast) and returns the shared page-derived
-       * list; filter correctness is not this stub's concern.
+       * Ignores every filter (sort, genre, year, year range, rating, cast) and returns the shared
+       * page-derived list; filter correctness is not this stub's concern.
        */
       @Override
       public TmdbMovieListResponse discoverMovies(
@@ -87,6 +87,8 @@ public class TmdbClientTestStubConfig {
           String sortBy,
           Long genreId,
           Integer year,
+          String yearFrom,
+          String yearTo,
           Double minRating,
           Long castId) {
         return buildStubMovieList(page);

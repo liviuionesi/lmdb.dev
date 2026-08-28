@@ -6,6 +6,8 @@ import dev.lmdb.shared.exception.ServiceUnavailableException;
 import dev.lmdb.shared.exception.ValidationException;
 import java.io.BufferedInputStream;
 import java.io.IOException;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
@@ -44,6 +46,8 @@ public class SpeechToTextService implements DisposableBean {
   private final String modelPath;
   private final ObjectMapper objectMapper;
   private volatile Model model;
+  private volatile boolean destroyed;
+  private final ReadWriteLock lock = new ReentrantReadWriteLock();
 
   /**
    * @param modelPath filesystem path to an unzipped Vosk model directory
@@ -67,13 +71,21 @@ public class SpeechToTextService implements DisposableBean {
   public String transcribe(MultipartFile audioFile) {
     // Validate the (cheap) client input before paying the model-load cost.
     byte[] pcm = toPcm16Mono16kHz(audioFile);
-    Model loadedModel = getOrLoadModel();
 
-    try (Recognizer recognizer = new Recognizer(loadedModel, SAMPLE_RATE_HZ)) {
-      recognizer.acceptWaveForm(pcm, pcm.length);
-      return extractText(recognizer.getFinalResult());
-    } catch (IOException e) {
-      throw new ServiceUnavailableException("speech-to-text", "recognizer failed to start", e);
+    lock.readLock().lock();
+    try {
+      Model loadedModel = getOrLoadModel();
+      if (loadedModel == null) {
+        throw new ServiceUnavailableException("speech-to-text", "service is shutting down");
+      }
+      try (Recognizer recognizer = new Recognizer(loadedModel, SAMPLE_RATE_HZ)) {
+        recognizer.acceptWaveForm(pcm, pcm.length);
+        return extractText(recognizer.getFinalResult());
+      } catch (IOException e) {
+        throw new ServiceUnavailableException("speech-to-text", "recognizer failed to start", e);
+      }
+    } finally {
+      lock.readLock().unlock();
     }
   }
 
@@ -85,12 +97,18 @@ public class SpeechToTextService implements DisposableBean {
    * @throws ServiceUnavailableException the model directory is missing or unreadable
    */
   private Model getOrLoadModel() {
+    if (destroyed) {
+      return null;
+    }
     Model loaded = model;
     if (loaded != null) {
       return loaded;
     }
 
     synchronized (this) {
+      if (destroyed) {
+        return null;
+      }
       if (model == null) {
         log.info("Loading Vosk speech-to-text model from {}", modelPath);
         LibVosk.setLogLevel(LogLevel.WARNINGS);
@@ -157,8 +175,15 @@ public class SpeechToTextService implements DisposableBean {
    */
   @Override
   public void destroy() {
-    if (model != null) {
-      model.close();
+    lock.writeLock().lock();
+    try {
+      destroyed = true;
+      if (model != null) {
+        model.close();
+        model = null;
+      }
+    } finally {
+      lock.writeLock().unlock();
     }
   }
 }

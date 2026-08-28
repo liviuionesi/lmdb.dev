@@ -17,7 +17,7 @@ File upload and media management service for images and videos.
 ## Technology Stack
 
 - Java 25
-- Spring Boot 4.1.0
+- Spring Boot 4.1.1
 - Spring Data MongoDB
 - MinIO Client
 - Eureka Client
@@ -41,13 +41,13 @@ docker run -p 8085:8085 lmdb/media-service:latest
 
 ## API Endpoints
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/v1/media/upload` | POST | Upload media file |
-| `/api/v1/media/{id}` | GET | Download media file |
-| `/api/v1/media/{id}` | DELETE | Delete media file |
-| `/api/v1/media/entity/{entityId}` | GET | Get all media for entity |
-| `/api/v1/media/{id}/thumbnail` | GET | Get thumbnail |
+| Endpoint                          | Method | Description              |
+| --------------------------------- | ------ | ------------------------ |
+| `/api/v1/media/upload`            | POST   | Upload media file        |
+| `/api/v1/media/{id}`              | GET    | Download media file      |
+| `/api/v1/media/{id}`              | DELETE | Delete media file        |
+| `/api/v1/media/entity/{entityId}` | GET    | Get all media for entity |
+| `/api/v1/media/{id}/thumbnail`    | GET    | Get thumbnail            |
 
 ## Database Schema
 

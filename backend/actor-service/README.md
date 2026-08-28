@@ -16,7 +16,7 @@ Actor information and filmography management service.
 ## Technology Stack
 
 - Java 25
-- Spring Boot 4.1.0
+- Spring Boot 4.1.1
 - Spring Data JPA
 - PostgreSQL
 - Flyway (database migrations)
@@ -42,11 +42,11 @@ docker run -p 8083:8083 lmdb/actor-service:latest
 
 ## API Endpoints
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/v1/actors/{id}` | GET | Get actor details |
-| `/api/v1/actors/{id}/movies` | GET | Get actor's filmography |
-| `/api/v1/actors/search` | GET | Search actors by name |
+| Endpoint                     | Method | Description             |
+| ---------------------------- | ------ | ----------------------- |
+| `/api/v1/actors/{id}`        | GET    | Get actor details       |
+| `/api/v1/actors/{id}/movies` | GET    | Get actor's filmography |
+| `/api/v1/actors/search`      | GET    | Search actors by name   |
 
 ## Database Schema
 

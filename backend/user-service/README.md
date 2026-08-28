@@ -17,7 +17,7 @@ User authentication, authorization, and profile management service.
 ## Technology Stack
 
 - Java 25
-- Spring Boot 4.1.0
+- Spring Boot 4.1.1
 - Spring Security
 - Spring Data JPA
 - PostgreSQL
@@ -45,23 +45,23 @@ docker run -p 8082:8082 lmdb/user-service:latest
 ## API Endpoints
 
 ### Authentication
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/v1/auth/register` | POST | Register new user |
-| `/api/v1/auth/login` | POST | User login (returns JWT) |
-| `/api/v1/auth/refresh` | POST | Refresh access token |
-| `/api/v1/auth/logout` | POST | User logout |
+| Endpoint                | Method | Description              |
+| ----------------------- | ------ | ------------------------ |
+| `/api/v1/auth/register` | POST   | Register new user        |
+| `/api/v1/auth/login`    | POST   | User login (returns JWT) |
+| `/api/v1/auth/refresh`  | POST   | Refresh access token     |
+| `/api/v1/auth/logout`   | POST   | User logout              |
 
 ### User Management
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/v1/users/profile` | GET | Get user profile |
-| `/api/v1/users/profile` | PUT | Update profile |
-| `/api/v1/users/favorites` | GET | Get favorite movies |
-| `/api/v1/users/favorites/{movieId}` | POST | Add to favorites |
+| Endpoint                            | Method | Description           |
+| ----------------------------------- | ------ | --------------------- |
+| `/api/v1/users/profile`             | GET    | Get user profile      |
+| `/api/v1/users/profile`             | PUT    | Update profile        |
+| `/api/v1/users/favorites`           | GET    | Get favorite movies   |
+| `/api/v1/users/favorites/{movieId}` | POST   | Add to favorites      |
 | `/api/v1/users/favorites/{movieId}` | DELETE | Remove from favorites |
-| `/api/v1/users/watchlist` | GET | Get watchlist |
-| `/api/v1/users/watchlist/{movieId}` | POST | Add to watchlist |
+| `/api/v1/users/watchlist`           | GET    | Get watchlist         |
+| `/api/v1/users/watchlist/{movieId}` | POST   | Add to watchlist      |
 
 ## Database Schema
 

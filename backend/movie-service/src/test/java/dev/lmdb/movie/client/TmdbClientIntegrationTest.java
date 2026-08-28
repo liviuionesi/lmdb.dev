@@ -4,6 +4,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
+import dev.lmdb.movie.client.dto.TmdbMovieListResponse;
 import dev.lmdb.movie.client.dto.TmdbMovieResponse;
 import java.time.Duration;
 import java.time.Instant;
@@ -80,6 +81,83 @@ class TmdbClientIntegrationTest {
     assertThat(response).isNotNull();
     assertThat(response.id()).isEqualTo(550L);
     assertThat(response.title()).isEqualTo("Fight Club");
+  }
+
+  /**
+   * Given a year range, when {@code discoverMovies} is called, then the request WireMock actually
+   * receives carries TMDB's {@code primary_release_date.gte}/{@code .lte} params (not {@code year})
+   * — #218 AC1/AC2, verified at the real HTTP-request layer via WireMock's query-param matcher, not
+   * just by inspecting what the client method was called with.
+   */
+  @Test
+  @DisplayName("discoverMovies: a year range sends primary_release_date.gte/.lte, not year")
+  void shouldDiscoverMoviesWithYearRange() {
+    // Given: WireMock only matches if gte/lte are present and year is absent
+    stubFor(
+        get(urlPathEqualTo("/discover/movie"))
+            .withQueryParam("primary_release_date.gte", equalTo("2000-01-01"))
+            .withQueryParam("primary_release_date.lte", equalTo("2010-12-31"))
+            .withQueryParam("year", absent())
+            .willReturn(
+                aResponse()
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        """
+                        {"page":1,"total_pages":1,"total_results":1,
+                         "results":[{"id":27205,"title":"Inception"}]}
+                        """)));
+
+    // When
+    TmdbMovieListResponse response =
+        tmdbClient.discoverMovies(
+            "test-api-key",
+            1,
+            "popularity.desc",
+            null,
+            null,
+            "2000-01-01",
+            "2010-12-31",
+            null,
+            null);
+
+    // Then: WireMock only would have matched the stub above if the right params were sent —
+    // a non-null response here IS the proof, not just an assertion on its content.
+    assertThat(response).isNotNull();
+    assertThat(response.results()).extracting("id").containsExactly(27205L);
+  }
+
+  /**
+   * Given only the pre-existing exact {@code year} filter (no range), when {@code discoverMovies}
+   * is called, then the request sent still carries {@code year} and NOT the new {@code
+   * primary_release_date.gte}/{@code .lte} params — #218 AC3's regression guarantee, proven at the
+   * real HTTP-request layer rather than assumed from the range test alone.
+   */
+  @Test
+  @DisplayName("discoverMovies: exact year alone sends year, not primary_release_date bounds")
+  void shouldDiscoverMoviesWithExactYearOnlyUnchanged() {
+    // Given: WireMock only matches if year is present and gte/lte are absent
+    stubFor(
+        get(urlPathEqualTo("/discover/movie"))
+            .withQueryParam("year", equalTo("2024"))
+            .withQueryParam("primary_release_date.gte", absent())
+            .withQueryParam("primary_release_date.lte", absent())
+            .willReturn(
+                aResponse()
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        """
+                        {"page":1,"total_pages":1,"total_results":1,
+                         "results":[{"id":550,"title":"Fight Club"}]}
+                        """)));
+
+    // When
+    TmdbMovieListResponse response =
+        tmdbClient.discoverMovies(
+            "test-api-key", 1, "popularity.desc", null, 2024, null, null, null, null);
+
+    // Then
+    assertThat(response).isNotNull();
+    assertThat(response.results()).extracting("id").containsExactly(550L);
   }
 
   /**

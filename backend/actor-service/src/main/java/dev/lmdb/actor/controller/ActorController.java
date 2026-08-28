@@ -6,6 +6,7 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 import dev.lmdb.actor.dto.ActorDtos.ActorDto;
 import dev.lmdb.actor.dto.ActorDtos.ActorImageDto;
 import dev.lmdb.actor.dto.ActorDtos.ActorSearchResponse;
+import dev.lmdb.actor.dto.ActorDtos.CrewCreditDto;
 import dev.lmdb.actor.dto.ActorDtos.FilmographyPageDto;
 import dev.lmdb.actor.service.ActorService;
 import dev.lmdb.shared.dto.ApiResponse;
@@ -81,6 +82,31 @@ public class ActorController {
       @RequestParam(defaultValue = "20") int size) {
     // Retrieve paged filmography from service (sorted newest first) and wrap in success envelope.
     return ok(actorService.getFilmographyPage(id, page, size), "Filmography retrieved");
+  }
+
+  /**
+   * Returns an actor's crew credits (director, producer, writer, etc.), optionally filtered by
+   * department and/or job — the crew-side counterpart to {@link #getFilmography}, additive and
+   * separate from it (#217, ADR-020). Unpaginated: see {@link ActorService#getCrewCredits}'s
+   * Javadoc for why.
+   *
+   * @param id TMDB person id
+   * @param department restrict to this TMDB department (e.g. "Directing"), or omit for any
+   * @param job restrict to this exact TMDB job (e.g. "Director"), or omit for any
+   * @return 200 with matching crew credits, newest release first
+   */
+  @GetMapping("/{id}/crew")
+  @Operation(
+      summary = "Get an actor's crew credits",
+      description =
+          "Director/producer/writer/etc., filterable by department and/or job — never includes"
+              + " cast credits")
+  public ResponseEntity<ApiResponse<List<CrewCreditDto>>> getCrewCredits(
+      @PathVariable Long id,
+      @RequestParam(required = false) String department,
+      @RequestParam(required = false) String job) {
+    // Delegate straight to the service — filtering/sorting logic lives there, not the controller.
+    return ok(actorService.getCrewCredits(id, department, job), "Crew credits retrieved");
   }
 
   /**
