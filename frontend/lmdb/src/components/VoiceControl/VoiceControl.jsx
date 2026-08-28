@@ -5,13 +5,15 @@ import { useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 
 import { ColorModeContext } from '../../utils/ToggleColorMode';
-import { selectGenreOrCategory, searchMovie } from '../../features/currentGenreOrCategory';
+import { selectGenreOrCategory, aiSearchStarted, aiSearchSucceeded, aiSearchFailed } from '../../features/currentGenreOrCategory';
 import { clearUser } from '../../features/auth';
 import { resolveApiUrl } from '../../utils/apiUrl';
 import { clearAuthTokens } from '../../utils';
 import { encodeToWav } from '../../utils/wavEncoder';
 import { parseVoiceCommand } from '../../utils/voiceCommands';
 import { useGetGenresQuery } from '../../services/TMDB';
+import { useExecuteSearchMutation } from '../../services/AI';
+import { toTmdbMovieShape } from '../Search/Search';
 
 /**
  * Click-to-talk voice control (#68): records a
@@ -25,13 +27,14 @@ function VoiceControl() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { data: genresData } = useGetGenresQuery();
+  const [executeSearch] = useExecuteSearchMutation();
 
   const [status, setStatus] = useState('idle'); // idle | recording | transcribing
   const [feedback, setFeedback] = useState(null);
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
 
-  const runCommand = ({ command, mode, genreOrCategory, query }) => {
+  const runCommand = async ({ command, mode, genreOrCategory, query }) => {
     const genres = genresData?.genres ?? [];
 
     if (command === 'chooseGenre') {
@@ -46,7 +49,13 @@ function VoiceControl() {
       navigate('/');
     } else if (command === 'search') {
       navigate('/');
-      dispatch(searchMovie(query));
+      dispatch(aiSearchStarted(query));
+      try {
+        const response = await executeSearch(query).unwrap();
+        dispatch(aiSearchSucceeded({ results: (response.results ?? []).map(toTmdbMovieShape) }));
+      } catch (error) {
+        dispatch(aiSearchFailed());
+      }
     }
   };
 
@@ -79,7 +88,7 @@ function VoiceControl() {
       if (!text) {
         setFeedback({ severity: 'warning', message: "Didn't catch that — try again." });
       } else if (parsedCommand) {
-        runCommand(parsedCommand);
+        await runCommand(parsedCommand);
         setFeedback({ severity: 'success', message: `Heard: "${text}"` });
       } else {
         setFeedback({ severity: 'info', message: `Heard: "${text}" — no matching command.` });

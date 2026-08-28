@@ -26,11 +26,6 @@ export const parseVoiceCommand = (rawText, genreNames = []) => {
     return { command: 'changeMode', mode: 'light' };
   }
 
-  const searchMatch = text.match(/\bsearch(?: for)?\s+(.+)/);
-  if (searchMatch) {
-    return { command: 'search', query: searchMatch[1].trim() };
-  }
-
   const matchedCategory = CATEGORY_PHRASES.find(({ pattern }) => pattern.test(text));
   if (matchedCategory) {
     return { command: 'chooseGenre', genreOrCategory: matchedCategory.category };
@@ -39,6 +34,11 @@ export const parseVoiceCommand = (rawText, genreNames = []) => {
   const matchedGenre = genreNames.find((name) => text.includes(name.toLowerCase()));
   if (matchedGenre) {
     return { command: 'chooseGenre', genreOrCategory: matchedGenre };
+  }
+
+  const queryText = text.replace(/^(?:search(?: for)?\s+)/, '').trim();
+  if (queryText) {
+    return { command: 'search', query: queryText };
   }
 
   return null;

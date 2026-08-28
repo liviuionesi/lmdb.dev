@@ -43,11 +43,11 @@ describe('parseVoiceCommand', () => {
     });
   });
 
-  it('returns null when nothing matches, even with genre names supplied', () => {
-    expect(parseVoiceCommand('what is the weather today', ['Action', 'Comedy'])).toBeNull();
+  it('falls back to search when nothing matches, even with genre names supplied', () => {
+    expect(parseVoiceCommand('what is the weather today', ['Action', 'Comedy'])).toEqual({ command: 'search', query: 'what is the weather today' });
   });
 
-  it('defaults genreNames to an empty list when omitted', () => {
-    expect(parseVoiceCommand('random gibberish text')).toBeNull();
+  it('defaults genreNames to an empty list when omitted and falls back to search', () => {
+    expect(parseVoiceCommand('random gibberish text')).toEqual({ command: 'search', query: 'random gibberish text' });
   });
 });
