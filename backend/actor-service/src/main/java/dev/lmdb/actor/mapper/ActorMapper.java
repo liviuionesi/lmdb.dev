@@ -2,11 +2,13 @@ package dev.lmdb.actor.mapper;
 
 import dev.lmdb.actor.client.dto.TmdbPersonImagesResponse.TmdbProfileImage;
 import dev.lmdb.actor.client.dto.TmdbPersonMovieCreditsResponse.TmdbCastCredit;
+import dev.lmdb.actor.client.dto.TmdbPersonMovieCreditsResponse.TmdbCrewCredit;
 import dev.lmdb.actor.client.dto.TmdbPersonResponse;
 import dev.lmdb.actor.client.dto.TmdbPersonSearchResponse.TmdbPersonSummary;
 import dev.lmdb.actor.dto.ActorDtos.ActorDto;
 import dev.lmdb.actor.dto.ActorDtos.ActorImageDto;
 import dev.lmdb.actor.dto.ActorDtos.ActorSummaryDto;
+import dev.lmdb.actor.dto.ActorDtos.CrewCreditDto;
 import dev.lmdb.actor.dto.ActorDtos.FilmographyEntryDto;
 import dev.lmdb.actor.model.Actor;
 import dev.lmdb.actor.model.ActorProfileImage;
@@ -95,6 +97,24 @@ public interface ActorMapper {
    * @return native filmography entry DTOs
    */
   List<FilmographyEntryDto> toFilmographyEntryDtos(List<TmdbCastCredit> credits);
+
+  /**
+   * Maps a single TMDB crew credit to a native {@link CrewCreditDto}.
+   *
+   * @param credit TMDB crew credit record
+   * @return native crew credit DTO
+   */
+  @Mapping(source = "id", target = "movieId")
+  @Mapping(target = "releaseDate", defaultValue = "")
+  CrewCreditDto toCrewCreditDto(TmdbCrewCredit credit);
+
+  /**
+   * Maps a list of TMDB crew credits to a list of native {@link CrewCreditDto}s.
+   *
+   * @param credits TMDB crew credit records
+   * @return native crew credit DTOs
+   */
+  List<CrewCreditDto> toCrewCreditDtos(List<TmdbCrewCredit> credits);
 
   /**
    * Maps a domain {@link ActorProfileImage} to a native {@link ActorImageDto}.

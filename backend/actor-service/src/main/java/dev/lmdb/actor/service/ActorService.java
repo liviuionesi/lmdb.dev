@@ -9,6 +9,7 @@ import dev.lmdb.actor.dto.ActorDtos.ActorDto;
 import dev.lmdb.actor.dto.ActorDtos.ActorImageDto;
 import dev.lmdb.actor.dto.ActorDtos.ActorSearchResponse;
 import dev.lmdb.actor.dto.ActorDtos.ActorSummaryDto;
+import dev.lmdb.actor.dto.ActorDtos.CrewCreditDto;
 import dev.lmdb.actor.dto.ActorDtos.FilmographyEntryDto;
 import dev.lmdb.actor.dto.ActorDtos.FilmographyPageDto;
 import dev.lmdb.actor.mapper.ActorMapper;
@@ -141,6 +142,57 @@ public class ActorService {
     int from = Math.min((page - 1) * pageSize, all.size());
     int to = Math.min(from + pageSize, all.size());
     return new FilmographyPageDto(page, totalPages, all.size(), all.subList(from, to));
+  }
+
+  /**
+   * Fetches an actor's crew credits (director, producer, writer, etc.) from TMDB's {@code
+   * movie_credits}, optionally filtered by department and/or job, newest release first — the
+   * crew-side counterpart to {@link #getFilmography} (#217, ADR-020). Existing cast-only behavior
+   * ({@link #getFilmography}/{@link #getFilmographyPage}) is unchanged; this is purely additive.
+   *
+   * <p>Unpaginated, unlike {@link #getFilmographyPage}: a person's crew credits (as director/
+   * producer specifically) are a small enough set that #203's cross-service aggregation needs the
+   * whole filtered list at once, not a UI page.
+   *
+   * @param tmdbId TMDB person id
+   * @param department restrict to this TMDB department (e.g. "Directing"), case-insensitive, or
+   *     {@code null}/blank for any department
+   * @param job restrict to this exact TMDB job (e.g. "Director"), case-insensitive, or {@code
+   *     null}/blank for any job
+   * @return matching crew credits sorted by release date descending; empty if TMDB reports no crew
+   *     credits at all, or none match the given filter
+   */
+  public List<CrewCreditDto> getCrewCredits(Long tmdbId, String department, String job) {
+    // 1. Fetch the same raw TMDB response getFilmography() uses, but read its crew side instead
+    //    of cast — one TMDB call already covers both, so this adds no extra round trip.
+    List<TmdbPersonMovieCreditsResponse.TmdbCrewCredit> rawCrew = getFilmographyRaw(tmdbId).crew();
+    if (rawCrew == null) {
+      return List.of();
+    }
+
+    // 2. Apply the optional department/job filter TMDB itself doesn't offer — blank/null means
+    //    "don't restrict on this dimension," matching how the rest of this API treats optional
+    //    query params.
+    List<TmdbPersonMovieCreditsResponse.TmdbCrewCredit> filtered =
+        rawCrew.stream()
+            .filter(c -> isBlank(department) || department.equalsIgnoreCase(c.department()))
+            .filter(c -> isBlank(job) || job.equalsIgnoreCase(c.job()))
+            .toList();
+
+    // 3. Map and sort newest-first, mirroring getFilmography()'s own ordering contract.
+    List<CrewCreditDto> entries = new ArrayList<>(actorMapper.toCrewCreditDtos(filtered));
+    entries.sort(
+        Comparator.comparing(
+            CrewCreditDto::releaseDate, Comparator.nullsLast(Comparator.reverseOrder())));
+    return entries;
+  }
+
+  /**
+   * @param value a filter parameter, possibly {@code null}
+   * @return {@code true} if {@code value} is {@code null} or carries no non-whitespace content
+   */
+  private static boolean isBlank(String value) {
+    return value == null || value.isBlank();
   }
 
   /**

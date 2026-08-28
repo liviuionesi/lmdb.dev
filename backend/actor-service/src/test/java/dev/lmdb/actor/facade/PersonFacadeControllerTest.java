@@ -152,7 +152,7 @@ class PersonFacadeControllerTest {
     TmdbCastCredit credit =
         new TmdbCastCredit(550L, "Fight Club", "The Narrator", "1999-10-15", "/p.jpg", 8.4);
     TmdbPersonMovieCreditsResponse creditsResponse =
-        new TmdbPersonMovieCreditsResponse(819L, List.of(credit));
+        new TmdbPersonMovieCreditsResponse(819L, List.of(credit), List.of());
     when(actorService.getFilmographyRaw(819L)).thenReturn(creditsResponse);
 
     // When & Then

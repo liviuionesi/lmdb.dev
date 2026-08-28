@@ -311,6 +311,58 @@ class ActorMapperTest {
   }
 
   /**
+   * Verifies that mapping a {@link
+   * dev.lmdb.actor.client.dto.TmdbPersonMovieCreditsResponse.TmdbCrewCredit} to {@link
+   * dev.lmdb.actor.dto.ActorDtos.CrewCreditDto} correctly maps id to movieId, carries
+   * job/department through unchanged, and defaults a null releaseDate to an empty string — the
+   * crew-side counterpart to {@link #toFilmographyEntryDtoMapsFields} (#217).
+   */
+  @Test
+  @DisplayName("toCrewCreditDto: maps crew credit and defaults null release date to empty string")
+  void toCrewCreditDtoMapsFields() {
+    var creditWithDate =
+        new dev.lmdb.actor.client.dto.TmdbPersonMovieCreditsResponse.TmdbCrewCredit(
+            155L, "The Dark Knight", "Director", "Directing", "2008-07-18", "/poster.jpg", 8.5);
+
+    var dto = mapper.toCrewCreditDto(creditWithDate);
+
+    assertThat(dto).isNotNull();
+    assertThat(dto.movieId()).isEqualTo(155L);
+    assertThat(dto.title()).isEqualTo("The Dark Knight");
+    assertThat(dto.job()).isEqualTo("Director");
+    assertThat(dto.department()).isEqualTo("Directing");
+    assertThat(dto.releaseDate()).isEqualTo("2008-07-18");
+    assertThat(dto.posterPath()).isEqualTo("/poster.jpg");
+    assertThat(dto.voteAverage()).isEqualTo(8.5);
+
+    var creditWithoutDate =
+        new dev.lmdb.actor.client.dto.TmdbPersonMovieCreditsResponse.TmdbCrewCredit(
+            156L, "Undated Movie", "Producer", "Production", null, "/undated.jpg", 6.0);
+    var undatedDto = mapper.toCrewCreditDto(creditWithoutDate);
+    assertThat(undatedDto.releaseDate()).isEmpty();
+    assertThat(mapper.toCrewCreditDto(null)).isNull();
+  }
+
+  /** Verifies that mapping a list of crew credits maps all elements. */
+  @Test
+  @DisplayName("toCrewCreditDtos: maps list of crew credits")
+  void toCrewCreditDtosMapsList() {
+    var credit1 =
+        new dev.lmdb.actor.client.dto.TmdbPersonMovieCreditsResponse.TmdbCrewCredit(
+            1L, "Movie 1", "Director", "Directing", "2020-01-01", "/p1.jpg", 7.0);
+    var credit2 =
+        new dev.lmdb.actor.client.dto.TmdbPersonMovieCreditsResponse.TmdbCrewCredit(
+            2L, "Movie 2", "Producer", "Production", "2021-01-01", "/p2.jpg", 8.0);
+
+    var dtos = mapper.toCrewCreditDtos(List.of(credit1, credit2));
+
+    assertThat(dtos).hasSize(2);
+    assertThat(dtos.get(0).movieId()).isEqualTo(1L);
+    assertThat(dtos.get(1).movieId()).isEqualTo(2L);
+    assertThat(mapper.toCrewCreditDtos(null)).isNull();
+  }
+
+  /**
    * Verifies mapping from {@link dev.lmdb.actor.model.ActorProfileImage} to {@link
    * dev.lmdb.actor.dto.ActorDtos.ActorImageDto}.
    */

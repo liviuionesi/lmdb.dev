@@ -69,6 +69,44 @@ class ActorServiceIntegrationTest {
         {"id":1546,"title":"25th Hour","character":"Monty Brogan",\
         "release_date":"2002-12-16","poster_path":"/q.jpg","vote_average":7.6}],"id":819}""";
 
+  /**
+   * TMDB movie_credits for a person with BOTH cast and crew credits — a director/producer who also
+   * has one acting cameo (#217, ADR-020). Two properties are deliberate, both closing gaps an
+   * independent test-quality review found in an earlier version of this fixture:
+   *
+   * <ul>
+   *   <li>Release-date order is the OPPOSITE of alphabetical job order (Director/2014 newest,
+   *       Co-Producer/2012, Producer/2010, Writer/2008 oldest) — date order coinciding with
+   *       alphabetical job order let a "sorts by job instead of releaseDate" mutation pass every
+   *       test undetected.
+   *   <li>The fourth credit ("Pulp Fiction", job {@code Co-Producer}, department {@code Directing
+   *       Unit}) is a decoy: both its job and department are substrings of a value a filter test
+   *       below searches for ({@code Producer}, {@code Directing}) without being equal to it — it
+   *       would leak into a filtered result under a {@code String.contains} filter but not under
+   *       {@code equalsIgnoreCase}, the one actually implemented.
+   * </ul>
+   */
+  private static final String CREDITS_WITH_CAST_AND_CREW_525 =
+      """
+        {"id":525,\
+        "cast":[{"id":27205,"title":"Inception","character":"Cameo",\
+        "release_date":"2010-07-16","poster_path":"/c.jpg","vote_average":8.4}],\
+        "crew":[{"id":155,"title":"The Dark Knight","job":"Director","department":"Directing",\
+        "release_date":"2014-07-18","poster_path":"/d.jpg","vote_average":8.5},\
+        {"id":680,"title":"Pulp Fiction","job":"Co-Producer","department":"Directing Unit",\
+        "release_date":"2012-01-01","poster_path":"/pf.jpg","vote_average":8.9},\
+        {"id":27205,"title":"Inception","job":"Producer","department":"Production",\
+        "release_date":"2010-07-16","poster_path":"/c.jpg","vote_average":8.4},\
+        {"id":157336,"title":"Interstellar","job":"Writer","department":"Writing",\
+        "release_date":"2008-11-07","poster_path":"/i.jpg","vote_average":8.6}]}""";
+
+  /** TMDB movie_credits for a person with crew-only credits — empty cast, per #217's own AC. */
+  private static final String CREDITS_CREW_ONLY_1000 =
+      """
+        {"id":1000,"cast":[],\
+        "crew":[{"id":11,"title":"Solo Producer Film","job":"Producer","department":"Production",\
+        "release_date":"2015-05-05","poster_path":"/s.jpg","vote_average":6.5}]}""";
+
   /** TMDB's profile-image set for person 819. */
   private static final String IMAGES_819 =
       """
@@ -295,6 +333,133 @@ class ActorServiceIntegrationTest {
         .andExpect(jsonPath("$.data.results.length()").value(1))
         // Fight Club (1999) is the older of the two → alone on page 2.
         .andExpect(jsonPath("$.data.results[0].movieId").value(550));
+  }
+
+  /**
+   * Given a person with both cast and crew credits, when their unfiltered crew credits are
+   * requested, then only the crew entries come back (not the cast cameo), sorted newest-release
+   * first — and the cast side stays reachable and unaffected via {@code /movies}, proving #217's
+   * "additive only, existing cast behavior unchanged" acceptance criterion at the HTTP layer, not
+   * just by inspection. Checking both the first AND last entries (not just one end) is what proves
+   * this sorts by release date specifically — see {@link #CREDITS_WITH_CAST_AND_CREW_525}'s Javadoc
+   * for why date order deliberately runs opposite to alphabetical job order here.
+   *
+   * @throws Exception if the MockMvc request fails to execute
+   */
+  @Test
+  @DisplayName("Native crew credits: parsed from movie_credits.crew, newest first, cast unaffected")
+  void nativeCrewCreditsParsedSeparatelyFromCast() throws Exception {
+    stubFor(
+        WireMock.get(urlPathEqualTo("/person/525/movie_credits"))
+            .willReturn(okJson(CREDITS_WITH_CAST_AND_CREW_525)));
+
+    // Crew side: all four credits, The Dark Knight (2014) newest, Interstellar (2008) oldest.
+    mockMvc
+        .perform(get("/api/v1/actors/525/crew"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.length()").value(4))
+        .andExpect(jsonPath("$.data[0].movieId").value(155))
+        .andExpect(jsonPath("$.data[0].job").value("Director"))
+        .andExpect(jsonPath("$.data[3].movieId").value(157336))
+        .andExpect(jsonPath("$.data[3].job").value("Writer"));
+
+    // Cast side: unchanged, still just the one acting cameo — proves this Task didn't touch it.
+    mockMvc
+        .perform(get("/api/v1/actors/525/movies"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.results.length()").value(1))
+        .andExpect(jsonPath("$.data.results[0].character").value("Cameo"));
+  }
+
+  /**
+   * Given a person with crew credits across multiple departments — including one ("Directing Unit")
+   * that is a near-miss substring of the filter value but not an exact match — when crew credits
+   * are requested filtered to one department, then only the exact match comes back. The near-miss
+   * decoy is what proves this filters by equality, not by {@code String.contains}: a
+   * substring-matching bug would let it leak into the result and fail the {@code length()==1}
+   * assertion below. This is the filter #203 needs to resolve {@code role=DIRECTED}.
+   *
+   * @throws Exception if the MockMvc request fails to execute
+   */
+  @Test
+  @DisplayName("Native crew credits: filters by department, excluding a substring near-miss")
+  void nativeCrewCreditsFiltersByDepartment() throws Exception {
+    stubFor(
+        WireMock.get(urlPathEqualTo("/person/525/movie_credits"))
+            .willReturn(okJson(CREDITS_WITH_CAST_AND_CREW_525)));
+
+    mockMvc
+        .perform(get("/api/v1/actors/525/crew").queryParam("department", "Directing"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.length()").value(1))
+        .andExpect(jsonPath("$.data[0].movieId").value(155))
+        .andExpect(jsonPath("$.data[0].department").value("Directing"));
+  }
+
+  /**
+   * Same as the department filter, but by exact job instead — case-insensitively, so a caller
+   * doesn't have to match TMDB's exact casing, and excluding "Co-Producer" (a near-miss substring
+   * of "Producer") to resolve {@code role=PRODUCED} without also matching a merely-related credit.
+   *
+   * @throws Exception if the MockMvc request fails to execute
+   */
+  @Test
+  @DisplayName("Native crew credits: filters by job, case-insensitively, excluding a near-miss")
+  void nativeCrewCreditsFiltersByJobCaseInsensitively() throws Exception {
+    stubFor(
+        WireMock.get(urlPathEqualTo("/person/525/movie_credits"))
+            .willReturn(okJson(CREDITS_WITH_CAST_AND_CREW_525)));
+
+    mockMvc
+        .perform(get("/api/v1/actors/525/crew").queryParam("job", "producer"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.length()").value(1))
+        .andExpect(jsonPath("$.data[0].movieId").value(27205))
+        .andExpect(jsonPath("$.data[0].job").value("Producer"));
+  }
+
+  /**
+   * Given a person with crew-only credits (empty cast — a pure producer/director TMDB has never
+   * credited as an actor), when their crew credits are requested, then the credit still comes back
+   * — #217's second required test scenario, distinct from the mixed-credits case above.
+   *
+   * @throws Exception if the MockMvc request fails to execute
+   */
+  @Test
+  @DisplayName("Native crew credits: a crew-only person (empty cast) still returns their credits")
+  void nativeCrewCreditsForCrewOnlyPerson() throws Exception {
+    stubFor(
+        WireMock.get(urlPathEqualTo("/person/1000/movie_credits"))
+            .willReturn(okJson(CREDITS_CREW_ONLY_1000)));
+
+    mockMvc
+        .perform(get("/api/v1/actors/1000/crew"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.length()").value(1))
+        .andExpect(jsonPath("$.data[0].movieId").value(11))
+        .andExpect(jsonPath("$.data[0].job").value("Producer"));
+  }
+
+  /**
+   * Given a person whose TMDB response has no {@code crew} field at all (the shape every existing
+   * fixture in this file used before #217), when their crew credits are requested, then the
+   * response is 200 with an empty list rather than a 500 — proves the new field's absence (not just
+   * an empty array) degrades safely, which matters because every pre-#217 caller's cached/fixture
+   * data looks exactly like this.
+   *
+   * @throws Exception if the MockMvc request fails to execute
+   */
+  @Test
+  @DisplayName("Native crew credits: a person with no crew field at all returns an empty list")
+  void nativeCrewCreditsForPersonWithNoCrewFieldIsEmpty() throws Exception {
+    stubFor(
+        WireMock.get(urlPathEqualTo("/person/819/movie_credits")).willReturn(okJson(CREDITS_819)));
+
+    mockMvc
+        .perform(get("/api/v1/actors/819/crew"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data").isArray())
+        .andExpect(jsonPath("$.data").isEmpty());
   }
 
   /**

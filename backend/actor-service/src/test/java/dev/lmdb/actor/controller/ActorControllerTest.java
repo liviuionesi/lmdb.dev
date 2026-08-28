@@ -10,6 +10,7 @@ import dev.lmdb.actor.dto.ActorDtos.ActorDto;
 import dev.lmdb.actor.dto.ActorDtos.ActorImageDto;
 import dev.lmdb.actor.dto.ActorDtos.ActorSearchResponse;
 import dev.lmdb.actor.dto.ActorDtos.ActorSummaryDto;
+import dev.lmdb.actor.dto.ActorDtos.CrewCreditDto;
 import dev.lmdb.actor.dto.ActorDtos.FilmographyEntryDto;
 import dev.lmdb.actor.dto.ActorDtos.FilmographyPageDto;
 import dev.lmdb.actor.service.ActorService;
@@ -122,6 +123,35 @@ class ActorControllerTest {
         .andExpect(jsonPath("$.data.page").value(1))
         .andExpect(jsonPath("$.data.totalItems").value(1))
         .andExpect(jsonPath("$.data.results[0].movieId").value(550));
+  }
+
+  /**
+   * Verifies that {@code GET /api/v1/actors/{id}/crew} returns 200 OK with the actor's crew credits
+   * and forwards the optional department/job query params through to the service unchanged (#217).
+   *
+   * @throws Exception if mock MVC execution fails
+   */
+  @Test
+  @DisplayName(
+      "GET /api/v1/actors/{id}/crew: returns crew credits, forwards department/job filters")
+  void getCrewCreditsReturnsCredits() throws Exception {
+    // Given
+    CrewCreditDto credit =
+        new CrewCreditDto(
+            155L, "The Dark Knight", "Director", "Directing", "2008-07-18", "/poster.jpg", 8.5);
+    when(actorService.getCrewCredits(819L, "Directing", "Director")).thenReturn(List.of(credit));
+
+    // When & Then
+    mockMvc
+        .perform(
+            get("/api/v1/actors/819/crew")
+                .param("department", "Directing")
+                .param("job", "Director"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.success").value(true))
+        .andExpect(jsonPath("$.data[0].movieId").value(155))
+        .andExpect(jsonPath("$.data[0].job").value("Director"))
+        .andExpect(jsonPath("$.data[0].department").value("Directing"));
   }
 
   /**

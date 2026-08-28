@@ -687,7 +687,8 @@ public class Actor {
 
 **API Endpoints (native):**
 - `GET /api/v1/actors/{id}` - Actor details (HATEOAS `_links` to movies/images)
-- `GET /api/v1/actors/{id}/movies?page=&size=` - Paged filmography
+- `GET /api/v1/actors/{id}/movies?page=&size=` - Paged filmography (cast credits)
+- `GET /api/v1/actors/{id}/crew?department=&job=` - Crew credits (director/producer/etc.), optionally filtered by department/job (#217, ADR-020) — unpaginated, additive alongside `/movies`
 - `GET /api/v1/actors/{id}/images` - Profile images
 - `GET /api/v1/actors/popular?page=` - Popular actors
 - `GET /api/v1/actors/search?query=&page=` - Search actors

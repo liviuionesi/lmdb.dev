@@ -17,6 +17,7 @@ import dev.lmdb.actor.client.dto.TmdbPersonSearchResponse;
 import dev.lmdb.actor.dto.ActorDtos.ActorDto;
 import dev.lmdb.actor.dto.ActorDtos.ActorImageDto;
 import dev.lmdb.actor.dto.ActorDtos.ActorSearchResponse;
+import dev.lmdb.actor.dto.ActorDtos.CrewCreditDto;
 import dev.lmdb.actor.dto.ActorDtos.FilmographyEntryDto;
 import dev.lmdb.actor.dto.ActorDtos.FilmographyPageDto;
 import dev.lmdb.actor.model.Actor;
@@ -176,7 +177,8 @@ class ActorServiceTest {
                 List.of(
                     credit(1L, "Older", "1999-01-01"),
                     credit(2L, "Undated", null),
-                    credit(3L, "Newer", "2019-01-01"))));
+                    credit(3L, "Newer", "2019-01-01")),
+                List.of()));
 
     // When
     List<FilmographyEntryDto> result = actorService.getFilmography(BRAD_PITT_ID);
@@ -203,7 +205,8 @@ class ActorServiceTest {
                 List.of(
                     credit(1L, "A", "2021-01-01"),
                     credit(2L, "B", "2020-01-01"),
-                    credit(3L, "C", "2019-01-01"))));
+                    credit(3L, "C", "2019-01-01")),
+                List.of()));
 
     // When: asking for the last (partial) page
     FilmographyPageDto page = actorService.getFilmographyPage(BRAD_PITT_ID, 2, 2);
@@ -226,10 +229,139 @@ class ActorServiceTest {
     when(tmdbPersonClient.getPersonMovieCredits(BRAD_PITT_ID))
         .thenReturn(
             new TmdbPersonMovieCreditsResponse(
-                BRAD_PITT_ID, List.of(credit(1L, "A", "2021-01-01"))));
+                BRAD_PITT_ID, List.of(credit(1L, "A", "2021-01-01")), List.of()));
 
     // When / Then
     assertThat(actorService.getFilmographyPage(BRAD_PITT_ID, 99, 20).results()).isEmpty();
+  }
+
+  /**
+   * Given a person with both cast and crew credits, when their crew credits are fetched unfiltered,
+   * then only the crew entries come back (mapped with job/department, not the cast character),
+   * sorted newest-release first — the unit-level counterpart to the crew-credit HTTP coverage in
+   * {@code ActorServiceIntegrationTest} (#217).
+   */
+  @Test
+  @DisplayName("getCrewCredits: returns only crew (not cast), sorted newest first")
+  void getCrewCreditsReturnsOnlyCrewSortedNewestFirst() {
+    // Given: one cast credit and three crew credits. Deliberately chosen so release-date order is
+    // the OPPOSITE of alphabetical job order (Director < Producer < Writer alphabetically, but here
+    // the Director credit is newest and the Writer credit is oldest) — an independent review found
+    // that an earlier version of this fixture let a "sorts by job" mutation pass undetected,
+    // because date order happened to coincide with alphabetical job order. Also includes an undated
+    // credit, mirroring getFilmographySortsNewestFirst's own undated-sinks-last case on the cast
+    // side.
+    when(tmdbPersonClient.getPersonMovieCredits(BRAD_PITT_ID))
+        .thenReturn(
+            new TmdbPersonMovieCreditsResponse(
+                BRAD_PITT_ID,
+                List.of(credit(1L, "Acted In", "2005-01-01")),
+                List.of(
+                    crewCredit(2L, "Zebra Production", "Producer", "Production", "2001-01-01"),
+                    crewCredit(4L, "Undated Writing", "Writer", "Writing", null),
+                    crewCredit(3L, "Alpha Directing", "Director", "Directing", "2015-01-01"))));
+
+    // When
+    List<CrewCreditDto> result = actorService.getCrewCredits(BRAD_PITT_ID, null, null);
+
+    // Then: 3 crew entries (the cast one is excluded), newest release first, undated last — and the
+    // job order (Director, Producer, Writer) is NOT alphabetical, so this only passes if the sort
+    // key is actually releaseDate, not job/title/department.
+    assertThat(result)
+        .extracting(CrewCreditDto::title)
+        .containsExactly("Alpha Directing", "Zebra Production", "Undated Writing");
+    assertThat(result)
+        .extracting(CrewCreditDto::job)
+        .containsExactly("Director", "Producer", "Writer");
+  }
+
+  /**
+   * Given a person with crew credits in more than one department, when crew credits are fetched
+   * filtered to one department, then only that department's credits come back — the filter #203
+   * needs to resolve {@code role=DIRECTED} without also matching a Producer/Writer credit.
+   */
+  @Test
+  @DisplayName("getCrewCredits: filters by department")
+  void getCrewCreditsFiltersByDepartment() {
+    // Given
+    when(tmdbPersonClient.getPersonMovieCredits(BRAD_PITT_ID))
+        .thenReturn(
+            new TmdbPersonMovieCreditsResponse(
+                BRAD_PITT_ID,
+                List.of(),
+                List.of(
+                    crewCredit(1L, "Directed", "Director", "Directing", "2010-01-01"),
+                    crewCredit(2L, "Produced", "Producer", "Production", "2011-01-01"))));
+
+    // When
+    List<CrewCreditDto> result = actorService.getCrewCredits(BRAD_PITT_ID, "Directing", null);
+
+    // Then
+    assertThat(result).extracting(CrewCreditDto::title).containsExactly("Directed");
+  }
+
+  /**
+   * Same as the department filter, but by exact job, and case-insensitively — TMDB always sends
+   * "Director" Title-cased, but a caller shouldn't have to match that exactly.
+   */
+  @Test
+  @DisplayName("getCrewCredits: filters by job, case-insensitively")
+  void getCrewCreditsFiltersByJobCaseInsensitively() {
+    // Given
+    when(tmdbPersonClient.getPersonMovieCredits(BRAD_PITT_ID))
+        .thenReturn(
+            new TmdbPersonMovieCreditsResponse(
+                BRAD_PITT_ID,
+                List.of(),
+                List.of(
+                    crewCredit(1L, "Directed", "Director", "Directing", "2010-01-01"),
+                    crewCredit(2L, "Wrote", "Writer", "Writing", "2011-01-01"))));
+
+    // When: lowercase, unlike TMDB's own "Director"
+    List<CrewCreditDto> result = actorService.getCrewCredits(BRAD_PITT_ID, null, "director");
+
+    // Then
+    assertThat(result).extracting(CrewCreditDto::title).containsExactly("Directed");
+  }
+
+  /**
+   * Given a person with crew-only credits (no cast at all — a pure director/producer), when their
+   * crew credits are fetched, then the credit still comes back — #217's second required test
+   * scenario at the unit level.
+   */
+  @Test
+  @DisplayName("getCrewCredits: a crew-only person (empty cast) still returns their credits")
+  void getCrewCreditsForCrewOnlyPerson() {
+    // Given: empty cast list, one crew credit
+    when(tmdbPersonClient.getPersonMovieCredits(BRAD_PITT_ID))
+        .thenReturn(
+            new TmdbPersonMovieCreditsResponse(
+                BRAD_PITT_ID,
+                List.of(),
+                List.of(
+                    crewCredit(1L, "Solo Producer Film", "Producer", "Production", "2015-01-01"))));
+
+    // When / Then
+    assertThat(actorService.getCrewCredits(BRAD_PITT_ID, null, null))
+        .extracting(CrewCreditDto::title)
+        .containsExactly("Solo Producer Film");
+  }
+
+  /**
+   * Given a person whose TMDB response carries no {@code crew} field at all (every pre-#217
+   * fixture's shape — {@code null}, not an empty list), when their crew credits are fetched, then
+   * the result is an empty list rather than a {@link NullPointerException} — proves the new field's
+   * absence degrades safely rather than only its emptiness being handled.
+   */
+  @Test
+  @DisplayName("getCrewCredits: a null crew field (not just empty) returns an empty list, not NPE")
+  void getCrewCreditsReturnsEmptyWhenCrewFieldIsNull() {
+    // Given: crew is null, matching TMDB responses that predate #217's field
+    when(tmdbPersonClient.getPersonMovieCredits(BRAD_PITT_ID))
+        .thenReturn(new TmdbPersonMovieCreditsResponse(BRAD_PITT_ID, List.of(), null));
+
+    // When / Then
+    assertThat(actorService.getCrewCredits(BRAD_PITT_ID, null, null)).isEmpty();
   }
 
   /**
@@ -477,6 +609,20 @@ class ActorServiceTest {
       Long id, String title, String releaseDate) {
     return new TmdbPersonMovieCreditsResponse.TmdbCastCredit(
         id, title, "Self", releaseDate, "/poster.jpg", 7.5);
+  }
+
+  /**
+   * @param id TMDB movie id
+   * @param title movie title
+   * @param job the crew job, e.g. "Director"
+   * @param department the TMDB department the job belongs to, e.g. "Directing"
+   * @param releaseDate release date, null to model an undated credit
+   * @return one crew credit (#217)
+   */
+  private static TmdbPersonMovieCreditsResponse.TmdbCrewCredit crewCredit(
+      Long id, String title, String job, String department, String releaseDate) {
+    return new TmdbPersonMovieCreditsResponse.TmdbCrewCredit(
+        id, title, job, department, releaseDate, "/poster.jpg", 7.5);
   }
 
   /**
