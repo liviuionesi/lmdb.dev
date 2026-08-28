@@ -58,33 +58,33 @@ the existing LMDB React app is the only frontend.
 
 ### 1.1 Backend (Exact Versions)
 
-| Technology | Version | Installation Method | Purpose |
-|------------|---------|---------------------|---------|
-| Java | 25 | SDKMAN | Programming language |
-| Spring Boot | 4.1.0 | Gradle | Framework (Framework 7, Jackson 3, Jakarta EE 11 — see ADR-009) |
-| Gradle | 9.7.0 | Wrapper / SDKMAN | Build tool |
-| Spring Cloud | 2025.1.2 | Gradle | Microservices infrastructure |
-| Spring AI | 2.0.0 | Gradle | AI/ML integration (implemented in ai-service — see §3.7) |
-| PostgreSQL | 17 (pgvector) | Docker/Podman | Relational database (`pgvector/pgvector:pg17` for ai-service embeddings per ADR-012) |
-| MongoDB | 8.0 | Docker/Podman | Document database |
-| Redis | 7.4-alpine | Docker/Podman | Caching layer |
-| gRPC | 1.76.0 | Gradle | Service communication |
-| JWT (jjwt) | 0.13.0 | Gradle | Authentication |
-| MapStruct | 1.6.3 | Gradle | DTO mapping (available on the classpath; hand-written DTO mapping so far) |
-| Lombok | 1.18.46 | Gradle | Boilerplate reduction |
-| MinIO | 8.5.7 | Gradle | Object storage client |
-| Logstash Logback Encoder | 8.1 | Gradle | JSON structured logging for ELK pipeline (#23) |
-| Protobuf Plugin | 0.9.6 | Gradle | gRPC code generation plugin for Gradle (#36) |
-| Protoc | 4.29.3 | Gradle | Protocol Buffer compiler (#36) |
-| JUnit | 5.11.3 | Gradle | Testing framework |
-| Mockito | 5.19.0 | Gradle | Mocking framework |
-| TestContainers | 2.0.5 | Gradle | Integration testing (Postgres/Redis stable; MongoDB saw transient flakiness under podman — see ADR-009) |
-| WireMock | 3.9.1 | Gradle | Fake-TMDB HTTP stubbing in tests |
-| Bucket4j | 8.10.1 | Gradle | Gateway rate limiting (`bucket4j-core`, not deprecated starter — see §11) |
-| Springdoc OpenAPI | 3.1.0 | Gradle | API documentation |
-| JaCoCo | 0.8.14 | Gradle | Code coverage |
-| OpenRewrite | 7.37.0 | Gradle | Standing framework-migration tool (see ADR-009) |
-| SonarQube Plugin | 6.2.0.5505 | Gradle | Static code analysis Gradle plugin (#20) |
+| Technology               | Version       | Installation Method | Purpose                                                                                                 |
+| ------------------------ | ------------- | ------------------- | ------------------------------------------------------------------------------------------------------- |
+| Java                     | 25            | SDKMAN              | Programming language                                                                                    |
+| Spring Boot              | 4.1.1         | Gradle              | Framework (Framework 7, Jackson 3, Jakarta EE 11 — see ADR-009)                                         |
+| Gradle                   | 9.7.0         | Wrapper / SDKMAN    | Build tool                                                                                              |
+| Spring Cloud             | 2025.1.2      | Gradle              | Microservices infrastructure                                                                            |
+| Spring AI                | 2.0.0         | Gradle              | AI/ML integration (implemented in ai-service — see §3.7)                                                |
+| PostgreSQL               | 17 (pgvector) | Docker/Podman       | Relational database (`pgvector/pgvector:pg17` for ai-service embeddings per ADR-012)                    |
+| MongoDB                  | 8.0           | Docker/Podman       | Document database                                                                                       |
+| Redis                    | 7.4-alpine    | Docker/Podman       | Caching layer                                                                                           |
+| gRPC                     | 1.76.0        | Gradle              | Service communication                                                                                   |
+| JWT (jjwt)               | 0.13.0        | Gradle              | Authentication                                                                                          |
+| MapStruct                | 1.6.3         | Gradle              | DTO mapping (available on the classpath; hand-written DTO mapping so far)                               |
+| Lombok                   | 1.18.46       | Gradle              | Boilerplate reduction                                                                                   |
+| MinIO                    | 8.5.7         | Gradle              | Object storage client                                                                                   |
+| Logstash Logback Encoder | 8.1           | Gradle              | JSON structured logging for ELK pipeline (#23)                                                          |
+| Protobuf Plugin          | 0.9.6         | Gradle              | gRPC code generation plugin for Gradle (#36)                                                            |
+| Protoc                   | 4.29.3        | Gradle              | Protocol Buffer compiler (#36)                                                                          |
+| JUnit                    | 5.11.3        | Gradle              | Testing framework                                                                                       |
+| Mockito                  | 5.19.0        | Gradle              | Mocking framework                                                                                       |
+| TestContainers           | 2.0.5         | Gradle              | Integration testing (Postgres/Redis stable; MongoDB saw transient flakiness under podman — see ADR-009) |
+| WireMock                 | 3.9.1         | Gradle              | Fake-TMDB HTTP stubbing in tests                                                                        |
+| Bucket4j                 | 8.10.1        | Gradle              | Gateway rate limiting (`bucket4j-core`, not deprecated starter — see §11)                               |
+| Springdoc OpenAPI        | 3.1.0         | Gradle              | API documentation                                                                                       |
+| JaCoCo                   | 0.8.14        | Gradle              | Code coverage                                                                                           |
+| OpenRewrite              | 7.37.0        | Gradle              | Standing framework-migration tool (see ADR-009)                                                         |
+| SonarQube Plugin         | 6.2.0.5505    | Gradle              | Static code analysis Gradle plugin (#20)                                                                |
 
 ### 1.2 Frontend — Existing LMDB React App (consumer, built elsewhere, merged in-repo)
 
@@ -99,16 +99,16 @@ file and a hardcoded TMDB API key from its history. It consumes this
 backend without frontend logic changes beyond configuration — see
 `docs/guides/RUN_WITH_LMDB_APP.md` for the runbook:
 
-| Technology | Version | Notes |
-|------------|---------|-------|
-| React | 19.2.8 | Vite build (migrated off CRA, #125-127 — `react-scripts` no longer used) |
-| Redux Toolkit | 2.12.0 | `@reduxjs/toolkit` 2.12.0 (`react-redux` 9.3.0) — TMDB calls in `src/services/TMDB.js` |
-| axios | 1.6.8 | Auth calls in `src/utils/index.js` |
-| Material UI | 9.3.1 | `@mui/material` & `@mui/icons-material` 9.3.1 |
-| Emotion | 11.4.1 / 11.3.0 | `@emotion/react` 11.4.1, `@emotion/styled` 11.3.0 |
-| Vosk Speech-to-Text | Latest | Offline voice control via `ai-service` SpeechToTextService |
-| React Router DOM | 7.18.2 | Client-side routing |
-| TMDB API contract | v3 | Base URL `https://api.themoviedb.org/3` → becomes this backend's gateway via `VITE_API_URL` (build-time) or dynamic resolution — see §11.6 |
+| Technology          | Version         | Notes                                                                                                                                      |
+| ------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| React               | 19.2.8          | Vite build (migrated off CRA, #125-127 — `react-scripts` no longer used)                                                                   |
+| Redux Toolkit       | 2.12.0          | `@reduxjs/toolkit` 2.12.0 (`react-redux` 9.3.0) — TMDB calls in `src/services/TMDB.js`                                                     |
+| axios               | 1.6.8           | Auth calls in `src/utils/index.js`                                                                                                         |
+| Material UI         | 9.3.1           | `@mui/material` & `@mui/icons-material` 9.3.1                                                                                              |
+| Emotion             | 11.4.1 / 11.3.0 | `@emotion/react` 11.4.1, `@emotion/styled` 11.3.0                                                                                          |
+| Vosk Speech-to-Text | Latest          | Offline voice control via `ai-service` SpeechToTextService                                                                                 |
+| React Router DOM    | 7.18.2          | Client-side routing                                                                                                                        |
+| TMDB API contract   | v3              | Base URL `https://api.themoviedb.org/3` → becomes this backend's gateway via `VITE_API_URL` (build-time) or dynamic resolution — see §11.6 |
 
 > A dedicated Next.js web app and React Native mobile apps were part of
 > earlier drafts and are **descoped** as of v1.2.0 — they were never
@@ -118,17 +118,17 @@ backend without frontend logic changes beyond configuration — see
 
 ### 1.3 DevOps & Infrastructure
 
-| Technology | Version | Purpose |
-|------------|---------|---------|
-| Podman | 5.x | Container runtime (Fedora native) |
-| Docker Compose | Latest | Multi-container orchestration |
-| Minikube | 1.34.x | Local Kubernetes |
-| kubectl | 1.31.x | Kubernetes CLI |
-| k9s | Latest | Kubernetes TUI |
-| GitHub Actions | Latest | CI/CD |
-| SonarQube | Community (Plugin 6.2.0.5505) | Static code analysis (#20) |
-| ELK Stack | 8.15.3 | Elasticsearch, Logstash, Kibana, Filebeat (#24) |
-| Ollama | Latest | Local LLM model runner backing ai-service (#36) |
+| Technology     | Version                       | Purpose                                         |
+| -------------- | ----------------------------- | ----------------------------------------------- |
+| Podman         | 5.x                           | Container runtime (Fedora native)               |
+| Docker Compose | Latest                        | Multi-container orchestration                   |
+| Minikube       | 1.34.x                        | Local Kubernetes                                |
+| kubectl        | 1.31.x                        | Kubernetes CLI                                  |
+| k9s            | Latest                        | Kubernetes TUI                                  |
+| GitHub Actions | Latest                        | CI/CD                                           |
+| SonarQube      | Community (Plugin 6.2.0.5505) | Static code analysis (#20)                      |
+| ELK Stack      | 8.15.3                        | Elasticsearch, Logstash, Kibana, Filebeat (#24) |
+| Ollama         | Latest                        | Local LLM model runner backing ai-service (#36) |
 
 ---
 
@@ -196,43 +196,43 @@ backend without frontend logic changes beyond configuration — see
 
 Significant decisions are recorded in [`adr/`](adr/):
 
-| ADR | Decision |
-|-----|----------|
-| [001](adr/001-microservices-architecture.md) | Microservices over monolith (conscious over-decomposition for the learning goal) |
-| [002](adr/002-database-per-service.md) | Per-service database choices |
-| [003](adr/003-tmdb-raw-passthrough-facade.md) | ~~TMDB facade serves raw stored JSON, not re-mapped DTOs~~ — **superseded by ADR-010** |
-| [004](adr/004-zero-budget-cloud-strategy.md) | $0 cloud budget: local-first, ephemeral free-tier clusters |
-| [005](adr/005-eureka-config-vs-kubernetes-native.md) | Eureka/Config Server in compose profile; K8s-native mechanisms in overlays |
-| [006](adr/006-kafka-event-bus.md) | Kafka event bus for save-through events & analytics |
-| [007](adr/007-distributed-tracing-zipkin.md) | Distributed tracing now (Micrometer Tracing + Zipkin) |
-| [008](adr/008-contract-testing.md) | Contract testing with Spring Cloud Contract |
-| [009](adr/009-openrewrite-spring-boot-4-migration.md) | OpenRewrite-driven Spring Boot 3.5 → 4.0 migration (Framework 7, Jackson 3, Cloud 2025.1); a routine follow-up chore then bumped 4.0.7 → 4.1.0 |
-| [010](adr/010-tmdb-facade-mapped-persisted-schema.md) | TMDB facade serves TMDB-shaped responses backed by LMDB's own mapped, persisted data — supersedes ADR-003's raw-passthrough model |
-| [011](adr/011-self-healing-read-through-on-schema-drift.md) | Read-through treats a schema-drifted MongoDB document as a cache miss: evict + re-fetch instead of a permanent 500 |
-| [012](adr/012-ai-service-postgresql-pgvector.md) | ai-service stores conversations in PostgreSQL + pgvector, not MongoDB — amends ADR-002's AI row, since user-owned data can't be self-healed |
-| [013](adr/013-frontend-merged-into-monorepo.md) | LMDB React frontend merged into this repo at `frontend/lmdb/` with full history preserved — this is now a monorepo |
-| [014](adr/014-media-service-s3-mongo-storage.md) | media-service: dual-tier storage — MinIO/S3-compatible object storage for user-uploaded binaries, MongoDB for their metadata; TMDB's own media stays on TMDB's CDN, never proxied |
-| [015](adr/015-local-only-deploy-trigger.md) | Deploy/destroy triggered only from a local shell (`./gradlew deploy*`) — the web-triggered `/admin` button and its serverless token proxy were removed outright, not just secured further, once found to have no authentication of its own |
-| [016](adr/016-dynamic-backend-resolution.md) | Frontend resolves its backend per-request (local → cloud → published tunnel fallback, health-checked), fronted by an ephemeral Cloudflare tunnel for HTTPS — one Vercel deploy works against any live backend, no redeploy needed |
-| [017](adr/017-full-cloud-service-parity.md) | Cloud overlays deploy the full local application service set (incl. Ollama), not a movie-only slice — re-sized nodes once verified live pricing showed the cost difference was negligible for ephemeral demo usage |
-| [018](adr/018-cloud-lifecycle-stop-not-destroy.md) | Stop cloud compute (not destroy) between demo sessions — de-allocate the VM to zero the dominant compute charge while PVCs/EBS preserve all database state; `terraform destroy` reserved for long breaks or state rebuilds |
-| [019](adr/019-azure-zero-touch-auto-wake-sleep.md) | Azure gets a Caddy hostNetwork pod for zero-cost real HTTPS, a fixed `/api/wakeup` that actually dispatches `cluster-stop.yml`'s start action, and a scheduled workflow enforcing the 1-hour idle auto-stop — closes gaps ADR-018 left open; knowingly narrows (not reverses) ADR-015's "no public cloud-spend trigger" rule |
+| ADR                                                         | Decision                                                                                                                                                                                                                                                                                                                     |
+| ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [001](adr/001-microservices-architecture.md)                | Microservices over monolith (conscious over-decomposition for the learning goal)                                                                                                                                                                                                                                             |
+| [002](adr/002-database-per-service.md)                      | Per-service database choices                                                                                                                                                                                                                                                                                                 |
+| [003](adr/003-tmdb-raw-passthrough-facade.md)               | ~~TMDB facade serves raw stored JSON, not re-mapped DTOs~~ — **superseded by ADR-010**                                                                                                                                                                                                                                       |
+| [004](adr/004-zero-budget-cloud-strategy.md)                | $0 cloud budget: local-first, ephemeral free-tier clusters                                                                                                                                                                                                                                                                   |
+| [005](adr/005-eureka-config-vs-kubernetes-native.md)        | Eureka/Config Server in compose profile; K8s-native mechanisms in overlays                                                                                                                                                                                                                                                   |
+| [006](adr/006-kafka-event-bus.md)                           | Kafka event bus for save-through events & analytics                                                                                                                                                                                                                                                                          |
+| [007](adr/007-distributed-tracing-zipkin.md)                | Distributed tracing now (Micrometer Tracing + Zipkin)                                                                                                                                                                                                                                                                        |
+| [008](adr/008-contract-testing.md)                          | Contract testing with Spring Cloud Contract                                                                                                                                                                                                                                                                                  |
+| [009](adr/009-openrewrite-spring-boot-4-migration.md)       | OpenRewrite-driven Spring Boot 3.5 → 4.0 migration (Framework 7, Jackson 3, Cloud 2025.1); a routine follow-up chore then bumped 4.0.7 → 4.1.1                                                                                                                                                                               |
+| [010](adr/010-tmdb-facade-mapped-persisted-schema.md)       | TMDB facade serves TMDB-shaped responses backed by LMDB's own mapped, persisted data — supersedes ADR-003's raw-passthrough model                                                                                                                                                                                            |
+| [011](adr/011-self-healing-read-through-on-schema-drift.md) | Read-through treats a schema-drifted MongoDB document as a cache miss: evict + re-fetch instead of a permanent 500                                                                                                                                                                                                           |
+| [012](adr/012-ai-service-postgresql-pgvector.md)            | ai-service stores conversations in PostgreSQL + pgvector, not MongoDB — amends ADR-002's AI row, since user-owned data can't be self-healed                                                                                                                                                                                  |
+| [013](adr/013-frontend-merged-into-monorepo.md)             | LMDB React frontend merged into this repo at `frontend/lmdb/` with full history preserved — this is now a monorepo                                                                                                                                                                                                           |
+| [014](adr/014-media-service-s3-mongo-storage.md)            | media-service: dual-tier storage — MinIO/S3-compatible object storage for user-uploaded binaries, MongoDB for their metadata; TMDB's own media stays on TMDB's CDN, never proxied                                                                                                                                            |
+| [015](adr/015-local-only-deploy-trigger.md)                 | Deploy/destroy triggered only from a local shell (`./gradlew deploy*`) — the web-triggered `/admin` button and its serverless token proxy were removed outright, not just secured further, once found to have no authentication of its own                                                                                   |
+| [016](adr/016-dynamic-backend-resolution.md)                | Frontend resolves its backend per-request (local → cloud → published tunnel fallback, health-checked), fronted by an ephemeral Cloudflare tunnel for HTTPS — one Vercel deploy works against any live backend, no redeploy needed                                                                                            |
+| [017](adr/017-full-cloud-service-parity.md)                 | Cloud overlays deploy the full local application service set (incl. Ollama), not a movie-only slice — re-sized nodes once verified live pricing showed the cost difference was negligible for ephemeral demo usage                                                                                                           |
+| [018](adr/018-cloud-lifecycle-stop-not-destroy.md)          | Stop cloud compute (not destroy) between demo sessions — de-allocate the VM to zero the dominant compute charge while PVCs/EBS preserve all database state; `terraform destroy` reserved for long breaks or state rebuilds                                                                                                   |
+| [019](adr/019-azure-zero-touch-auto-wake-sleep.md)          | Azure gets a Caddy hostNetwork pod for zero-cost real HTTPS, a fixed `/api/wakeup` that actually dispatches `cluster-stop.yml`'s start action, and a scheduled workflow enforcing the 1-hour idle auto-stop — closes gaps ADR-018 left open; knowingly narrows (not reverses) ADR-015's "no public cloud-spend trigger" rule |
 
 ### 2.4 Failure-Mode Matrix
 
 Behavior when a dependency fails (the resilience contract; each row is
 enforced by code and, where marked ✓, by an automated test):
 
-| Failure | Behavior | Status |
-|---------|----------|--------|
-| Redis down | Cache layer skipped; requests fall through to MongoDB/TMDB (slower, correct) | built-in |
-| MongoDB down | Facade read-through fails → 502 TMDB-shaped error; native API 5xx | acceptable (single-node dev DB) |
-| TMDB unreachable | Facade serves stale MongoDB copy if present ✓; else 502 TMDB-shaped error ✓ | implemented (#31) |
-| TMDB 4xx/5xx | Error status + body replayed to client verbatim ✓ | implemented (#31) |
-| TMDB rate limit | Bucket4j blocks the calling thread until a token frees (40 req/10 s, single shared bucket) ✓ | implemented (#16) |
-| Downstream service down (gateway view) | Resilience4j circuit breaker → fallback response | implemented (#13) |
-| Kafka down | Event publish fails silently (logged); request path unaffected | planned (ADR-006) |
-| Eureka down | Existing clients use cached registry; K8s profile unaffected (DNS) | built-in / ADR-005 |
+| Failure                                | Behavior                                                                                     | Status                          |
+| -------------------------------------- | -------------------------------------------------------------------------------------------- | ------------------------------- |
+| Redis down                             | Cache layer skipped; requests fall through to MongoDB/TMDB (slower, correct)                 | built-in                        |
+| MongoDB down                           | Facade read-through fails → 502 TMDB-shaped error; native API 5xx                            | acceptable (single-node dev DB) |
+| TMDB unreachable                       | Facade serves stale MongoDB copy if present ✓; else 502 TMDB-shaped error ✓                  | implemented (#31)               |
+| TMDB 4xx/5xx                           | Error status + body replayed to client verbatim ✓                                            | implemented (#31)               |
+| TMDB rate limit                        | Bucket4j blocks the calling thread until a token frees (40 req/10 s, single shared bucket) ✓ | implemented (#16)               |
+| Downstream service down (gateway view) | Resilience4j circuit breaker → fallback response                                             | implemented (#13)               |
+| Kafka down                             | Event publish fails silently (logged); request path unaffected                               | planned (ADR-006)               |
+| Eureka down                            | Existing clients use cached registry; K8s profile unaffected (DNS)                           | built-in / ADR-005              |
 
 ---
 
@@ -959,13 +959,13 @@ lives in MongoDB, where self-healing on schema drift is safe.** Anything that
 cannot be reconstructed from TMDB or recomputed must not sit on a store with
 neither schema validation nor a recovery path.
 
-| Service | Database | Re-derivable? | Reason |
-|---------|----------|---------------|--------|
-| Movie | MongoDB | Yes (TMDB) | Complex nested objects (cast, crew, videos), irregular shape; drift handled by ADR-011 self-healing |
-| User | PostgreSQL | No | ACID compliance, relational integrity, authentication |
-| Actor | PostgreSQL | Yes (TMDB) | Strong relationships, structured data, complex queries |
-| AI | PostgreSQL + pgvector | **No** (conversations) | **ADR-012**, superseding ADR-002's MongoDB assignment: conversation history is user-generated and unrecoverable, so it needs Flyway + `validate` like any other user data; pgvector holds the embeddings |
-| Media | MongoDB (+ MinIO) | Yes (TMDB CDN refs) | Document-oriented metadata; MinIO reserved for hypothetical user uploads, never TMDB bytes (§3.8) |
+| Service | Database              | Re-derivable?          | Reason                                                                                                                                                                                                   |
+| ------- | --------------------- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Movie   | MongoDB               | Yes (TMDB)             | Complex nested objects (cast, crew, videos), irregular shape; drift handled by ADR-011 self-healing                                                                                                      |
+| User    | PostgreSQL            | No                     | ACID compliance, relational integrity, authentication                                                                                                                                                    |
+| Actor   | PostgreSQL            | Yes (TMDB)             | Strong relationships, structured data, complex queries                                                                                                                                                   |
+| AI      | PostgreSQL + pgvector | **No** (conversations) | **ADR-012**, superseding ADR-002's MongoDB assignment: conversation history is user-generated and unrecoverable, so it needs Flyway + `validate` like any other user data; pgvector holds the embeddings |
+| Media   | MongoDB (+ MinIO)     | Yes (TMDB CDN refs)    | Document-oriented metadata; MinIO reserved for hypothetical user uploads, never TMDB bytes (§3.8)                                                                                                        |
 
 ### 4.2 Data Migration Strategy
 
@@ -1086,28 +1086,28 @@ populate that catalog.
 **Endpoints required by the React app (`src/services/TMDB.js`,
 `src/utils/index.js`) — the facade MUST implement all of these:**
 
-| # | TMDB v3 Endpoint | Used by (React app) | Backing service | Strategy |
-|---|------------------|---------------------|-----------------|----------|
-| 1 | `GET /genre/movie/list` | Sidebar genres | Movie | live (small, static taxonomy) + Redis cache |
-| 2 | `GET /movie/{category}?page=` (popular, top_rated, upcoming, now_playing) | Category browsing | Movie | live ranking, results upserted |
-| 3 | `GET /discover/movie?with_genres={id}&page=` | Genre browsing | Movie | live ranking, results upserted |
-| 4 | `GET /search/movie?query=&page=` | Search | Movie | live ranking, results upserted |
-| 5 | `GET /movie/{id}?append_to_response=videos,credits` | Movie details page | Movie | read-through/save-through (MongoDB) |
-| 6 | `GET /movie/{id}/recommendations` | Details page | Movie | live ranking, results upserted |
-| 7 | `GET /movie/{id}/similar` | Details page | Movie | live ranking, results upserted |
-| 8 | `GET /person/{id}` | Actor page | Actor | read-through/save-through (PostgreSQL) |
-| 9 | `GET /discover/movie?with_cast={id}&page=` | Actor filmography | Actor (via Movie) | live ranking, results upserted |
+| #   | TMDB v3 Endpoint                                                          | Used by (React app) | Backing service   | Strategy                                    |
+| --- | ------------------------------------------------------------------------- | ------------------- | ----------------- | ------------------------------------------- |
+| 1   | `GET /genre/movie/list`                                                   | Sidebar genres      | Movie             | live (small, static taxonomy) + Redis cache |
+| 2   | `GET /movie/{category}?page=` (popular, top_rated, upcoming, now_playing) | Category browsing   | Movie             | live ranking, results upserted              |
+| 3   | `GET /discover/movie?with_genres={id}&page=`                              | Genre browsing      | Movie             | live ranking, results upserted              |
+| 4   | `GET /search/movie?query=&page=`                                          | Search              | Movie             | live ranking, results upserted              |
+| 5   | `GET /movie/{id}?append_to_response=videos,credits`                       | Movie details page  | Movie             | read-through/save-through (MongoDB)         |
+| 6   | `GET /movie/{id}/recommendations`                                         | Details page        | Movie             | live ranking, results upserted              |
+| 7   | `GET /movie/{id}/similar`                                                 | Details page        | Movie             | live ranking, results upserted              |
+| 8   | `GET /person/{id}`                                                        | Actor page          | Actor             | read-through/save-through (PostgreSQL)      |
+| 9   | `GET /discover/movie?with_cast={id}&page=`                                | Actor filmography   | Actor (via Movie) | live ranking, results upserted              |
 
 **Additional TMDB person endpoints implemented beyond the React app's current
 needs** (issue #18's acceptance criteria call for full person coverage, and
 they cost nothing extra given the typed client is already there):
 
-| TMDB v3 Endpoint | Backing service | Strategy |
-|------------------|-----------------|----------|
-| `GET /person/{id}/movie_credits` | Actor | live (the movies belong to movie-service, ADR-002 — nothing of actor-service's to persist) |
-| `GET /person/{id}/images` | Actor | read-through/save-through (PostgreSQL) — CDN *references* only, never the image bytes (§3.8) |
-| `GET /person/popular?page=` | Actor | live ranking, results upserted |
-| `GET /search/person?query=&page=` | Actor | live ranking, results upserted |
+| TMDB v3 Endpoint                  | Backing service | Strategy                                                                                     |
+| --------------------------------- | --------------- | -------------------------------------------------------------------------------------------- |
+| `GET /person/{id}/movie_credits`  | Actor           | live (the movies belong to movie-service, ADR-002 — nothing of actor-service's to persist)   |
+| `GET /person/{id}/images`         | Actor           | read-through/save-through (PostgreSQL) — CDN *references* only, never the image bytes (§3.8) |
+| `GET /person/popular?page=`       | Actor           | live ranking, results upserted                                                               |
+| `GET /search/person?query=&page=` | Actor           | live ranking, results upserted                                                               |
 
 **Schema drift is a cache miss, not an error (ADR-011).** Because the facade
 now persists a *typed* catalog (ADR-010), a stored document can fall out of
@@ -1524,7 +1524,7 @@ javaVersion=25
 projectVersion=1.0.0-SNAPSHOT
 
 # Spring Boot  
-springBootVersion=4.1.0
+springBootVersion=4.1.1
 springDependencyManagementVersion=1.1.7
 
 # Spring Cloud
@@ -1662,15 +1662,15 @@ in the same sense — contract/performance/smoke tests each run once per
 service or endpoint set, not scaled by class count like unit tests are).
 All seven, with where each actually lives:
 
-| # | Type | Tool | Scope | Where |
-|---|------|------|-------|-------|
-| 1 | Unit | JUnit 5 + Mockito | §10.2 | `<service>/src/test/` |
-| 2 | Integration | Testcontainers + `@ServiceConnection` | §10.3 | `<service>/src/test/` |
-| 3 | E2E (browser) | Playwright | §10.4 | `e2e/` (repo root) |
-| 4 | API smoke | Postman/Newman | §10.5 | `docs/api/LMDB-API.postman_collection.json`, `.github/workflows/e2e-smoke.yml` |
-| 5 | Performance | Gatling (Java DSL) | §10.6 | `movie-service/src/test/.../performance/` |
-| 6 | Contract | Spring Cloud Contract (ADR-008) | §10.7 | `<service>/src/contractTest/` — movie, user, actor, ai-service |
-| 7 | Frontend unit/component | Vitest + Testing Library | §10.8 | `frontend/lmdb/src/**/*.test.{js,jsx}` |
+| #   | Type                    | Tool                                  | Scope | Where                                                                          |
+| --- | ----------------------- | ------------------------------------- | ----- | ------------------------------------------------------------------------------ |
+| 1   | Unit                    | JUnit 5 + Mockito                     | §10.2 | `<service>/src/test/`                                                          |
+| 2   | Integration             | Testcontainers + `@ServiceConnection` | §10.3 | `<service>/src/test/`                                                          |
+| 3   | E2E (browser)           | Playwright                            | §10.4 | `e2e/` (repo root)                                                             |
+| 4   | API smoke               | Postman/Newman                        | §10.5 | `docs/api/LMDB-API.postman_collection.json`, `.github/workflows/e2e-smoke.yml` |
+| 5   | Performance             | Gatling (Java DSL)                    | §10.6 | `movie-service/src/test/.../performance/`                                      |
+| 6   | Contract                | Spring Cloud Contract (ADR-008)       | §10.7 | `<service>/src/contractTest/` — movie, user, actor, ai-service                 |
+| 7   | Frontend unit/component | Vitest + Testing Library              | §10.8 | `frontend/lmdb/src/**/*.test.{js,jsx}`                                         |
 
 ### 10.2 Unit Testing (60% of tests)
 
@@ -1978,11 +1978,11 @@ All cloud infrastructure is provisioned with **Terraform** (Infrastructure as
 Code) and all services run on **Kubernetes**. Two cloud targets are supported,
 both constrained to their **free tiers**:
 
-| Target | Kubernetes Flavor | Free-Tier Basis | Notes |
-|--------|-------------------|-----------------|-------|
-| **Azure** (primary) | AKS (managed) | AKS control plane is free; $200 credit (30 days) | Managed control plane at $0 — but see the node-size note below, the node itself is not guaranteed free |
-| **AWS** (secondary) | k3s (self-managed on EC2) | 750 h/month t2.micro/t3.micro (12 months); 30 GB EBS | EKS control plane is NOT free (~$73/month) — use single-node k3s instead |
-| Local | minikube / k3d | n/a | Mirrors cloud manifests exactly |
+| Target              | Kubernetes Flavor         | Free-Tier Basis                                      | Notes                                                                                                  |
+| ------------------- | ------------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| **Azure** (primary) | AKS (managed)             | AKS control plane is free; $200 credit (30 days)     | Managed control plane at $0 — but see the node-size note below, the node itself is not guaranteed free |
+| **AWS** (secondary) | k3s (self-managed on EC2) | 750 h/month t2.micro/t3.micro (12 months); 30 GB EBS | EKS control plane is NOT free (~$73/month) — use single-node k3s instead                               |
+| Local               | minikube / k3d            | n/a                                                  | Mirrors cloud manifests exactly                                                                        |
 
 **HARD CONSTRAINT: the budget is $0.** Every decision below follows from
 that. Verification is layered, not assumed:
@@ -2280,11 +2280,11 @@ primary target. When either cloud is up, all 9 workloads are deployed:
 
 **Cost model — ADR-018: stop-not-destroy between demo sessions:**
 
-| State | What's billed | Rate | Daily cost |
-|---|---|---|---|
-| Running (`az aks start`) | VM + disks + IP | ~$0.21/hr | ~**$5.06/day** |
-| Stopped (`az aks stop`) | Disks (~16 GiB) + public IP only | ~$0.01/hr | ~**$0.25/day** |
-| Destroyed (`terraform destroy`) | Nothing | $0 | $0 |
+| State                           | What's billed                    | Rate      | Daily cost     |
+| ------------------------------- | -------------------------------- | --------- | -------------- |
+| Running (`az aks start`)        | VM + disks + IP                  | ~$0.21/hr | ~**$5.06/day** |
+| Stopped (`az aks stop`)         | Disks (~16 GiB) + public IP only | ~$0.01/hr | ~**$0.25/day** |
+| Destroyed (`terraform destroy`) | Nothing                          | $0        | $0             |
 
 `az aks stop` de-allocates the VM while preserving all 4 PVCs (Postgres,
 MongoDB, Redis, Ollama — one StatefulSet replica each). Credits last ~10–20× longer than always-on.
@@ -2299,10 +2299,10 @@ implemented.
 **What leaving one running would actually cost** (Azure Retail Pricing,
 `eastus`):
 
-| Node | Spec | Rate | If left running 24/7 for a month |
-|---|---|---|---|
-| `Standard_D2ls_v7` (movie-only slice, retired) | 2vCPU/4GB | $0.117/hr | ~$85 |
-| `Standard_D4ls_v7` (full parity, current) | 4vCPU/8GB | $0.192/hr | ~$139 |
+| Node                                           | Spec      | Rate      | If left running 24/7 for a month |
+| ---------------------------------------------- | --------- | --------- | -------------------------------- |
+| `Standard_D2ls_v7` (movie-only slice, retired) | 2vCPU/4GB | $0.117/hr | ~$85                             |
+| `Standard_D4ls_v7` (full parity, current)      | 4vCPU/8GB | $0.192/hr | ~$139                            |
 
 A realistic demo session costs cents. The budget risk is leaving the cluster
 running unattended, which `auto-stop-watchdog.sh` and the stop scripts
@@ -2395,20 +2395,20 @@ checking for `access-control-allow-origin` in the response.
 Lifecycle is managed via scripts in `infrastructure/scripts/`, Gradle tasks,
 and GitHub Actions workflows — no manual cloud portal clicks required.
 
-| Tool / Gradle Task | What it does |
-|---|---|
-| `./gradlew startAzure` (`start-azure.sh`) | Resumes stopped AKS cluster, waits for all 9 workloads Ready, auto-updates DuckDNS (~2m) |
-| `./gradlew stopAzure` (`stop-azure.sh`) | Stops AKS compute nodes ($0 compute spend, preserves disk data), waits for full de-allocation |
-| `./gradlew startAws` (`start-aws.sh`) | Resumes stopped AWS EC2 k3s instance (~1m), updates DuckDNS |
-| `./gradlew stopAws` (`stop-aws.sh`) | Stops AWS EC2 k3s instance ($0 compute spend, preserves EBS volume data) |
-| `./gradlew stopAllClouds` (`stop-all-clouds.sh`) | Detects and stops whichever cloud(s) are running (Azure, AWS, Minikube) |
-| `stop-all-clouds.sh --dry-run` | Prints what would be stopped without acting |
-| `./gradlew autoStopWatchdog` (`auto-stop-watchdog.sh`) | Manual/local equivalent of `cluster-idle-stop.yml` below — same idle check, run by hand instead of on a schedule |
-| `./gradlew statusInfra` (`status-infra.sh`) | Health check across Local, Tunnel, Azure, and AWS endpoints |
-| `.github/workflows/deploy.yml` | **Smart Deploy**: Password-gated, auto-wakes stopped clusters or auto-provisions if destroyed, verifies 9 workloads |
-| `.github/workflows/cluster-stop.yml` | Remote start/stop from GitHub Actions UI (protected by `DEPLOY_PASSPHRASE`) — also what `/api/wakeup` dispatches (start action) when a visitor hits the site with the backend asleep |
-| `.github/workflows/cluster-idle-stop.yml` | **Scheduled** (every 10 min, ADR-019): checks `/actuator/activity`, stops whichever cloud is running once idle ≥ 1h. The actual mechanism behind the "auto-sleep after an hour" promise — no passphrase needed since cron can't be dispatched externally |
-| `.github/workflows/destroy.yml` | Full `terraform destroy` — password-gated, requires confirmation `DESTROY` |
+| Tool / Gradle Task                                     | What it does                                                                                                                                                                                                                                             |
+| ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `./gradlew startAzure` (`start-azure.sh`)              | Resumes stopped AKS cluster, waits for all 9 workloads Ready, auto-updates DuckDNS (~2m)                                                                                                                                                                 |
+| `./gradlew stopAzure` (`stop-azure.sh`)                | Stops AKS compute nodes ($0 compute spend, preserves disk data), waits for full de-allocation                                                                                                                                                            |
+| `./gradlew startAws` (`start-aws.sh`)                  | Resumes stopped AWS EC2 k3s instance (~1m), updates DuckDNS                                                                                                                                                                                              |
+| `./gradlew stopAws` (`stop-aws.sh`)                    | Stops AWS EC2 k3s instance ($0 compute spend, preserves EBS volume data)                                                                                                                                                                                 |
+| `./gradlew stopAllClouds` (`stop-all-clouds.sh`)       | Detects and stops whichever cloud(s) are running (Azure, AWS, Minikube)                                                                                                                                                                                  |
+| `stop-all-clouds.sh --dry-run`                         | Prints what would be stopped without acting                                                                                                                                                                                                              |
+| `./gradlew autoStopWatchdog` (`auto-stop-watchdog.sh`) | Manual/local equivalent of `cluster-idle-stop.yml` below — same idle check, run by hand instead of on a schedule                                                                                                                                         |
+| `./gradlew statusInfra` (`status-infra.sh`)            | Health check across Local, Tunnel, Azure, and AWS endpoints                                                                                                                                                                                              |
+| `.github/workflows/deploy.yml`                         | **Smart Deploy**: Password-gated, auto-wakes stopped clusters or auto-provisions if destroyed, verifies 9 workloads                                                                                                                                      |
+| `.github/workflows/cluster-stop.yml`                   | Remote start/stop from GitHub Actions UI (protected by `DEPLOY_PASSPHRASE`) — also what `/api/wakeup` dispatches (start action) when a visitor hits the site with the backend asleep                                                                     |
+| `.github/workflows/cluster-idle-stop.yml`              | **Scheduled** (every 10 min, ADR-019): checks `/actuator/activity`, stops whichever cloud is running once idle ≥ 1h. The actual mechanism behind the "auto-sleep after an hour" promise — no passphrase needed since cron can't be dispatched externally |
+| `.github/workflows/destroy.yml`                        | Full `terraform destroy` — password-gated, requires confirmation `DESTROY`                                                                                                                                                                               |
 
 **Zero-touch Azure wake/sleep (ADR-019):** `frontend/lmdb/api/wakeup.js`
 (Vercel serverless) is what makes visiting the deployed frontend alone enough
@@ -2528,11 +2528,11 @@ implementation 'net.logstash.logback:logstash-logback-encoder:8.1'
 **Free-tier reality:** Elasticsearch needs ≥1 GB heap — it does NOT fit on a
 free-tier node alongside the services. Deployment profiles:
 
-| Profile | Logging deployment |
-|---------|--------------------|
-| Local (minikube/k3d, docker-compose) | Full ELK + Filebeat, single-node ES |
-| Cloud free tier | Filebeat only, shipping to a **local** or external ES endpoint; alternatively `kubectl logs` + Kibana omitted |
-| Cloud (paid, future) | ECK operator, 3-node ES |
+| Profile                              | Logging deployment                                                                                            |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| Local (minikube/k3d, docker-compose) | Full ELK + Filebeat, single-node ES                                                                           |
+| Cloud free tier                      | Filebeat only, shipping to a **local** or external ES endpoint; alternatively `kubectl logs` + Kibana omitted |
+| Cloud (paid, future)                 | ECK operator, 3-node ES                                                                                       |
 
 The compose file `infrastructure/docker/docker-compose.elk.yml` runs the full
 stack locally so the pipeline (JSON logs → Logstash grok/filters → index
@@ -2553,12 +2553,12 @@ templates → Kibana dashboards) is fully demonstrable without cloud cost.
 Alerts in §12.1 derive from these SLOs (measured at the gateway, 30-day
 window):
 
-| SLO | Target | Measured (Gatling #45) | Error budget consequence |
-|-----|--------|------------------------|--------------------------|
-| Availability (non-5xx) | 99.0% | 100.0% | budget burn >2×: freeze feature work, fix reliability |
-| Latency, cache-served reads | P95 < 200 ms | **P95: 18 ms** (P50: 4 ms) | sustained breach: investigate Redis/Mongo before adding features |
-| Latency, TMDB-fallback reads | P95 < 800 ms | **P95: 279 ms** (P50: 252 ms) | breach without TMDB degradation: profile the read-through chain |
-| Facade shape fidelity | 100% (byte-identical) | 100% | any regression is a release blocker, caught by fixture tests |
+| SLO                          | Target                | Measured (Gatling #45)        | Error budget consequence                                         |
+| ---------------------------- | --------------------- | ----------------------------- | ---------------------------------------------------------------- |
+| Availability (non-5xx)       | 99.0%                 | 100.0%                        | budget burn >2×: freeze feature work, fix reliability            |
+| Latency, cache-served reads  | P95 < 200 ms          | **P95: 18 ms** (P50: 4 ms)    | sustained breach: investigate Redis/Mongo before adding features |
+| Latency, TMDB-fallback reads | P95 < 800 ms          | **P95: 279 ms** (P50: 252 ms) | breach without TMDB degradation: profile the read-through chain  |
+| Facade shape fidelity        | 100% (byte-identical) | 100%                          | any regression is a release blocker, caught by fixture tests     |
 
 ### 12.5 Rollout Order
 
@@ -2602,7 +2602,7 @@ window):
 
 **Demonstrated Skills:**
 - Enterprise microservices architecture
-- Spring Boot 4.1.0 + Spring Cloud 2025.1.2
+- Spring Boot 4.1.1 + Spring Cloud 2025.1.2
 - Java 25 latest features (records, pattern matching, virtual threads)
 - REST + gRPC APIs
 - PostgreSQL + MongoDB hybrid strategy

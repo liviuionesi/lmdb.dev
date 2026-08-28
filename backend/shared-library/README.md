@@ -670,7 +670,7 @@ The library includes `lombok-mapstruct-binding` for seamless integration between
 ## 📦 Dependencies
 
 - Java 25
-- Spring Boot 4.1.0
+- Spring Boot 4.1.1
 - Spring Boot Starter Validation
 - MapStruct 1.6.3
 - Lombok 1.18.46

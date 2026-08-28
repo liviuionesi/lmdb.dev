@@ -5,7 +5,7 @@
 [![Docker Publish](https://github.com/liviuionesi/lmdb.dev/actions/workflows/docker-publish.yml/badge.svg?branch=main)](https://github.com/liviuionesi/lmdb.dev/actions/workflows/docker-publish.yml)
 [![Terraform Plan](https://github.com/liviuionesi/lmdb.dev/actions/workflows/terraform-plan.yml/badge.svg?branch=main)](https://github.com/liviuionesi/lmdb.dev/actions/workflows/terraform-plan.yml)
 [![Java 25](https://img.shields.io/badge/Java-25-orange.svg)](https://openjdk.org/projects/jdk/25/)
-[![Spring Boot 4.1.0](https://img.shields.io/badge/Spring%20Boot-4.1.0-brightgreen.svg)](https://spring.io/projects/spring-boot)
+[![Spring Boot 4.1.1](https://img.shields.io/badge/Spring%20Boot-4.1.1-brightgreen.svg)](https://spring.io/projects/spring-boot)
 [![Spring Cloud 2025.1.2](https://img.shields.io/badge/Spring%20Cloud-2025.1.2-blue.svg)](https://spring.io/projects/spring-cloud)
 [![React 19 / Vite](https://img.shields.io/badge/React-19%20%7C%20Vite-61dafb.svg)](https://vitejs.dev/)
 [![Project Metrics](https://img.shields.io/badge/Project%20Metrics-Dynamic%20Report-purple.svg)](docs/reports/PROJECT_METRICS.md)
@@ -71,16 +71,16 @@ Redis                                   Ollama (LLaMA 3.2)
 
 ## 2. Feature Catalog
 
-| Feature Area | Microservice | Storage / Tech | Implementation Details |
-|---|---|---|---|
-| **Movie Catalog & Browse** | [`movie-service`](backend/movie-service/) | MongoDB 8.0, Redis 7.4 | TMDB facade routes (`/movie/**`, `/genre/**`, `/discover/**`). Maps external payloads into typed documents, caches hot queries in Redis, persists records locally. |
-| **User Authentication & Profiles** | [`user-service`](backend/user-service/) | PostgreSQL 17, JPA/Hibernate | BCrypt password hashing, signed JWT access/refresh tokens, profiles, favorites, watchlist. |
-| **Actor Biographies & Credits** | [`actor-service`](backend/actor-service/) | PostgreSQL 17, JPA/Hibernate | Actor profile retrieval, filmography mapping, person discovery routes (`/person/**`, `/search/person`). |
-| **AI Assistant & Semantic Search** | [`ai-service`](backend/ai-service/) | PostgreSQL + pgvector, Ollama | Contextual movie chat via LLaMA 3.2, semantic search over vector embeddings (`nomic-embed-text`), taste-profile recommendations. |
-| **Voice Navigation** | [`ai-service`](backend/ai-service/) | Vosk (offline) | Speech-to-text (`POST /api/v1/ai/speech-to-text`) driving category navigation, search, and UI actions. |
-| **Media Asset Management** | [`media-service`](backend/media-service/) | MinIO (S3 API), MongoDB 8.0 | Multipart upload, binary chunking, metadata indexing, presigned asset streaming. |
-| **Traffic Control & Edge Routing** | [`api-gateway`](backend/api-gateway/) | Spring Cloud Gateway, Redis | Redis token-bucket rate limiting, Resilience4j circuit breakers, JWT validation, CORS, URL rewrites. |
-| **Web Client Application** | [`frontend/lmdb`](frontend/lmdb/) | React 19, Vite, Redux Toolkit, MUI | Responsive UI, dark/light theme, speech recognition, trailer modal, dynamic backend resolver. |
+| Feature Area                       | Microservice                              | Storage / Tech                     | Implementation Details                                                                                                                                             |
+| ---------------------------------- | ----------------------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Movie Catalog & Browse**         | [`movie-service`](backend/movie-service/) | MongoDB 8.0, Redis 7.4             | TMDB facade routes (`/movie/**`, `/genre/**`, `/discover/**`). Maps external payloads into typed documents, caches hot queries in Redis, persists records locally. |
+| **User Authentication & Profiles** | [`user-service`](backend/user-service/)   | PostgreSQL 17, JPA/Hibernate       | BCrypt password hashing, signed JWT access/refresh tokens, profiles, favorites, watchlist.                                                                         |
+| **Actor Biographies & Credits**    | [`actor-service`](backend/actor-service/) | PostgreSQL 17, JPA/Hibernate       | Actor profile retrieval, filmography mapping, person discovery routes (`/person/**`, `/search/person`).                                                            |
+| **AI Assistant & Semantic Search** | [`ai-service`](backend/ai-service/)       | PostgreSQL + pgvector, Ollama      | Contextual movie chat via LLaMA 3.2, semantic search over vector embeddings (`nomic-embed-text`), taste-profile recommendations.                                   |
+| **Voice Navigation**               | [`ai-service`](backend/ai-service/)       | Vosk (offline)                     | Speech-to-text (`POST /api/v1/ai/speech-to-text`) driving category navigation, search, and UI actions.                                                             |
+| **Media Asset Management**         | [`media-service`](backend/media-service/) | MinIO (S3 API), MongoDB 8.0        | Multipart upload, binary chunking, metadata indexing, presigned asset streaming.                                                                                   |
+| **Traffic Control & Edge Routing** | [`api-gateway`](backend/api-gateway/)     | Spring Cloud Gateway, Redis        | Redis token-bucket rate limiting, Resilience4j circuit breakers, JWT validation, CORS, URL rewrites.                                                               |
+| **Web Client Application**         | [`frontend/lmdb`](frontend/lmdb/)         | React 19, Vite, Redux Toolkit, MUI | Responsive UI, dark/light theme, speech recognition, trailer modal, dynamic backend resolver.                                                                      |
 
 ---
 
@@ -193,12 +193,12 @@ newman run docs/api/LMDB-API.postman_collection.json
 
 Four Terraform/Compose-codified targets, one Gradle task each:
 
-| Topology | What it is | Command |
-|---|---|---|
-| **Local Dev Stack** | Full container stack via Docker/Podman Compose or the local K8s overlay | `./gradlew deployLocal` |
+| Topology                 | What it is                                                                             | Command                 |
+| ------------------------ | -------------------------------------------------------------------------------------- | ----------------------- |
+| **Local Dev Stack**      | Full container stack via Docker/Podman Compose or the local K8s overlay                | `./gradlew deployLocal` |
 | **Local Stack + Tunnel** | Local/Minikube backend exposed to the deployed Vercel frontend via a Cloudflare tunnel | `./gradlew startTunnel` |
-| **Azure AKS** | Managed AKS cluster, Terraform-provisioned | `./gradlew deployAzure` |
-| **AWS k3s** | Lightweight k3s on a single EC2 instance, Terraform-provisioned | `./gradlew deployAws` |
+| **Azure AKS**            | Managed AKS cluster, Terraform-provisioned                                             | `./gradlew deployAzure` |
+| **AWS k3s**              | Lightweight k3s on a single EC2 instance, Terraform-provisioned                        | `./gradlew deployAws`   |
 
 Notes:
 - The tunnel scenario auto-publishes its HTTPS hostname to [`infrastructure/tunnel-url.txt`](infrastructure/tunnel-url.txt) on `develop`; the deployed frontend picks it up within seconds via GitHub raw, no rebuild.
@@ -242,12 +242,12 @@ The Vercel frontend resolves its live backend at request time — manual overrid
 
 ## 9. CI/CD
 
-| Pipeline | Trigger | Responsibilities |
-|---|---|---|
-| [`backend-ci.yml`](.github/workflows/backend-ci.yml) | Push/PR to `main`, `develop` | Compiles Java 25 modules, Spotless/Checkstyle, JUnit & Testcontainers suites, SonarQube Quality Gate. |
-| [`frontend-ci.yml`](.github/workflows/frontend-ci.yml) | Push/PR to `main`, `develop` | ESLint, Prettier, Vitest suite with coverage. |
-| [`docker-publish.yml`](.github/workflows/docker-publish.yml) | Chained to green Backend CI on `main` | Builds container images for all 8 microservices, publishes to `ghcr.io/liviuionesi/lmdb-*`. |
-| [`terraform-plan.yml`](.github/workflows/terraform-plan.yml) | Changes to `infrastructure/terraform/**` | Validates HCL, `terraform fmt`, speculative plans for Azure and AWS. |
+| Pipeline                                                     | Trigger                                  | Responsibilities                                                                                      |
+| ------------------------------------------------------------ | ---------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| [`backend-ci.yml`](.github/workflows/backend-ci.yml)         | Push/PR to `main`, `develop`             | Compiles Java 25 modules, Spotless/Checkstyle, JUnit & Testcontainers suites, SonarQube Quality Gate. |
+| [`frontend-ci.yml`](.github/workflows/frontend-ci.yml)       | Push/PR to `main`, `develop`             | ESLint, Prettier, Vitest suite with coverage.                                                         |
+| [`docker-publish.yml`](.github/workflows/docker-publish.yml) | Chained to green Backend CI on `main`    | Builds container images for all 8 microservices, publishes to `ghcr.io/liviuionesi/lmdb-*`.           |
+| [`terraform-plan.yml`](.github/workflows/terraform-plan.yml) | Changes to `infrastructure/terraform/**` | Validates HCL, `terraform fmt`, speculative plans for Azure and AWS.                                  |
 
 * **Automated modernization (OpenRewrite):** `./gradlew rewriteRun`
 * **Git hooks:** pre-commit blocks broken builds; commit-msg enforces `feat: ... (#NN)`-style messages linking a real issue.

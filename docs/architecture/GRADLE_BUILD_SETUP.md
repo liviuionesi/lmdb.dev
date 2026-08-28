@@ -30,7 +30,7 @@ lmdb.dev/
 
 - **Java**: 25 (via toolchain / SDKMAN)
 - **Gradle**: 9.2.0 (via Gradle Wrapper)
-- **Spring Boot**: 4.1.0
+- **Spring Boot**: 4.1.1
 - **Spring Cloud**: 2025.1.2
 - **Spring AI**: 2.0.0
 - **Spring Dependency Management**: 1.1.7
@@ -75,7 +75,7 @@ javaVersion=25
 projectVersion=1.0.0-SNAPSHOT
 
 # Spring Boot  
-springBootVersion=4.1.0
+springBootVersion=4.1.1
 springDependencyManagementVersion=1.1.7
 
 # Spring Cloud
@@ -324,7 +324,7 @@ dependencies {
 - ✅ No version conflicts
 
 ### Version Notes
-- Spring Boot 4.1.0 ✅ (current GA release)
+- Spring Boot 4.1.1 ✅ (current GA release)
 - Spring AI 2.0.0 ✅ (tracks Spring Boot 4.x)
 - Spring Cloud 2025.1.2 ✅ (current release train)
 
@@ -373,7 +373,7 @@ org.gradle.caching=true
 ✅ All 9 modules recognized  
 ✅ `./gradlew clean build` completes successfully  
 ✅ Java 25 toolchain configured  
-✅ Spring Boot 4.1.0 operational  
+✅ Spring Boot 4.1.1 operational  
 ✅ Spring Cloud 2025.1.2 operational  
 ✅ TestContainers BOM configured (2.0.5)  
 ✅ Shared library imports working  
@@ -453,7 +453,7 @@ dependencyManagement {
 - ✅ `./gradlew build` runs successfully (1m 42s)
 - ✅ All 9 modules recognized by Gradle
 - ✅ Java 25 toolchain configured and active
-- ✅ Spring Boot 4.1.0 working
+- ✅ Spring Boot 4.1.1 working
 - ✅ Spring Cloud 2025.1.2 working
 - ✅ Shared library imports functional (5 services using it)
 - ✅ Build completes without errors

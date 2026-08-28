@@ -978,6 +978,48 @@ class AiServiceIntegrationTest {
   }
 
   /**
+   * Given a zero-length query (distinct from {@link #parseQueryRejectsBlankQueryWith400}'s
+   * whitespace-only one — {@code @NotBlank} rejects both, but nothing exercised the literal empty
+   * string before), when the endpoint is called, then it's rejected with 400 without ever reaching
+   * the model — #206's "empty query" edge case.
+   *
+   * @throws Exception if the MockMvc request fails to execute
+   */
+  @Test
+  @DisplayName("POST /api/v1/ai/search/query rejects an empty query with 400")
+  void parseQueryRejectsAnEmptyQueryWith400() throws Exception {
+    String body = objectMapper.writeValueAsString(Map.of("query", ""));
+
+    mockMvc
+        .perform(
+            post("/api/v1/ai/search/query").contentType(MediaType.APPLICATION_JSON).content(body))
+        .andExpect(status().isBadRequest());
+
+    verify(chatModel, never()).call(any(Prompt.class));
+  }
+
+  /**
+   * Same validation as {@link #parseQueryRejectsAnEmptyQueryWith400}, but for {@code
+   * /search/execute} — until now nothing verified this endpoint enforces {@link
+   * dev.lmdb.ai.dto.QueryParseRequestDto}'s {@code @NotBlank} at all, since every existing {@code
+   * execute} test supplied a real query.
+   *
+   * @throws Exception if the MockMvc request fails to execute
+   */
+  @Test
+  @DisplayName("POST /api/v1/ai/search/execute rejects an empty query with 400")
+  void executeSearchRejectsAnEmptyQueryWith400() throws Exception {
+    String body = objectMapper.writeValueAsString(Map.of("query", ""));
+
+    mockMvc
+        .perform(
+            post("/api/v1/ai/search/execute").contentType(MediaType.APPLICATION_JSON).content(body))
+        .andExpect(status().isBadRequest());
+
+    verify(chatModel, never()).call(any(Prompt.class));
+  }
+
+  /**
    * Given a query that embeds a newline and a control character crafted to look like a forged
    * "system:" turn (the same injection shape {@link #chatMessageCannotForgeAdditionalTurns} guards
    * against for chat), when it's parsed, then the text actually handed to the model is {@link
@@ -1506,6 +1548,86 @@ class AiServiceIntegrationTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.results").isArray())
         .andExpect(jsonPath("$.results").isEmpty());
+  }
+
+  /**
+   * Given a nonsense query the model can't read as the target schema at all, when it's executed,
+   * then {@link dev.lmdb.ai.service.QueryParsingService#parse} degrades to a plain-title fallback
+   * carrying the raw query text, and {@link
+   * dev.lmdb.ai.service.QueryAggregationService#search} resolves it as a
+   * literal movie-service title search rather than surfacing an error — #206's "nonsense query"
+   * edge case, exercised end to end through {@code /search/execute}, not just {@code /search/query}
+   * (already covered by {@link #parseQueryFallsBackToPlainTitleWhenModelResponseIsUnparseable}).
+   *
+   * @throws Exception if the MockMvc request fails to execute
+   */
+  @Test
+  @DisplayName(
+      "POST /api/v1/ai/search/execute falls back to a movie-service title search for a nonsense"
+          + " query")
+  void executeSearchFallsBackToTitleSearchForANonsenseQuery() throws Exception {
+    String gibberish = "asdkjfh qwerty zxcvbn";
+    stubAssistantReply("I don't understand what movie you're asking about.");
+    stubFor(
+        WireMock.get(urlPathEqualTo("/api/v1/movies/search"))
+            .withQueryParam("query", WireMock.equalTo(gibberish))
+            .willReturn(
+                aResponse()
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        """
+                {"content":[],"pageNumber":0,"pageSize":200,"totalElements":0,"totalPages":0,
+                 "first":true,"last":true,"hasNext":false,"hasPrevious":false,"numberOfElements":0}
+                """)));
+
+    String body = objectMapper.writeValueAsString(Map.of("query", gibberish));
+    mockMvc
+        .perform(
+            post("/api/v1/ai/search/execute").contentType(MediaType.APPLICATION_JSON).content(body))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.results").isArray())
+        .andExpect(jsonPath("$.results").isEmpty());
+
+    // Proves the fallback actually reached movie-service with the raw text as a literal title,
+    // rather than short-circuiting to empty without trying — the same "true short-circuit" concern
+    // executeSearchDelegatesPlainTitleToMovieServiceSearch already asserts for a real plain title.
+    WireMock.verify(1, getRequestedFor(urlPathEqualTo("/api/v1/movies/search")));
+  }
+
+  /**
+   * Given the model's response is schema-valid JSON but names neither a person nor a plain title
+   * (structurally possible per {@link dev.lmdb.ai.dto.StructuredQueryFilterDto}'s shape, called out
+   * as an untested degrade path in {@link dev.lmdb.ai.service.QueryAggregationService}'s own class
+   * Javadoc), when
+   * executed, then the result is an empty list with 200, and neither actor-service nor
+   * movie-service is ever called — {@link
+   * dev.lmdb.ai.service.QueryAggregationService#executeStructuredFilter}'s "nothing to anchor a
+   * lookup on" branch must return before making any downstream request, not merely end up empty
+   * after one.
+   *
+   * @throws Exception if the MockMvc request fails to execute
+   */
+  @Test
+  @DisplayName(
+      "POST /api/v1/ai/search/execute returns empty without calling either downstream service when"
+          + " the filter names neither a person nor a plain title")
+  void executeSearchReturnsEmptyWhenFilterNamesNeitherPersonNorPlainTitle() throws Exception {
+    stubAssistantReply(
+        """
+        {"personName":null,"role":null,"yearFrom":null,"yearTo":null,
+         "collaborators":[],"genre":null,"negated":[],"plainTitle":null}
+        """);
+
+    String body = objectMapper.writeValueAsString(Map.of("query", "movies"));
+    mockMvc
+        .perform(
+            post("/api/v1/ai/search/execute").contentType(MediaType.APPLICATION_JSON).content(body))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.results").isArray())
+        .andExpect(jsonPath("$.results").isEmpty());
+
+    WireMock.verify(0, getRequestedFor(urlPathMatching("/api/v1/actors/.*")));
+    WireMock.verify(0, getRequestedFor(urlPathMatching("/api/v1/movies/.*")));
   }
 
   /**
