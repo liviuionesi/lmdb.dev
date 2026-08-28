@@ -3,13 +3,16 @@ package dev.lmdb.ai.controller;
 import dev.lmdb.ai.dto.ChatRequestBodyDto;
 import dev.lmdb.ai.dto.ChatRequestDto;
 import dev.lmdb.ai.dto.ChatResponseDto;
+import dev.lmdb.ai.dto.QueryParseRequestDto;
 import dev.lmdb.ai.dto.RecommendationRequestBodyDto;
 import dev.lmdb.ai.dto.RecommendationRequestDto;
 import dev.lmdb.ai.dto.RecommendationResponseDto;
 import dev.lmdb.ai.dto.SimilarUserDto;
+import dev.lmdb.ai.dto.StructuredQueryFilterDto;
 import dev.lmdb.ai.dto.TranscriptionResponseDto;
 import dev.lmdb.ai.security.CallerIdentity;
 import dev.lmdb.ai.service.ChatAssistantService;
+import dev.lmdb.ai.service.QueryParsingService;
 import dev.lmdb.ai.service.RecommendationService;
 import dev.lmdb.ai.service.SemanticSearchService;
 import dev.lmdb.ai.service.SpeechToTextService;
@@ -36,14 +39,17 @@ import org.springframework.web.multipart.MultipartFile;
 
 /**
  * REST surface for ai-service's features: catalog-grounded recommendations, the conversational
- * assistant, semantic search over user taste profiles, and offline speech-to-text for the
- * frontend's voice control (#68). The recommendation and chat features are also exposed over gRPC
- * by {@link dev.lmdb.ai.grpc.AiGrpcService}.
+ * assistant, semantic search over user taste profiles, natural-language search-query parsing
+ * (#202), and offline speech-to-text for the frontend's voice control (#68). The recommendation and
+ * chat features are also exposed over gRPC by {@link dev.lmdb.ai.grpc.AiGrpcService}; query parsing
+ * is deliberately REST-only (ADR-020 — no backend-to-backend caller needs it today).
  *
  * <p>Every user-scoped endpoint here takes the caller's identity from the gateway-issued {@code
  * X-User-Id} header via {@link CallerIdentity} — never from the request body or a query parameter,
- * which the caller controls. Speech-to-text is the one exception: it is not user-scoped and is
- * {@code permitAll} at the gateway, so it reads no identity at all.
+ * which the caller controls. Speech-to-text and query parsing are the exceptions: neither touches
+ * per-user data, so neither reads an identity at all (speech-to-text is additionally {@code
+ * permitAll} at the gateway; query parsing still requires a valid JWT via the gateway's blanket
+ * {@code /api/v1/ai/**} rule, it just doesn't need to know who the caller is).
  */
 @RestController
 @RequestMapping("/api/v1/ai")
@@ -52,13 +58,16 @@ import org.springframework.web.multipart.MultipartFile;
 @Slf4j
 @Tag(
     name = "AI API",
-    description = "Recommendations, chat assistant, semantic search, and speech-to-text")
+    description =
+        "Recommendations, chat assistant, semantic search, natural-language query parsing, and"
+            + " speech-to-text")
 public class AiController {
 
   private final RecommendationService recommendationService;
   private final ChatAssistantService chatAssistantService;
   private final SemanticSearchService semanticSearchService;
   private final SpeechToTextService speechToTextService;
+  private final QueryParsingService queryParsingService;
 
   /**
    * Generates ranked, explained movie recommendations from LMDB's own catalog for the authenticated
@@ -123,6 +132,28 @@ public class AiController {
     UUID userId = CallerIdentity.require(callerId);
     log.info("GET /api/v1/ai/search/semantic - userId={}, k={}", userId, k);
     return ResponseEntity.ok(semanticSearchService.findSimilarUsers(query, userId, k));
+  }
+
+  /**
+   * Parses a free-text (typed or dictated) movie query into a structured filter — person, role,
+   * year range, collaborators, genre, negation — or an explicit plain-title fallback when the query
+   * carries no detectable structure (#202, ADR-020). Not user-scoped — parsing touches no per-user
+   * data. Extraction only: this does not call actor-service/movie-service or execute the filter
+   * (that's the cross-service aggregation endpoint, #203).
+   *
+   * @param body the raw query text
+   * @return the extracted structured filter, or a plain-title fallback
+   */
+  @PostMapping("/search/query")
+  @Operation(
+      summary = "Parse a natural-language movie query",
+      description =
+          "Extracts a structured filter (person/role/year range/collaborators/genre/negation) or a"
+              + " plain-title fallback; does not execute the filter")
+  public ResponseEntity<StructuredQueryFilterDto> parseQuery(
+      @Valid @RequestBody QueryParseRequestDto body) {
+    log.info("POST /api/v1/ai/search/query");
+    return ResponseEntity.ok(queryParsingService.parse(body.query()));
   }
 
   /**
