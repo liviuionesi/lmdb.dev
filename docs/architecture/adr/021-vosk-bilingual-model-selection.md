@@ -49,6 +49,11 @@ noisier, more spontaneous test sets — TED-LIUM talks and call-center/podcast
 audio — over the clean read-speech sets (LibriSpeech test-clean, Tuda-de
 test), since spontaneous/varied-recording-condition speech is the closer
 available proxy for accented/dialectal speech than studio-quality readings.
+These figures come from a single fetch of `alphacep/vosk-space/models.md`
+during this session — no further network access was available to cross-check
+them against a second source or confirm the benchmark methodology/version —
+so they're taken at face value as the vendor's self-reported numbers, not
+independently reproduced.
 **The literal accented-recording verification still has to happen** once
 #215's fixture and #212's integration both exist — this ADR's choice is
 provisional on that verification, not a replacement for it.
