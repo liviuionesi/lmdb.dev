@@ -8,6 +8,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
@@ -811,7 +812,7 @@ class AiServiceIntegrationTest {
   @Test
   @DisplayName("POST /api/v1/ai/speech-to-text returns the transcribed text")
   void speechToTextReturnsTranscribedText() throws Exception {
-    when(speechToTextService.transcribe(any())).thenReturn("show me action movies");
+    when(speechToTextService.transcribe(any(), any())).thenReturn("show me action movies");
 
     MockMultipartFile audio =
         new MockMultipartFile("audio", "command.wav", "audio/wav", "fake-wav-bytes".getBytes());
@@ -830,7 +831,7 @@ class AiServiceIntegrationTest {
   @Test
   @DisplayName("POST /api/v1/ai/speech-to-text returns empty text when nothing was recognized")
   void speechToTextReturnsEmptyTextWhenNothingRecognized() throws Exception {
-    when(speechToTextService.transcribe(any())).thenReturn("");
+    when(speechToTextService.transcribe(any(), any())).thenReturn("");
 
     MockMultipartFile silence =
         new MockMultipartFile(
@@ -840,6 +841,26 @@ class AiServiceIntegrationTest {
         .perform(multipart("/api/v1/ai/speech-to-text").file(silence))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.text").value(""));
+  }
+
+  /**
+   * Given a {@code language} query parameter, when speech-to-text is called, then the controller
+   * passes it through to {@link SpeechToTextService#transcribe} unchanged — verifies the HTTP-layer
+   * contract for #212's language selection; {@link SpeechToTextServiceTest} covers what the service
+   * does with each language.
+   */
+  @Test
+  @DisplayName("POST /api/v1/ai/speech-to-text passes the language query parameter through")
+  void speechToTextPassesLanguageParameterThrough() throws Exception {
+    when(speechToTextService.transcribe(any(), eq("de"))).thenReturn("wie spät ist es");
+
+    MockMultipartFile audio =
+        new MockMultipartFile("audio", "command.wav", "audio/wav", "fake-wav-bytes".getBytes());
+
+    mockMvc
+        .perform(multipart("/api/v1/ai/speech-to-text").file(audio).param("language", "de"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.text").value("wie spät ist es"));
   }
 
   /**

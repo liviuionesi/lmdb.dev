@@ -61,12 +61,19 @@ spec:
             periodSeconds: 15
             timeoutSeconds: 3
             failureThreshold: 3
+          # Memory bumped from 384Mi/768Mi for #212 (bilingual Vosk speech-to-text,
+          # ADR-021): a second resident model (English's own model also grew, small ->
+          # lgraph) adds real off-heap footprint alongside JAVA_OPTS' -Xmx512m heap.
+          # This is a conservative, unmeasured buffer, not a measured value — this
+          # environment has no network egress to the Vosk model host to actually
+          # load both models and check combined RSS (same constraint ADR-021
+          # documents). Revisit with real numbers once that's possible.
           resources:
             requests:
               cpu: 200m
-              memory: 384Mi
+              memory: 512Mi
               ephemeral-storage: 256Mi
             limits:
               cpu: "1"
-              memory: 768Mi
+              memory: 1024Mi
               ephemeral-storage: 512Mi

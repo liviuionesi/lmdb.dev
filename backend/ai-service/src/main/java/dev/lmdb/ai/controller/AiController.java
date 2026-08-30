@@ -183,10 +183,12 @@ public class AiController {
   }
 
   /**
-   * Transcribes an uploaded voice-command audio clip via Vosk (#68). Not user-scoped — the clip is
-   * transcribed and discarded, nothing is read or written per user.
+   * Transcribes an uploaded voice-command audio clip via Vosk (#68, bilingual per #212). Not
+   * user-scoped — the clip is transcribed and discarded, nothing is read or written per user.
    *
    * @param audio a WAV (PCM) recording of the spoken command
+   * @param language {@code en}/{@code de} to select the transcription model, or omitted to default
+   *     to English (pre-#212 behavior)
    * @return the recognized text
    */
   @PostMapping(value = "/speech-to-text", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -194,8 +196,10 @@ public class AiController {
       summary = "Speech to text",
       description = "Offline transcription via a local Vosk model — no cloud STT provider")
   public ResponseEntity<TranscriptionResponseDto> speechToText(
-      @RequestParam("audio") MultipartFile audio) {
-    log.info("POST /api/v1/ai/speech-to-text - {} bytes", audio.getSize());
-    return ResponseEntity.ok(new TranscriptionResponseDto(speechToTextService.transcribe(audio)));
+      @RequestParam("audio") MultipartFile audio,
+      @RequestParam(value = "language", required = false) String language) {
+    log.info("POST /api/v1/ai/speech-to-text - {} bytes, language={}", audio.getSize(), language);
+    return ResponseEntity.ok(
+        new TranscriptionResponseDto(speechToTextService.transcribe(audio, language)));
   }
 }

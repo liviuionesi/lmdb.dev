@@ -45,27 +45,49 @@ RUN apt-get update && apt-get install -y --no-install-recommends wget curl unzip
 
 WORKDIR /app
 
-# Bake in the offline Vosk speech-to-text model (#151) - previously only a
-# manual local-dev step (infrastructure/scripts/download-vosk-model.sh),
-# meaning voice control silently had no model to load at all on either
-# cloud deploy (SpeechToTextService loads it lazily, so ai-service itself
-# starts fine and only fails once a request actually needs it). Baked in
-# here so it's present identically everywhere, matching VOSK_MODEL_PATH's
-# own default (./models/vosk-model-small-en-us-0.15, relative to this
-# WORKDIR) — same URL infrastructure/scripts/download-vosk-model.sh uses.
+# Bake in the offline Vosk speech-to-text models (#151, bilingual per
+# #200/#212) - previously only a manual local-dev step
+# (infrastructure/scripts/download-vosk-model.sh), meaning voice control
+# silently had no model to load at all on either cloud deploy
+# (SpeechToTextService loads each language lazily, so ai-service itself
+# starts fine and only fails once a request for that language actually needs
+# it). Baked in here so both are present identically everywhere, matching
+# VOSK_MODEL_PATH / VOSK_MODEL_PATH_DE's own defaults (relative to this
+# WORKDIR) — same URLs infrastructure/scripts/download-vosk-model.sh uses.
+# Model choice per ADR-021: English is vosk-model-en-us-0.22-lgraph (was
+# vosk-model-small-en-us-0.15), German is vosk-model-small-de-0.15,
+# ai-service's first German model.
 #
-# The archive is pinned by SHA-256 and verified before it is unpacked. Vosk
+# Each archive is pinned by SHA-256 and verified before it is unpacked. Vosk
 # loads native code out of this directory via JNI, so unverified content here
 # executes inside the service process — a compromised upstream, a hijacked
 # mirror, or a MITM on the build network would otherwise be baked into the
 # image and pushed to ghcr.io as a normal release. `--fail` matters for the
 # same reason: without it curl writes an HTTP error page to the output file
 # and the build carries on treating it as an archive.
-ARG VOSK_MODEL_SHA256=30f26242c4eb449f948e42cb302dd7a686cb29a3423a8367f99ff41780942498
-RUN curl -fsSL -o /tmp/vosk-model.zip https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip \
+#
+# KNOWN LIMITATION (both ARGs below): these are UNVERIFIED placeholder
+# hashes, not real published checksums — the autonomous-run environment that
+# wrote this has no network egress to alphacephei.com (same constraint
+# ADR-021 documents) to actually fetch either archive and hash it for real.
+# `sha256sum -c` will fail on any real download, by design (a safe build
+# failure, not silently trusting unverified native code) until someone with
+# real network access downloads each archive, hashes it, and replaces the
+# placeholder below and in infrastructure/scripts/download-vosk-model.sh.
+# Tracked as a follow-up; this build step is not exercised by CI on
+# `develop` (backend-ci.yml doesn't build this image) — it starts mattering
+# once Story #200 closes and `develop` merges to `main`, which triggers
+# docker-publish.yml.
+ARG VOSK_MODEL_SHA256=0000000000000000000000000000000000000000000000000000000000000000
+ARG VOSK_MODEL_SHA256_DE=0000000000000000000000000000000000000000000000000000000000000000
+RUN curl -fsSL -o /tmp/vosk-model.zip https://alphacephei.com/vosk/models/vosk-model-en-us-0.22-lgraph.zip \
     && echo "${VOSK_MODEL_SHA256}  /tmp/vosk-model.zip" | sha256sum -c - \
     && unzip -q /tmp/vosk-model.zip -d models \
-    && rm /tmp/vosk-model.zip
+    && rm /tmp/vosk-model.zip \
+    && curl -fsSL -o /tmp/vosk-model-de.zip https://alphacephei.com/vosk/models/vosk-model-small-de-0.15.zip \
+    && echo "${VOSK_MODEL_SHA256_DE}  /tmp/vosk-model-de.zip" | sha256sum -c - \
+    && unzip -q /tmp/vosk-model-de.zip -d models \
+    && rm /tmp/vosk-model-de.zip
 
 # Copy built JAR from build stage
 COPY --from=build /app/backend/ai-service/build/libs/*.jar app.jar
