@@ -5,11 +5,11 @@ import dev.lmdb.ai.dto.ChatRequestDto;
 import dev.lmdb.ai.dto.ChatResponseDto;
 import dev.lmdb.ai.dto.NaturalLanguageSearchResponseDto;
 import dev.lmdb.ai.dto.QueryParseRequestDto;
+import dev.lmdb.ai.dto.QueryParseResponseDto;
 import dev.lmdb.ai.dto.RecommendationRequestBodyDto;
 import dev.lmdb.ai.dto.RecommendationRequestDto;
 import dev.lmdb.ai.dto.RecommendationResponseDto;
 import dev.lmdb.ai.dto.SimilarUserDto;
-import dev.lmdb.ai.dto.StructuredQueryFilterDto;
 import dev.lmdb.ai.dto.TranscriptionResponseDto;
 import dev.lmdb.ai.security.CallerIdentity;
 import dev.lmdb.ai.service.ChatAssistantService;
@@ -141,23 +141,25 @@ public class AiController {
   /**
    * Parses a free-text (typed or dictated) movie query into a structured filter — person, role,
    * year range, collaborators, genre, negation — or an explicit plain-title fallback when the query
-   * carries no detectable structure (#202, ADR-020). Not user-scoped — parsing touches no per-user
-   * data. Extraction only: this does not call actor-service/movie-service or execute the filter
-   * (that's the cross-service aggregation endpoint, #203).
+   * carries no detectable structure (#202, ADR-020), alongside a token/span breakdown of the same
+   * query for live search-bar highlighting (#207, Story #199). Not user-scoped — parsing touches no
+   * per-user data. Extraction only: this does not call actor-service/movie-service or execute the
+   * filter (that's the cross-service aggregation endpoint, #203).
    *
    * @param body the raw query text
-   * @return the extracted structured filter, or a plain-title fallback
+   * @return the extracted structured filter (or plain-title fallback) and its span breakdown
    */
   @PostMapping("/search/query")
   @Operation(
       summary = "Parse a natural-language movie query",
       description =
           "Extracts a structured filter (person/role/year range/collaborators/genre/negation) or a"
-              + " plain-title fallback; does not execute the filter")
-  public ResponseEntity<StructuredQueryFilterDto> parseQuery(
+              + " plain-title fallback, plus a token/span breakdown for live highlighting; does not"
+              + " execute the filter")
+  public ResponseEntity<QueryParseResponseDto> parseQuery(
       @Valid @RequestBody QueryParseRequestDto body) {
     log.info("POST /api/v1/ai/search/query");
-    return ResponseEntity.ok(queryParsingService.parse(body.query()));
+    return ResponseEntity.ok(queryParsingService.parseWithSpans(body.query()));
   }
 
   /**

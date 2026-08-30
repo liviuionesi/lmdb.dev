@@ -866,12 +866,16 @@ class AiServiceIntegrationTest {
   /**
    * Given a query naming a person, a role, a year range, and a collaborator, when it's parsed, then
    * every field of the structured filter is populated from the model's response — the multi-
-   * constraint case #202's acceptance criteria calls out by name.
+   * constraint case #202's acceptance criteria calls out by name — and the span breakdown carries
+   * one CONNECTOR span ("and") plus one ENTITY span per named value, each at its exact offset in
+   * the submitted text, in left-to-right order — #207 AC1/AC2/AC4's multi-category case.
    *
    * @throws Exception if the MockMvc request fails to execute
    */
   @Test
-  @DisplayName("POST /api/v1/ai/search/query extracts every field for a multi-constraint query")
+  @DisplayName(
+      "POST /api/v1/ai/search/query extracts every field and a multi-category span breakdown for a"
+          + " multi-constraint query")
   void parseQueryExtractsFullFilterForMultiConstraintQuery() throws Exception {
     stubAssistantReply(
         """
@@ -879,28 +883,41 @@ class AiServiceIntegrationTest {
          "collaborators":["Meg Ryan"],"genre":null,"negated":[],"plainTitle":null}
         """);
 
-    String body =
-        objectMapper.writeValueAsString(
-            Map.of(
-                "query",
-                "movies Tom Hanks directed between 2000 and 2010 that also starred Meg Ryan"));
+    String query = "movies Tom Hanks directed between 2000 and 2010 that also starred Meg Ryan";
+    String body = objectMapper.writeValueAsString(Map.of("query", query));
 
     mockMvc
         .perform(
             post("/api/v1/ai/search/query").contentType(MediaType.APPLICATION_JSON).content(body))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.personName").value("Tom Hanks"))
-        .andExpect(jsonPath("$.role").value("DIRECTED"))
-        .andExpect(jsonPath("$.yearFrom").value(2000))
-        .andExpect(jsonPath("$.yearTo").value(2010))
-        .andExpect(jsonPath("$.collaborators[0]").value("Meg Ryan"))
-        .andExpect(jsonPath("$.plainTitle").doesNotExist());
+        .andExpect(jsonPath("$.filter.personName").value("Tom Hanks"))
+        .andExpect(jsonPath("$.filter.role").value("DIRECTED"))
+        .andExpect(jsonPath("$.filter.yearFrom").value(2000))
+        .andExpect(jsonPath("$.filter.yearTo").value(2010))
+        .andExpect(jsonPath("$.filter.collaborators[0]").value("Meg Ryan"))
+        .andExpect(jsonPath("$.filter.plainTitle").doesNotExist())
+        .andExpect(jsonPath("$.spans.length()").value(5))
+        .andExpect(jsonPath("$.spans[0].text").value("Tom Hanks"))
+        .andExpect(jsonPath("$.spans[0].category").value("ENTITY"))
+        .andExpect(jsonPath("$.spans[0].start").value(query.indexOf("Tom Hanks")))
+        .andExpect(
+            jsonPath("$.spans[0].end").value(query.indexOf("Tom Hanks") + "Tom Hanks".length()))
+        .andExpect(jsonPath("$.spans[1].text").value("2000"))
+        .andExpect(jsonPath("$.spans[1].category").value("ENTITY"))
+        .andExpect(jsonPath("$.spans[2].text").value("and"))
+        .andExpect(jsonPath("$.spans[2].category").value("CONNECTOR"))
+        .andExpect(jsonPath("$.spans[3].text").value("2010"))
+        .andExpect(jsonPath("$.spans[3].category").value("ENTITY"))
+        .andExpect(jsonPath("$.spans[4].text").value("Meg Ryan"))
+        .andExpect(jsonPath("$.spans[4].category").value("ENTITY"))
+        .andExpect(jsonPath("$.spans[4].end").value(query.length()));
   }
 
   /**
    * Given a query that is just a title with no operators or named entities, when it's parsed, then
    * the response carries only {@code plainTitle} — #198 AC3's "no query-shape branching in the
-   * frontend" depends on this fallback being explicit rather than an empty/degenerate filter.
+   * frontend" depends on this fallback being explicit rather than an empty/degenerate filter — and
+   * an empty {@code spans} list, not an error or stale structure (#207 AC3).
    *
    * @throws Exception if the MockMvc request fails to execute
    */
@@ -919,9 +936,11 @@ class AiServiceIntegrationTest {
         .perform(
             post("/api/v1/ai/search/query").contentType(MediaType.APPLICATION_JSON).content(body))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.plainTitle").value("Inception"))
-        .andExpect(jsonPath("$.personName").doesNotExist())
-        .andExpect(jsonPath("$.role").doesNotExist());
+        .andExpect(jsonPath("$.filter.plainTitle").value("Inception"))
+        .andExpect(jsonPath("$.filter.personName").doesNotExist())
+        .andExpect(jsonPath("$.filter.role").doesNotExist())
+        .andExpect(jsonPath("$.spans").isArray())
+        .andExpect(jsonPath("$.spans").isEmpty());
   }
 
   /**
@@ -948,35 +967,76 @@ class AiServiceIntegrationTest {
         .perform(
             post("/api/v1/ai/search/query").contentType(MediaType.APPLICATION_JSON).content(body))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.plainTitle").value("asdkjfh some gibberish query"))
-        .andExpect(jsonPath("$.personName").doesNotExist());
+        .andExpect(jsonPath("$.filter.plainTitle").value("asdkjfh some gibberish query"))
+        .andExpect(jsonPath("$.filter.personName").doesNotExist());
   }
 
   /**
    * Given a query negates a field ("didn't direct"), when it's parsed, then that field's name
    * appears in {@code negated} rather than the constraint being silently dropped or the query
-   * matching as if it were positive — #202's negation acceptance criterion.
+   * matching as if it were positive — #202's negation acceptance criterion — and the span breakdown
+   * carries one NEGATION span covering the full "didn't direct" phrase plus one ENTITY span for the
+   * named person, at their exact offsets in the submitted text (#207 AC1/AC2/AC4).
    *
    * @throws Exception if the MockMvc request fails to execute
    */
   @Test
-  @DisplayName("POST /api/v1/ai/search/query extracts negation as a distinct field")
-  void parseQueryExtractsNegationAsADistinctField() throws Exception {
+  @DisplayName("POST /api/v1/ai/search/query extracts negation as a distinct field and span")
+  void parseQueryExtractsNegationAsADistinctFieldAndSpan() throws Exception {
     stubAssistantReply(
         """
         {"personName":"Clint Eastwood","role":"DIRECTED","yearFrom":null,"yearTo":null,
          "collaborators":[],"genre":null,"negated":["role"],"plainTitle":null}
         """);
 
-    String body =
-        objectMapper.writeValueAsString(Map.of("query", "movies Clint Eastwood didn't direct"));
+    String query = "movies Clint Eastwood didn't direct";
+    String body = objectMapper.writeValueAsString(Map.of("query", query));
 
     mockMvc
         .perform(
             post("/api/v1/ai/search/query").contentType(MediaType.APPLICATION_JSON).content(body))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.negated[0]").value("role"))
-        .andExpect(jsonPath("$.personName").value("Clint Eastwood"));
+        .andExpect(jsonPath("$.filter.negated[0]").value("role"))
+        .andExpect(jsonPath("$.filter.personName").value("Clint Eastwood"))
+        .andExpect(jsonPath("$.spans[?(@.category=='NEGATION')].text").value("didn't direct"))
+        .andExpect(
+            jsonPath("$.spans[?(@.category=='NEGATION')].start").value(query.indexOf("didn't")))
+        .andExpect(jsonPath("$.spans[?(@.category=='NEGATION')].end").value(query.length()))
+        .andExpect(jsonPath("$.spans[?(@.category=='ENTITY')].text").value("Clint Eastwood"))
+        .andExpect(
+            jsonPath("$.spans[?(@.category=='ENTITY')].start").value(query.indexOf("Clint")));
+  }
+
+  /**
+   * Given a query naming a person whose name contains non-ASCII (accented) characters, when it's
+   * parsed, then the resulting ENTITY span's offsets are exact against the original text — #207
+   * AC2's own stated verification case, distinct from the plain-ASCII names every other span test
+   * here uses.
+   *
+   * @throws Exception if the MockMvc request fails to execute
+   */
+  @Test
+  @DisplayName("POST /api/v1/ai/search/query produces exact span offsets for an accented name")
+  void parseQueryProducesExactSpanOffsetsForAnAccentedName() throws Exception {
+    stubAssistantReply(
+        """
+        {"personName":"François Truffaut","role":"DIRECTED","yearFrom":null,"yearTo":null,
+         "collaborators":[],"genre":null,"negated":[],"plainTitle":null}
+        """);
+
+    String query = "movies directed by François Truffaut";
+    String body = objectMapper.writeValueAsString(Map.of("query", query));
+
+    mockMvc
+        .perform(
+            post("/api/v1/ai/search/query").contentType(MediaType.APPLICATION_JSON).content(body))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.filter.personName").value("François Truffaut"))
+        .andExpect(jsonPath("$.spans.length()").value(1))
+        .andExpect(jsonPath("$.spans[0].text").value("François Truffaut"))
+        .andExpect(jsonPath("$.spans[0].category").value("ENTITY"))
+        .andExpect(jsonPath("$.spans[0].start").value(query.indexOf("François")))
+        .andExpect(jsonPath("$.spans[0].end").value(query.length()));
   }
 
   /**
@@ -1155,10 +1215,10 @@ class AiServiceIntegrationTest {
         .perform(
             post("/api/v1/ai/search/query").contentType(MediaType.APPLICATION_JSON).content(body))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.collaborators").isArray())
-        .andExpect(jsonPath("$.collaborators").isEmpty())
-        .andExpect(jsonPath("$.negated").isArray())
-        .andExpect(jsonPath("$.negated").isEmpty());
+        .andExpect(jsonPath("$.filter.collaborators").isArray())
+        .andExpect(jsonPath("$.filter.collaborators").isEmpty())
+        .andExpect(jsonPath("$.filter.negated").isArray())
+        .andExpect(jsonPath("$.filter.negated").isEmpty());
   }
 
   /**
