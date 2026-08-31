@@ -2126,6 +2126,137 @@ class AiServiceIntegrationTest {
   }
 
   /**
+   * Given the EN dictation language is selected, when a recorded clip is transcribed and the
+   * resulting transcript is classified, then the full pipeline — language selection through
+   * speech-to-text through intent parsing — resolves to the expected command, chaining the two real
+   * HTTP endpoints {@code VoiceControl.jsx} calls in sequence rather than exercising either in
+   * isolation (#216 AC1, Story #200). {@link SpeechToTextService} is mocked (no Vosk model in CI,
+   * see {@link AiModelTestConfig}) so this doesn't prove Vosk's own transcription accuracy against
+   * real accented/dialectal speech — that verification is still open (Task #215, ADR-021) and out
+   * of scope here; {@link dev.lmdb.ai.service.SpeechToTextServiceTest} covers this service's
+   * deterministic, model-independent behavior instead. {@link ChatModel} is likewise mocked (no
+   * Ollama in CI, same config), so this doesn't prove the real model's classification accuracy
+   * either — {@link dev.lmdb.ai.service.VoiceCommandParsingServiceTest} and the other {@code
+   * /voice-command} tests above cover that in isolation. What this proves, that no single-stage
+   * test does: the {@code language} query parameter reaches {@link SpeechToTextService#transcribe}
+   * unchanged, AND the transcript it returns is exactly what reaches {@link
+   * dev.lmdb.ai.service.VoiceCommandParsingService#parse} next and shows up, unmutated, in the
+   * prompt actually sent to {@link ChatModel} — verified below via {@link ArgumentCaptor} the same
+   * way {@link #parseVoiceCommandSanitizesInputBeforeItReachesThePrompt} does, rather than trusting
+   * a same-content-regardless-of-input mock to stand in for that check.
+   *
+   * @throws Exception if either MockMvc request fails to execute
+   */
+  @Test
+  @DisplayName(
+      "Full pipeline: EN speech-to-text output feeds voice-command classification end to end")
+  void fullPipelineTranscribesAndClassifiesEnglishTranscript() throws Exception {
+    when(speechToTextService.transcribe(any(), eq("en"))).thenReturn("dark mode please");
+    stubAssistantReply(
+        """
+        {"command":"CHANGE_MODE","mode":"DARK","genreOrCategory":null,"query":null}
+        """);
+
+    String transcript = transcribeViaSpeechToText("en");
+    assertThat(transcript).isEqualTo("dark mode please");
+
+    String voiceCommandBody = objectMapper.writeValueAsString(Map.of("transcript", transcript));
+    mockMvc
+        .perform(
+            post("/api/v1/ai/voice-command")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(voiceCommandBody))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.command").value("CHANGE_MODE"))
+        .andExpect(jsonPath("$.mode").value("DARK"));
+
+    // Proves the transcript speech-to-text returned actually reached the model prompt, not just
+    // that the mocked ChatModel returned its canned reply regardless of what was sent to it.
+    ArgumentCaptor<Prompt> promptCaptor = ArgumentCaptor.forClass(Prompt.class);
+    verify(chatModel).call(promptCaptor.capture());
+    String sentText =
+        promptCaptor.getValue().getInstructions().stream()
+            .filter(UserMessage.class::isInstance)
+            .findFirst()
+            .orElseThrow()
+            .getText();
+    assertThat(sentText).contains(transcript);
+  }
+
+  /**
+   * Same as {@link #fullPipelineTranscribesAndClassifiesEnglishTranscript}, for German — proves the
+   * pipeline composition isn't English-specific: the {@code language=de} parameter selects German
+   * transcription, and the resulting German transcript reaches intent parsing unmodified,
+   * classified here to a different command shape (genre/category, with a caller-supplied genre
+   * list) than the English case above, so this isn't just a copy with the language swapped — #216
+   * AC1's "for both languages" requirement. Same {@link ArgumentCaptor} check as the English case
+   * above — the {@code ChatModel} mock is likewise content-blind here, so the captured prompt is
+   * what actually proves the German transcript (and genre list) reached the model, not just that
+   * {@code /voice-command} returned 200.
+   *
+   * @throws Exception if either MockMvc request fails to execute
+   */
+  @Test
+  @DisplayName(
+      "Full pipeline: DE speech-to-text output feeds voice-command classification end to end")
+  void fullPipelineTranscribesAndClassifiesGermanTranscript() throws Exception {
+    when(speechToTextService.transcribe(any(), eq("de"))).thenReturn("zeig mir Actionfilme");
+    stubAssistantReply(
+        """
+        {"command":"CHOOSE_GENRE","mode":null,"genreOrCategory":"Action","query":null}
+        """);
+
+    String transcript = transcribeViaSpeechToText("de");
+    assertThat(transcript).isEqualTo("zeig mir Actionfilme");
+
+    String voiceCommandBody =
+        objectMapper.writeValueAsString(
+            Map.of("transcript", transcript, "genreNames", List.of("Action", "Comedy")));
+    mockMvc
+        .perform(
+            post("/api/v1/ai/voice-command")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(voiceCommandBody))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.command").value("CHOOSE_GENRE"))
+        .andExpect(jsonPath("$.genreOrCategory").value("Action"));
+
+    // Proves the German transcript and the caller-supplied genre list both actually reached the
+    // model prompt, not just that the mocked ChatModel returned its canned reply regardless.
+    ArgumentCaptor<Prompt> promptCaptor = ArgumentCaptor.forClass(Prompt.class);
+    verify(chatModel).call(promptCaptor.capture());
+    String sentText =
+        promptCaptor.getValue().getInstructions().stream()
+            .filter(UserMessage.class::isInstance)
+            .findFirst()
+            .orElseThrow()
+            .getText();
+    assertThat(sentText).contains(transcript).contains("Known genres: Action, Comedy");
+  }
+
+  /**
+   * Calls {@code POST /api/v1/ai/speech-to-text} for the given language and returns the recognized
+   * text — shared by the full-pipeline tests above, which each start from a real speech-to-text
+   * response rather than a hand-built transcript string.
+   *
+   * @param language the {@code language} query parameter to request transcription against
+   * @return the {@code text} field of the endpoint's JSON response
+   * @throws Exception if the MockMvc request fails to execute
+   */
+  private String transcribeViaSpeechToText(String language) throws Exception {
+    MockMultipartFile audio =
+        new MockMultipartFile("audio", "command.wav", "audio/wav", "fake-wav-bytes".getBytes());
+    String response =
+        mockMvc
+            .perform(multipart("/api/v1/ai/speech-to-text").file(audio).param("language", language))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    return objectMapper.readTree(response).get("text").asText();
+  }
+
+  /**
    * Stubs the mocked {@link ChatModel} to return a fixed reply for any prompt.
    *
    * @param reply the assistant reply the next chat call should produce

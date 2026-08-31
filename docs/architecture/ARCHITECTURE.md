@@ -701,9 +701,13 @@ format): `/person/{id}`, `/person/{id}/movie_credits`, `/person/{id}/images`,
 
 ### 3.7 AI Service (Advanced)
 
-**Status: implemented and live-verified (#36, #68, #151)** — all four
-features below are real, tested against the running service on Azure and
-AWS, not aspirational. Two deliberate deviations from the original spec:
+**Status: implemented and live-verified (#36, #68, #151)** — the original
+four features are real, tested against the running service on Azure and
+AWS, not aspirational; voice-command classification (#214) and bilingual
+speech-to-text (#212) below are implemented and unit/integration-tested but
+not yet live-verified against a real deployed cloud model download — #229
+tracks the same "no network egress to the model host" gap ADR-021 documents
+for the Vosk model itself. Two deliberate deviations from the original spec:
 **Spring AI 2.0.0** (not the 1.0.0-SNAPSHOT this doc originally named —
 2.x is what tracks Spring Boot 4.x), and **Ollama only, no OpenAI starter on
 the classpath at all** (not "OpenAI/Ollama" — ADR-004's $0 budget rules out
@@ -739,10 +743,11 @@ nearest-neighbour search over `user_taste_profiles` embeddings specifically
 > and the K8s overlays, and the main implementation cost of ADR-012.
 
 **Features (all live, REST via the gateway at `/api/v1/ai/**`):**
-1. **Speech-to-text** (`POST /speech-to-text`) — offline, Vosk, no cloud API
-2. **Movie recommendations** (`POST /recommendations`) — Ollama, grounded in movie-service's real catalog, never invents titles
-3. **Chat assistant** (`POST /chat`) — Ollama, persisted conversation history
-4. **Semantic search** (`GET /search/semantic`) — pgvector ANN query over taste-profile embeddings
+1. **Speech-to-text** (`POST /speech-to-text`) — offline, Vosk, no cloud API; bilingual English/German since #212 (below)
+2. **Voice-command classification** (`POST /voice-command`) — Ollama, LLM-based intent parsing over a transcript into logout/theme-toggle/genre-or-category/search, either language, phrasing-tolerant (#214, replaces the frontend's old per-language regex table)
+3. **Movie recommendations** (`POST /recommendations`) — Ollama, grounded in movie-service's real catalog, never invents titles
+4. **Chat assistant** (`POST /chat`) — Ollama, persisted conversation history
+5. **Semantic search** (`GET /search/semantic`) — pgvector ANN query over taste-profile embeddings
 
 **Domain Model (JPA entities on PostgreSQL — ADR-012):**
 
@@ -860,31 +865,55 @@ public class RecommendationService {
   }
 }
 
-// SpeechToTextService — fully offline: Vosk model loaded lazily (first
-// request, not startup — a missing/undownloaded model shouldn't block
+// SpeechToTextService — fully offline: bilingual (English/German, #212) —
+// each language's Vosk model loaded lazily, keyed by a `language` request
+// param (first request for that language, not startup — a missing/
+// undownloaded model for one language shouldn't block the other or
 // ai-service's other features), a fresh Recognizer per request (Vosk's
 // Recognizer isn't thread-safe), audio resampled to 16kHz mono PCM16
 // regardless of what the browser sent.
 @Service
 public class SpeechToTextService implements DisposableBean {
-  public String transcribe(MultipartFile audioFile) {
+  public String transcribe(MultipartFile audioFile, String language) {
+    String normalizedLanguage = normalizeLanguage(language); // defaults to English
     byte[] pcm = toPcm16Mono16kHz(audioFile);
-    try (Recognizer recognizer = new Recognizer(getOrLoadModel(), SAMPLE_RATE_HZ)) {
+    try (Recognizer recognizer = new Recognizer(getOrLoadModel(normalizedLanguage), SAMPLE_RATE_HZ)) {
       recognizer.acceptWaveForm(pcm, pcm.length);
       return extractText(recognizer.getFinalResult());
     }
   }
 }
+
+// VoiceCommandParsingService — classifies a transcript (either language, any
+// phrasing) into one of four canonical commands via the same structured-
+// extraction ChatClient pattern RecommendationService/QueryParsingService
+// use (#214), replacing the frontend's old per-language regex table
+// (voiceCommands.js), which only ever matched fixed English phrases.
+@Service
+public class VoiceCommandParsingService {
+  private final ChatClient chatClient;
+
+  public VoiceCommandDto parse(String rawTranscript, List<String> genreNames) {
+    return chatClient.prompt()
+        .system(SYSTEM_PROMPT) // classifies into LOGOUT/CHANGE_MODE/CHOOSE_GENRE/SEARCH
+        .user(buildUserPrompt(rawTranscript, genreNames))
+        .call()
+        .entity(VoiceCommandDto.class);
+  }
+}
 ```
 
-**Deployment note (found live, #151):** the Vosk model (~40MB, small
-English) isn't downloaded by `docker-compose`/Terraform automatically — it's
-baked directly into the ai-service Docker image at build time so it's
-present identically on every deploy target (local, Azure, AWS), matching
-`VOSK_MODEL_PATH`'s default. `SpeechToTextService` loads it lazily, so a
-missing model previously meant ai-service *started* fine and only failed
-once a real transcription request needed it — a silent gap until it was
-actually exercised.
+**Deployment note (found live, #151, updated #212):** neither Vosk model
+(`vosk-model-en-us-0.22-lgraph`, ~128MB; `vosk-model-small-de-0.15`, ~45MB —
+ADR-021's picks) is downloaded by `docker-compose`/Terraform
+automatically — both are baked directly into the ai-service Docker image at
+build time so they're present identically on every deploy target (local,
+Azure, AWS), matching `VOSK_MODEL_PATH`/`VOSK_MODEL_PATH_DE`'s defaults.
+`SpeechToTextService` loads each lazily, keyed by language, so a missing
+model for one language previously meant ai-service *started* fine and only
+failed once a real transcription request for that language needed it — a
+silent gap until it was actually exercised; the other language is
+unaffected either way.
 
 ---
 
