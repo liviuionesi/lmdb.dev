@@ -1,12 +1,24 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { TextField, InputAdornment } from '@mui/material';
 import { Search as SearchIcon } from '@mui/icons-material';
 import { useDispatch } from 'react-redux';
 import { useLocation } from 'react-router-dom';
 
-import { aiSearchStarted, aiSearchSucceeded, aiSearchFailed, aiSearchCleared } from '../../features/currentGenreOrCategory';
-import { useExecuteSearchMutation } from '../../services/AI';
+import {
+  aiSearchStarted,
+  aiSearchSucceeded,
+  aiSearchFailed,
+  aiSearchCleared,
+  querySpansReceived,
+  querySpansCleared,
+} from '../../features/currentGenreOrCategory';
+import { useExecuteSearchMutation, useParseQueryMutation } from '../../services/AI';
 import useStyles from './styles';
+
+// How long a typing pause must last before a debounced parse-as-you-type call fires (#208 AC1) —
+// short enough to feel live, long enough that a normal typing cadence collapses to one call per
+// pause rather than one per keystroke.
+export const QUERY_HIGHLIGHT_DEBOUNCE_MS = 400;
 
 // Maps one ai-service search result (movieId/title/overview/releaseDate/posterPath/voteAverage,
 // see backend/ai-service/.../SearchResultMovieDto) into the TMDB-shaped movie object every
@@ -30,11 +42,57 @@ function Search() {
   const dispatch = useDispatch();
   const location = useLocation();
   const [executeSearch] = useExecuteSearchMutation();
+  const [parseQuery] = useParseQueryMutation();
   // Tracks which query is the MOST RECENTLY submitted one, so an out-of-order response from an
   // earlier, slower search can't overwrite a newer one's results — executeSearch is an imperative
   // mutation, not a query hook, so RTK Query's own per-arg de-dupe/cancellation doesn't apply here
   // the way it did for the old useGetMoviesQuery-driven flow.
   const latestQueryRef = useRef('');
+  // Same stale-response guard, but for the separate debounced parse-as-you-type flow (#208 AC2) —
+  // kept apart from latestQueryRef above since the two calls (execute on Enter, parse on every
+  // debounced keystroke) run independently and can be in flight at the same time.
+  const latestParseRef = useRef('');
+  const debounceTimerRef = useRef(null);
+
+  // Only a pending debounce timer needs cleanup on unmount — parseQuery's own in-flight promise is
+  // already guarded by latestParseRef above, so an unmount mid-request just lets it resolve unused.
+  useEffect(() => () => {
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+  }, []);
+
+  const handleQueryChange = (event) => {
+    const { value } = event.target;
+    setQuery(value);
+
+    // 1. Cancel any already-scheduled parse call — only the pause after the LAST keystroke should
+    //    actually fire one (#208 AC1), not one per keystroke.
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+
+    const trimmed = value.trim();
+    if (!trimmed) {
+      // Emptying the box exits live-highlight mode immediately; no need to wait out the debounce
+      // for a call ai-service would reject as blank input anyway.
+      latestParseRef.current = '';
+      dispatch(querySpansCleared());
+      return;
+    }
+
+    // 2. Schedule the parse call for after the debounce pause.
+    debounceTimerRef.current = setTimeout(() => {
+      latestParseRef.current = trimmed;
+      parseQuery(trimmed)
+        .unwrap()
+        .then((response) => {
+          // #208 AC2: a newer keystroke may have superseded this call while it was in flight.
+          if (latestParseRef.current !== trimmed) return;
+          dispatch(querySpansReceived({ spans: response.spans ?? [] }));
+        })
+        .catch(() => {
+          // #208 AC3: a failed parse call must not clear or overwrite the last valid highlight
+          // state — do nothing, same as staying with whatever was last successfully rendered.
+        });
+    }, QUERY_HIGHLIGHT_DEBOUNCE_MS);
+  };
 
   const handleKeyPress = async (event) => {
     if (event.key !== 'Enter') return;
@@ -75,7 +133,7 @@ function Search() {
       <TextField
         onKeyPress={handleKeyPress}
         value={query}
-        onChange={(e) => setQuery(e.target.value)}
+        onChange={handleQueryChange}
         variant="standard"
         slotProps={{
           input: {

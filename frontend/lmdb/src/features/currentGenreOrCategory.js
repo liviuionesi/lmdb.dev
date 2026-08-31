@@ -15,6 +15,12 @@ export const genreOrCategory = createSlice({
     aiSearchQuery: '',
     aiSearchResults: null,
     aiSearchStatus: 'idle', // 'idle' | 'loading' | 'succeeded' | 'failed'
+    // Live query-highlighting state (#207/#208, Story #199): the most recent span breakdown from
+    // ai-service's POST /api/v1/ai/search/query, kept separate from aiSearchResults above — parsing
+    // (this) and executing (aiSearchStarted/Succeeded/Failed) are two independent calls Search.jsx
+    // fires on different triggers (debounced keystroke vs. Enter). Rendering the highlights
+    // themselves is #209/#210's concern, not this Task's (#208).
+    queryHighlightSpans: [],
   },
   reducers: {
     selectGenreOrCategory: (state, action) => {
@@ -25,6 +31,7 @@ export const genreOrCategory = createSlice({
       state.aiSearchQuery = '';
       state.aiSearchResults = null;
       state.aiSearchStatus = 'idle';
+      state.queryHighlightSpans = [];
     },
     searchMovie: (state, action) => {
       state.searchQuery = action.payload;
@@ -34,6 +41,7 @@ export const genreOrCategory = createSlice({
       state.aiSearchQuery = '';
       state.aiSearchResults = null;
       state.aiSearchStatus = 'idle';
+      state.queryHighlightSpans = [];
     },
     aiSearchStarted: (state, action) => {
       state.aiSearchQuery = action.payload;
@@ -55,6 +63,18 @@ export const genreOrCategory = createSlice({
       state.aiSearchQuery = '';
       state.aiSearchResults = null;
       state.aiSearchStatus = 'idle';
+      state.queryHighlightSpans = [];
+    },
+    querySpansReceived: (state, action) => {
+      // A debounced parse-as-you-type call (#208) resolved — replace the highlight spans wholesale
+      // with this call's breakdown. Search.jsx only dispatches this after confirming the response
+      // is still for the most recently typed value (#208 AC2), so no staleness guard belongs here.
+      state.queryHighlightSpans = action.payload.spans;
+    },
+    querySpansCleared: (state) => {
+      // Emptying the search box exits live-highlight mode immediately — same intent as
+      // aiSearchCleared above, but for the separate parse-as-you-type flow.
+      state.queryHighlightSpans = [];
     },
   },
 });
@@ -66,6 +86,8 @@ export const {
   aiSearchSucceeded,
   aiSearchFailed,
   aiSearchCleared,
+  querySpansReceived,
+  querySpansCleared,
 } = genreOrCategory.actions;
 
 export default genreOrCategory.reducer;

@@ -8,6 +8,8 @@ import reducer, {
   aiSearchSucceeded,
   aiSearchFailed,
   aiSearchCleared,
+  querySpansReceived,
+  querySpansCleared,
 } from './currentGenreOrCategory';
 
 describe('currentGenreOrCategory slice', () => {
@@ -19,12 +21,13 @@ describe('currentGenreOrCategory slice', () => {
       aiSearchQuery: '',
       aiSearchResults: null,
       aiSearchStatus: 'idle',
+      queryHighlightSpans: [],
     });
   });
 
   it('selectGenreOrCategory sets the genre/category and clears any active search', () => {
     const state = {
-      genreIdOrCategoryName: '', page: 1, searchQuery: 'batman', aiSearchQuery: 'batman', aiSearchResults: { results: [] }, aiSearchStatus: 'succeeded',
+      genreIdOrCategoryName: '', page: 1, searchQuery: 'batman', aiSearchQuery: 'batman', aiSearchResults: { results: [] }, aiSearchStatus: 'succeeded', queryHighlightSpans: [],
     };
     const next = reducer(state, selectGenreOrCategory('popular'));
     expect(next.genreIdOrCategoryName).toBe('popular');
@@ -105,5 +108,67 @@ describe('currentGenreOrCategory slice', () => {
     // Only the AI-search fields are touched — the currently-selected genre/category is untouched,
     // matching the pre-#204 "clear search falls back to whatever was already selected" behavior.
     expect(next.genreIdOrCategoryName).toBe('popular');
+  });
+
+  it('querySpansReceived (#208) stores the latest span breakdown for live search-bar highlighting', () => {
+    const state = { genreIdOrCategoryName: '', page: 1, searchQuery: '', aiSearchQuery: '', aiSearchResults: null, aiSearchStatus: 'idle', queryHighlightSpans: [] };
+    const spans = [{ text: 'and', category: 'CONNECTOR', start: 5, end: 8 }];
+
+    const next = reducer(state, querySpansReceived({ spans }));
+
+    expect(next.queryHighlightSpans).toEqual(spans);
+  });
+
+  it('querySpansReceived replaces any previous span breakdown wholesale, not merges', () => {
+    const state = {
+      genreIdOrCategoryName: '',
+      page: 1,
+      searchQuery: '',
+      aiSearchQuery: '',
+      aiSearchResults: null,
+      aiSearchStatus: 'idle',
+      queryHighlightSpans: [{ text: 'stale', category: 'ENTITY', start: 0, end: 5 }],
+    };
+    const spans = [{ text: 'or', category: 'CONNECTOR', start: 0, end: 2 }];
+
+    const next = reducer(state, querySpansReceived({ spans }));
+
+    expect(next.queryHighlightSpans).toEqual(spans);
+  });
+
+  it('querySpansCleared (#208) resets the highlight spans, e.g. when the search box is emptied', () => {
+    const state = {
+      genreIdOrCategoryName: '',
+      page: 1,
+      searchQuery: '',
+      aiSearchQuery: '',
+      aiSearchResults: null,
+      aiSearchStatus: 'idle',
+      queryHighlightSpans: [{ text: 'and', category: 'CONNECTOR', start: 5, end: 8 }],
+    };
+
+    const next = reducer(state, querySpansCleared());
+
+    expect(next.queryHighlightSpans).toEqual([]);
+  });
+
+  it.each([
+    ['selectGenreOrCategory', () => selectGenreOrCategory('popular')],
+    ['searchMovie', () => searchMovie('spoken query')],
+    ['aiSearchCleared', () => aiSearchCleared()],
+  ])('%s also clears any stale highlight spans left over from a previous search', (_name, buildAction) => {
+    const state = {
+      genreIdOrCategoryName: '',
+      page: 1,
+      searchQuery: '',
+      aiSearchQuery: '',
+      aiSearchResults: null,
+      aiSearchStatus: 'idle',
+      queryHighlightSpans: [{ text: 'and', category: 'CONNECTOR', start: 5, end: 8 }],
+    };
+
+    const next = reducer(state, buildAction());
+
+    expect(next.queryHighlightSpans).toEqual([]);
   });
 });

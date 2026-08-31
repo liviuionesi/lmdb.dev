@@ -1,17 +1,23 @@
 // Tests Search: hidden off the home route, and on Enter resolves the typed query through
 // ai-service's search-execute endpoint (#204) rather than the old direct movie-service search.
+// Also covers the separate debounced parse-as-you-type flow (#208) that feeds Story #199's live
+// search-bar highlighting — wiring/race-condition behavior only, not the highlight rendering
+// itself (#209/#210).
 import React from 'react';
-import { screen, waitFor } from '@testing-library/react';
+import {
+  screen, waitFor, fireEvent, act,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { configureStore } from '@reduxjs/toolkit';
 
-import Search, { toTmdbMovieShape } from './Search';
-import genreOrCategoryReducer, { aiSearchSucceeded } from '../../features/currentGenreOrCategory';
+import Search, { toTmdbMovieShape, QUERY_HIGHLIGHT_DEBOUNCE_MS } from './Search';
+import genreOrCategoryReducer, { aiSearchSucceeded, querySpansReceived } from '../../features/currentGenreOrCategory';
 import { renderWithProviders } from '../../test-utils/render';
-import { useExecuteSearchMutation } from '../../services/AI';
+import { useExecuteSearchMutation, useParseQueryMutation } from '../../services/AI';
 
 vi.mock('../../services/AI', () => ({
   useExecuteSearchMutation: vi.fn(),
+  useParseQueryMutation: vi.fn(),
 }));
 
 const buildStore = () => configureStore({ reducer: { currentGenreOrCategory: genreOrCategoryReducer } });
@@ -27,7 +33,22 @@ const mockMutation = ({ resolve, reject } = {}) => {
   return trigger;
 };
 
+// Same shape as mockMutation above, but for useParseQueryMutation — the separate #208
+// parse-as-you-type call. Every test needs this mocked (Search.jsx calls the hook unconditionally
+// on every render), even tests that don't care about its behavior, hence the benign default.
+const mockParseMutation = ({ resolve, reject } = {}) => {
+  const trigger = vi.fn(() => ({
+    unwrap: () => (reject ? Promise.reject(reject) : Promise.resolve(resolve ?? { filter: null, spans: [] })),
+  }));
+  useParseQueryMutation.mockReturnValue([trigger, {}]);
+  return trigger;
+};
+
 describe('Search', () => {
+  beforeEach(() => {
+    mockParseMutation();
+  });
+
   it('renders the search field on the home route', () => {
     mockMutation();
     renderWithProviders(<Search />, { route: '/', store: buildStore() });
@@ -144,6 +165,134 @@ describe('Search', () => {
     expect(aiSearchQuery).toBe('superman');
     expect(aiSearchResults.results).toHaveLength(1);
     expect(aiSearchResults.results[0].title).toBe('Superman');
+  });
+});
+
+describe('Search - live query highlighting (#208)', () => {
+  beforeEach(() => {
+    mockMutation();
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('debounces for a pause within AC1\'s ~300-500ms range, not an arbitrarily short or long one', () => {
+    // The other tests in this block only assert behavior relative to QUERY_HIGHLIGHT_DEBOUNCE_MS
+    // itself (e.g. "advancing by the debounce fires the call"), which would still pass even if the
+    // constant regressed to something absurd like 0ms or 10000ms — this pins the actual value AC1
+    // requires.
+    expect(QUERY_HIGHLIGHT_DEBOUNCE_MS).toBeGreaterThanOrEqual(300);
+    expect(QUERY_HIGHLIGHT_DEBOUNCE_MS).toBeLessThanOrEqual(500);
+  });
+
+  it('collapses rapid typing into a single debounced parseQuery call, not one per keystroke (AC1)', () => {
+    const parseTrigger = mockParseMutation();
+    renderWithProviders(<Search />, { route: '/', store: buildStore() });
+    const input = screen.getByRole('textbox');
+
+    // Each keystroke arrives well within the debounce pause of the one before it.
+    fireEvent.change(input, { target: { value: 'b' } });
+    fireEvent.change(input, { target: { value: 'ba' } });
+    fireEvent.change(input, { target: { value: 'bat' } });
+
+    expect(parseTrigger).not.toHaveBeenCalled();
+
+    act(() => {
+      vi.advanceTimersByTime(QUERY_HIGHLIGHT_DEBOUNCE_MS);
+    });
+
+    expect(parseTrigger).toHaveBeenCalledTimes(1);
+    expect(parseTrigger).toHaveBeenCalledWith('bat');
+  });
+
+  it('fires a new debounced call once the pause after the last keystroke actually elapses', () => {
+    const parseTrigger = mockParseMutation();
+    renderWithProviders(<Search />, { route: '/', store: buildStore() });
+    const input = screen.getByRole('textbox');
+
+    fireEvent.change(input, { target: { value: 'batman' } });
+    act(() => { vi.advanceTimersByTime(QUERY_HIGHLIGHT_DEBOUNCE_MS); });
+    fireEvent.change(input, { target: { value: 'batman begins' } });
+    act(() => { vi.advanceTimersByTime(QUERY_HIGHLIGHT_DEBOUNCE_MS); });
+
+    expect(parseTrigger).toHaveBeenCalledTimes(2);
+    expect(parseTrigger).toHaveBeenNthCalledWith(1, 'batman');
+    expect(parseTrigger).toHaveBeenNthCalledWith(2, 'batman begins');
+  });
+
+  it('discards a stale, out-of-order parseQuery response rather than overwriting newer highlights (AC2)', async () => {
+    let resolveFirst;
+    let resolveSecond;
+    const parseTrigger = vi.fn()
+      .mockImplementationOnce(() => ({ unwrap: () => new Promise((resolve) => { resolveFirst = resolve; }) }))
+      .mockImplementationOnce(() => ({ unwrap: () => new Promise((resolve) => { resolveSecond = resolve; }) }));
+    useParseQueryMutation.mockReturnValue([parseTrigger, {}]);
+    const store = buildStore();
+    renderWithProviders(<Search />, { route: '/', store });
+    const input = screen.getByRole('textbox');
+
+    // Two separate debounce windows, each producing its own in-flight call.
+    fireEvent.change(input, { target: { value: 'batman' } });
+    act(() => { vi.advanceTimersByTime(QUERY_HIGHLIGHT_DEBOUNCE_MS); });
+    fireEvent.change(input, { target: { value: 'superman' } });
+    act(() => { vi.advanceTimersByTime(QUERY_HIGHLIGHT_DEBOUNCE_MS); });
+
+    expect(parseTrigger).toHaveBeenCalledTimes(2);
+
+    const supermanSpans = [{ text: 'superman', category: 'ENTITY', start: 0, end: 8 }];
+    // The newer ("superman") call resolves first; the older, slower ("batman") one resolves after
+    // — the response Search.jsx must discard as stale.
+    await act(async () => { resolveSecond({ filter: null, spans: supermanSpans }); });
+    await act(async () => {
+      resolveFirst({ filter: null, spans: [{ text: 'batman', category: 'ENTITY', start: 0, end: 6 }] });
+    });
+
+    expect(store.getState().currentGenreOrCategory.queryHighlightSpans).toEqual(supermanSpans);
+  });
+
+  it('leaves the last valid highlight spans in place when a parseQuery call fails (AC3)', async () => {
+    const goodSpans = [{ text: 'and', category: 'CONNECTOR', start: 2, end: 5 }];
+    // One trigger, two calls with different outcomes — not two separate mockReturnValue swaps,
+    // which wouldn't reliably reach the second debounced call: Search.jsx only picks up a new
+    // useParseQueryMutation() return value on its own next render, not the instant a test reassigns
+    // the mock, so the closure scheduled by the second fireEvent.change below could otherwise still
+    // be holding the first render's trigger reference.
+    const parseTrigger = vi.fn()
+      .mockImplementationOnce(() => ({ unwrap: () => Promise.resolve({ filter: null, spans: goodSpans }) }))
+      .mockImplementationOnce(() => ({ unwrap: () => Promise.reject(new Error('network error')) }));
+    useParseQueryMutation.mockReturnValue([parseTrigger, {}]);
+    const store = buildStore();
+    renderWithProviders(<Search />, { route: '/', store });
+    const input = screen.getByRole('textbox');
+
+    fireEvent.change(input, { target: { value: 'a and b' } });
+    await act(async () => { vi.advanceTimersByTime(QUERY_HIGHLIGHT_DEBOUNCE_MS); });
+    expect(store.getState().currentGenreOrCategory.queryHighlightSpans).toEqual(goodSpans);
+
+    // A subsequent keystroke's debounced call now fails.
+    fireEvent.change(input, { target: { value: 'a and b or c' } });
+    await act(async () => { vi.advanceTimersByTime(QUERY_HIGHLIGHT_DEBOUNCE_MS); });
+
+    // Still the last successfully-parsed spans — not cleared, not stuck loading.
+    expect(store.getState().currentGenreOrCategory.queryHighlightSpans).toEqual(goodSpans);
+  });
+
+  it('clears highlight spans immediately when the box is emptied, without waiting for the debounce', () => {
+    mockParseMutation();
+    const store = buildStore();
+    store.dispatch(querySpansReceived({ spans: [{ text: 'and', category: 'CONNECTOR', start: 0, end: 3 }] }));
+    renderWithProviders(<Search />, { route: '/', store });
+    const input = screen.getByRole('textbox');
+
+    // The field starts empty; type something first so the change back to blank is a real DOM value
+    // transition (React's controlled-input change detection ignores a fireEvent.change that leaves
+    // the value unchanged).
+    fireEvent.change(input, { target: { value: 'batman' } });
+    fireEvent.change(input, { target: { value: '' } });
+
+    expect(store.getState().currentGenreOrCategory.queryHighlightSpans).toEqual([]);
   });
 });
 

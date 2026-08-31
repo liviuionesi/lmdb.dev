@@ -14,7 +14,15 @@ export const aiApi = createApi({
     executeSearch: builder.mutation({
       query: (searchQuery) => ({ url: '/search/execute', method: 'POST', body: { query: searchQuery } }),
     }),
+    //* Parse a natural-language movie query WITHOUT executing it (#207) — the search bar's
+    //* debounced parse-as-you-type call (#208), which only needs the token/span breakdown for live
+    //* highlighting (#209), not actual search results. A mutation (not a query endpoint) to match
+    //* executeSearch's own manual-trigger, manual-stale-response-guard pattern above, rather than
+    //* mixing RTK Query's arg-keyed caching into a call fired on every debounced keystroke.
+    parseQuery: builder.mutation({
+      query: (searchQuery) => ({ url: '/search/query', method: 'POST', body: { query: searchQuery } }),
+    }),
   }),
 });
 
-export const { useExecuteSearchMutation } = aiApi;
+export const { useExecuteSearchMutation, useParseQueryMutation } = aiApi;
