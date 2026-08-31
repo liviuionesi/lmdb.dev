@@ -3,7 +3,10 @@
 // dispatches the resulting voice command; and its EN/DE dictation-language
 // switch (#213). encodeToWav/parseVoiceCommand are unit-tested in their own
 // files, so they're mocked here to isolate VoiceControl's own state machine
-// (idle -> recording -> transcribing) and its command-dispatch branches.
+// (idle -> recording -> transcribing) and its command-dispatch branches -
+// parseVoiceCommand's own bilingual/phrasing-variance behavior moved
+// server-side (#214), so this file only needs to cover that it's awaited
+// and that a rejection is handled, not what any particular transcript maps to.
 // dictationLanguage.js's own get/set behavior is unit-tested separately in
 // dictationLanguage.test.js - here it's exercised through real
 // localStorage (cleared in beforeEach) so persistence-across-mount is
@@ -366,6 +369,19 @@ describe('VoiceControl', () => {
 
   it('shows an error when the transcription request throws', async () => {
     global.fetch.mockRejectedValue(new Error('network down'));
+    renderVoiceControl();
+
+    await recordAndStop();
+
+    expect(await screen.findByText('Voice control is unavailable right now.')).toBeInTheDocument();
+  });
+
+  it('shows an error when the (now-async, #214) command-classification call rejects', async () => {
+    // parseVoiceCommand became a network call to ai-service's voice-command endpoint (#214) - it
+    // can now reject the way the speech-to-text fetch already could, and transcribeAndRun must
+    // await it inside the same try/catch rather than letting an unhandled rejection escape.
+    global.fetch.mockResolvedValue({ ok: true, json: async () => ({ text: 'action movies' }) });
+    parseVoiceCommand.mockRejectedValue(new Error('voice-command parsing failed (500)'));
     renderVoiceControl();
 
     await recordAndStop();

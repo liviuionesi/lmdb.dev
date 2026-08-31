@@ -19,9 +19,10 @@ import { toTmdbMovieShape } from '../Search/Search';
 /**
  * Click-to-talk voice control (#68): records a
  * short clip via the browser's own mic APIs, sends it to ai-service's
- * self-hosted speech-to-text endpoint, and runs voice commands
- * (browse a genre/category, toggle dark/light mode, log out, search)
- * against the transcribed text.
+ * self-hosted speech-to-text endpoint, then classifies the transcribed text
+ * into a command (browse a genre/category, toggle dark/light mode, log out,
+ * search) via ai-service's LLM-based voice-command endpoint (#214) rather
+ * than a local regex table.
  *
  * <p>Also owns the EN/DE dictation-language switch (#213, part of #200's
  * bilingual voice control Story): a small persisted toggle next to the mic
@@ -115,7 +116,11 @@ function VoiceControl() {
       }
 
       const { text } = await response.json();
-      const parsedCommand = parseVoiceCommand(text, (genresData?.genres ?? []).map((g) => g.name));
+      // parseVoiceCommand now classifies via ai-service's LLM-based voice-command endpoint (#214)
+      // rather than matching locally - a network call, so it must be awaited like the
+      // speech-to-text request above. A failure here falls into this same try's catch, same as a
+      // failed transcription.
+      const parsedCommand = await parseVoiceCommand(text, (genresData?.genres ?? []).map((g) => g.name));
 
       if (!text) {
         setFeedback({ severity: 'warning', message: "Didn't catch that — try again." });

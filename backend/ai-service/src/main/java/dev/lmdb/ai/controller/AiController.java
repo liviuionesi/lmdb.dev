@@ -11,6 +11,8 @@ import dev.lmdb.ai.dto.RecommendationRequestDto;
 import dev.lmdb.ai.dto.RecommendationResponseDto;
 import dev.lmdb.ai.dto.SimilarUserDto;
 import dev.lmdb.ai.dto.TranscriptionResponseDto;
+import dev.lmdb.ai.dto.VoiceCommandDto;
+import dev.lmdb.ai.dto.VoiceCommandParseRequestDto;
 import dev.lmdb.ai.security.CallerIdentity;
 import dev.lmdb.ai.service.ChatAssistantService;
 import dev.lmdb.ai.service.QueryAggregationService;
@@ -18,6 +20,7 @@ import dev.lmdb.ai.service.QueryParsingService;
 import dev.lmdb.ai.service.RecommendationService;
 import dev.lmdb.ai.service.SemanticSearchService;
 import dev.lmdb.ai.service.SpeechToTextService;
+import dev.lmdb.ai.service.VoiceCommandParsingService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -42,17 +45,19 @@ import org.springframework.web.multipart.MultipartFile;
 /**
  * REST surface for ai-service's features: catalog-grounded recommendations, the conversational
  * assistant, semantic search over user taste profiles, natural-language search-query parsing (#202)
- * and execution (#203), and offline speech-to-text for the frontend's voice control (#68). The
- * recommendation and chat features are also exposed over gRPC by {@link
- * dev.lmdb.ai.grpc.AiGrpcService}; the search-query endpoints are deliberately REST-only (ADR-020 —
- * no backend-to-backend caller needs them today).
+ * and execution (#203), offline speech-to-text for the frontend's voice control (#68), and — since
+ * #214 — LLM-based classification of the transcribed command itself, replacing the frontend's old
+ * per-language regex table. The recommendation and chat features are also exposed over gRPC by
+ * {@link dev.lmdb.ai.grpc.AiGrpcService}; the search-query and voice-command endpoints are
+ * deliberately REST-only (ADR-020 — no backend-to-backend caller needs them today).
  *
  * <p>Every user-scoped endpoint here takes the caller's identity from the gateway-issued {@code
  * X-User-Id} header via {@link CallerIdentity} — never from the request body or a query parameter,
- * which the caller controls. Speech-to-text and the search-query endpoints are the exceptions: none
- * touch per-user data, so none read an identity at all (speech-to-text is additionally {@code
- * permitAll} at the gateway; the search-query endpoints still require a valid JWT via the gateway's
- * blanket {@code /api/v1/ai/**} rule, they just don't need to know who the caller is).
+ * which the caller controls. Speech-to-text, the search-query endpoints, and voice-command
+ * classification are the exceptions: none touch per-user data, so none read an identity at all
+ * (speech-to-text is additionally {@code permitAll} at the gateway; the other two still require a
+ * valid JWT via the gateway's blanket {@code /api/v1/ai/**} rule, they just don't need to know who
+ * the caller is).
  */
 @RestController
 @RequestMapping("/api/v1/ai")
@@ -63,7 +68,7 @@ import org.springframework.web.multipart.MultipartFile;
     name = "AI API",
     description =
         "Recommendations, chat assistant, semantic search, natural-language search parsing and"
-            + " execution, and speech-to-text")
+            + " execution, speech-to-text, and voice-command classification")
 public class AiController {
 
   private final RecommendationService recommendationService;
@@ -72,6 +77,7 @@ public class AiController {
   private final SpeechToTextService speechToTextService;
   private final QueryParsingService queryParsingService;
   private final QueryAggregationService queryAggregationService;
+  private final VoiceCommandParsingService voiceCommandParsingService;
 
   /**
    * Generates ranked, explained movie recommendations from LMDB's own catalog for the authenticated
@@ -203,5 +209,28 @@ public class AiController {
     log.info("POST /api/v1/ai/speech-to-text - {} bytes, language={}", audio.getSize(), language);
     return ResponseEntity.ok(
         new TranscriptionResponseDto(speechToTextService.transcribe(audio, language)));
+  }
+
+  /**
+   * Classifies a transcribed voice command (English or German, any phrasing) into a canonical
+   * command — logout, theme toggle, genre/category browse, or search (#68) — via LLM-based intent
+   * parsing (#214, Story #200), replacing the frontend's old per-language regex table. Not
+   * user-scoped, same as the search-query endpoints — classification touches no per-user data.
+   *
+   * @param body the transcript to classify, plus the caller's current genre names
+   * @return the classified command; every field {@code null} when nothing confidently matched
+   */
+  @PostMapping("/voice-command")
+  @Operation(
+      summary = "Classify a transcribed voice command",
+      description =
+          "Classifies a transcript into logout/theme-toggle/genre-or-category/search via LLM-based"
+              + " intent parsing rather than per-language regex; every field is null when nothing"
+              + " confidently matched")
+  public ResponseEntity<VoiceCommandDto> parseVoiceCommand(
+      @Valid @RequestBody VoiceCommandParseRequestDto body) {
+    log.info("POST /api/v1/ai/voice-command");
+    return ResponseEntity.ok(
+        voiceCommandParsingService.parse(body.transcript(), body.genreNames()));
   }
 }
