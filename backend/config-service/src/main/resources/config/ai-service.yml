@@ -7,17 +7,7 @@ spring:
     database: ${MONGODB_DATABASE}
     uri: ${MONGODB_URI}
 
-# AI service specific settings (Spring AI temporarily disabled)
-# ai:
-#   openai:
-#     api-key: ${OPENAI_API_KEY:your-api-key-here}
-#     chat:
-#       options:
-#         model: gpt-4
-#         temperature: 0.7
-#     embeddings:
-#       model: text-embedding-ada-002
-
+# AI service specific settings
 ai:
   recommendations:
     max-results: 10

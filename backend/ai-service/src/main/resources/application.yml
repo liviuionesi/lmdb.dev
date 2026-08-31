@@ -82,9 +82,7 @@ spring:
       # data ADR-012 exists to protect.
       time-to-live: 300000  # 5 minutes, matching the movie-service facade
   ai:
-    # Ollama only — no OpenAI starter on the classpath. ADR-004's $0 budget
-    # rules out a paid model provider; this runs entirely against a local
-    # model server.
+    # Ollama only — runs entirely against a local model server.
     ollama:
       base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
       chat:

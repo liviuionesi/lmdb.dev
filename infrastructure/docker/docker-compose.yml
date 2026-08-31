@@ -435,11 +435,10 @@ services:
       start_period: 90s
     restart: unless-stopped
 
-  # Ollama — local model server backing ai-service (#36), $0 per ADR-004: no
-  # OpenAI API key, ever. Models aren't bundled in the image; pull them once
-  # after first start:
-  #   docker exec -it lmdb-ollama ollama pull llama3.2
-  #   docker exec -it lmdb-ollama ollama pull nomic-embed-text
+  # Ollama — local model server backing ai-service
+  # Models aren't bundled in the image; pull them once after first start
+  # docker exec -it lmdb-ollama ollama pull llama3.2
+  # docker exec -it lmdb-ollama ollama pull nomic-embed-text
   ollama:
     image: docker.io/ollama/ollama:latest
     container_name: lmdb-ollama

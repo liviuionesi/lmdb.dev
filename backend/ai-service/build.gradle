@@ -51,7 +51,7 @@ dependencies {
     implementation "org.projectlombok:lombok:${lombokVersion}"
     annotationProcessor "org.projectlombok:lombok:${lombokVersion}"
 
-    // Ollama only (not the OpenAI starter) — ADR-004's $0 budget rules out a
+    // Ollama only — ADR-004's $0 budget rules out a
     // paid model provider; ai-service runs entirely against a local model.
     implementation 'org.springframework.ai:spring-ai-starter-model-ollama'
 

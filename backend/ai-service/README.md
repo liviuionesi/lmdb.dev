@@ -5,7 +5,7 @@ AI-powered features: catalog-grounded movie recommendations, a chat assistant, a
 **Port:** 8084 (REST), 9084 (gRPC)
 **Database:** PostgreSQL + pgvector (`lmdb_ai`)
 **Protocols:** REST + gRPC
-**Model provider:** Ollama only (local, $0 — ADR-004). No OpenAI/paid API key anywhere in this service.
+**Model provider:** Ollama only (local, $0 — ADR-004). No paid API key anywhere in this service.
 
 ## Responsibilities
 

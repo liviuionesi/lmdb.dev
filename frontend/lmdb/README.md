@@ -9,8 +9,22 @@ A modern, responsive movie streaming & discovery application built with React 19
 - **State Management & Caching**: Redux Toolkit & RTK Query
 - **Routing**: React Router DOM v7
 - **Voice Control**: Vosk Speech-to-Text integration via `ai-service`
+- **Natural-Language Search**: free-text/dictated movie search resolved by `ai-service` (parsing + cross-service aggregation with actor-service/movie-service — see [ADR-020](../../docs/architecture/adr/020-nl-query-cross-service-aggregation.md))
 - **Testing**: Vitest 4 + React Testing Library (180+ tests)
 - **Code Quality**: ESLint + Prettier
+
+## Natural-Language Search
+
+The search bar (`src/components/Search/Search.jsx`) does not call
+movie-service's title search directly. It dispatches a single mutation from
+a dedicated RTK Query slice, `aiApi` (`src/services/AI.js`), to
+`POST /api/v1/ai/search/execute` — reached through the API Gateway, not
+movie-service. ai-service parses the free text into a structured filter (or
+a plain-title fallback) and aggregates results across actor-service and
+movie-service itself; the frontend never branches on query shape or makes
+more than one call. See [ADR-020](../../docs/architecture/adr/020-nl-query-cross-service-aggregation.md)
+for why the frontend consumes ai-service this way instead of orchestrating
+multiple backend calls client-side.
 
 ## Voice Assistant Setup (Vosk Speech-to-Text)
 
