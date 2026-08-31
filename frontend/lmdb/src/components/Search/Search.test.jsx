@@ -296,6 +296,173 @@ describe('Search - live query highlighting (#208)', () => {
   });
 });
 
+describe('Search - live highlight rendering (#209)', () => {
+  // Matches the '#208' block above: fireEvent.change schedules a real #208 debounce timer these
+  // tests don't care about (they only assert on `query`-driven UI, not on a parseQuery response) —
+  // fake timers keep that timer from firing for real in the background after each test ends.
+  beforeEach(() => {
+    mockMutation();
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('renders no highlight legend or overlay while the search box is empty', () => {
+    mockParseMutation();
+    renderWithProviders(<Search />, { route: '/', store: buildStore() });
+
+    expect(screen.queryByRole('button', { name: /search highlights/i })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('query-highlight-overlay')).not.toBeInTheDocument();
+  });
+
+  it('renders no highlight overlay while empty, even with stale spans left over in Redux state', () => {
+    // A prior search's spans that querySpansCleared() should have wiped, still present here to
+    // prove overlay visibility is gated on the CURRENT query being non-blank, not on whether spans
+    // happen to exist — otherwise a future refactor that lost the querySpansCleared() dispatch
+    // would leave stale highlights rendered over an empty box with nothing to catch it.
+    mockParseMutation();
+    const store = buildStore();
+    store.dispatch(querySpansReceived({ spans: [{ text: 'x', category: 'ENTITY', start: 0, end: 1 }] }));
+    renderWithProviders(<Search />, { route: '/', store });
+
+    expect(screen.queryByTestId('query-highlight-overlay')).not.toBeInTheDocument();
+  });
+
+  it('shows the legend and overlay, and hides the real input\'s own text, once a query is typed (AC3, overlay approach)', () => {
+    mockParseMutation();
+    renderWithProviders(<Search />, { route: '/', store: buildStore() });
+    const input = screen.getByRole('textbox');
+
+    fireEvent.change(input, { target: { value: 'batman' } });
+
+    expect(screen.getByRole('button', { name: /search highlights/i })).toBeInTheDocument();
+    expect(screen.getByTestId('query-highlight-overlay')).toBeInTheDocument();
+    // The real <input>'s glyphs are hidden so only the overlay's rendition is visible — the caret
+    // itself must stay visible, so only `color` (not `caretColor`) goes transparent.
+    expect(input.style.color).toBe('transparent');
+    expect(input.style.caretColor).not.toBe('');
+  });
+
+  it('renders the current highlight spans from Redux state, overlaid on the typed text (AC1)', () => {
+    mockParseMutation();
+    const store = buildStore();
+    renderWithProviders(<Search />, { route: '/', store });
+    const input = screen.getByRole('textbox');
+
+    fireEvent.change(input, { target: { value: 'a and b' } });
+    act(() => {
+      store.dispatch(querySpansReceived({
+        spans: [{
+          text: 'and', category: 'CONNECTOR', start: 2, end: 5,
+        }],
+      }));
+    });
+
+    expect(screen.getByText('and')).toBeInTheDocument();
+  });
+
+  it("positions the overlay over the real input's measured box, relative to the field wrapper (AC2)", () => {
+    // jsdom's own getBoundingClientRect always returns an all-zero rect, which would let a
+    // backwards subtraction (wrapper-relative-to-input instead of input-relative-to-wrapper) or a
+    // dropped offset pass unnoticed — stub distinct, non-zero rects for the wrapper and the real
+    // input so the geometry math in Search.jsx's syncOverlayRect is actually exercised.
+    mockParseMutation();
+    renderWithProviders(<Search />, { route: '/', store: buildStore() });
+    const input = screen.getByRole('textbox');
+    const wrapper = screen.getByTestId('search-field-wrapper');
+
+    wrapper.getBoundingClientRect = () => ({
+      left: 0, top: 0, width: 300, height: 40, right: 300, bottom: 40,
+    });
+    input.getBoundingClientRect = () => ({
+      left: 40, top: 8, width: 220, height: 24, right: 260, bottom: 32,
+    });
+
+    fireEvent.change(input, { target: { value: 'batman' } });
+
+    expect(screen.getByTestId('query-highlight-overlay')).toHaveStyle({
+      left: '40px', top: '8px', width: '220px', height: '24px',
+    });
+  });
+
+  it("mirrors the real input's horizontal scroll onto the overlay as typing scrolls past the field's visible width (AC2)", () => {
+    mockParseMutation();
+    renderWithProviders(<Search />, { route: '/', store: buildStore() });
+    const input = screen.getByRole('textbox');
+
+    fireEvent.change(input, { target: { value: 'a query long enough to scroll past the visible field width' } });
+    const overlay = screen.getByTestId('query-highlight-overlay');
+    expect(overlay.scrollLeft).toBe(0);
+
+    // jsdom doesn't scroll a real <input> on its own — set scrollLeft directly, the way the
+    // browser would as the user keeps typing past the field's width, then fire the 'scroll' event
+    // handleInputScroll listens for.
+    input.scrollLeft = 42;
+    fireEvent.scroll(input);
+
+    expect(overlay.scrollLeft).toBe(42);
+  });
+
+  it('clears the legend and overlay, and restores the real input\'s text color, when the box is emptied', () => {
+    mockParseMutation();
+    renderWithProviders(<Search />, { route: '/', store: buildStore() });
+    const input = screen.getByRole('textbox');
+
+    fireEvent.change(input, { target: { value: 'batman' } });
+    expect(screen.getByRole('button', { name: /search highlights/i })).toBeInTheDocument();
+
+    fireEvent.change(input, { target: { value: '' } });
+
+    expect(screen.queryByRole('button', { name: /search highlights/i })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('query-highlight-overlay')).not.toBeInTheDocument();
+    expect(input.style.color).not.toBe('transparent');
+  });
+
+  describe('with ResizeObserver available (AC2, a layout shift window resize would miss)', () => {
+    // jsdom doesn't implement ResizeObserver at all — Search.jsx guards against exactly that (see
+    // its Notes), which also means the guarded branch gets no coverage without a stand-in here.
+    // This mock lets the test both exercise that branch and verify what it actually does: observe
+    // the field wrapper (not some other node) and disconnect cleanly on unmount.
+    let observeSpy;
+    let disconnectSpy;
+    let originalResizeObserver;
+
+    beforeEach(() => {
+      observeSpy = vi.fn();
+      disconnectSpy = vi.fn();
+      originalResizeObserver = global.ResizeObserver;
+      // `new ResizeObserver(...)` requires a real constructor — a plain arrow-returning vi.fn()
+      // isn't new-able and throws "is not a constructor" the instant Search.jsx's effect runs.
+      global.ResizeObserver = vi.fn().mockImplementation(function MockResizeObserver() {
+        this.observe = observeSpy;
+        this.disconnect = disconnectSpy;
+      });
+    });
+
+    afterEach(() => {
+      global.ResizeObserver = originalResizeObserver;
+    });
+
+    it('observes the field wrapper so a non-window layout shift re-syncs the overlay too', () => {
+      mockParseMutation();
+      renderWithProviders(<Search />, { route: '/', store: buildStore() });
+
+      expect(observeSpy).toHaveBeenCalledWith(screen.getByTestId('search-field-wrapper'));
+    });
+
+    it('disconnects the observer on unmount, alongside the window resize listener', () => {
+      mockParseMutation();
+      const { unmount } = renderWithProviders(<Search />, { route: '/', store: buildStore() });
+
+      unmount();
+
+      expect(disconnectSpy).toHaveBeenCalledTimes(1);
+    });
+  });
+});
+
 describe('toTmdbMovieShape', () => {
   it('maps ai-service field names to the TMDB shape every rendering component expects', () => {
     expect(toTmdbMovieShape({
