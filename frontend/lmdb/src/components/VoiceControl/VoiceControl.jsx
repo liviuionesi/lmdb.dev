@@ -47,6 +47,16 @@ function VoiceControl() {
   const languageRef = useRef(language);
   languageRef.current = language;
 
+  /**
+   * Handles a click on the EN/DE dictation-language switch (#213).
+   *
+   * @param {React.SyntheticEvent} event - MUI's change event (unused; the
+   *   new value is what the caller needs).
+   * @param {string|null} newLanguage - the newly selected code (`'en'`/`'de'`),
+   *   or `null` when MUI's exclusive {@link ToggleButtonGroup} reports the
+   *   already-active button being clicked again.
+   * @returns {void}
+   */
   const handleLanguageChange = (event, newLanguage) => {
     // MUI's exclusive ToggleButtonGroup passes null when the already-selected
     // button is clicked again - ignore that rather than clearing the selection.
