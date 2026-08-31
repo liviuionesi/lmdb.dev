@@ -1,9 +1,13 @@
 // Tests VoiceControl (#68): the click-to-talk Fab that records via the
 // browser mic APIs, sends the clip to ai-service for transcription, and
-// dispatches the resulting voice command. encodeToWav/parseVoiceCommand are
-// unit-tested in their own files, so they're mocked here to isolate
-// VoiceControl's own state machine (idle -> recording -> transcribing) and
-// its command-dispatch branches. MediaRecorder/getUserMedia/fetch aren't in
+// dispatches the resulting voice command; and its EN/DE dictation-language
+// switch (#213). encodeToWav/parseVoiceCommand are unit-tested in their own
+// files, so they're mocked here to isolate VoiceControl's own state machine
+// (idle -> recording -> transcribing) and its command-dispatch branches.
+// dictationLanguage.js's own get/set behavior is unit-tested separately in
+// dictationLanguage.test.js - here it's exercised through real
+// localStorage (cleared in beforeEach) so persistence-across-mount is
+// actually verified end to end. MediaRecorder/getUserMedia/fetch aren't in
 // jsdom, so each is stubbed at the top of the file.
 import React from 'react';
 import { screen, waitFor, act } from '@testing-library/react';
@@ -96,6 +100,7 @@ describe('VoiceControl', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
     useGetGenresQuery.mockReturnValue({
       data: { genres: [{ id: 28, name: 'Action' }, { id: 35, name: 'Comedy' }] },
     });
@@ -114,6 +119,109 @@ describe('VoiceControl', () => {
     renderVoiceControl();
     expect(getFab()).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('defaults the dictation-language switch to English for a first-time user', () => {
+    // Given no prior visit (localStorage cleared in beforeEach), when
+    // VoiceControl mounts, then the switch reflects the same English
+    // default getDictationLanguage() returns - not a separately hardcoded
+    // 'en' in the component that could drift from the util's default.
+    renderVoiceControl();
+    expect(screen.getByRole('button', { name: 'English', pressed: true })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'German', pressed: false })).toBeInTheDocument();
+  });
+
+  it('restores a previously-persisted German selection on mount', () => {
+    // Given a prior session already chose German, when VoiceControl mounts
+    // fresh, then it reads that persisted choice via getDictationLanguage()
+    // rather than always starting from English (#213's "persists across
+    // page reloads" criterion).
+    localStorage.setItem('lmdb_dictation_language', 'de');
+    renderVoiceControl();
+    expect(screen.getByRole('button', { name: 'German', pressed: true })).toBeInTheDocument();
+  });
+
+  it('falls back to English when localStorage holds an unsupported/corrupted value', () => {
+    // Given storage was corrupted or written by an old build (e.g. a code
+    // neither 'en' nor 'de'), when VoiceControl mounts, then it must not
+    // render that raw value as "selected" nor forward it to the backend -
+    // covers the component actually going through getDictationLanguage()'s
+    // sanitizing rather than reading localStorage raw itself.
+    localStorage.setItem('lmdb_dictation_language', 'fr');
+    renderVoiceControl();
+    expect(screen.getByRole('button', { name: 'English', pressed: true })).toBeInTheDocument();
+  });
+
+  it('persists a language switch and sends it with the next speech-to-text request', async () => {
+    // Given the user switches to German, when they record and stop, then
+    // both the persisted value and the outgoing request's `language` field
+    // reflect German - asserts the actual FormData field, not just a
+    // truthy check, so a hardcoded/wrong field name would fail this.
+    global.fetch.mockResolvedValue({ ok: true, json: async () => ({ text: '' }) });
+    renderVoiceControl();
+
+    await userEvent.click(screen.getByRole('button', { name: 'German' }));
+    expect(localStorage.getItem('lmdb_dictation_language')).toBe('de');
+
+    await recordAndStop();
+
+    // resolveApiUrl's own health-check probe shares this mocked fetch (and,
+    // depending on test order, its resolution cache may already be warm from
+    // an earlier test) - find the actual speech-to-text call by URL rather
+    // than assuming it's fetch's first/only call.
+    const [, requestInit] = global.fetch.mock.calls.find(([url]) => url.includes('/speech-to-text'));
+    expect(requestInit.body.get('language')).toBe('de');
+  });
+
+  it('keeps sending the switched language on a second request without switching again', async () => {
+    // Given the user switched to German once, when they record and stop
+    // *twice* without touching the switch again, then both requests carry
+    // German (#213: "sent with every ... request until changed") - guards
+    // against a regression that resets `language` back to the default
+    // between recordings (e.g. in the transcribeAndRun `finally` block).
+    global.fetch.mockResolvedValue({ ok: true, json: async () => ({ text: '' }) });
+    renderVoiceControl();
+
+    await userEvent.click(screen.getByRole('button', { name: 'German' }));
+    await recordAndStop();
+    await recordAndStop();
+
+    const speechToTextCalls = global.fetch.mock.calls.filter(([url]) => url.includes('/speech-to-text'));
+    expect(speechToTextCalls).toHaveLength(2);
+    speechToTextCalls.forEach(([, requestInit]) => {
+      expect(requestInit.body.get('language')).toBe('de');
+    });
+  });
+
+  it('does not clear the selection when the already-active language button is clicked again', async () => {
+    // Given English is already selected, when its own toggle button is
+    // clicked again, then it stays selected - MUI's exclusive
+    // ToggleButtonGroup passes `null` on a re-click of the active option,
+    // and the handler must ignore that rather than clearing the selection
+    // to an unsupported empty state.
+    renderVoiceControl();
+
+    await userEvent.click(screen.getByRole('button', { name: 'English' }));
+
+    expect(screen.getByRole('button', { name: 'English', pressed: true })).toBeInTheDocument();
+  });
+
+  it('keeps recording uninterrupted and uses the newly-selected language when switched mid-recording', async () => {
+    global.fetch.mockResolvedValue({ ok: true, json: async () => ({ text: '' }) });
+    renderVoiceControl();
+
+    await userEvent.click(getFab());
+    await waitFor(() => expect(getFab()).not.toBeDisabled());
+
+    // Switching language while a recording is already in progress must not
+    // interrupt it (#213's "doesn't ... break an in-progress recording").
+    await userEvent.click(screen.getByRole('button', { name: 'German' }));
+    expect(screen.getByRole('button', { name: /click to stop recording/i })).toBeInTheDocument();
+
+    await userEvent.click(getFab());
+
+    const [, requestInit] = global.fetch.mock.calls.find(([url]) => url.includes('/speech-to-text'));
+    expect(requestInit.body.get('language')).toBe('de');
   });
 
   it('requests the microphone and switches to the recording icon on click', async () => {

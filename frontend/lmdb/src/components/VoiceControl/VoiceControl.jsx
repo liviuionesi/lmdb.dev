@@ -1,5 +1,5 @@
 import React, { useContext, useRef, useState } from 'react';
-import { Fab, CircularProgress, Snackbar, Alert, Tooltip } from '@mui/material';
+import { Fab, CircularProgress, Snackbar, Alert, Tooltip, ToggleButtonGroup, ToggleButton } from '@mui/material';
 import { Mic, Stop } from '@mui/icons-material';
 import { useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
@@ -11,6 +11,7 @@ import { resolveApiUrl } from '../../utils/apiUrl';
 import { clearAuthTokens } from '../../utils';
 import { encodeToWav } from '../../utils/wavEncoder';
 import { parseVoiceCommand } from '../../utils/voiceCommands';
+import { getDictationLanguage, setDictationLanguage } from '../../utils/dictationLanguage';
 import { useGetGenresQuery } from '../../services/TMDB';
 import { useExecuteSearchMutation } from '../../services/AI';
 import { toTmdbMovieShape } from '../Search/Search';
@@ -21,6 +22,10 @@ import { toTmdbMovieShape } from '../Search/Search';
  * self-hosted speech-to-text endpoint, and runs voice commands
  * (browse a genre/category, toggle dark/light mode, log out, search)
  * against the transcribed text.
+ *
+ * <p>Also owns the EN/DE dictation-language switch (#213, part of #200's
+ * bilingual voice control Story): a small persisted toggle next to the mic
+ * Fab that selects which Vosk model ai-service transcribes against (#212).
  */
 function VoiceControl() {
   const { setMode } = useContext(ColorModeContext);
@@ -31,8 +36,24 @@ function VoiceControl() {
 
   const [status, setStatus] = useState('idle'); // idle | recording | transcribing
   const [feedback, setFeedback] = useState(null);
+  const [language, setLanguage] = useState(getDictationLanguage);
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
+  // Read via a ref rather than the `language` state directly so that a
+  // switch made *after* recording has started (#213: "doesn't ... break an
+  // in-progress recording") is still picked up - `transcribeAndRun` fires
+  // from the MediaRecorder's onstop handler, bound back in startRecording,
+  // so closing over `language` there would freeze it at recording-start time.
+  const languageRef = useRef(language);
+  languageRef.current = language;
+
+  const handleLanguageChange = (event, newLanguage) => {
+    // MUI's exclusive ToggleButtonGroup passes null when the already-selected
+    // button is clicked again - ignore that rather than clearing the selection.
+    if (!newLanguage) return;
+    setLanguage(newLanguage);
+    setDictationLanguage(newLanguage);
+  };
 
   const runCommand = async ({ command, mode, genreOrCategory, query }) => {
     const genres = genresData?.genres ?? [];
@@ -65,6 +86,7 @@ function VoiceControl() {
       const wavBlob = await encodeToWav(audioBlob);
       const formData = new FormData();
       formData.append('audio', wavBlob, 'command.wav');
+      formData.append('language', languageRef.current);
 
       // Must await the health-checked resolver here rather than the
       // synchronous getApiUrl() - on a cold cache (e.g. this is the first
@@ -140,6 +162,21 @@ function VoiceControl() {
 
   return (
     <>
+      <Tooltip title="Dictation language">
+        <ToggleButtonGroup
+          value={language}
+          exclusive
+          size="small"
+          onChange={handleLanguageChange}
+          aria-label="Dictation language"
+          sx={{
+            position: 'fixed', right: 20, bottom: 100, zIndex: 1201, backgroundColor: 'background.paper',
+          }}
+        >
+          <ToggleButton value="en" aria-label="English">EN</ToggleButton>
+          <ToggleButton value="de" aria-label="German">DE</ToggleButton>
+        </ToggleButtonGroup>
+      </Tooltip>
       <Tooltip title={status === 'recording' ? 'Click to stop recording' : 'Voice control (Try: "Search Batman", "Popular", "Action", "Dark mode")'}>
         <span style={{ position: 'fixed', right: 20, bottom: 40, zIndex: 1201 }}>
           <Fab
