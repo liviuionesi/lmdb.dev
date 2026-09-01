@@ -189,18 +189,34 @@ curl http://localhost:8888/movie-service/dev | jq
 
 ## Client Configuration
 
-Services connect to Config Service by adding these properties:
+Services need `spring-cloud-starter-config` on the classpath and an import
+declaration. Without the dependency the import is skipped in silence, so the
+service starts and quietly uses no remote configuration at all.
 
 ```yaml
 spring:
-  application:
-    name: movie-service
   config:
-    import: "configserver:http://localhost:8888"
-  cloud:
-    config:
-      fail-fast: true
+    activate:
+      on-profile: "!test"
+    import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}
 ```
+
+`CONFIG_SERVER_URL` is what docker-compose sets (`http://config-service:8888`).
+Keep it as the single place the address is configured — declaring a second
+import elsewhere makes each service fetch twice.
+
+Two things to know:
+
+- Values served here take precedence over the service's own `application.yml`.
+  Only put something in a served file if the config server is genuinely the
+  source of truth for it, otherwise it silently overrides the service.
+- With the config client on the classpath, Spring Cloud requires an import to
+  exist or startup fails. Any test that loads a Spring context and does not
+  activate the `test` profile needs `spring.cloud.config.enabled=false`.
+
+Kubernetes does not run this service at all (ADR-005). The overlays set
+`SPRING_CLOUD_CONFIG_ENABLED=false` and supply the same values through
+ConfigMaps and Secrets.
 
 ## Encryption/Decryption
 

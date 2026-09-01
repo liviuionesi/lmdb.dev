@@ -3,9 +3,6 @@
 spring:
   application:
     name: ai-service
-  mongodb:
-    database: ${MONGODB_DATABASE}
-    uri: ${MONGODB_URI}
 
 # AI service specific settings
 ai:

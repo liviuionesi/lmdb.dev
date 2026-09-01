@@ -29,7 +29,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * the service's throwing behavior; the HTTP mapping of those exceptions is exercised where the
  * exception handler is on the path.
  */
-@WebMvcTest(MovieController.class)
+@WebMvcTest(value = MovieController.class, properties = "spring.cloud.config.enabled=false")
 @Import(TestCacheConfig.class)
 @DisplayName("MovieController Error Handling Tests")
 class MovieControllerErrorTest {

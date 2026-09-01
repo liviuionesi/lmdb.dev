@@ -11,9 +11,8 @@ spring:
     hikari:
       maximum-pool-size: 20
       minimum-idle: 10
-  data:
-    mongodb:
-      auto-index-creation: false
+  mongodb:
+    auto-index-creation: false
 
 # Common production actuator settings (restricted)
 management:

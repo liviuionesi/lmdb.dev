@@ -32,7 +32,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * right endpoints in the right shape" from the service's business logic (covered in
  * MovieServiceTest).
  */
-@WebMvcTest(MovieController.class)
+@WebMvcTest(value = MovieController.class, properties = "spring.cloud.config.enabled=false")
 @Import(TestCacheConfig.class)
 @DisplayName("MovieController Tests")
 class MovieControllerTest {

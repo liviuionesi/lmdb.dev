@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.resttestclient.TestRestTemplate;
 import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureTestRestTemplate;
@@ -166,23 +168,29 @@ class ServedConfigurationContentTest {
   }
 
   /**
-   * movie-service reads Mongo and Redis under specific keys, and the profile documents must put
+   * movie-service reads Mongo and Redis under specific keys, and both profile documents must put
    * them there.
    *
    * <p>Spring Boot 4 names these two differently: Mongo dropped the {@code data} segment, Redis
    * kept it. A value written one level too high, or under the other spelling, binds to nothing and
    * the service silently falls back to its defaults.
+   *
+   * <p>dev and prod are both checked. prod is the profile the deployed stack runs on, and the two
+   * documents are maintained separately, so testing only one leaves the other free to drift.
+   *
+   * @param profile the movie-service profile document under test
    */
-  @Test
-  @DisplayName("movie-service dev profile nests Mongo and Redis under spring")
-  void servesMovieServiceDatastoreKeys() {
+  @ParameterizedTest(name = "movie-service/{0}")
+  @ValueSource(strings = {"dev", "prod"})
+  @DisplayName("movie-service profiles nest Mongo and Redis under spring")
+  void servesMovieServiceDatastoreKeys(String profile) {
     // Given / When
-    Map<String, Object> properties = fetchProperties("movie-service", "dev");
+    Map<String, Object> properties = fetchProperties("movie-service", profile);
 
     // Then — exactly the keys movie-service binds
-    assertThat(properties).containsEntry("spring.mongodb.uri", "${MONGODB_URI}");
-    assertThat(properties).containsEntry("spring.data.redis.host", "${REDIS_HOST}");
-    assertThat(properties).containsEntry("spring.data.redis.password", "${REDIS_PASSWORD}");
+    assertThat(properties).containsKey("spring.mongodb.uri");
+    assertThat(properties).containsKey("spring.data.redis.host");
+    assertThat(properties).containsKey("spring.data.redis.password");
 
     // And not at the document root, where nothing would read them
     assertThat(properties).doesNotContainKey("mongodb.uri");

@@ -40,7 +40,9 @@ import org.springframework.web.client.ResourceAccessException;
  * JSON response payload generation, HATEOAS link creation, and global exception translation without
  * spinning up a full application context or external dependencies.
  */
-@WebMvcTest(controllers = {ActorController.class, GlobalExceptionHandler.class})
+@WebMvcTest(
+    controllers = {ActorController.class, GlobalExceptionHandler.class},
+    properties = "spring.cloud.config.enabled=false")
 @DisplayName("ActorController & GlobalExceptionHandler WebMvc Tests")
 class ActorControllerTest {
 
