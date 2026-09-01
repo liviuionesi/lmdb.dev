@@ -5,14 +5,15 @@ AI-powered features: catalog-grounded movie recommendations, a chat assistant, a
 **Port:** 8084 (REST), 9084 (gRPC)
 **Database:** PostgreSQL + pgvector (`lmdb_ai`)
 **Protocols:** REST + gRPC
-**Model provider:** Ollama only (local, $0 — ADR-004). No OpenAI/paid API key anywhere in this service.
+**Model provider:** Ollama only (local, $0 — ADR-004). No paid API key anywhere in this service.
 
 ## Responsibilities
 
 - Movie recommendations computed from LMDB's own catalog (movie-service), never proxied from TMDB's own recommendation endpoint
 - Chat assistant with persisted conversation history
 - Semantic search: ANN query over user taste embeddings (pgvector `<=>` operator, HNSW index)
-- Offline Speech-to-Text Voice Recognition powered by self-hosted Vosk engine and embedded small English model (replacing cloud Whisper for $0 cost) (#68, #151)
+- Offline Speech-to-Text Voice Recognition powered by self-hosted Vosk engine, bilingual English/German (replacing cloud Whisper for $0 cost) (#68, #151, #212)
+- LLM-based voice-command intent classification — phrasing-tolerant, either language (#214)
 
 ## Why PostgreSQL, not MongoDB
 
@@ -48,16 +49,17 @@ docker run -p 8084:8084 -p 9084:9084 lmdb/ai-service:local
 | `/search/semantic` | GET | Nearest taste-profile neighbours to a free-text query |
 | `/search/query` | POST | Parse a natural-language movie query into a structured filter, or a plain-title fallback — extraction only, no execution (#202, ADR-020) |
 | `/search/execute` | POST | Parse AND execute a natural-language movie query, resolved against actor-service/movie-service (#203, ADR-020) |
-| `/speech-to-text` | POST | Transcribe WAV audio using self-hosted Vosk engine (#68) |
+| `/speech-to-text` | POST | Transcribe WAV audio using self-hosted Vosk engine; `language` query param (`en`/`de`, defaults to `en`) selects which model (#68, #212) |
+| `/voice-command` | POST | Classify a transcribed voice command into logout/theme-toggle/genre-or-category/search via LLM-based intent parsing, either language, phrasing-tolerant (#214) |
 
-All recommendations/chat/semantic search features are scoped to a `userId`. Voice control uses `/speech-to-text` (public endpoint at gateway). `/search/query` and `/search/execute` are not user-scoped — they touch no per-user data — but still require a valid gateway JWT.
+All recommendations/chat/semantic search features are scoped to a `userId`. Voice control uses `/speech-to-text` (public endpoint at gateway) and `/voice-command` — like `/search/query` and `/search/execute`, not user-scoped (touches no per-user data) but still requires a valid gateway JWT, unlike `/speech-to-text`.
 
 ### 🎙️ Supported Voice Commands
-Users can speak into the microphone icon in the UI:
-- **Genre / Category**: `"Popular"`, `"Top rated"`, `"Upcoming"`, or any genre (`"Action"`, `"Comedy"`, `"Drama"`, etc.)
-- **Search**: `"Search [Movie Title]"` (e.g. `"Search Inception"`)
-- **Theme**: `"Dark mode"` / `"Light mode"`
-- **Auth**: `"Log out"` / `"Sign out"`
+Bilingual (English/German) since #200/#212 — the frontend's mic Fab carries an EN/DE toggle (#213) that selects which language `/speech-to-text` transcribes against; whatever language the user picks, `/voice-command`'s LLM-based classifier (#214) understands phrasing variance in that language directly, not fixed phrases:
+- **Genre / Category**: `"Popular"`, `"Top rated"`, `"Upcoming"`, or any genre (`"Action"`, `"Comedy"`, `"Drama"`, etc.) — German: `"Zeig mir Actionfilme"`, `"Beliebte Filme"`
+- **Search**: `"Search [Movie Title]"` (e.g. `"Search Inception"`) — German: `"Suche nach Inception"`
+- **Theme**: `"Dark mode"` / `"Light mode"` — German: `"Dunkelmodus"` / `"Hellmodus"`
+- **Auth**: `"Log out"` / `"Sign out"` — German: `"Abmelden"`
 
 ### gRPC — `ai_service.proto`
 - `GetRecommendations` — same logic as the REST endpoint

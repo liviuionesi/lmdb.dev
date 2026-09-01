@@ -57,4 +57,27 @@ describe('aiApi endpoints', () => {
 
     expect(result.data).toEqual({ results: [{ movieId: 550, title: 'Fight Club' }] });
   });
+
+  it('parseQuery posts the raw query to /search/query, not /search/execute (#208)', async () => {
+    await store.dispatch(aiApi.endpoints.parseQuery.initiate('movies Tom Hanks directed'));
+
+    const request = global.fetch.mock.calls[0][0];
+    expect(request.url).toBe(`${baseUrl}/search/query`);
+    expect(request.method).toBe('POST');
+    expect(JSON.parse(await request.text())).toEqual({ query: 'movies Tom Hanks directed' });
+  });
+
+  it('parseQuery resolves with the filter/spans response body unwrapped', async () => {
+    global.fetch = vi.fn().mockResolvedValue(jsonResponse({
+      filter: null,
+      spans: [{ text: 'and', category: 'CONNECTOR', start: 5, end: 8 }],
+    }));
+
+    const result = await store.dispatch(aiApi.endpoints.parseQuery.initiate('Batman and Robin'));
+
+    expect(result.data).toEqual({
+      filter: null,
+      spans: [{ text: 'and', category: 'CONNECTOR', start: 5, end: 8 }],
+    });
+  });
 });

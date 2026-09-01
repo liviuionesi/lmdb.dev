@@ -13,7 +13,12 @@
     {
       "name": "speech-to-text.vosk.model-path",
       "type": "java.lang.String",
-      "description": "Local filesystem path to the Vosk offline voice model."
+      "description": "Local filesystem path to the English Vosk offline voice model."
+    },
+    {
+      "name": "speech-to-text.vosk.model-path-de",
+      "type": "java.lang.String",
+      "description": "Local filesystem path to the German Vosk offline voice model."
     }
   ]
 }

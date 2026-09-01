@@ -2,6 +2,13 @@
 // vite.config.mjs) before every test file.
 import '@testing-library/jest-dom';
 
+// #210: makes `expect(await axe(container)).toHaveNoViolations()` available in every test file,
+// same as jest-dom's matchers above — a single global registration rather than each accessibility
+// test re-importing/extending jest-axe's matcher for itself.
+import { toHaveNoViolations } from 'jest-axe';
+
+expect.extend(toHaveNoViolations);
+
 // jsdom's CSS.escape is spec-strict about its receiver: called as a detached
 // function reference (no `CSS.` in front) it throws "called on an object
 // that is not a valid instance of CSS". Emotion (the engine behind

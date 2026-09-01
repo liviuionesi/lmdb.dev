@@ -8,10 +8,7 @@ option java_outer_classname = "AiServiceProto";
 
 // gRPC surface for ai-service (#36, ARCHITECTURE.md §3.7). Mirrors the two
 // REST features implemented against Ollama: catalog-grounded recommendations
-// and the conversational assistant. Voice transcription (Whisper) from the
-// original architecture sketch is deliberately not implemented — it needs a
-// paid OpenAI API key, which conflicts with ADR-004's $0 budget, and it is
-// not part of issue #36's implementation checklist.
+// and the conversational assistant.
 service AIService {
   rpc GetRecommendations(RecommendationRequest) returns (RecommendationResponse);
   rpc ChatWithAssistant(ChatRequest) returns (ChatResponse);

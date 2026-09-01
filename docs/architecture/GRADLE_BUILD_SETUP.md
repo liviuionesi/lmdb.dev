@@ -177,7 +177,7 @@ org.gradle.configuration-cache=false
 - TestContainers (PostgreSQL)
 
 **AI Service**
-- Spring AI (OpenAI integration)
+- Spring AI (Ollama integration)
 - MongoDB storage
 - gRPC communication
 - TestContainers (MongoDB)

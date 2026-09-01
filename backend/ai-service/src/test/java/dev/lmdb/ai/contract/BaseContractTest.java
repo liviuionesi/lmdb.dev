@@ -14,6 +14,7 @@ import dev.lmdb.ai.service.QueryParsingService;
 import dev.lmdb.ai.service.RecommendationService;
 import dev.lmdb.ai.service.SemanticSearchService;
 import dev.lmdb.ai.service.SpeechToTextService;
+import dev.lmdb.ai.service.VoiceCommandParsingService;
 import io.restassured.module.mockmvc.RestAssuredMockMvc;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,6 +37,7 @@ public abstract class BaseContractTest {
     SpeechToTextService speechToTextService = mock(SpeechToTextService.class);
     QueryParsingService queryParsingService = mock(QueryParsingService.class);
     QueryAggregationService queryAggregationService = mock(QueryAggregationService.class);
+    VoiceCommandParsingService voiceCommandParsingService = mock(VoiceCommandParsingService.class);
 
     MovieRecommendationDto recommendation =
         new MovieRecommendationDto(
@@ -53,7 +55,8 @@ public abstract class BaseContractTest {
             semanticSearchService,
             speechToTextService,
             queryParsingService,
-            queryAggregationService);
+            queryAggregationService,
+            voiceCommandParsingService);
 
     RestAssuredMockMvc.standaloneSetup(aiController);
   }

@@ -1,5 +1,6 @@
 package dev.lmdb.ai.service;
 
+import dev.lmdb.ai.dto.QueryParseResponseDto;
 import dev.lmdb.ai.dto.StructuredQueryFilterDto;
 import dev.lmdb.ai.security.PromptSanitizer;
 import java.util.List;
@@ -96,6 +97,25 @@ public class QueryParsingService {
     }
 
     return filter == null ? plainTitleFallback(sanitized) : filter;
+  }
+
+  /**
+   * Parses one free-text query into a structured filter alongside its token/span breakdown (#207) —
+   * the shape {@code POST /api/v1/ai/search/query} actually returns. Spans are computed
+   * deterministically from the already-extracted filter by {@link QuerySpanExtractor}, not
+   * requested from the model itself — see that class's own Javadoc for why.
+   *
+   * <p>Sanitizes {@code rawQuery} once here and reuses that exact string for both extraction (via
+   * {@link #parse}, which re-sanitizes — a no-op on already-sanitized text) and span offsets, so a
+   * span's {@code start}/{@code end} always line up with the same text the model itself saw.
+   *
+   * @param rawQuery the caller-supplied query text, typed or transcribed from dictation
+   * @return the extracted filter (or plain-title fallback) and its span breakdown
+   */
+  public QueryParseResponseDto parseWithSpans(String rawQuery) {
+    String sanitized = PromptSanitizer.sanitize(rawQuery);
+    StructuredQueryFilterDto filter = parse(sanitized);
+    return new QueryParseResponseDto(filter, QuerySpanExtractor.extract(sanitized, filter));
   }
 
   /**

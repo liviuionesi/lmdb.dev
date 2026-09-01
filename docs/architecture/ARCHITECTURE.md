@@ -29,8 +29,6 @@ free-tier cloud deployment, and full observability. A dedicated Next.js web
 app and React Native mobile apps were considered and **descoped** (v1.2.0) —
 the existing LMDB React app is the only frontend.
 
-📊 **Live Project Metrics & Code Analytics:** See [`docs/reports/PROJECT_METRICS.md`](../reports/PROJECT_METRICS.md) for real-time dynamically computed codebase statistics (git churn, LOC, test suites, architecture topology, and documentation coverage).
-
 ---
 
 ## Table of Contents
@@ -94,15 +92,14 @@ The frontend is the pre-existing LMDB application, now living at
 this repo as a monorepo on 2026-07-30 — its full commit history (44 commits,
 authorship intact) was preserved via `git filter-repo` (to relocate every
 commit's paths under `frontend/lmdb/`) followed by a
-`--allow-unrelated-histories` merge, after first scrubbing a leaked `.env`
-file and a hardcoded TMDB API key from its history. It consumes this
+`--allow-unrelated-histories` merge. It consumes this
 backend without frontend logic changes beyond configuration — see
 `docs/guides/RUN_WITH_LMDB_APP.md` for the runbook:
 
 | Technology          | Version         | Notes                                                                                                                                      |
 | ------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | React               | 19.2.8          | Vite build (migrated off CRA, #125-127 — `react-scripts` no longer used)                                                                   |
-| Redux Toolkit       | 2.12.0          | `@reduxjs/toolkit` 2.12.0 (`react-redux` 9.3.0) — TMDB calls in `src/services/TMDB.js`                                                     |
+| Redux Toolkit       | 2.12.0          | `@reduxjs/toolkit` 2.12.0 (`react-redux` 9.3.0) — TMDB calls in `src/services/TMDB.js`, natural-language search in `src/services/AI.js` (ADR-020) |
 | axios               | 1.6.8           | Auth calls in `src/utils/index.js`                                                                                                         |
 | Material UI         | 9.3.1           | `@mui/material` & `@mui/icons-material` 9.3.1                                                                                              |
 | Emotion             | 11.4.1 / 11.3.0 | `@emotion/react` 11.4.1, `@emotion/styled` 11.3.0                                                                                          |
@@ -110,11 +107,6 @@ backend without frontend logic changes beyond configuration — see
 | React Router DOM    | 7.18.2          | Client-side routing                                                                                                                        |
 | TMDB API contract   | v3              | Base URL `https://api.themoviedb.org/3` → becomes this backend's gateway via `VITE_API_URL` (build-time) or dynamic resolution — see §11.6 |
 
-> A dedicated Next.js web app and React Native mobile apps were part of
-> earlier drafts and are **descoped** as of v1.2.0 — they were never
-> actually scaffolded in this repo (no `frontend/web-nextjs` or
-> `frontend/mobile-react-native` directory ever existed in git history),
-> despite some earlier-draft doc sections describing them as if present.
 
 ### 1.3 DevOps & Infrastructure
 
@@ -137,11 +129,11 @@ backend without frontend logic changes beyond configuration — see
 ### 2.1 High-Level Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│         LMDB React App (now Vite, frontend/lmdb)    │
-│    RTK Query, TMDB v3 contract, Vosk AI voice via ai-service │
+┌──────────────────────────────────────────────────────────────┐
+│         LMDB React App (now Vite, frontend/lmdb)             │
+│    RTK Query, TMDB v3, Vosk voice + AI search (ai-service)   │
 │  baseURL: resolved per-request (local/cloud/tunnel — ADR-016)│
-└──────────────────────────────┬──────────────────────────────┘
+└──────────────────────────────┬───────────────────────────────┘
                                │  TMDB v3-shaped requests
                                ▼
           ┌──────────────────────────────────┐
@@ -157,10 +149,10 @@ backend without frontend logic changes beyond configuration — see
         ┌───────────────┼───────────────┐
         │               │               │
         ▼               ▼               ▼
-┌───────────────┐ ┌───────────────┐ ┌───────────────┐
-│ Eureka Server │ │ Config Server │ │ Microservices │
-│   (8761)      │ │    (8888)     │ │   Cluster     │
-└───────────────┘ └───────────────┘ └───────┬───────┘
+┌───────────────┐ ┌───────────────┐  ┌───────────────┐
+│ Eureka Server │ │ Config Server │  │ Microservices │
+│   (8761)      │ │    (8888)     │  │   Cluster     │
+└───────────────┘ └───────────────┘  └───────┬───────┘
                                              │
         ┌────────────────┬────────────────┬──┴────┬─────────┐
         ▼                ▼                ▼       ▼         ▼
@@ -217,6 +209,7 @@ Significant decisions are recorded in [`adr/`](adr/):
 | [017](adr/017-full-cloud-service-parity.md)                 | Cloud overlays deploy the full local application service set (incl. Ollama), not a movie-only slice — re-sized nodes once verified live pricing showed the cost difference was negligible for ephemeral demo usage                                                                                                           |
 | [018](adr/018-cloud-lifecycle-stop-not-destroy.md)          | Stop cloud compute (not destroy) between demo sessions — de-allocate the VM to zero the dominant compute charge while PVCs/EBS preserve all database state; `terraform destroy` reserved for long breaks or state rebuilds                                                                                                   |
 | [019](adr/019-azure-zero-touch-auto-wake-sleep.md)          | Azure gets a Caddy hostNetwork pod for zero-cost real HTTPS, a fixed `/api/wakeup` that actually dispatches `cluster-stop.yml`'s start action, and a scheduled workflow enforcing the 1-hour idle auto-stop — closes gaps ADR-018 left open; knowingly narrows (not reverses) ADR-015's "no public cloud-spend trigger" rule |
+| [020](adr/020-nl-query-cross-service-aggregation.md)        | ai-service owns both natural-language query parsing (Ollama) and cross-service aggregation (actor-service + movie-service, in-memory merge — no DB join, ADR-002); frontend calls it directly through the gateway in one round trip — see §3.7                                                                             |
 
 ### 2.4 Failure-Mode Matrix
 
@@ -701,15 +694,16 @@ format): `/person/{id}`, `/person/{id}/movie_credits`, `/person/{id}/images`,
 
 ### 3.7 AI Service (Advanced)
 
-**Status: implemented and live-verified (#36, #68, #151)** — all four
-features below are real, tested against the running service on Azure and
-AWS, not aspirational. Two deliberate deviations from the original spec:
+**Status: implemented and live-verified (#36, #68, #151)** — the original
+four features are real, tested against the running service on Azure and
+AWS, not aspirational; voice-command classification (#214) and bilingual
+speech-to-text (#212) below are implemented and unit/integration-tested but
+not yet live-verified against a real deployed cloud model download — #229
+tracks the same "no network egress to the model host" gap ADR-021 documents
+for the Vosk model itself. Two deliberate deviations from the original spec:
 **Spring AI 2.0.0** (not the 1.0.0-SNAPSHOT this doc originally named —
-2.x is what tracks Spring Boot 4.x), and **Ollama only, no OpenAI starter on
-the classpath at all** (not "OpenAI/Ollama" — ADR-004's $0 budget rules out
-a paid provider outright, so there's nothing to switch between). Voice
-recognition uses **Vosk** (offline, local, no API key — see below), not
-Whisper, which needs a paid OpenAI key ADR-004 rules out. Semantic search is
+2.x is what tracks Spring Boot 4.x), and **Ollama**.
+Voice recognition uses **Vosk** (offline, local, no API key). Semantic search is
 nearest-neighbour search over `user_taste_profiles` embeddings specifically
 (no separate per-movie embedding store exists), see
 `backend/ai-service/README.md` for the exact API surface.
@@ -739,10 +733,21 @@ nearest-neighbour search over `user_taste_profiles` embeddings specifically
 > and the K8s overlays, and the main implementation cost of ADR-012.
 
 **Features (all live, REST via the gateway at `/api/v1/ai/**`):**
-1. **Speech-to-text** (`POST /speech-to-text`) — offline, Vosk, no cloud API
-2. **Movie recommendations** (`POST /recommendations`) — Ollama, grounded in movie-service's real catalog, never invents titles
-3. **Chat assistant** (`POST /chat`) — Ollama, persisted conversation history
-4. **Semantic search** (`GET /search/semantic`) — pgvector ANN query over taste-profile embeddings
+1. **Speech-to-text** (`POST /speech-to-text`) — offline, Vosk, no cloud API; bilingual English/German since #212 (below)
+2. **Voice-command classification** (`POST /voice-command`) — Ollama, LLM-based intent parsing over a transcript into logout/theme-toggle/genre-or-category/search, either language, phrasing-tolerant (#214, replaces the frontend's old per-language regex table)
+3. **Movie recommendations** (`POST /recommendations`) — Ollama, grounded in movie-service's real catalog, never invents titles
+4. **Chat assistant** (`POST /chat`) — Ollama, persisted conversation history
+5. **Semantic search** (`GET /search/semantic`) — pgvector ANN query over taste-profile embeddings
+6. **Natural-language movie search** (`POST /search/query`, `POST /search/execute`) — **ADR-020**:
+   ai-service owns both parsing free text into a structured filter (Ollama,
+   `PromptSanitizer`-guarded) and aggregating it across actor-service and
+   movie-service in memory (no cross-service DB join — ADR-002). The
+   frontend's search bar (`Search.jsx`) calls `/search/execute` directly
+   through the gateway via a dedicated `aiApi` RTK Query slice
+   (`frontend/lmdb/src/services/AI.js`) — one round trip, replacing the old
+   direct movie-service title search (#198, #202-#207); a plain-title query
+   with no detected structure falls back to movie-service's existing
+   `/search` unchanged, so the frontend never branches on query shape.
 
 **Domain Model (JPA entities on PostgreSQL — ADR-012):**
 
@@ -860,31 +865,55 @@ public class RecommendationService {
   }
 }
 
-// SpeechToTextService — fully offline: Vosk model loaded lazily (first
-// request, not startup — a missing/undownloaded model shouldn't block
+// SpeechToTextService — fully offline: bilingual (English/German, #212) —
+// each language's Vosk model loaded lazily, keyed by a `language` request
+// param (first request for that language, not startup — a missing/
+// undownloaded model for one language shouldn't block the other or
 // ai-service's other features), a fresh Recognizer per request (Vosk's
 // Recognizer isn't thread-safe), audio resampled to 16kHz mono PCM16
 // regardless of what the browser sent.
 @Service
 public class SpeechToTextService implements DisposableBean {
-  public String transcribe(MultipartFile audioFile) {
+  public String transcribe(MultipartFile audioFile, String language) {
+    String normalizedLanguage = normalizeLanguage(language); // defaults to English
     byte[] pcm = toPcm16Mono16kHz(audioFile);
-    try (Recognizer recognizer = new Recognizer(getOrLoadModel(), SAMPLE_RATE_HZ)) {
+    try (Recognizer recognizer = new Recognizer(getOrLoadModel(normalizedLanguage), SAMPLE_RATE_HZ)) {
       recognizer.acceptWaveForm(pcm, pcm.length);
       return extractText(recognizer.getFinalResult());
     }
   }
 }
+
+// VoiceCommandParsingService — classifies a transcript (either language, any
+// phrasing) into one of four canonical commands via the same structured-
+// extraction ChatClient pattern RecommendationService/QueryParsingService
+// use (#214), replacing the frontend's old per-language regex table
+// (voiceCommands.js), which only ever matched fixed English phrases.
+@Service
+public class VoiceCommandParsingService {
+  private final ChatClient chatClient;
+
+  public VoiceCommandDto parse(String rawTranscript, List<String> genreNames) {
+    return chatClient.prompt()
+        .system(SYSTEM_PROMPT) // classifies into LOGOUT/CHANGE_MODE/CHOOSE_GENRE/SEARCH
+        .user(buildUserPrompt(rawTranscript, genreNames))
+        .call()
+        .entity(VoiceCommandDto.class);
+  }
+}
 ```
 
-**Deployment note (found live, #151):** the Vosk model (~40MB, small
-English) isn't downloaded by `docker-compose`/Terraform automatically — it's
-baked directly into the ai-service Docker image at build time so it's
-present identically on every deploy target (local, Azure, AWS), matching
-`VOSK_MODEL_PATH`'s default. `SpeechToTextService` loads it lazily, so a
-missing model previously meant ai-service *started* fine and only failed
-once a real transcription request needed it — a silent gap until it was
-actually exercised.
+**Deployment note (found live, #151, updated #212):** neither Vosk model
+(`vosk-model-en-us-0.22-lgraph`, ~128MB; `vosk-model-small-de-0.15`, ~45MB —
+ADR-021's picks) is downloaded by `docker-compose`/Terraform
+automatically — both are baked directly into the ai-service Docker image at
+build time so they're present identically on every deploy target (local,
+Azure, AWS), matching `VOSK_MODEL_PATH`/`VOSK_MODEL_PATH_DE`'s defaults.
+`SpeechToTextService` loads each lazily, keyed by language, so a missing
+model for one language previously meant ai-service *started* fine and only
+failed once a real transcription request for that language needed it — a
+silent gap until it was actually exercised; the other language is
+unaffected either way.
 
 ---
 
