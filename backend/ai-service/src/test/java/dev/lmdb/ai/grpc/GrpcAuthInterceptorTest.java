@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.grpc.Metadata;
+import io.grpc.MethodDescriptor;
 import io.grpc.ServerCall;
 import io.grpc.ServerCallHandler;
 import io.grpc.Status;
@@ -43,7 +44,9 @@ class GrpcAuthInterceptorTest {
     call = mock(ServerCall.class);
     next = mock(ServerCallHandler.class);
     when(call.getMethodDescriptor())
-        .thenReturn((io.grpc.MethodDescriptor) AIServiceGrpc.getChatWithAssistantMethod());
+        .thenReturn(
+            (MethodDescriptor<Object, Object>)
+                (MethodDescriptor<?, ?>) AIServiceGrpc.getChatWithAssistantMethod());
   }
 
   /**

@@ -53,5 +53,5 @@ management:
 logging:
   level:
     root: INFO
-    dev.lmdb.gateway: DEBUG
+    "[dev.lmdb.gateway]": DEBUG
 

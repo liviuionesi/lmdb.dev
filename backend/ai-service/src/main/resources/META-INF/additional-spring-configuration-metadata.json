@@ -6,6 +6,11 @@
       "description": "Port for the gRPC Netty server."
     },
     {
+      "name": "grpc.server.auth-token",
+      "type": "java.lang.String",
+      "description": "Shared service token every gRPC call must present as x-service-token. Unset leaves the server fail-closed, rejecting every call."
+    },
+    {
       "name": "movie-service.base-url",
       "type": "java.lang.String",
       "description": "Base URL for movie-service candidate fetching."
