@@ -232,7 +232,7 @@ org.gradle.configuration-cache=false
 ## Testing Configuration (Spring Boot 4.x / JUnit 5 Standards)
 
 ### Test Framework Requirements
-**CRITICAL for Cursor IDE Test Runner compatibility:**
+**CRITICAL for Antigravity IDE Test Runner compatibility:**
 
 1. **JUnit 5 (Jupiter) ONLY** - JUnit 4 is **FORBIDDEN**
 2. **junit-platform-launcher** - Required in every service:
@@ -241,7 +241,7 @@ org.gradle.configuration-cache=false
    ```
 3. **@MockitoBean** instead of `@MockBean` (Spring Boot 3.4+)
 4. **Testcontainers with @ServiceConnection** - NO H2 databases
-5. **Tests run via Cursor IDE Test Runner** - NOT terminal
+5. **Tests run via Antigravity IDE Test Runner** - NOT terminal
 
 ### Test Dependencies (Common to all services)
 ```groovy

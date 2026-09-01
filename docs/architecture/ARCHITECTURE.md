@@ -1126,6 +1126,11 @@ populate that catalog.
 | 7   | `GET /movie/{id}/similar`                                                 | Details page        | Movie             | live ranking, results upserted              |
 | 8   | `GET /person/{id}`                                                        | Actor page          | Actor             | read-through/save-through (PostgreSQL)      |
 | 9   | `GET /discover/movie?with_cast={id}&page=`                                | Actor filmography   | Actor (via Movie) | live ranking, results upserted              |
+| 10  | `POST /api/v1/auth/login`                                                 | User login          | Gateway → User    | LMDB JWT authentication (stateless, signed) |
+| 11  | `POST /api/v1/auth/register`                                              | User registration   | Gateway → User    | BCrypt password hashing & account creation |
+| 12  | `GET /api/v1/users/profile`                                               | User profile        | Gateway → User    | Authenticated user profile retrieval       |
+| 13  | `GET /api/v1/users/favorites`, `/watchlist`                               | Favorites & lists   | Gateway → User    | Relational PostgreSQL user list query       |
+| 14  | `POST /api/v1/users/favorites/{id}`, `/watchlist`                         | Favorites mutation  | Gateway → User    | Relational PostgreSQL list item mutation    |
 
 **Additional TMDB person endpoints implemented beyond the React app's current
 needs** (issue #18's acceptance criteria call for full person coverage, and
@@ -1152,11 +1157,6 @@ self-heals. Only mapping/conversion failures are absorbed this way —
 outage as a miss would stampede TMDB. This is safe **only** because the catalog
 is re-derivable from TMDB; user-owned data (favorites, watchlists, accounts)
 lives in PostgreSQL under Flyway and must never adopt this pattern.
-| 10 | Login | Gateway → user-service | **LMDB JWT, not TMDB session proxy — implemented, see below** |
-| 11 | Register | Gateway → user-service | **LMDB JWT, not TMDB session proxy — implemented, see below** |
-| 12 | Profile | Gateway → user-service | **LMDB JWT, not TMDB session proxy — implemented, see below** |
-| 13 | Favorites / watchlist lists | Gateway → user-service | **LMDB JWT, not TMDB session proxy — implemented, see below** |
-| 14 | Favorites / watchlist toggle | Gateway → user-service | **LMDB JWT, not TMDB session proxy — implemented, see below** |
 
 **Read-through / save-through flow (endpoints 5, 8 — near-immutable detail
 resources):**
@@ -1211,6 +1211,27 @@ and writes the exact same persisted catalog as the facade above — there is
 one dataset behind both, not a cache and a source of truth. It remains
 available for direct/Swagger consumption and future clients; the TMDB facade
 is the contract that matters for the React app.
+
+### 5.1c Admin Security & Observability Endpoints
+
+**Admin Dashboard & Telemetry (`/admin/security/**`, `/actuator/**`):**
+Restricted endpoints powering the React Executive Ops Center (`AdminDashboard.jsx`, visible only to users with role `ADMIN`):
+
+| Endpoint | Backing Service | Description / Purpose |
+| --- | --- | --- |
+| `GET /admin/security/status` | Gateway | Security status, active mode, and blacklist/whitelist sizes |
+| `GET /admin/security/blacklist` | Gateway | Retrieves currently blacklisted IP addresses |
+| `POST /admin/security/blacklist?ip=` | Gateway | Dynamically blocks an IP address at the gateway |
+| `DELETE /admin/security/blacklist?ip=` | Gateway | Removes an IP address from the blacklist |
+| `GET /admin/security/whitelist` | Gateway | Retrieves currently whitelisted IP addresses |
+| `POST /admin/security/whitelist?ip=` | Gateway | Adds an IP address to the whitelist |
+| `DELETE /admin/security/whitelist?ip=` | Gateway | Removes an IP address from the whitelist |
+| `POST /admin/security/whitelist-mode/enable` | Gateway | Enables strict whitelist-only mode (blocks non-whitelisted traffic) |
+| `POST /admin/security/whitelist-mode/disable` | Gateway | Disables whitelist-only mode |
+| `GET /actuator/health` | Gateway / All Services | Cluster health readiness and liveness status |
+| `GET /actuator/gateway/routes` | Gateway | Gateway active routing table topology telemetry |
+| `GET /actuator/prometheus` | Gateway / All Services | Prometheus metrics scraping endpoint |
+| `GET /actuator/activity` | Gateway | Idle tracking service activity telemetry (ADR-019 auto-sleep) |
 
 ### 5.2 OpenAPI Documentation
 
@@ -1708,7 +1729,7 @@ All seven, with where each actually lives:
 **Critical Requirements:**
 - ✅ JUnit 5 (Jupiter) exclusively - **JUnit 4 is FORBIDDEN**
 - ✅ `testRuntimeOnly 'org.junit.platform:junit-platform-launcher'` in build.gradle
-- ✅ Tests run via Cursor IDE Test Runner (CodeLens "Run Test" buttons)
+- ✅ Tests run via Antigravity IDE Test Runner (CodeLens "Run Test" buttons)
 - ✅ NO `@MockBean` - use `@MockitoBean` (Spring Boot 3.4+) for Spring context tests
 
 **Example:**
@@ -1779,7 +1800,7 @@ class MovieServiceTest {
 **Critical Requirements:**
 - ✅ Testcontainers with `@ServiceConnection` (Spring Boot 3.1+)
 - ✅ NO H2 database - use Testcontainers with real databases
-- ✅ Tests run in Cursor IDE Test Runner
+- ✅ Tests run in Antigravity IDE Test Runner
 
 **Example (Modern @ServiceConnection approach):**
 ```java
@@ -2760,7 +2781,7 @@ No `VERSIONS.md`, `CHANGELOG.md`, or `CONTRIBUTING.md` exist at the repo root �
 - Java records for immutability
 - Testcontainers with `@ServiceConnection`
 - `testRuntimeOnly 'org.junit.platform:junit-platform-launcher'` in build.gradle
-- Tests run via Cursor IDE Test Runner
+- Tests run via Antigravity IDE Test Runner
 
 ### Records (Immutable DTOs - Java 25)
 ```java
