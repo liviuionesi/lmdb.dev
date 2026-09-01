@@ -116,10 +116,14 @@ public class SecurityConfig {
                     .pathMatchers("/api/v1/ai/**")
                     .authenticated()
 
-                    // Admin endpoints (require authentication - should add role check in
-                    // production)
+                    // Gateway administration (#237): every /admin/** endpoint mutates the
+                    // gateway's live security posture (IP allow/deny lists, whitelist mode),
+                    // so it takes the ADMIN role rather than plain authentication — a
+                    // signed-in account alone is not an operator. hasRole prepends ROLE_,
+                    // which is exactly the authority JwtAuthenticationFilter builds from the
+                    // token's roles claim (dev.lmdb.user.model.Role.ADMIN).
                     .pathMatchers("/admin/**")
-                    .authenticated()
+                    .hasRole("ADMIN")
 
                     // All other endpoints require authentication
                     .anyExchange()

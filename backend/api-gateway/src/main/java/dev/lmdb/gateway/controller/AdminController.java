@@ -13,7 +13,10 @@ import org.springframework.web.bind.annotation.*;
  * Admin controller for managing IP filters and security settings. Provides REST API for
  * blacklist/whitelist management.
  *
- * <p>Note: These endpoints should be secured with admin-only access in production.
+ * <p>Every endpoint here changes the gateway's live security posture, so the whole {@code
+ * /admin/**} surface is restricted to callers holding the {@code ADMIN} role — the rule lives in
+ * {@link dev.lmdb.gateway.config.SecurityConfig}, not on the handlers, so no endpoint added to this
+ * controller can accidentally be published to ordinary authenticated users.
  *
  * @author LMDB Development Team
  * @version 1.0.0
