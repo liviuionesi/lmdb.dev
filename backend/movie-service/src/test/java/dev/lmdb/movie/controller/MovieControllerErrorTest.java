@@ -1,5 +1,6 @@
 package dev.lmdb.movie.controller;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -51,8 +52,7 @@ class MovieControllerErrorTest {
         .thenThrow(new ResourceNotFoundException("Movie not found with ID: " + movieId));
 
     // Act & Assert
-    org.junit.jupiter.api.Assertions.assertThrows(
-        ResourceNotFoundException.class, () -> movieService.getMovieById(movieId));
+    assertThrows(ResourceNotFoundException.class, () -> movieService.getMovieById(movieId));
   }
 
   /**
@@ -68,8 +68,7 @@ class MovieControllerErrorTest {
         .thenThrow(new ServiceUnavailableException("TMDB API is unavailable"));
 
     // Act & Assert
-    org.junit.jupiter.api.Assertions.assertThrows(
-        ServiceUnavailableException.class, () -> movieService.getMovieById(movieId));
+    assertThrows(ServiceUnavailableException.class, () -> movieService.getMovieById(movieId));
   }
 
   /**
@@ -84,8 +83,7 @@ class MovieControllerErrorTest {
     when(movieService.getMovieById(movieId)).thenThrow(new RuntimeException("Unexpected error"));
 
     // Act & Assert
-    org.junit.jupiter.api.Assertions.assertThrows(
-        RuntimeException.class, () -> movieService.getMovieById(movieId));
+    assertThrows(RuntimeException.class, () -> movieService.getMovieById(movieId));
   }
 
   /**
@@ -133,8 +131,7 @@ class MovieControllerErrorTest {
         .thenThrow(new ServiceUnavailableException("Search service unavailable"));
 
     // Act & Assert
-    org.junit.jupiter.api.Assertions.assertThrows(
-        ServiceUnavailableException.class, () -> movieService.searchMovies("test", 1, 20));
+    assertThrows(ServiceUnavailableException.class, () -> movieService.searchMovies("test", 1, 20));
   }
 
   /**
@@ -149,7 +146,7 @@ class MovieControllerErrorTest {
         .thenThrow(new ServiceUnavailableException("Discovery service unavailable"));
 
     // Act & Assert
-    org.junit.jupiter.api.Assertions.assertThrows(
+    assertThrows(
         ServiceUnavailableException.class,
         () -> movieService.discoverMovies(1, 20, null, null, null, null, null));
   }
@@ -167,8 +164,7 @@ class MovieControllerErrorTest {
         .thenThrow(new ResourceNotFoundException("Videos not found for movie: " + movieId));
 
     // Act & Assert
-    org.junit.jupiter.api.Assertions.assertThrows(
-        ResourceNotFoundException.class, () -> movieService.getMovieVideos(movieId));
+    assertThrows(ResourceNotFoundException.class, () -> movieService.getMovieVideos(movieId));
   }
 
   /**
@@ -184,7 +180,6 @@ class MovieControllerErrorTest {
         .thenThrow(new ResourceNotFoundException("Credits not found for movie: " + movieId));
 
     // Act & Assert
-    org.junit.jupiter.api.Assertions.assertThrows(
-        ResourceNotFoundException.class, () -> movieService.getMovieCredits(movieId));
+    assertThrows(ResourceNotFoundException.class, () -> movieService.getMovieCredits(movieId));
   }
 }

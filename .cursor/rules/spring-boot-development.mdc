@@ -105,6 +105,46 @@ class CustomerIntegrationTest {
 }
 ````
 
+### B.1 Static Imports Are MANDATORY in Test Code
+
+Never write a fully-qualified or class-qualified call in a test body when a
+static import is available — `org.junit.jupiter.api.Assertions.assertThrows(...)`
+and `Assertions.assertThrows(...)` are both FORBIDDEN; only bare
+`assertThrows(...)` is acceptable. This applies to every JUnit 5, AssertJ,
+Mockito, Hamcrest, and MockMvc call:
+
+```java
+// BAD — inline class names, forces the reader to mentally strip noise
+org.junit.jupiter.api.Assertions.assertThrows(NotFoundException.class, () -> service.get(id));
+Mockito.when(repository.findById(id)).thenReturn(Optional.empty());
+Assertions.assertEquals(expected, actual);
+
+// GOOD — statically import the specific method, call it bare
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.when;
+
+assertThrows(NotFoundException.class, () -> service.get(id));
+when(repository.findById(id)).thenReturn(Optional.empty());
+assertEquals(expected, actual);
+```
+
+  - Import the **specific method** used (`import static
+    org.junit.jupiter.api.Assertions.assertEquals;`), not a wildcard
+    (`Assertions.*`) — matches this codebase's existing convention (see
+    `assertThat`, `when`, `verify`, `status()` usage throughout
+    `backend/**/src/test`).
+  - Applies to `org.junit.jupiter.api.Assertions`, `org.assertj.core.api.Assertions`,
+    `org.mockito.Mockito`, `org.mockito.ArgumentMatchers`, `org.mockito.BDDMockito`,
+    `org.hamcrest.Matchers`/`CoreMatchers`, and
+    `MockMvcRequestBuilders`/`MockMvcResultMatchers`/`MockMvcResultHandlers`.
+  - Run `spotlessApply` after adding static imports — it removes now-unused
+    plain class imports and fixes import ordering automatically.
+  - Rationale: a bare `assertThrows(...)` / `when(...)` reads as the intent
+    (assert, stub) without the class-name noise competing for attention —
+    the class is implementation plumbing the reader doesn't need repeated at
+    every call site.
+
 ### C. Controller (Functional Style / ProblemDetails)
 
 ```java

@@ -7,8 +7,11 @@ import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
@@ -135,7 +138,7 @@ class AiServiceIntegrationTest {
     // (DefaultChatClientUtils) — an unstubbed mock returns null there and NPEs
     // before the prompt is ever built, regardless of what call() is stubbed to do.
     when(chatModel.getOptions()).thenReturn(ChatOptions.builder().build());
-    when(embeddingModel.embed(org.mockito.ArgumentMatchers.anyString())).thenReturn(zeroVector());
+    when(embeddingModel.embed(anyString())).thenReturn(zeroVector());
   }
 
   /**
@@ -559,7 +562,7 @@ class AiServiceIntegrationTest {
                 .param("query", "explosions")
                 .param("k", "2"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$", org.hamcrest.Matchers.hasSize(2)))
+        .andExpect(jsonPath("$", hasSize(2)))
         .andExpect(jsonPath("$[0].userId").value(actionFan.toString()))
         .andExpect(jsonPath("$[1].userId").value(romanceFan.toString()));
   }
@@ -756,7 +759,7 @@ class AiServiceIntegrationTest {
     // Verify the prompt sent to the model contains at most 20 user/assistant messages
     // (plus the system prompt). The ArgumentCaptor captures the last call.
     ArgumentCaptor<Prompt> promptCaptor = ArgumentCaptor.forClass(Prompt.class);
-    verify(chatModel, org.mockito.Mockito.atLeastOnce()).call(promptCaptor.capture());
+    verify(chatModel, atLeastOnce()).call(promptCaptor.capture());
     Prompt lastPrompt = promptCaptor.getValue();
     long nonSystemMessages =
         lastPrompt.getInstructions().stream().filter(m -> !(m instanceof SystemMessage)).count();
@@ -788,7 +791,7 @@ class AiServiceIntegrationTest {
                  "first":true,"last":true,"hasNext":false,"hasPrevious":false,"numberOfElements":0}
                 """)));
     // Override the default zero-vector stub with a wrong-dimension vector.
-    when(embeddingModel.embed(org.mockito.ArgumentMatchers.anyString())).thenReturn(new float[384]);
+    when(embeddingModel.embed(anyString())).thenReturn(new float[384]);
 
     String body =
         objectMapper.writeValueAsString(Map.of("recentMovies", List.of("Se7en"), "count", 1));

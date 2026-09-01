@@ -1,8 +1,10 @@
 package dev.lmdb.media.model;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import java.time.Instant;
 import java.util.Map;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -33,10 +35,10 @@ class MediaFileTest {
             "test-user",
             null);
 
-    Assertions.assertEquals("file-uuid-123", mediaFile.id());
-    Assertions.assertEquals(EntityType.USER, mediaFile.entityType());
-    Assertions.assertEquals(MediaType.AVATAR, mediaFile.mediaType());
-    Assertions.assertEquals(2048L, mediaFile.fileSize());
+    assertEquals("file-uuid-123", mediaFile.id());
+    assertEquals(EntityType.USER, mediaFile.entityType());
+    assertEquals(MediaType.AVATAR, mediaFile.mediaType());
+    assertEquals(2048L, mediaFile.fileSize());
   }
 
   /**
@@ -48,7 +50,7 @@ class MediaFileTest {
     MediaMetadata metadata = new MediaMetadata(100, 100, null, null, null);
     Map<String, String> emptyThumbnails = Map.of();
     Instant now = Instant.now();
-    Assertions.assertThrows(
+    assertThrows(
         IllegalArgumentException.class,
         () ->
             new MediaFile(

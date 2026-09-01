@@ -1,5 +1,6 @@
 package dev.lmdb.movie.observability;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -54,7 +55,7 @@ class PrometheusEndpointTest extends AbstractMongoIntegrationTest {
     mockMvc
         .perform(get("/actuator/prometheus"))
         .andExpect(status().isOk())
-        .andExpect(content().string(org.hamcrest.Matchers.containsString("jvm_memory_used_bytes")));
+        .andExpect(content().string(containsString("jvm_memory_used_bytes")));
   }
 
   /**
@@ -71,11 +72,7 @@ class PrometheusEndpointTest extends AbstractMongoIntegrationTest {
     mockMvc
         .perform(get("/actuator/prometheus"))
         .andExpect(status().isOk())
-        .andExpect(
-            content()
-                .string(
-                    org.hamcrest.Matchers.containsString(
-                        "application=\"" + applicationName + "\"")));
+        .andExpect(content().string(containsString("application=\"" + applicationName + "\"")));
   }
 
   /**
