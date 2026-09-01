@@ -477,6 +477,11 @@ describe('Search - dictated query hand-off (#199 AC5 / #210)', () => {
   });
 
   it('populates the field, runs the parse call immediately (not debounced), and executes the search — as if the query had been typed and Enter pressed', async () => {
+    const rawResult = { movieId: 550, title: 'Fight Club' };
+    // Overrides this block's beforeEach default with a captured trigger + a real result, so the
+    // "executes the search" half of this test's own title is actually asserted below — not just
+    // implied by a beforeEach call whose return value nothing here used.
+    const searchTrigger = mockMutation({ resolve: { results: [rawResult] } });
     const parseTrigger = mockParseMutation({
       resolve: { filter: null, spans: [{ text: 'and', category: 'CONNECTOR', start: 2, end: 5 }] },
     });
@@ -492,6 +497,14 @@ describe('Search - dictated query hand-off (#199 AC5 / #210)', () => {
     // The parse call fired without waiting out QUERY_HIGHLIGHT_DEBOUNCE_MS — a dictated utterance
     // arrives whole, so there's no keystroke-by-keystroke pause to debounce.
     expect(parseTrigger).toHaveBeenCalledWith('a and b');
+    // The search itself actually ran too, all the way through to a mapped, succeeded result —
+    // not just the highlighting half of the pipeline.
+    expect(searchTrigger).toHaveBeenCalledWith('a and b');
+    expect(store.getState().currentGenreOrCategory.aiSearchStatus).toBe('succeeded');
+    expect(store.getState().currentGenreOrCategory.aiSearchQuery).toBe('a and b');
+    expect(store.getState().currentGenreOrCategory.aiSearchResults).toEqual({
+      results: [toTmdbMovieShape(rawResult)],
+    });
   });
 
   it("renders the resulting highlight spans over the dictated text, the same overlay a typed query would get (#210's 'as if it had been typed')", async () => {
@@ -512,13 +525,16 @@ describe('Search - dictated query hand-off (#199 AC5 / #210)', () => {
     expect(screen.getByText('and')).toBeInTheDocument();
   });
 
-  it('clears highlight spans and runs neither call for a whitespace-only dictated query, same as an emptied typed field', async () => {
-    // Defensive parity with handleQueryChange's own empty-box branch — ai-service's voice-command
-    // endpoint should never actually classify blank speech as a SEARCH command, but this guards
-    // against calling parseQuery/executeSearch with input @NotBlank would reject anyway.
+  it('clears highlight spans AND any prior AI search results for a whitespace-only dictated query, mirroring handleKeyPress\'s own empty-Enter branch in full', async () => {
+    // Defensive parity with handleKeyPress's empty-Enter branch (#204 AC4) — ai-service's
+    // voice-command endpoint should never actually classify blank speech as a SEARCH command, but
+    // this guards against calling parseQuery/executeSearch with input @NotBlank would reject
+    // anyway, and against leaving a stale result set on screen if it somehow did.
+    const searchTrigger = mockMutation();
     const parseTrigger = mockParseMutation();
     const store = buildStore();
     store.dispatch(querySpansReceived({ spans: [{ text: 'x', category: 'ENTITY', start: 0, end: 1 }] }));
+    store.dispatch(aiSearchSucceeded({ results: [{ id: 1 }] }));
     renderWithProviders(<Search />, { route: '/', store });
 
     await act(async () => {
@@ -526,8 +542,12 @@ describe('Search - dictated query hand-off (#199 AC5 / #210)', () => {
     });
 
     expect(parseTrigger).not.toHaveBeenCalled();
-    expect(store.getState().currentGenreOrCategory.queryHighlightSpans).toEqual([]);
-    expect(store.getState().currentGenreOrCategory.dictatedQuery).toBeNull();
+    expect(searchTrigger).not.toHaveBeenCalled();
+    const state = store.getState().currentGenreOrCategory;
+    expect(state.queryHighlightSpans).toEqual([]);
+    expect(state.aiSearchStatus).toBe('idle');
+    expect(state.aiSearchResults).toBeNull();
+    expect(state.dictatedQuery).toBeNull();
   });
 
   it('consumes the dictatedQuery marker once acted on, so the same transcript cannot re-trigger itself on a later, unrelated render', async () => {
@@ -560,6 +580,34 @@ describe('Search - dictated query hand-off (#199 AC5 / #210)', () => {
 
     expect(parseTrigger).toHaveBeenCalledTimes(1);
     expect(parseTrigger).toHaveBeenCalledWith('batman');
+  });
+
+  it('a slower, earlier dictated query cannot overwrite a faster, later one — the shared staleness guard applies to back-to-back dictated queries too', async () => {
+    let resolveFirst;
+    let resolveSecond;
+    const parseTrigger = vi.fn()
+      .mockImplementationOnce(() => ({ unwrap: () => new Promise((resolve) => { resolveFirst = resolve; }) }))
+      .mockImplementationOnce(() => ({ unwrap: () => new Promise((resolve) => { resolveSecond = resolve; }) }));
+    useParseQueryMutation.mockReturnValue([parseTrigger, {}]);
+    const store = buildStore();
+    renderWithProviders(<Search />, { route: '/', store });
+
+    // Two dictated queries land back to back, before the first's parse call has resolved —
+    // e.g. the user re-dictates a correction before ai-service answers the first attempt.
+    await act(async () => { store.dispatch(dictatedQuerySubmitted('batman')); });
+    await act(async () => { store.dispatch(dictatedQuerySubmitted('superman')); });
+
+    const supermanSpans = [{ text: 'superman', category: 'ENTITY', start: 0, end: 8 }];
+    // The newer ("superman") call resolves first; the older, slower ("batman") one resolves after
+    // — the response Search.jsx must discard as stale, same guard the typed-path AC2 test above
+    // already proves for keystrokes.
+    await act(async () => { resolveSecond({ filter: null, spans: supermanSpans }); });
+    await act(async () => {
+      resolveFirst({ filter: null, spans: [{ text: 'batman', category: 'ENTITY', start: 0, end: 6 }] });
+    });
+
+    expect(screen.getByRole('textbox')).toHaveValue('superman');
+    expect(store.getState().currentGenreOrCategory.queryHighlightSpans).toEqual(supermanSpans);
   });
 });
 

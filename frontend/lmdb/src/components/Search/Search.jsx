@@ -216,25 +216,34 @@ function Search() {
   };
 
   // #199 AC5 / #210: a dictated query (VoiceControl.jsx's "search" command) lands here the same
-  // way a typed one does — set the field's text, run the same parse call typing's debounce would
-  // eventually have fired (immediately rather than debounced: a dictated utterance arrives whole,
-  // there's no keystroke-by-keystroke pause to wait out), and execute the search exactly as Enter
-  // would. dictatedQueryConsumed() resets the Redux marker so this effect can't re-fire on a later,
-  // unrelated render.
+  // way a typed-and-Entered one does.
   useEffect(() => {
     if (dictatedQuery === null) return;
 
+    // 1. Show it in the field, exactly like a typed value would appear.
     setQuery(dictatedQuery);
+    // 2. Cancel any typed-query debounce still pending from before this dictated query landed —
+    //    without this, that stale timer could fire runParse() for the OLD typed value a moment
+    //    after the dictated one, clobbering the highlighting this effect just triggered.
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
 
     const trimmed = dictatedQuery.trim();
     if (trimmed) {
+      // 3a. Non-blank: run the same two calls handleQueryChange's debounce and handleKeyPress's
+      //     Enter would each eventually have run — immediately rather than debounced, since a
+      //     dictated utterance arrives whole (no keystroke-by-keystroke pause to wait out).
       runParse(trimmed);
       runSearch(trimmed);
     } else {
+      // 3b. Blank (in practice: only if ai-service's voice-command endpoint somehow classified
+      //     silence as SEARCH) — mirror handleKeyPress's own empty-Enter branch fully, not just
+      //     its highlight-clearing half, so no stale AI-search result set is left on screen.
       latestParseRef.current = '';
+      latestQueryRef.current = '';
       dispatch(querySpansCleared());
+      dispatch(aiSearchCleared());
     }
+    // 4. Reset the Redux marker so this effect can't re-fire on a later, unrelated render.
     dispatch(dictatedQueryConsumed());
   }, [dictatedQuery, runParse, runSearch, dispatch]);
 
