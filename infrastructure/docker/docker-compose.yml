@@ -248,7 +248,10 @@ services:
       dockerfile: backend/config-service/Dockerfile
     container_name: lmdb-config-service
     ports:
-      - "${CONFIG_SERVICE_PORT:-8888}:8888"
+      # Bound to the loopback interface: the other services reach this over the
+      # lmdb-network bridge, so the published port is only for a developer
+      # curling it from this machine. It does not need to leave the host.
+      - "127.0.0.1:${CONFIG_SERVICE_PORT:-8888}:8888"
     networks:
       - lmdb-network
     environment:
