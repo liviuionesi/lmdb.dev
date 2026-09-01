@@ -8,6 +8,10 @@ resources:
 configMapGenerator:
   - name: ai-service-config
     literals:
+      # Config Server is not deployed to Kubernetes (ADR-005) — ConfigMaps
+      # and Secrets carry these values instead. Off explicitly so the pod
+      # never reaches for a config server that isn't there.
+      - SPRING_CLOUD_CONFIG_ENABLED=false
       - SPRING_APPLICATION_NAME=ai-service
       - SPRING_PROFILES_ACTIVE=prod
       # ai-service owns its own database (ADR-002/ADR-012) — lmdb_ai,

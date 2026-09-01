@@ -9,6 +9,10 @@ resources:
 configMapGenerator:
   - name: api-gateway-config
     literals:
+      # Config Server is not deployed to Kubernetes (ADR-005) — ConfigMaps
+      # and Secrets carry these values instead. Off explicitly so the pod
+      # never reaches for a config server that isn't there.
+      - SPRING_CLOUD_CONFIG_ENABLED=false
       - SPRING_APPLICATION_NAME=api-gateway
       # "kubernetes" activates the profile added to application.yml (#25,
       # ADR-005) that rewrites the gateway's lb:// routes to plain

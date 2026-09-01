@@ -2,6 +2,10 @@
 # datasource comes from Testcontainers via @ServiceConnection.
 spring:
   cloud:
+    # No config server in tests; with the config client on the classpath
+    # Spring Cloud otherwise demands a spring.config.import.
+    config:
+      enabled: false
     discovery:
       enabled: false
   autoconfigure:
