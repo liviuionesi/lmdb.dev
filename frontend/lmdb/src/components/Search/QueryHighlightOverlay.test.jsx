@@ -1,8 +1,21 @@
 // Tests QueryHighlightOverlay (#209): the pure buildSegments span-to-segment mapping, and the
 // component's own rendering of those segments (category classNames applied, aria-hidden, ref
-// forwarding for Search.jsx's scrollLeft sync).
+// forwarding for Search.jsx's scrollLeft sync). Also #210's automated accessibility pass (jest-axe,
+// registered globally in setupTests.js).
+//
+// #210 AC4 (manual check, not a Vitest/jsdom concern — jsdom renders no pixels): verified by
+// screenshotting a real Chromium render of the actual search field (all three categories, "a and
+// not Batman") in both themes. Dark mode renders the three highlightStyles.js colors as designed
+// (dotted #4FC3F7, wavy #FF8A65, solid #81C784) and all three are clearly legible against the dark
+// field. Light mode passes every overlay pixel through this field's pre-existing `filter:
+// invert(1)` hack (see highlightStyles.js's own comment on why), which inverts those three colors
+// too — they land on a different, but still three mutually-distinct and legible, hue triplet
+// against the light-mode field's blue background. Confirmed both themes stay legible and stay
+// distinguishable by underline shape (dotted/wavy/solid) and weight, not just by color, matching
+// this same file's "AC1" tests below.
 import React, { createRef } from 'react';
 import { render } from '@testing-library/react';
+import { axe } from 'jest-axe';
 
 import QueryHighlightOverlay, { buildSegments } from './QueryHighlightOverlay';
 import { HIGHLIGHT_LEGEND_TEXT } from './HighlightLegend';
@@ -166,5 +179,24 @@ describe('QueryHighlightOverlay', () => {
     expect(container.firstChild).toHaveStyle({
       left: '10px', top: '2px', width: '100px', height: '20px',
     });
+  });
+
+  // #210 AC3: an automated accessibility check on the rendered highlighting — complements (not
+  // replaces) the "distinguishable by more than color" tests above, which are what actually prove
+  // WCAG 1.4.1 itself (axe-core has no rule that can judge "conveyed by color alone" — that's a
+  // visual-design question, not a DOM-structural one); this instead guards against any *other*
+  // violation the highlighted markup could introduce (e.g. redundant/conflicting ARIA), across all
+  // three categories rendered together in one query.
+  it('has no axe violations with all three highlight categories rendered together in one query', async () => {
+    const spans = [
+      { text: 'and', category: 'CONNECTOR', start: 2, end: 5 },
+      { text: 'not', category: 'NEGATION', start: 6, end: 9 },
+      {
+        text: 'Batman', category: 'ENTITY', start: 10, end: 16,
+      },
+    ];
+    const { container } = render(<QueryHighlightOverlay query="a and not Batman" spans={spans} />);
+
+    expect(await axe(container)).toHaveNoViolations();
   });
 });

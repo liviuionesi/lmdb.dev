@@ -10,6 +10,8 @@ import reducer, {
   aiSearchCleared,
   querySpansReceived,
   querySpansCleared,
+  dictatedQuerySubmitted,
+  dictatedQueryConsumed,
 } from './currentGenreOrCategory';
 
 describe('currentGenreOrCategory slice', () => {
@@ -22,6 +24,7 @@ describe('currentGenreOrCategory slice', () => {
       aiSearchResults: null,
       aiSearchStatus: 'idle',
       queryHighlightSpans: [],
+      dictatedQuery: null,
     });
   });
 
@@ -170,5 +173,25 @@ describe('currentGenreOrCategory slice', () => {
     const next = reducer(state, buildAction());
 
     expect(next.queryHighlightSpans).toEqual([]);
+  });
+
+  it('dictatedQuerySubmitted (#199 AC5) stores the query VoiceControl.jsx recognized for Search.jsx to pick up', () => {
+    const state = {
+      genreIdOrCategoryName: '', page: 1, searchQuery: '', aiSearchQuery: '', aiSearchResults: null, aiSearchStatus: 'idle', queryHighlightSpans: [], dictatedQuery: null,
+    };
+
+    const next = reducer(state, dictatedQuerySubmitted('movies directed by nolan'));
+
+    expect(next.dictatedQuery).toBe('movies directed by nolan');
+  });
+
+  it('dictatedQueryConsumed (#199 AC5) resets dictatedQuery to null once Search.jsx has acted on it', () => {
+    const state = {
+      genreIdOrCategoryName: '', page: 1, searchQuery: '', aiSearchQuery: '', aiSearchResults: null, aiSearchStatus: 'idle', queryHighlightSpans: [], dictatedQuery: 'movies directed by nolan',
+    };
+
+    const next = reducer(state, dictatedQueryConsumed());
+
+    expect(next.dictatedQuery).toBeNull();
   });
 });

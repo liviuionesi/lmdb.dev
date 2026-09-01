@@ -5,7 +5,7 @@ import { useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 
 import { ColorModeContext } from '../../utils/ToggleColorMode';
-import { selectGenreOrCategory, aiSearchStarted, aiSearchSucceeded, aiSearchFailed } from '../../features/currentGenreOrCategory';
+import { selectGenreOrCategory, dictatedQuerySubmitted } from '../../features/currentGenreOrCategory';
 import { clearUser } from '../../features/auth';
 import { resolveApiUrl } from '../../utils/apiUrl';
 import { clearAuthTokens } from '../../utils';
@@ -13,8 +13,6 @@ import { encodeToWav } from '../../utils/wavEncoder';
 import { parseVoiceCommand } from '../../utils/voiceCommands';
 import { getDictationLanguage, setDictationLanguage } from '../../utils/dictationLanguage';
 import { useGetGenresQuery } from '../../services/TMDB';
-import { useExecuteSearchMutation } from '../../services/AI';
-import { toTmdbMovieShape } from '../Search/Search';
 
 /**
  * Click-to-talk voice control (#68): records a
@@ -33,7 +31,6 @@ function VoiceControl() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { data: genresData } = useGetGenresQuery();
-  const [executeSearch] = useExecuteSearchMutation();
 
   const [status, setStatus] = useState('idle'); // idle | recording | transcribing
   const [feedback, setFeedback] = useState(null);
@@ -80,14 +77,13 @@ function VoiceControl() {
       dispatch(clearUser());
       navigate('/');
     } else if (command === 'search') {
+      // #199 AC5: hand the recognized query to Search.jsx via Redux rather than running the
+      // search here directly — this way a dictated query goes through the exact same
+      // setQuery -> debounced-parse -> highlight -> execute pipeline a typed-and-Entered query
+      // does (Search.jsx's dictatedQuery effect), instead of duplicating that logic here and
+      // silently skipping highlighting for a voice-driven search.
       navigate('/');
-      dispatch(aiSearchStarted(query));
-      try {
-        const response = await executeSearch(query).unwrap();
-        dispatch(aiSearchSucceeded({ results: (response.results ?? []).map(toTmdbMovieShape) }));
-      } catch (error) {
-        dispatch(aiSearchFailed());
-      }
+      dispatch(dictatedQuerySubmitted(query));
     }
   };
 

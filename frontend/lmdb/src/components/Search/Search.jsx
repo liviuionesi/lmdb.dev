@@ -14,6 +14,7 @@ import {
   aiSearchCleared,
   querySpansReceived,
   querySpansCleared,
+  dictatedQueryConsumed,
 } from '../../features/currentGenreOrCategory';
 import { useExecuteSearchMutation, useParseQueryMutation } from '../../services/AI';
 import QueryHighlightOverlay from './QueryHighlightOverlay';
@@ -51,6 +52,9 @@ function Search() {
   const [parseQuery] = useParseQueryMutation();
   // The most recent span breakdown #208 stored — rendered by QueryHighlightOverlay below (#209).
   const spans = useSelector((state) => state.currentGenreOrCategory.queryHighlightSpans);
+  // A query VoiceControl.jsx's "search" command handed off via Redux (#199 AC5) — non-null exactly
+  // once, until the effect below consumes it.
+  const dictatedQuery = useSelector((state) => state.currentGenreOrCategory.dictatedQuery);
   // Tracks which query is the MOST RECENTLY submitted one, so an out-of-order response from an
   // earlier, slower search can't overwrite a newer one's results — executeSearch is an imperative
   // mutation, not a query hook, so RTK Query's own per-arg de-dupe/cancellation doesn't apply here
@@ -132,6 +136,45 @@ function Search() {
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
   }, []);
 
+  // Runs the #207 parse-as-you-type call for `trimmed` and stores its span breakdown (#208) —
+  // factored out of handleQueryChange's debounce callback so the #199 AC5 dictation effect below
+  // can reuse the exact same request/staleness-guard/dispatch logic instead of a second copy of it.
+  const runParse = useCallback((trimmed) => {
+    latestParseRef.current = trimmed;
+    parseQuery(trimmed)
+      .unwrap()
+      .then((response) => {
+        // #208 AC2: a newer keystroke (or a dictated query landing mid-flight) may have superseded
+        // this call while it was in flight.
+        if (latestParseRef.current !== trimmed) return;
+        dispatch(querySpansReceived({ spans: response.spans ?? [] }));
+      })
+      .catch(() => {
+        // #208 AC3: a failed parse call must not clear or overwrite the last valid highlight
+        // state — do nothing, same as staying with whatever was last successfully rendered.
+      });
+  }, [parseQuery, dispatch]);
+
+  // Runs the #204 AC1 search-execute call for `trimmed` — factored out of handleKeyPress so the
+  // #199 AC5 dictation effect below resolves a dictated query through the exact same pipeline
+  // (and staleness guard) a typed-and-Entered query does, rather than duplicating this logic in
+  // VoiceControl.jsx, which used to run it there and silently skip highlighting in the process.
+  const runSearch = useCallback(async (trimmed) => {
+    latestQueryRef.current = trimmed;
+    dispatch(aiSearchStarted(trimmed));
+    try {
+      const response = await executeSearch(trimmed).unwrap();
+      if (latestQueryRef.current !== trimmed) return; // superseded by a newer search
+      dispatch(aiSearchSucceeded({ results: (response.results ?? []).map(toTmdbMovieShape) }));
+    } catch {
+      if (latestQueryRef.current !== trimmed) return;
+      // #204 AC3: a failed ai-service call must not leave the UI blank — aiSearchFailed() flips
+      // Movies.jsx into its own error-message rendering, the same path a movie-service outage
+      // already used before this Task.
+      dispatch(aiSearchFailed());
+    }
+  }, [executeSearch, dispatch]);
+
   const handleQueryChange = (event) => {
     const { value } = event.target;
     setQuery(value);
@@ -150,20 +193,7 @@ function Search() {
     }
 
     // 2. Schedule the parse call for after the debounce pause.
-    debounceTimerRef.current = setTimeout(() => {
-      latestParseRef.current = trimmed;
-      parseQuery(trimmed)
-        .unwrap()
-        .then((response) => {
-          // #208 AC2: a newer keystroke may have superseded this call while it was in flight.
-          if (latestParseRef.current !== trimmed) return;
-          dispatch(querySpansReceived({ spans: response.spans ?? [] }));
-        })
-        .catch(() => {
-          // #208 AC3: a failed parse call must not clear or overwrite the last valid highlight
-          // state — do nothing, same as staying with whatever was last successfully rendered.
-        });
-    }, QUERY_HIGHLIGHT_DEBOUNCE_MS);
+    debounceTimerRef.current = setTimeout(() => runParse(trimmed), QUERY_HIGHLIGHT_DEBOUNCE_MS);
   };
 
   const handleKeyPress = async (event) => {
@@ -181,22 +211,32 @@ function Search() {
     }
 
     // #204 AC1: resolves through ai-service's natural-language query pipeline (#203) instead of
-    // the old direct movie-service title search — see currentGenreOrCategory.js's Javadoc-style
-    // comment for how this coexists with VoiceControl.jsx's own, not-yet-updated flow (#205).
-    latestQueryRef.current = trimmed;
-    dispatch(aiSearchStarted(trimmed));
-    try {
-      const response = await executeSearch(trimmed).unwrap();
-      if (latestQueryRef.current !== trimmed) return; // superseded by a newer search
-      dispatch(aiSearchSucceeded({ results: (response.results ?? []).map(toTmdbMovieShape) }));
-    } catch {
-      if (latestQueryRef.current !== trimmed) return;
-      // #204 AC3: a failed ai-service call must not leave the UI blank — aiSearchFailed() flips
-      // Movies.jsx into its own error-message rendering, the same path a movie-service outage
-      // already used before this Task.
-      dispatch(aiSearchFailed());
-    }
+    // the old direct movie-service title search.
+    await runSearch(trimmed);
   };
+
+  // #199 AC5 / #210: a dictated query (VoiceControl.jsx's "search" command) lands here the same
+  // way a typed one does — set the field's text, run the same parse call typing's debounce would
+  // eventually have fired (immediately rather than debounced: a dictated utterance arrives whole,
+  // there's no keystroke-by-keystroke pause to wait out), and execute the search exactly as Enter
+  // would. dictatedQueryConsumed() resets the Redux marker so this effect can't re-fire on a later,
+  // unrelated render.
+  useEffect(() => {
+    if (dictatedQuery === null) return;
+
+    setQuery(dictatedQuery);
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+
+    const trimmed = dictatedQuery.trim();
+    if (trimmed) {
+      runParse(trimmed);
+      runSearch(trimmed);
+    } else {
+      latestParseRef.current = '';
+      dispatch(querySpansCleared());
+    }
+    dispatch(dictatedQueryConsumed());
+  }, [dictatedQuery, runParse, runSearch, dispatch]);
 
   if (location.pathname !== '/') return null;
 

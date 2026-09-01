@@ -21,12 +21,10 @@ import genreOrCategoryReducer from '../../features/currentGenreOrCategory';
 import authReducer from '../../features/auth';
 import { renderWithProviders } from '../../test-utils/render';
 import { useGetGenresQuery } from '../../services/TMDB';
-import { useExecuteSearchMutation } from '../../services/AI';
 import { encodeToWav } from '../../utils/wavEncoder';
 import { ColorModeContext } from '../../utils/ToggleColorMode';
 
 vi.mock('../../services/TMDB', () => ({ useGetGenresQuery: vi.fn() }));
-vi.mock('../../services/AI', () => ({ useExecuteSearchMutation: vi.fn() }));
 vi.mock('../../utils/wavEncoder', () => ({ encodeToWav: vi.fn() }));
 // voiceCommands is deliberately NOT mocked here (see file header) - the real parseVoiceCommand
 // runs and calls fetch itself, which is what makes this a full-pipeline test rather than a
@@ -111,7 +109,6 @@ describe('VoiceControl full pipeline (real parseVoiceCommand, mocked fetch)', ()
     useGetGenresQuery.mockReturnValue({
       data: { genres: [{ id: 28, name: 'Action' }, { id: 35, name: 'Comedy' }] },
     });
-    useExecuteSearchMutation.mockReturnValue([vi.fn().mockResolvedValue({ results: [] })]);
     encodeToWav.mockResolvedValue(new Blob(['wav']));
     Object.defineProperty(global.navigator, 'mediaDevices', {
       value: { getUserMedia: vi.fn().mockResolvedValue({ getTracks: () => [{ stop: vi.fn() }] }) },
@@ -166,5 +163,25 @@ describe('VoiceControl full pipeline (real parseVoiceCommand, mocked fetch)', ()
     const voiceCommandBody = JSON.parse(voiceCommandInit.body);
     expect(voiceCommandBody.transcript).toBe('dunkelmodus bitte');
     expect(voiceCommandBody.genreNames).toEqual(['Action', 'Comedy']);
+  });
+
+  it('drives a "search" command end to end: transcription -> intent parsing -> dictatedQuery hand-off (#199 AC5)', async () => {
+    // Same chain as the two cases above, for the third real command type parseVoiceCommand can
+    // return - proving the pipeline reaches VoiceControl's dictatedQuery hand-off (Search.jsx's own
+    // effect is what actually runs the search; see Search.test.jsx for that half) with the real
+    // classified query, not a hand-rolled shape a component-level mock could get wrong.
+    global.fetch = stubBackend('movies directed by nolan', {
+      command: 'SEARCH', mode: null, genreOrCategory: null, query: 'movies directed by nolan',
+    });
+    const { store } = renderVoiceControl();
+
+    await recordAndStop();
+
+    await waitFor(() => expect(store.getState().currentGenreOrCategory.dictatedQuery).toBe('movies directed by nolan'));
+    expect(await screen.findByText('Heard: "movies directed by nolan"')).toBeInTheDocument();
+
+    const [, voiceCommandInit] = global.fetch.mock.calls.find(([url]) => url.includes('/voice-command'));
+    const voiceCommandBody = JSON.parse(voiceCommandInit.body);
+    expect(voiceCommandBody.transcript).toBe('movies directed by nolan');
   });
 });

@@ -21,6 +21,12 @@ export const genreOrCategory = createSlice({
     // fires on different triggers (debounced keystroke vs. Enter). Rendering the highlights
     // themselves is #209/#210's concern, not this Task's (#208).
     queryHighlightSpans: [],
+    // A query VoiceControl.jsx wants Search.jsx to run, as if it had been typed and Enter pressed
+    // (#199 AC5 / #210) — `null` when nothing is pending. Kept as a one-shot handoff rather than a
+    // permanent mirror of VoiceControl's transcript: Search.jsx consumes it (dictatedQueryConsumed)
+    // the moment it acts on it, so a stale value can't re-trigger a second run on an unrelated
+    // re-render.
+    dictatedQuery: null,
   },
   reducers: {
     selectGenreOrCategory: (state, action) => {
@@ -76,6 +82,17 @@ export const genreOrCategory = createSlice({
       // aiSearchCleared above, but for the separate parse-as-you-type flow.
       state.queryHighlightSpans = [];
     },
+    dictatedQuerySubmitted: (state, action) => {
+      // VoiceControl.jsx recognized a "search" voice command — hand the transcript to Search.jsx
+      // (#199 AC5) rather than running the search here, so a dictated query goes through the exact
+      // same pipeline (and gets the exact same live highlighting) a typed-and-Entered one does.
+      state.dictatedQuery = action.payload;
+    },
+    dictatedQueryConsumed: (state) => {
+      // Search.jsx dispatches this right after acting on dictatedQuery, so the same transcript
+      // can't be re-run on a later, unrelated state change.
+      state.dictatedQuery = null;
+    },
   },
 });
 
@@ -88,6 +105,8 @@ export const {
   aiSearchCleared,
   querySpansReceived,
   querySpansCleared,
+  dictatedQuerySubmitted,
+  dictatedQueryConsumed,
 } = genreOrCategory.actions;
 
 export default genreOrCategory.reducer;

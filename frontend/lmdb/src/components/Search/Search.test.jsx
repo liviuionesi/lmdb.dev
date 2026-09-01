@@ -11,7 +11,7 @@ import userEvent from '@testing-library/user-event';
 import { configureStore } from '@reduxjs/toolkit';
 
 import Search, { toTmdbMovieShape, QUERY_HIGHLIGHT_DEBOUNCE_MS } from './Search';
-import genreOrCategoryReducer, { aiSearchSucceeded, querySpansReceived } from '../../features/currentGenreOrCategory';
+import genreOrCategoryReducer, { aiSearchSucceeded, querySpansReceived, dictatedQuerySubmitted } from '../../features/currentGenreOrCategory';
 import { renderWithProviders } from '../../test-utils/render';
 import { useExecuteSearchMutation, useParseQueryMutation } from '../../services/AI';
 
@@ -460,6 +460,106 @@ describe('Search - live highlight rendering (#209)', () => {
 
       expect(disconnectSpy).toHaveBeenCalledTimes(1);
     });
+  });
+});
+
+describe('Search - dictated query hand-off (#199 AC5 / #210)', () => {
+  // Matches the '#208'/'#209' blocks above: fake timers keep a real setTimeout from firing in the
+  // background once a test ends, and let the "cancels a pending typed debounce" test below actually
+  // advance past QUERY_HIGHLIGHT_DEBOUNCE_MS without waiting for it in real time.
+  beforeEach(() => {
+    mockMutation({ resolve: { results: [] } });
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('populates the field, runs the parse call immediately (not debounced), and executes the search — as if the query had been typed and Enter pressed', async () => {
+    const parseTrigger = mockParseMutation({
+      resolve: { filter: null, spans: [{ text: 'and', category: 'CONNECTOR', start: 2, end: 5 }] },
+    });
+    const store = buildStore();
+    renderWithProviders(<Search />, { route: '/', store });
+
+    await act(async () => {
+      store.dispatch(dictatedQuerySubmitted('a and b'));
+    });
+
+    // The field shows the dictated text, exactly like a typed query would.
+    expect(screen.getByRole('textbox')).toHaveValue('a and b');
+    // The parse call fired without waiting out QUERY_HIGHLIGHT_DEBOUNCE_MS — a dictated utterance
+    // arrives whole, so there's no keystroke-by-keystroke pause to debounce.
+    expect(parseTrigger).toHaveBeenCalledWith('a and b');
+  });
+
+  it("renders the resulting highlight spans over the dictated text, the same overlay a typed query would get (#210's 'as if it had been typed')", async () => {
+    mockParseMutation({
+      resolve: { filter: null, spans: [{ text: 'and', category: 'CONNECTOR', start: 2, end: 5 }] },
+    });
+    const store = buildStore();
+    renderWithProviders(<Search />, { route: '/', store });
+
+    await act(async () => {
+      store.dispatch(dictatedQuerySubmitted('a and b'));
+    });
+
+    // A plain synchronous query, not findByText: findBy*'s internal polling relies on real
+    // setTimeout, which never advances under this block's fake timers (the response is already
+    // resolved by the `act` above, so there's nothing to actually wait for).
+    expect(screen.getByTestId('query-highlight-overlay')).toBeInTheDocument();
+    expect(screen.getByText('and')).toBeInTheDocument();
+  });
+
+  it('clears highlight spans and runs neither call for a whitespace-only dictated query, same as an emptied typed field', async () => {
+    // Defensive parity with handleQueryChange's own empty-box branch — ai-service's voice-command
+    // endpoint should never actually classify blank speech as a SEARCH command, but this guards
+    // against calling parseQuery/executeSearch with input @NotBlank would reject anyway.
+    const parseTrigger = mockParseMutation();
+    const store = buildStore();
+    store.dispatch(querySpansReceived({ spans: [{ text: 'x', category: 'ENTITY', start: 0, end: 1 }] }));
+    renderWithProviders(<Search />, { route: '/', store });
+
+    await act(async () => {
+      store.dispatch(dictatedQuerySubmitted('   '));
+    });
+
+    expect(parseTrigger).not.toHaveBeenCalled();
+    expect(store.getState().currentGenreOrCategory.queryHighlightSpans).toEqual([]);
+    expect(store.getState().currentGenreOrCategory.dictatedQuery).toBeNull();
+  });
+
+  it('consumes the dictatedQuery marker once acted on, so the same transcript cannot re-trigger itself on a later, unrelated render', async () => {
+    mockParseMutation({ resolve: { filter: null, spans: [] } });
+    const store = buildStore();
+    renderWithProviders(<Search />, { route: '/', store });
+
+    await act(async () => {
+      store.dispatch(dictatedQuerySubmitted('batman'));
+    });
+
+    expect(store.getState().currentGenreOrCategory.dictatedQuery).toBeNull();
+  });
+
+  it('cancels a still-pending typed-query debounce timer when a dictated query lands mid-pause, so the stale typed value cannot fire after it', async () => {
+    const parseTrigger = mockParseMutation({ resolve: { filter: null, spans: [] } });
+    const store = buildStore();
+    renderWithProviders(<Search />, { route: '/', store });
+    const input = screen.getByRole('textbox');
+
+    // A typed keystroke schedules a debounced parse call that hasn't fired yet...
+    fireEvent.change(input, { target: { value: 'super' } });
+    // ...then a dictated query lands before that pause elapses.
+    await act(async () => {
+      store.dispatch(dictatedQuerySubmitted('batman'));
+    });
+    // If the typed debounce timer had NOT been cancelled, letting it elapse now would fire a
+    // second, stale parse call for 'super' after the dictated one for 'batman'.
+    act(() => { vi.advanceTimersByTime(QUERY_HIGHLIGHT_DEBOUNCE_MS); });
+
+    expect(parseTrigger).toHaveBeenCalledTimes(1);
+    expect(parseTrigger).toHaveBeenCalledWith('batman');
   });
 });
 
