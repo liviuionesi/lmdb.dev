@@ -1,9 +1,11 @@
 # Alert rules (issue #24, ARCHITECTURE.md section 12.1 / 12.4). Scoped to
-# the 8 LMDB services by job name — job defaults to the target Service's
+# the LMDB services deployed to Kubernetes, by job name — job defaults to the target Service's
 # name for a ServiceMonitor-discovered target, which under this directory's
 # contract (service-monitors/README.md) is the same as each service's `app`
 # label. Node/pod-level rules (restart loop) aren't service-scoped since
 # they come from kube-state-metrics, not the app's own /actuator/prometheus.
+# discovery-service and config-service are excluded on purpose: ADR-005 keeps
+# them out of Kubernetes, so they can never produce a scrape target here.
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
@@ -17,7 +19,7 @@ spec:
       rules:
         - alert: LMDBServiceDown
           expr: |
-            up{job=~"discovery-service|config-service|api-gateway|movie-service|user-service|actor-service|ai-service|media-service"} == 0
+            up{job=~"api-gateway|movie-service|user-service|actor-service|ai-service|media-service"} == 0
           for: 2m
           labels:
             severity: critical
@@ -28,7 +30,7 @@ spec:
         - alert: LMDBHighP95Latency
           expr: |
             histogram_quantile(0.95,
-              sum(rate(http_server_requests_seconds_bucket{job=~"discovery-service|config-service|api-gateway|movie-service|user-service|actor-service|ai-service|media-service"}[5m])) by (le, application)
+              sum(rate(http_server_requests_seconds_bucket{job=~"api-gateway|movie-service|user-service|actor-service|ai-service|media-service"}[5m])) by (le, application)
             ) > 0.5
           for: 5m
           labels:
@@ -40,9 +42,9 @@ spec:
         - alert: LMDBJvmHeapHigh
           expr: |
             (
-              sum(jvm_memory_used_bytes{area="heap", job=~"discovery-service|config-service|api-gateway|movie-service|user-service|actor-service|ai-service|media-service"}) by (application)
+              sum(jvm_memory_used_bytes{area="heap", job=~"api-gateway|movie-service|user-service|actor-service|ai-service|media-service"}) by (application)
               /
-              sum(jvm_memory_max_bytes{area="heap", job=~"discovery-service|config-service|api-gateway|movie-service|user-service|actor-service|ai-service|media-service"}) by (application)
+              sum(jvm_memory_max_bytes{area="heap", job=~"api-gateway|movie-service|user-service|actor-service|ai-service|media-service"}) by (application)
             ) > 0.85
           for: 5m
           labels:

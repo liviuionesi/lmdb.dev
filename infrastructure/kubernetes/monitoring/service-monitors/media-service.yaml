@@ -1,3 +1,7 @@
+# NOTE: media-service is not part of infrastructure/kubernetes/base yet, so
+# this monitor currently selects nothing. Kept because that is an omission,
+# not a decision — unlike config-service and discovery-service, which are
+# deliberately absent from Kubernetes (ADR-005) and have no monitor here.
 # ServiceMonitor for media-service (issue #24, ARCHITECTURE.md section 12.1).
 # See README.md for the labeling contract this depends on.
 apiVersion: monitoring.coreos.com/v1
