@@ -35,19 +35,20 @@ spring:
   config:
     activate:
       on-profile: dev
+  # Boot 4 renamed these two the opposite way round: Mongo lost its `data`
+  # segment, Redis kept it. Keep both exactly as written.
+  mongodb:
+    uri: ${MONGODB_URI}
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
+      password: ${REDIS_PASSWORD}
 
 tmdb:
   api:
     # TMDB API key passed via environment
     key: ${TMDB_API_KEY:}
-
-mongodb:
-  uri: ${MONGODB_URI}
-
-redis:
-  host: ${REDIS_HOST}
-  port: ${REDIS_PORT}
-  password: ${REDIS_PASSWORD}
 
 logging:
   level:
@@ -60,18 +61,17 @@ spring:
   config:
     activate:
       on-profile: prod
+  mongodb:
+    uri: ${MONGODB_URI:}  # Must be set via environment variable
+  data:
+    redis:
+      host: ${REDIS_HOST:}  # Must be set via environment variable
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}  # Must be set via environment variable
 
 tmdb:
   api:
     key: ${TMDB_API_KEY:}  # Must be set via environment variable
-
-mongodb:
-  uri: ${MONGODB_URI:}  # Must be set via environment variable
-
-redis:
-  host: ${REDIS_HOST:}  # Must be set via environment variable
-  port: ${REDIS_PORT:6379}
-  password: ${REDIS_PASSWORD:}  # Must be set via environment variable
 
 logging:
   level:
