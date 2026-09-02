@@ -111,6 +111,16 @@ Scrum specifically, and how this would change if it didn't)
   | Workflow state | Project board `Status` field |
   | Story Points, Hours | the issue body |
 
+  Every issue carries **exactly one** type label and **exactly one**
+  priority label, and is assigned to the repo owner. No `sprint-N` labels:
+  sprints are milestones. Component labels (`backend`, `frontend`,
+  `ai-service`, ...) are optional and unlimited.
+
+  When priority is not obvious: a Bug takes the value its body's
+  "Priority (business urgency)" line states, anything else inherits its
+  parent's, and what has neither takes `P2-medium`. That is the rule the
+  2026-09-02 sweep used on 138 issues.
+
   Story Points and Hours stay in the body on purpose. The board has an
   `Estimate` field, but it is empty on all 210 items, and a project field
   cannot be read with `gh issue view`, which is how every agent reads this
