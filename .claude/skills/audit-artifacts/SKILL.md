@@ -21,6 +21,7 @@ If no argument is given, ask which Story, or pick the lowest-numbered
 Story not yet audited.
 
 Repo: `liviuionesi/lmdb.dev`. Templates: `.github/ISSUE_TEMPLATE/`.
+Voice profile: `VOICE.md`, next to this file.
 
 ## Why this exists
 
@@ -58,11 +59,33 @@ section. Concretely:
 - `## Notes` is decisions, rescopes and follow-up numbers only. If it reads
   like a log of what happened, cut it.
 
-### Gate 2 — Language
+### Gate 2 — Voice
 
-Plain English, short sentences, bullets over paragraphs. Spell out jargon
-the first time ("security group", not "SG"). A bullet may be a full clause
-if that is what clarity needs — the goal is readable, not telegraphic.
+Rewrite the text so it reads like Liviu wrote it, not like an agent wrote
+it. **Read `VOICE.md` next to this file before starting.** It holds the
+rules and three real before/after pairs taken from this board.
+
+The short version: short sentences, plain words, no em dashes, no closing
+zingers, say it once. Spell out jargon the first time ("security group",
+not "SG").
+
+**Where the voice comes from.** Liviu does not write the code or the
+issues by hand, so nothing already on this board is a sample of his
+writing. His messages in conversation are the only clean corpus.
+`VOICE.md` is derived from those.
+
+**Never calibrate against existing issues.** They were written by agents.
+Copying their tone is how the artificial register survives the audit —
+you would be sanding one agent's prose into another agent's prose and
+calling it humanised. `VOICE.md` is the only reference.
+
+**Match his complexity, not his typos.** He writes fast and leaves
+spelling errors. Copy the sentence length, the rhythm and the word
+choice. Do not copy the mistakes into a project artifact.
+
+**Shortening must not cost a fact.** Issue numbers, file paths, class
+names, commands and version numbers stay exact. If a sentence cannot get
+shorter without going vague, leave it long.
 
 Cut on sight: narrated investigation logs, "Lessons from the first live
 run", growing caveat lists, pasted build output, test counts, coverage
