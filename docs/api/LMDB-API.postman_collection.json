@@ -25,7 +25,23 @@
                             ]
                         },
                         "description": "Check API Gateway health status"
-                    }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "pm.test(\"Gateway reports UP\", function () {",
+                                    "    pm.expect(pm.response.json().status).to.eql(\"UP\");",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ]
                 },
                 {
                     "name": "Movie Service Health (Direct)",
@@ -43,7 +59,23 @@
                             ]
                         },
                         "description": "Check Movie Service health directly (bypassing gateway)"
-                    }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "pm.test(\"movie-service reports UP\", function () {",
+                                    "    pm.expect(pm.response.json().status).to.eql(\"UP\");",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ]
                 },
                 {
                     "name": "Actor Service Health (Direct)",
@@ -61,7 +93,23 @@
                             ]
                         },
                         "description": "Check Actor Service health directly (bypassing gateway)"
-                    }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "pm.test(\"actor-service reports UP\", function () {",
+                                    "    pm.expect(pm.response.json().status).to.eql(\"UP\");",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ]
                 },
                 {
                     "name": "User Service Health (Direct)",
@@ -79,7 +127,23 @@
                             ]
                         },
                         "description": "Check User Service health directly (bypassing gateway)"
-                    }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "pm.test(\"user-service reports UP\", function () {",
+                                    "    pm.expect(pm.response.json().status).to.eql(\"UP\");",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ]
                 },
                 {
                     "name": "Eureka Dashboard",
@@ -96,6 +160,69 @@
                             ]
                         },
                         "description": "View Eureka dashboard to see registered services"
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Eureka Registry (core services registered)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "pm.test(\"movie, user and actor services are registered and UP\", function () {",
+                                    "    var apps = pm.response.json().applications.application;",
+                                    "    if (!Array.isArray(apps)) { apps = [apps]; }",
+                                    "    var up = {};",
+                                    "    apps.forEach(function (app) {",
+                                    "        var instances = Array.isArray(app.instance) ? app.instance : [app.instance];",
+                                    "        if (instances.some(function (i) { return i.status === \"UP\"; })) {",
+                                    "            up[app.name.toUpperCase()] = true;",
+                                    "        }",
+                                    "    });",
+                                    "    [\"MOVIE-SERVICE\", \"USER-SERVICE\", \"ACTOR-SERVICE\"].forEach(function (name) {",
+                                    "        pm.expect(up[name], name + \" registered with an UP instance\").to.eql(true);",
+                                    "    });",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{eureka_url}}/eureka/apps",
+                            "host": [
+                                "{{eureka_url}}"
+                            ],
+                            "path": [
+                                "eureka",
+                                "apps"
+                            ]
+                        },
+                        "description": "Read the Eureka registry as JSON and assert the three catalog services are registered with an UP instance. The dashboard request above only proves Eureka itself answers."
                     }
                 }
             ],
@@ -1243,7 +1370,20 @@
                             ]
                         },
                         "description": "Open Swagger UI for interactive Movie Service API documentation"
-                    }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ]
                 },
                 {
                     "name": "Movie Service - OpenAPI JSON",
@@ -1261,7 +1401,25 @@
                             ]
                         },
                         "description": "Get Movie Service OpenAPI specification as JSON"
-                    }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "pm.test(\"Serves an OpenAPI 3 document with paths\", function () {",
+                                    "    var doc = pm.response.json();",
+                                    "    pm.expect(doc.openapi).to.match(/^3\\./);",
+                                    "    pm.expect(Object.keys(doc.paths)).to.not.be.empty;",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ]
                 },
                 {
                     "name": "Actor Service - Swagger UI",
@@ -1278,7 +1436,20 @@
                             ]
                         },
                         "description": "Open Swagger UI for interactive Actor Service API documentation"
-                    }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ]
                 },
                 {
                     "name": "Actor Service - OpenAPI JSON",
@@ -1296,7 +1467,25 @@
                             ]
                         },
                         "description": "Get Actor Service OpenAPI specification as JSON"
-                    }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "pm.test(\"Serves an OpenAPI 3 document with paths\", function () {",
+                                    "    var doc = pm.response.json();",
+                                    "    pm.expect(doc.openapi).to.match(/^3\\./);",
+                                    "    pm.expect(Object.keys(doc.paths)).to.not.be.empty;",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ]
                 },
                 {
                     "name": "User Service - Swagger UI",
@@ -1313,7 +1502,20 @@
                             ]
                         },
                         "description": "Open Swagger UI for interactive User Service API documentation"
-                    }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ]
                 },
                 {
                     "name": "User Service - OpenAPI JSON",
@@ -1331,7 +1533,25 @@
                             ]
                         },
                         "description": "Get User Service OpenAPI specification as JSON"
-                    }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "pm.test(\"Serves an OpenAPI 3 document with paths\", function () {",
+                                    "    var doc = pm.response.json();",
+                                    "    pm.expect(doc.openapi).to.match(/^3\\./);",
+                                    "    pm.expect(Object.keys(doc.paths)).to.not.be.empty;",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ]
                 }
             ],
             "description": "API documentation endpoints"
