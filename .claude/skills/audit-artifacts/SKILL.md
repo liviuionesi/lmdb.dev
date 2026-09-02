@@ -10,8 +10,15 @@ Takes **one Story and every Task under it** through four gates. One Story
 per run. Do not spread across unrelated Stories — a half-audited board is
 worse than an un-audited one, because it looks trustworthy.
 
-Usage: `/audit-artifacts 85` (a Story number). If no number is given, ask
-which Story, or pick the lowest-numbered Story not yet audited.
+Two modes:
+
+- `/audit-artifacts 85` — **Story mode.** Story #85 and its child Tasks.
+- `/audit-artifacts epic 22` — **Epic mode.** Epic #22's own body only.
+  See "Epic mode" below; it is a separate run, never folded into a Story
+  run.
+
+If no argument is given, ask which Story, or pick the lowest-numbered
+Story not yet audited.
 
 Repo: `liviuionesi/lmdb.dev`. Templates: `.github/ISSUE_TEMPLATE/`.
 
@@ -164,13 +171,54 @@ statement, a design decision), say so in one line in Notes and mark it
 4. Then the Story: Gates 1 → 4, and make its `## Technical Tasks` list
    match the real open/closed state of its children.
 5. **Cascade.** If every Task under the Story is closed and the Story now
-   genuinely meets the Definition of Done, close the Story, tick it in its
-   Epic, and merge `develop` → `main`. If every Story under that Epic is
-   closed, close the Epic. Never leave an exhausted Story or Epic open.
+   genuinely meets the Definition of Done, close the Story and merge
+   `develop` → `main`. Then reach up into the parent Epic and do exactly
+   two things: tick this Story's box in `## Child Stories`, and close the
+   Epic if every one of its Stories is now closed. Never leave an
+   exhausted Story or Epic open.
+
+   That upward reach is the **only** edit a Story run may make to an Epic.
+   Do not rewrite the Epic's prose, criteria or Notes here — several
+   Stories share one Epic (#22 parents #87, #88 and #89), so two Story
+   runs rewriting one Epic body will overwrite each other. Full Epic
+   rewrites belong to Epic mode, which one Task owns.
 6. Commit code and test changes referencing the audit Task number. One
    commit per Task is fine; do not batch unrelated issues into one commit.
 7. Post one short comment on the Story saying what changed and what is
    still open.
+
+## Epic mode
+
+`/audit-artifacts epic 22` audits one Epic body. Run it **after** every
+Story under that Epic has been audited — an Epic's Child Stories list is
+only honest once its Stories are.
+
+Gates 1, 2 and 3 apply unchanged. Gate 4 does not: the Epic template has
+no acceptance-criteria section, so there is nothing to attach a test to.
+Its Child Stories list is the proof surface instead. Check all four:
+
+- Every child Story is listed, with a short label after the number so the
+  list reads without opening each one.
+- Every box matches that Story's real open/closed state.
+- Every listed Story is also linked natively as a sub-issue, and every
+  native sub-issue appears in the list. The two must not disagree.
+- No Task hangs directly off the Epic. Tasks belong to Stories. If one
+  does, re-parent it under a Story or open the Story it needs.
+
+Then the Epic's own text:
+
+- The title names an outcome, not a phase. "[EPIC] Project Setup Phase"
+  (#1) describes a slot in a schedule; the Epic template asks for the
+  value delivered.
+- `## Product Goal alignment` is filled in. "Indirectly serves it by ..."
+  is a valid answer for tooling and maintenance Epics — write that rather
+  than dropping the section.
+- `## Notes` holds decisions and rescopes, not retrofit archaeology.
+- A Story that was dropped rather than delivered gets a one-line reason in
+  the list, not a box left unchecked forever.
+- Close the Epic if every Story under it is closed.
+
+One Task owns each Epic. Never audit an Epic from inside a Story run.
 
 ## Parallelism
 
@@ -196,6 +244,8 @@ were unsure how to rescope. Flag it — do not guess.
 - Not a cloud re-verification pass. Do not run a real `terraform apply` to
   groom text. If a criterion truly needs live infrastructure, keep the
   prior evidence, state it briefly, and mark the proof `(manual: …)`.
-- Do not touch issues outside this Story's subtree.
+- Do not touch issues outside this Story's subtree, with the single
+  exception in step 5: ticking this Story's box in its parent Epic, and
+  closing that Epic when it is exhausted.
 - Do not renumber, delete, or re-parent issues outside the subtree — that
   is a structural change the user should see first.
