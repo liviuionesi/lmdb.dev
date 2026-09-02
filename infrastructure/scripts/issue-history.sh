@@ -14,6 +14,11 @@
 #     by an agent through gh are recorded under the repo owner, so the
 #     history cannot separate agent edits from human ones.
 #
+# The exported mirror under .github/issues/backlog/ is a snapshot, not the
+# source of truth. The GitHub board is. A mirror that disagrees with the
+# board means an export is overdue, not that there is a conflict. Re-run
+# --export and commit.
+#
 # Usage:
 #   issue-history.sh 252              list revisions
 #   issue-history.sh 252 --diff       unified diff between each revision
