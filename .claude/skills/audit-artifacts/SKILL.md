@@ -58,6 +58,12 @@ section. Concretely:
   section — that is deliberate, do not add one.
 - **At most 5 acceptance criteria.** More than 5 honest criteria means the
   issue is too big — flag it for a split, do not cram.
+
+  One exception, decided 2026-09-02: an issue in the audit backlog under
+  #251 names every artifact it audits as its own criterion, however many
+  that is. #288 carries 19 for story #77's 17 tasks. The point of the audit
+  is that nothing is covered by a group statement, and that beats the size
+  rule here.
 - An empty section is deleted, not left as a bare heading.
 - `## Notes` is decisions, rescopes and follow-up numbers only. If it reads
   like a log of what happened, cut it.
@@ -87,6 +93,17 @@ run", growing caveat lists, pasted build output, test counts, coverage
 percentages, notes about what the environment could not run.
 
 ### Gate 3 — Truth
+
+**Run `infrastructure/scripts/audit-check.py <n> --tree` first.** It checks
+the mechanical half of this gate and Gate 1 across a whole subtree: label
+counts, assignee, retired `sprint-N`, banned sections, parent link or a
+stated reason, template sections, dated criteria, criteria with no proof,
+closed issues with unchecked criteria or open children, and a Bug whose
+priority label disagrees with its body. Fix what it reports before reading
+anything by hand — it is faster than you and it does not get bored.
+
+What it cannot check, and you must: whether a claim is true, whether a named
+test actually proves the criterion, and whether the prose reads well.
 
 Check every claim against the **current** repo, not against what the issue
 says about itself.

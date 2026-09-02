@@ -116,6 +116,13 @@ Scrum specifically, and how this would change if it didn't)
   sprints are milestones. Component labels (`backend`, `frontend`,
   `ai-service`, ...) are optional and unlimited.
 
+  On the project board every item also carries **Status, Priority, Size,
+  Estimate, Start date, Target date and Milestone**. Size and Estimate come
+  from the Story Points or Hours already in the body, not from a second
+  guess. Start and Target date are the sprint window the item is planned
+  into. `gh project item-list` does not print custom date fields; read them
+  with GraphQL if you need to check.
+
   When priority is not obvious: a Bug takes the value its body's
   "Priority (business urgency)" line states, anything else inherits its
   parent's, and what has neither takes `P2-medium`. That is the rule the

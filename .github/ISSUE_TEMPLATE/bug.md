@@ -18,6 +18,8 @@ labels: bug
      code can be P3. -->
 **Severity (technical impact):** Blocker / Critical / Major / Minor
 **Priority (business urgency):** P0 / P1 / P2 / P3
+<!-- The priority written here and the P0-critical..P3-low label on the
+     issue must agree. audit-check.py fails the issue when they do not. -->
 
 ## Acceptance Criteria
 <!-- At most 5. Verified against the real running system, not just a unit
