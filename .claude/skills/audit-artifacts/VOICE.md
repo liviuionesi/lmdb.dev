@@ -1,68 +1,65 @@
-# Voice profile — Liviu
+# Writing standard
 
-How issues on this repo should read. Derived from Liviu's own messages,
-because every issue body on the board was written by an agent and none of
-it is a usable sample.
+Applies to issues, commit bodies and skill docs in this repo.
 
-Correct this file when it gets something wrong. It is the reference Gate 2
-calibrates against, so fixing it here fixes every future audit.
+Target: C1 English. Full command of grammar and vocabulary, used for
+precision. Not simplified English. Not literary English.
 
-## The short version
+Gate 2 of `/audit-artifacts` calibrates against this file. Correct it when
+it is wrong. The correction then applies to every later audit.
 
-Short sentences. Plain words. Say it once. State what has to happen and
-why, then stop.
+## Principles
 
-## Rules
+1. Write literally what is meant. No metaphor, no analogy, no image.
+2. State facts, conditions and results. If a sentence carries none of
+   those, delete it.
+3. Give numbers, not adjectives.
+4. One idea per sentence.
+5. Use a bullet list when the content is a list. Use prose when the
+   content is an argument with dependent steps.
 
-**Sentence length.** Most sentences under 20 words. If one runs longer,
-split it at the "and" or the comma.
+## Cut
 
-**No em dashes in prose.** Not one. An em dash is almost always two
-sentences that were afraid to separate. Use a period.
+**Intensifiers and filler.** actually, genuinely, really, truly, simply,
+quietly, silently, clearly, obviously, of course, it turns out, the thing
+is, worth noting, importantly.
 
-One exception, and only one. The child-list format the templates require
-is `- [ ] #N — short label`. That dash is a separator, not punctuation.
-Leave it. Checking a rewrite with `grep -c "—"` should return only the
-count of those list lines.
+**Rhetorical shapes.**
 
-**No semicolons. No colons for drama.** A colon is fine before a real
-list. It is not fine as a drum roll.
+- Closing lines that restate the paragraph for emphasis.
+- "Not X, but Y" used for contrast rather than for correcting an error.
+- Rhetorical questions.
+- Sentence fragments used as punchlines.
+- Em dashes used as a dramatic pause. Use a comma, parentheses, or a new
+  sentence. The `- [ ] #N — label` separator the templates require is not
+  prose; leave it.
 
-**No closing zingers.** Do not end a paragraph with a short punchy line
-that restates the point for effect. Say the point once, in the middle,
-plainly, and move on.
+**Corporate vocabulary.** leverage, ensure, robust, seamless, holistic,
+streamline, align, drive, enable, unlock, surface (as a verb), journey,
+stakeholder, going forward, at scale, best-in-class.
 
-**No contrast-for-effect.** "This is not X, it is Y" is a rhetorical
-shape, not information. Write what it is.
+Replacements: use, make sure, reliable, works, complete, simplify, match,
+cause, allow, find, show.
 
-**Plain vocabulary.** use, check, make sure, break, fix, wrong, done,
-missing, works. Not: ensure, ascertain, leverage, robust, comprehensive,
-holistic, surface (as a verb), rigorous, seamless.
+**Vague quantifiers.** many, several, various, a number of, significant,
+substantial, most. Give the number or drop the claim.
 
-**Obligation is direct.** "must", "has to", "we need to". Not "it is
-recommended that" or "consideration should be given to".
+## Keep
 
-**Purpose is stated flatly.** "The goal is to ...", "so that ...".
-
-**Sequence with "then".** first, then, after that. Not "subsequently",
-"thereafter", "in parallel with which".
-
-**One idea per bullet.** No sub-clauses hanging off the end.
-
-**Keep the precision.** Simple language is not vague language. Issue
-numbers, file paths, class names and commands all stay exact. Shortening
-a sentence must never cost a fact.
-
-**Do not copy mistakes.** Liviu writes fast and leaves typos. Match his
-sentence length, rhythm and word choice. Do not reproduce spelling errors,
-missing apostrophes or lowercase sentence starts in project artifacts.
-This profile copies how he thinks, not how his keyboard behaves.
+- Exact identifiers: issue numbers, file paths, class names, commands,
+  version numbers, dates.
+- Subordinate clauses that carry a condition or a cause. Structure is
+  allowed. Decoration is not.
+- Technical terms in their precise sense. Do not soften a term so a
+  sentence reads more smoothly.
+- Length where length is required. A short sentence is not automatically
+  better. Do not shorten if it costs a fact.
 
 ## Before and after
 
-All three "before" examples are real text an agent wrote on this board.
+Each "before" is real text from this board, written by an agent.
 
-**1.**
+**Effect instead of fact**
 
 Before:
 > An issue that claims done without proof is worse than an open issue — it
@@ -70,35 +67,40 @@ Before:
 > red when the code does, instead of staying green while the system rots.
 
 After:
-> An issue that says done with no proof is worse than an open one. Nobody
-> looks at it again. If every criterion has a test, the board goes red when
-> the code breaks. Right now it stays green while things break quietly.
+> Closing an issue without proof removes it from review, so nobody
+> re-checks it. If each criterion names a test, CI fails when the behaviour
+> breaks. Without a test, the break is not detected.
 
-**2.**
-
-Before:
-> One Task owns all four on purpose. Epic #15 parents two of this batch's
-> Stories (#85, #86) and Epic #22 parents three (#87, #88, #89), so if each
-> Story-audit Task also rewrote its Epic, two or three Tasks would
-> overwrite the same body.
-
-After:
-> One task does all four epics. Epic #15 has two stories in this batch,
-> epic #22 has three. If every story task also rewrote its epic, two or
-> three tasks would write over each other.
-
-**3.**
+**Punchline**
 
 Before:
-> Runs after #255-#261, because an Epic's Child Stories list is only honest
-> once its Stories are.
+> A test that passes no matter what proves nothing.
 
 After:
-> Runs after #255 to #261. The child stories list is only correct once the
-> stories are done.
+> Break the implementation, confirm the test fails, then restore it. A test
+> that still passes with the implementation broken does not verify the
+> behaviour.
 
-## Smell test
+**Adjectives instead of numbers**
 
-Read the rewritten text out loud. If it sounds like a consultant wrote it,
-it is wrong. If it sounds like someone explaining the job to a colleague
-who already knows the codebase, it is right.
+Before:
+> The board has grown large and many issues no longer match the code.
+
+After:
+> 193 issues: 12 epics, 38 stories, 127 tasks, 12 bugs. 15 carry a
+> `sprint-N` label that contradicts their milestone. 3 have no type label.
+
+**Corporate vocabulary**
+
+Before:
+> Ensure comprehensive test coverage across all touched modules.
+
+After:
+> Run the tests for every module the change touches.
+
+## Check before publishing
+
+- Every sentence carries a fact, a condition, or an instruction.
+- Every quantity is a number.
+- No word from the cut lists appears.
+- Deleting any sentence would lose information.

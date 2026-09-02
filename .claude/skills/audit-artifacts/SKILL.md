@@ -21,7 +21,7 @@ If no argument is given, ask which Story, or pick the lowest-numbered
 Story not yet audited.
 
 Repo: `liviuionesi/lmdb.dev`. Templates: `.github/ISSUE_TEMPLATE/`.
-Voice profile: `VOICE.md`, next to this file.
+Writing standard: `VOICE.md`, next to this file.
 
 ## Why this exists
 
@@ -61,31 +61,23 @@ section. Concretely:
 
 ### Gate 2 — Voice
 
-Rewrite the text so it reads like Liviu wrote it, not like an agent wrote
-it. **Read `VOICE.md` next to this file before starting.** It holds the
-rules and three real before/after pairs taken from this board.
+Rewrite the text to the repo writing standard. **Read `VOICE.md` next to
+this file before starting.** It holds the principles, the cut lists and
+four before/after pairs taken from this board.
 
-The short version: short sentences, plain words, no em dashes, no closing
-zingers, say it once. Spell out jargon the first time ("security group",
-not "SG").
-
-**Where the voice comes from.** Liviu does not write the code or the
-issues by hand, so nothing already on this board is a sample of his
-writing. His messages in conversation are the only clean corpus.
-`VOICE.md` is derived from those.
+Target: C1 English, literal and factual. Facts, statements, bullet lists,
+numbers. No intensifiers, no corporate vocabulary, no rhetorical shapes.
+Spell out jargon on first use ("security group", not "SG").
 
 **Never calibrate against existing issues.** They were written by agents.
-Copying their tone is how the artificial register survives the audit —
-you would be sanding one agent's prose into another agent's prose and
-calling it humanised. `VOICE.md` is the only reference.
-
-**Match his complexity, not his typos.** He writes fast and leaves
-spelling errors. Copy the sentence length, the rhythm and the word
-choice. Do not copy the mistakes into a project artifact.
+Copying their register is how the artificial tone survives the audit: one
+agent's prose becomes another agent's prose. `VOICE.md` is the only
+reference.
 
 **Shortening must not cost a fact.** Issue numbers, file paths, class
-names, commands and version numbers stay exact. If a sentence cannot get
-shorter without going vague, leave it long.
+names, commands and version numbers stay exact. A short sentence is not
+automatically better than a long one. If a sentence cannot be shortened
+without becoming vague, leave it.
 
 Cut on sight: narrated investigation logs, "Lessons from the first live
 run", growing caveat lists, pasted build output, test counts, coverage
