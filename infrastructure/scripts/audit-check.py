@@ -18,6 +18,7 @@ Usage:
 import json, re, subprocess, sys
 
 REPO = "liviuionesi/lmdb.dev"
+OWNER, NAME = REPO.split("/")
 TYPES = ("epic", "user-story", "task", "bug")
 PRIOS = ("P0-critical", "P1-high", "P2-medium", "P3-low")
 # A criterion is "proven" if it names a test, a command, or says explicitly
@@ -28,7 +29,14 @@ PRIOS = ("P0-critical", "P1-high", "P2-medium", "P3-low")
 PROOF = re.compile(r"`[^`]+`|\(manual:|\(no test|Backend CI|Frontend CI"
                    r"|\baudited\b|\(#\d+|#\d+(?:,|\s+and)\s*#\d+", re.I)
 DATE = re.compile(r"\b20\d{2}-\d{2}-\d{2}\b")
-BANNED_SECTIONS = ("## Child Stories", "## Technical Tasks")
+# Sections that hold a second copy of a GitHub field. AGENTS.md: "Do not
+# restate in the body what a GitHub field already holds." The copy drifts from
+# the field, and which one gets read depends on who is reading.
+BANNED_SECTIONS = {
+    "## Child Stories": "the native sub-issue links",
+    "## Technical Tasks": "the native sub-issue links",
+    "## Sprint": "the Milestone field",
+}
 SECTIONS = {
     "epic":       ["## Epic", "## Business Value", "## Product Goal alignment"],
     "user-story": ["## User Story", "## Acceptance Criteria", "## Definition of Ready",
@@ -42,15 +50,17 @@ SECTIONS = {
 # issue towards an empty one.
 
 
-def fetch(numbers=None):
-    """Fetch issues from GitHub. Returns a dict keyed by issue number."""
-    q = """query($endCursor:String){ repository(owner:"liviuionesi",name:"lmdb.dev"){
-      issues(first:50, after:$endCursor, states:[OPEN,CLOSED]){
-        pageInfo{hasNextPage endCursor}
-        nodes{ number state title body milestone{title}
-          labels(first:20){nodes{name}} assignees(first:5){nodes{login}}
-          parent{number} subIssues(first:100){nodes{number state}} } } } }"""
+def fetch():
+    """Fetch every issue on the board. Returns a dict keyed by issue number."""
+    q = """query($owner:String!,$name:String!,$endCursor:String){
+      repository(owner:$owner,name:$name){
+        issues(first:50, after:$endCursor, states:[OPEN,CLOSED]){
+          pageInfo{hasNextPage endCursor}
+          nodes{ number state title body milestone{title}
+            labels(first:20){nodes{name}} assignees(first:5){nodes{login}}
+            parent{number} subIssues(first:100){nodes{number state}} } } } }"""
     out = subprocess.run(["gh", "api", "graphql", "--paginate", "-f", "query=" + q,
+                          "-f", "owner=" + OWNER, "-f", "name=" + NAME,
                           "--jq", ".data.repository.issues.nodes[]"],
                          capture_output=True, text=True, check=True).stdout
     return {r["number"]: r for r in (json.loads(l) for l in out.splitlines() if l.strip())}
@@ -76,7 +86,7 @@ def criteria(body):
                                             sec.group(1), re.S | re.M)]
 
 
-def check(issue, tree):
+def check(issue):
     """Run every mechanical check on one issue. Returns a list of problems."""
     body = issue["body"] or ""
     lab = labels(issue)
@@ -95,9 +105,9 @@ def check(issue, tree):
         bad.append("carries a retired sprint-N label")
 
     # 3. Hierarchy is native only.
-    for s in BANNED_SECTIONS:
+    for s, holder in BANNED_SECTIONS.items():
         if re.search(r"\n" + re.escape(s) + r"\n", "\n" + body):
-            bad.append(f"has {s}, which native sub-issues replaced")
+            bad.append(f"has {s}, duplicating {holder}")
     if re.search(r"^Parent:\s*#\d+", body, re.M):
         bad.append("has a markdown Parent: #N line")
 
@@ -172,7 +182,7 @@ def main():
             print(f"#{n}: not found")
             failed += 1
             continue
-        bad = check(data[n], data)
+        bad = check(data[n])
         if bad:
             failed += 1
             if not quiet:
