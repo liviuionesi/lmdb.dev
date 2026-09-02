@@ -30,12 +30,16 @@ PROOF = re.compile(r"`[^`]+`|\(manual:|\(no test|Backend CI|Frontend CI"
 DATE = re.compile(r"\b20\d{2}-\d{2}-\d{2}\b")
 BANNED_SECTIONS = ("## Child Stories", "## Technical Tasks")
 SECTIONS = {
-    "epic":       ["## Epic", "## Business Value", "## Product Goal alignment", "## Notes"],
+    "epic":       ["## Epic", "## Business Value", "## Product Goal alignment"],
     "user-story": ["## User Story", "## Acceptance Criteria", "## Definition of Ready",
-                   "## Story Points", "## Definition of Done", "## Notes"],
-    "task":       ["## Task", "## Acceptance Criteria", "## Estimate", "## Notes"],
-    "bug":        ["## Bug", "## Severity vs. Priority", "## Acceptance Criteria", "## Notes"],
+                   "## Story Points", "## Definition of Done"],
+    "task":       ["## Task", "## Acceptance Criteria", "## Estimate"],
+    "bug":        ["## Bug", "## Severity vs. Priority", "## Acceptance Criteria"],
 }
+# `## Notes` is deliberately absent from the lists above. The templates mark it
+# "only if something genuinely needs flagging", and Gate 1 says an empty section
+# is deleted rather than left as a bare heading, so requiring it would push every
+# issue towards an empty one.
 
 
 def fetch(numbers=None):
