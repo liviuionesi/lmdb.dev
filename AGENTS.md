@@ -23,6 +23,34 @@ The skills directory is shared by symlink for the same reason as the
 contract. The hook and MCP files are per-tool because the formats differ —
 change one, change the other.
 
+### Repo skills, and how they translate between tools
+
+| Skill | What it does |
+|---|---|
+| `audit-artifacts` | One Story and its Tasks through Shape, Voice, Truth, Proof |
+| `resync-tasks` | Backstop sweep: shorten and re-sync every open issue |
+| `work-issue` | One issue through the full implement → test → review → close loop |
+| `javadoc` | Audit and fix Javadoc and comments across the repo |
+| `codemod` | Repeatable migrations and large mechanical edits |
+
+Each lives at `.claude/skills/<name>/` and resolves for Antigravity at
+`.agents/skills/<name>/` through the symlink.
+
+Every skill file is written against Claude Code. Three things translate
+the same way in every skill, so a skill never needs a per-tool rewrite:
+
+- **Invocation.** `/<name>` in Claude Code. In any other tool, point the
+  agent at `.agents/skills/<name>/SKILL.md` and pass the same argument.
+- **"Dispatch an Agent", "a subagent".** A subagent in Claude Code, a
+  separate agent run in Antigravity — the same pair as work-loop step 4.
+  Running the steps sequentially in one session is always a valid
+  substitute; it is slower, not wrong.
+- **`AskUserQuestion`.** Ask the question in chat and wait for the answer.
+
+The `tools:` line in a skill's frontmatter lists Claude Code tool names.
+Other tools ignore it. Every skill here needs only `gh`, `git` and file
+access.
+
 ## Before starting any work
 
 Every run starts from a fresh checkout, so a lock/halt file that only ever
