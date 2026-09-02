@@ -46,11 +46,14 @@ The body matches its template in `.github/ISSUE_TEMPLATE/` section for
 section. Concretely:
 
 - Every section the template has is present. No extra sections invented.
-- Story: `As a / I want / So that`, `Parent Epic`, Given/When/Then criteria,
-  DoR box, Story Points, Technical Tasks, DoD box, Notes.
-- Task: `Task`, `Parent Story`, criteria, `Hours`, Notes.
-- Epic: `Epic`, `Business Value`, `Product Goal alignment`, `Child Stories`,
-  Notes.
+- Story: `As a / I want / So that`, Given/When/Then criteria, DoR box,
+  Story Points, Sprint, Closing this Story, DoD box, Notes.
+- Task: `Task`, `Scope` (optional), criteria, `Hours`, Notes.
+- Epic: `Epic`, `Business Value`, `Product Goal alignment`, Closing this
+  Epic, Notes.
+- No issue carries a child list or a `Parent: #N` line. Hierarchy is the
+  native sub-issue link. An issue with no parent keeps a `## No parent`
+  section holding the reason.
 - Bug: `Bug`, `Severity vs. Priority`, criteria, Notes. Bugs have no parent
   section — that is deliberate, do not add one.
 - **At most 5 acceptance criteria.** More than 5 honest criteria means the
@@ -105,21 +108,8 @@ Also fix the metadata, which drifts silently:
   `bug`) and one priority (`P0-critical` … `P3-low`).
 - **`sprint-N` labels are dead.** Sprints are GitHub Milestones. Strip any
   `sprint-0`…`sprint-5` label and make sure the Milestone is right instead.
-- Linkage runs **both ways and twice over**: the markdown `Parent: #N` line
-  on the child, the child listed back under `## Technical Tasks` /
-  `## Child Stories` on the parent with a short label, **and** the native
-  GitHub sub-issue link. `gh issue edit` cannot create the native link —
-  use the GraphQL `addSubIssue` mutation:
-
-```bash
-# resolve node ids, then link child under parent
-gh api graphql -f query='
-mutation($parent:ID!,$child:ID!){
-  addSubIssue(input:{issueId:$parent, subIssueId:$child}){ clientMutationId }
-}' -f parent="$PARENT_NODE_ID" -f child="$CHILD_NODE_ID"
-```
-
-Check what is already linked before adding:
+- Linkage is the native sub-issue link and nothing else. Check it, do not
+  expect a markdown copy:
 
 ```bash
 gh api graphql -f query='query($o:String!,$r:String!,$n:Int!){
@@ -127,6 +117,20 @@ gh api graphql -f query='query($o:String!,$r:String!,$n:Int!){
     parent{number} subIssues(first:50){ totalCount nodes{number state} } } } }' \
   -f o=liviuionesi -f r=lmdb.dev -F n=<N>
 ```
+
+  If a link is missing, add it with `addSubIssue` — `gh issue edit` cannot:
+
+```bash
+gh api graphql -f query='
+mutation($parent:ID!,$child:ID!){
+  addSubIssue(input:{issueId:$parent, subIssueId:$child}){ clientMutationId }
+}' -f parent="$PARENT_NODE_ID" -f child="$CHILD_NODE_ID"
+```
+
+- If the body still holds a `## Child Stories`, `## Technical Tasks` or
+  `Parent: #N` line, delete it. Confirm the native link says the same thing
+  first, and if the section holds prose rather than a list, move that prose
+  to Notes instead of dropping it.
 
 ### Gate 4 — Proof
 
@@ -210,15 +214,13 @@ only honest once its Stories are.
 
 Gates 1, 2 and 3 apply unchanged. Gate 4 does not: the Epic template has
 no acceptance-criteria section, so there is nothing to attach a test to.
-Its Child Stories list is the proof surface instead. Check all four:
+The native sub-issue links are the surface to check instead:
 
-- Every child Story is listed, with a short label after the number so the
-  list reads without opening each one.
-- Every box matches that Story's real open/closed state.
-- Every listed Story is also linked natively as a sub-issue, and every
-  native sub-issue appears in the list. The two must not disagree.
+- Every Story that belongs to this Epic is linked as a sub-issue.
+- Nothing is linked that does not belong.
 - No Task hangs directly off the Epic. Tasks belong to Stories. If one
   does, re-parent it under a Story or open the Story it needs.
+- The body carries no markdown child list. If it does, delete it.
 
 Then the Epic's own text:
 

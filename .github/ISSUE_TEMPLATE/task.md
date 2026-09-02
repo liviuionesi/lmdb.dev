@@ -8,16 +8,18 @@ labels: task
 ## Task
 <!-- What needs to be done, and why, in a few sentences or bullets. -->
 
-## Parent Story
-Parent: #<N>
-<!-- Replace the line above with a one-line reason if there's genuinely no
-     parent Story (pure technical/infra work with no user-facing slice).
-     An explicit "no parent" decision is fine; a missing section is not.
+## No parent
+<!-- Delete this whole section when the issue HAS a parent: the native
+     GitHub sub-issue link is the parent record, and a markdown copy would
+     just be a second thing to keep in sync.
 
-     Also link it natively: open the Story and use "Add existing issue"
-     under Sub-issues. The markdown line above is for readers; the native
-     link is what makes the project board show the hierarchy and roll up
-     progress. Both, always — they must not disagree. -->
+     Keep it only to record a deliberate "no parent" decision, replacing
+     this comment with the one-line reason. That is the one fact the
+     native link cannot express: the difference between "no parent on
+     purpose" and "somebody forgot".
+
+     Set the parent from the PARENT issue: Sub-issues -> Add existing
+     issue. -->
 
 ## Scope
 <!-- Only if it's not obvious what's excluded. Name the sibling issue that

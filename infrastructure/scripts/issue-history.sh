@@ -99,17 +99,48 @@ cmd_events() {
 # Write every issue body to DIR/<number>.md so the backlog can be tracked
 # in git. Re-run and commit to record what changed since the last run.
 cmd_export() {
-  local dir="$1"
+  dir="$1"
   mkdir -p "$dir"
-  gh issue list --repo "$REPO" --state all --limit 500 \
-    --json number,title,state,body,labels,milestone > "$dir/.raw.json"
-  jq -r '.[].number' "$dir/.raw.json" | while read -r n; do
-    jq -r --argjson n "$n" '.[] | select(.number==$n)
-      | "<!-- number: \(.number)\n     state: \(.state)\n     labels: \([.labels[].name]|join(", "))\n     milestone: \(.milestone.title // "none") -->\n# \(.title)\n\n\(.body)"' \
-      "$dir/.raw.json" > "$dir/$n.md"
-  done
-  rm -f "$dir/.raw.json"
-  echo "exported $(ls -1 "$dir"/*.md | wc -l) issues to $dir"
+  # Hierarchy is native sub-issue links, which `gh issue list` cannot read,
+  # so the export goes through GraphQL and records parent and children in
+  # the header. Without that the mirror would lose the hierarchy entirely.
+  gh api graphql --paginate -f query='
+    query($endCursor:String){
+      repository(owner:"'"$OWNER"'",name:"'"$NAME"'"){
+        issues(first:50, after:$endCursor, states:[OPEN,CLOSED]){
+          pageInfo{hasNextPage endCursor}
+          nodes{ number title state body
+            labels(first:20){nodes{name}}
+            milestone{title}
+            parent{number}
+            subIssues(first:100){nodes{number state}} } } } }' \
+    --jq '.data.repository.issues.nodes[]' > "$dir/.raw.jsonl"
+
+  python3 - "$dir" <<'PYEOF'
+import json, sys, pathlib
+out = pathlib.Path(sys.argv[1])
+raw = out / ".raw.jsonl"
+count = 0
+for line in raw.read_text().splitlines():
+    if not line.strip():
+        continue
+    i = json.loads(line)
+    labels = ", ".join(n["name"] for n in i["labels"]["nodes"]) or "none"
+    ms = (i.get("milestone") or {}).get("title") or "none"
+    parent = f"#{i['parent']['number']}" if i.get("parent") else "none"
+    kids = ", ".join(f"#{n['number']}({'x' if n['state']=='CLOSED' else ' '})"
+                     for n in i["subIssues"]["nodes"]) or "none"
+    header = (f"<!-- number: {i['number']}\n"
+              f"     state: {i['state']}\n"
+              f"     labels: {labels}\n"
+              f"     milestone: {ms}\n"
+              f"     parent: {parent}\n"
+              f"     children: {kids} -->\n")
+    (out / f"{i['number']}.md").write_text(f"{header}# {i['title']}\n\n{i['body'] or ''}")
+    count += 1
+print(f"exported {count} issues to {out}")
+PYEOF
+  rm -f "$dir/.raw.jsonl"
 }
 
 [ $# -ge 1 ] || { sed -n '2,25p' "$0" | sed 's|^# \?||'; exit 1; }

@@ -16,25 +16,17 @@ labels: epic
      "Indirectly serves it by ..." is a valid answer for maintenance and
      tooling Epics — say that rather than dropping the section. -->
 
-## Child Stories
-<!-- Keep this list current — it's the actual source of truth for what's
-     left, not a re-derived summary. Give every entry a short label after
-     the number so the list reads without opening each Story. Boxes are
-     checked when the Story closes, and must match its real state.
+## Closing this Epic
+<!-- Child Stories are the native GitHub sub-issue links, nothing else.
+     Add them with "Add existing issue" under Sub-issues on this Epic.
+     There is no markdown list here on purpose: it duplicated the panel,
+     had to be hand-synced on every edit, and a stale checkbox once hid an
+     open Task under a closed Story (#77/#120).
 
-     Link each Story natively too, via "Add existing issue" under
-     Sub-issues — that's what the project board reads for hierarchy and
-     progress roll-up. The markdown list and the native links must agree.
-
-     Tasks hang off Stories, not directly off an Epic. If a chore has no
-     natural Story, either open one or record the "no parent" decision on
-     the Task itself.
-
-     Don't close this Epic with any box below unchecked, and don't leave it
-     open once they all are. If a Story was dropped rather than delivered,
-     say so in one line here instead of leaving it unchecked forever. -->
-- [ ] #<N> — <short label>
-- [ ] #<N> — <short label>
+     Do not close this Epic while any sub-issue is open, and do not leave
+     it open once they are all closed. Tasks hang off Stories, never
+     directly off an Epic. If a Story was dropped rather than delivered,
+     say so in one line under Notes. -->
 
 ## Notes
 <!-- Only if something genuinely needs flagging: a decision, a rescope, a

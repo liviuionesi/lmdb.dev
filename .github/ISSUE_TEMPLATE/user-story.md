@@ -14,16 +14,18 @@ labels: user-story
      Negotiable, Valuable, Estimable, Small, Testable. If it fails Small or
      Estimable, split it — don't force-fit a 6th acceptance criterion. -->
 
-## Parent Epic
-Parent: #<N>
-<!-- Every Story belongs to an Epic. If it genuinely doesn't, replace the
-     line above with a one-line reason — an explicit "no parent" decision
-     is fine, a missing section is not.
+## No parent
+<!-- Delete this whole section when the issue HAS a parent: the native
+     GitHub sub-issue link is the parent record, and a markdown copy would
+     just be a second thing to keep in sync.
 
-     Also link it natively: open the Epic and use "Add existing issue"
-     under Sub-issues. The markdown line above is for readers; the native
-     link is what makes the project board show the hierarchy and roll up
-     progress. Both, always — they must not disagree. -->
+     Keep it only to record a deliberate "no parent" decision, replacing
+     this comment with the one-line reason. That is the one fact the
+     native link cannot express: the difference between "no parent on
+     purpose" and "somebody forgot".
+
+     Set the parent from the PARENT issue: Sub-issues -> Add existing
+     issue. -->
 
 ## Acceptance Criteria (Given/When/Then)
 <!-- At most 5. Each one is real and independently testable — the
@@ -46,12 +48,12 @@ Parent: #<N>
 ## Sprint
 **Milestone:** <link>
 
-## Technical Tasks
-<!-- Broken down as child Task issues, not inline. Give every entry a short
-     label after the number, so this list can be read without opening each
-     one. Link each Task natively as a sub-issue too, and keep the boxes
-     matching the Tasks' real open/closed state. -->
-- [ ] #<N> — <short label>
+## Closing this Story
+<!-- Technical Tasks are the native GitHub sub-issue links, nothing else.
+     Add them with "Add existing issue" under Sub-issues on this Story.
+     No markdown list here on purpose: see epic.md for why.
+
+     Do not close this Story while any child Task is open. -->
 
 ## Definition of Done
 - [ ] Meets [Definition of Done](https://github.com/liviuionesi/lmdb.dev/blob/develop/docs/process/DEFINITION_OF_DONE.md)

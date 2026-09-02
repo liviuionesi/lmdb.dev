@@ -90,17 +90,33 @@ Scrum specifically, and how this would change if it didn't)
   acceptance criteria, Story Points, a Sprint milestone). A Task is a
   technical subtask under a Story, hour-estimated. Bugs are their own
   type, outside this hierarchy.
-- **Link every parent both ways, every time.** A Story carries a
-  `## Parent Epic` section, a Task a `## Parent Story` section, each
-  holding `Parent: #N` — and the parent lists the child back under
-  `## Child Stories` / `## Technical Tasks`, with a short label after the
-  number so the list reads without opening each one. On top of that
-  markdown, create the **native GitHub sub-issue link** (`gh issue edit`
-  won't do it — use the Sub-issues panel on the parent, or the
-  `addSubIssue` GraphQL mutation). The markdown is for readers; the native
-  link is what the project board reads for hierarchy and progress
-  roll-up. The two must never disagree. If something genuinely has no
-  parent, write the one-line reason in the section instead of deleting it.
+- **Hierarchy lives in GitHub's native sub-issue links, and nowhere else.**
+  Set it from the parent: the Sub-issues panel, or the `addSubIssue`
+  GraphQL mutation (`gh issue edit` cannot create it). Issue bodies carry
+  no `## Child Stories`, no `## Technical Tasks`, and no `Parent: #N`
+  line. Those were markdown copies of facts GitHub already holds, re-synced
+  by hand on every edit. A stale checkbox on #77 hid the open Task #120
+  under a closed Story until the 2026-09-02 audit found it.
+  The one thing a native link cannot express is a deliberate decision to
+  have no parent, so an issue without one keeps a `## No parent` section
+  holding the one-line reason.
+- **Do not restate in the body what a GitHub field already holds.**
+
+  | Fact | Where it lives |
+  |---|---|
+  | Parent and children | native sub-issue links |
+  | Sprint | Milestone |
+  | Type: epic / user-story / task / bug | label |
+  | Priority: P0-critical … P3-low | label |
+  | Workflow state | Project board `Status` field |
+  | Story Points, Hours | the issue body |
+
+  Story Points and Hours stay in the body on purpose. The board has an
+  `Estimate` field, but it is empty on all 210 items, and a project field
+  cannot be read with `gh issue view`, which is how every agent reads this
+  backlog. Moving them there would hide them, not de-duplicate them. The
+  board's `Priority` and `Size` fields are unused for the same reason:
+  2 and 3 items out of 210.
 - Templates: `.github/ISSUE_TEMPLATE/{epic,user-story,task,bug}.md`. Use
   them for shape, not GitHub's web form (`gh issue create`/`gh issue edit`
   don't apply them automatically — match the shape by hand).
