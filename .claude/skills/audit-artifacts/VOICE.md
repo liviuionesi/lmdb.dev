@@ -17,8 +17,13 @@ why, then stop.
 **Sentence length.** Most sentences under 20 words. If one runs longer,
 split it at the "and" or the comma.
 
-**No em dashes.** Not one. An em dash is almost always two sentences that
-were afraid to separate. Use a period.
+**No em dashes in prose.** Not one. An em dash is almost always two
+sentences that were afraid to separate. Use a period.
+
+One exception, and only one. The child-list format the templates require
+is `- [ ] #N — short label`. That dash is a separator, not punctuation.
+Leave it. Checking a rewrite with `grep -c "—"` should return only the
+count of those list lines.
 
 **No semicolons. No colons for drama.** A colon is fine before a real
 list. It is not fine as a drum roll.
