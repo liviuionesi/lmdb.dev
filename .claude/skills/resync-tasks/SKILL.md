@@ -103,7 +103,9 @@ milestones, don't force them all into one list. Instead:
 1. **Discover.** `gh issue list --repo liviuionesi/lmdb.dev --state open --limit 200`.
    Report the count before starting.
 
-2. **Dispatch one Agent per issue, in parallel.** Give each agent:
+2. **Dispatch one agent per issue, in parallel** — a subagent in Claude
+   Code, a separate agent run in Antigravity, or one issue at a time in
+   this session. Give each agent:
    - The before/after example above, verbatim, as the style calibration.
    - The issue number and repo.
    - Instructions:

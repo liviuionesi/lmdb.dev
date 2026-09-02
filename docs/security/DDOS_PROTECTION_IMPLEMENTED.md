@@ -224,7 +224,14 @@ public class IpFilterGlobalFilter implements GlobalFilter, Ordered {
 - `POST /admin/security/whitelist-mode/disable` - Disable whitelist mode
 - `GET /admin/security/status` - View security status
 
-**Security:** Admin endpoints require authentication (`/admin/**` is protected)
+**Security:** `/admin/**` requires a token carrying the `ADMIN` role (#237), not merely a
+signed-in account.
+
+**Bootstrap (#238):** registration always issues `Role.USER`, and there is no promotion endpoint
+yet, so a fresh deployment has no ADMIN account. Until #238 lands, mint one directly against the
+user-service database (`UPDATE users SET role = 'ADMIN' WHERE username = '<you>'`) and re-login to
+pick up the new claim — do this *before* you need the emergency lever below, not during an
+incident.
 
 ---
 
@@ -416,6 +423,7 @@ curl -X DELETE -H "Authorization: Bearer $TOKEN" \
 ```
 
 ### Enable Whitelist Mode (Emergency)
+`$TOKEN` here must carry the `ADMIN` role — see the bootstrap note above.
 ```bash
 # Enable whitelist mode (blocks all IPs except whitelisted)
 curl -X POST -H "Authorization: Bearer $TOKEN" \

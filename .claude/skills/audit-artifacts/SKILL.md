@@ -1,0 +1,311 @@
+---
+name: audit-artifacts
+description: Audit and rewrite one Story and its child Tasks so they match the issue templates, read in plain English, tell the truth about the code, and have every acceptance criterion backed by a test that actually runs. Use when the user runs /audit-artifacts, or asks to review/rewrite GitHub issues, check that acceptance criteria are real, or bring the backlog up to Scrum standard.
+tools: Bash, Read, Write, Edit, Grep, Glob, Agent, TodoWrite
+---
+
+# /audit-artifacts — one Story, audited to the end
+
+Takes **one Story and every Task under it** through four gates. One Story
+per run. Do not spread across unrelated Stories — a half-audited board is
+worse than an un-audited one, because it looks trustworthy.
+
+Two modes:
+
+- `/audit-artifacts 85` — **Story mode.** Story #85 and its child Tasks.
+- `/audit-artifacts epic 22` — **Epic mode.** Epic #22's own body only.
+  See "Epic mode" below; it is a separate run, never folded into a Story
+  run.
+
+If no argument is given, ask which Story, or pick the lowest-numbered
+Story not yet audited.
+
+Repo: `liviuionesi/lmdb.dev`. Templates: `.github/ISSUE_TEMPLATE/`.
+Writing standard: `VOICE.md`, next to this file.
+
+## Why this exists
+
+`/resync-tasks` makes issues short and honest. It stops there. This skill
+goes one step further and asks the question that actually matters:
+
+> If someone deleted this issue and kept only the code, would the code
+> still prove the criterion is true?
+
+If the answer is no, the tick mark is a promise, not a fact. Dates like
+"verified 2025-11-14" inside an acceptance criterion are the clearest
+symptom — the box stays ticked forever while the thing it claims quietly
+breaks. That is how #109 and #250 happened on green-looking issues.
+
+## The four gates
+
+Run them in this order. Each gate assumes the one before it passed.
+
+### Gate 1 — Shape
+
+The body matches its template in `.github/ISSUE_TEMPLATE/` section for
+section. Concretely:
+
+- Every section the template has is present. No extra sections invented.
+- Story: `As a / I want / So that`, Given/When/Then criteria, DoR box,
+  Story Points, Closing this Story, DoD box, Notes. There is no `## Sprint`
+  section: the Milestone field holds the sprint, and two copies drift.
+- Task: `Task`, `Scope` (optional), criteria, `Hours`, Notes.
+- Epic: `Epic`, `Business Value`, `Product Goal alignment`, Closing this
+  Epic, Notes.
+- No issue carries a child list or a `Parent: #N` line. Hierarchy is the
+  native sub-issue link. An issue with no parent keeps a `## No parent`
+  section holding the reason.
+- Bug: `Bug`, `Root Cause` (deleted while still investigating),
+  `Severity vs. Priority`, criteria, Notes. Bugs have no parent section.
+  That is deliberate, do not add one.
+- **At most 5 acceptance criteria.** More than 5 honest criteria means the
+  issue is too big — flag it for a split, do not cram.
+
+  One exception, decided 2026-09-02: an issue in the audit backlog under
+  #251 names every artifact it audits as its own criterion, however many
+  that is. #288 carries 19 for story #77's 17 tasks. The point of the audit
+  is that nothing is covered by a group statement, and that beats the size
+  rule here.
+- An empty section is deleted, not left as a bare heading.
+- `## Notes` is decisions, rescopes and follow-up numbers only. If it reads
+  like a log of what happened, cut it.
+
+### Gate 2 — Voice
+
+Rewrite the text to the repo writing standard. **Read `VOICE.md` next to
+this file before starting.** It holds the principles, the cut lists and
+four before/after pairs taken from this board.
+
+Target: C1 English, literal and factual. Facts, statements, bullet lists,
+numbers. No intensifiers, no corporate vocabulary, no rhetorical shapes.
+Spell out jargon on first use ("security group", not "SG").
+
+**Never calibrate against existing issues.** They were written by agents.
+Copying their register is how the artificial tone survives the audit: one
+agent's prose becomes another agent's prose. `VOICE.md` is the only
+reference.
+
+**Shortening must not cost a fact.** Issue numbers, file paths, class
+names, commands and version numbers stay exact. A short sentence is not
+automatically better than a long one. If a sentence cannot be shortened
+without becoming vague, leave it.
+
+Cut on sight: narrated investigation logs, "Lessons from the first live
+run", growing caveat lists, pasted build output, test counts, coverage
+percentages, notes about what the environment could not run.
+
+### Gate 3 — Truth
+
+**Run `infrastructure/scripts/audit-check.py <n> --tree` first.** It checks
+the mechanical half of this gate and Gate 1 across a whole subtree: label
+counts, assignee, retired `sprint-N`, sections duplicating a GitHub field
+(`## Sprint`, `## Child Stories`, `## Technical Tasks`), parent link or a
+stated reason, template sections, dated criteria, criteria with no proof,
+closed issues with unchecked criteria or open children, and a Bug whose
+priority label disagrees with its body. Fix what it reports before reading
+anything by hand.
+
+The script is itself covered by `infrastructure/scripts/test_audit_check.py`
+(`python3 -m unittest discover -s infrastructure/scripts -p 'test_*.py'`).
+Add a test there when you add a rule, so the checker cannot drift the way
+the issues it checks once did.
+
+What it cannot check, and you must: whether a claim is true, whether a named
+test actually proves the criterion, and whether the prose reads well.
+
+Check every claim against the **current** repo, not against what the issue
+says about itself.
+
+- Does the file/directory/class the criterion names still exist under that
+  name? (#2 claimed `frontend/filmpire`; it has been `frontend/lmdb` since
+  ADR-013.)
+- Does the config value still hold? Read the file, do not trust the text.
+- Did a later issue or ADR supersede this work? If so, rescope the
+  criterion in one line and name the ADR or issue that replaced it. Do not
+  add a caveat under a criterion that is now wrong — rewrite the criterion.
+- Never tick a box you have not personally verified this run.
+- Never verify through a shortcut that skips the layer the issue is about.
+  A gateway routing fix is not proven by calling the service directly.
+
+Also fix the metadata, which drifts silently:
+
+- Every issue has exactly one type label (`epic` / `user-story` / `task` /
+  `bug`) and one priority (`P0-critical` … `P3-low`).
+- **`sprint-N` labels are dead.** Sprints are GitHub Milestones. Strip any
+  `sprint-0`…`sprint-5` label and make sure the Milestone is right instead.
+- Linkage is the native sub-issue link and nothing else. Check it, do not
+  expect a markdown copy:
+
+```bash
+gh api graphql -f query='query($o:String!,$r:String!,$n:Int!){
+  repository(owner:$o,name:$r){ issue(number:$n){
+    parent{number} subIssues(first:50){ totalCount nodes{number state} } } } }' \
+  -f o=liviuionesi -f r=lmdb.dev -F n=<N>
+```
+
+  If a link is missing, add it with `addSubIssue` — `gh issue edit` cannot:
+
+```bash
+gh api graphql -f query='
+mutation($parent:ID!,$child:ID!){
+  addSubIssue(input:{issueId:$parent, subIssueId:$child}){ clientMutationId }
+}' -f parent="$PARENT_NODE_ID" -f child="$CHILD_NODE_ID"
+```
+
+- If the body still holds a `## Child Stories`, `## Technical Tasks` or
+  `Parent: #N` line, delete it. Confirm the native link says the same thing
+  first, and if the section holds prose rather than a list, move that prose
+  to Notes instead of dropping it.
+
+### Gate 4 — Proof
+
+This is the gate that makes the audit worth running.
+
+For each acceptance criterion, name the thing that proves it. Write the
+proof into the criterion itself, in parentheses, so the issue and the code
+cannot drift apart silently:
+
+```
+- [x] All 9 backend modules are wired into one root Gradle build
+      (`SettingsGradleTest.allNineModulesAreIncluded`)
+```
+
+Rules for the proof:
+
+- **Prefer a test that CI already runs.** A JUnit test, a Vitest test, a
+  Playwright spec, a workflow step. Something that goes red on its own.
+- A repeatable **command** is acceptable when a test genuinely cannot cover
+  it (`./gradlew build`, `kubectl apply -k …`). Write the command, not a
+  date.
+- **A date is never a proof.** `verified 2025-11-14` describes the past.
+  Move that evidence to an issue comment and replace the criterion with
+  something re-checkable today.
+- **Manual-only is a last resort** and must say so: `(manual: <exact
+  steps>)`. Cap it at one criterion per issue. More than one means the work
+  is not really testable and needs a follow-up Task.
+
+**If a criterion has no proof, write one.** That is part of this skill, not
+a separate job:
+
+1. Find the module that owns the behaviour.
+2. Write the test next to the existing tests, in their style — JUnit 5 +
+   WireMock for external calls, Testcontainers for real infrastructure.
+   Match the neighbours; do not invent a new pattern.
+3. Full Javadoc on the test class and every `@Test`, per the repo's
+   documentation standard in `AGENTS.md`. Tests are not exempt.
+4. Run it. `./gradlew :backend:<module>:test --tests '<Class>'`.
+5. **Watch it fail first.** Break the thing it asserts, confirm the test
+   goes red, put it back. A test that passes no matter what proves nothing.
+6. Only then write its name into the criterion.
+
+If a criterion turns out to be untestable in principle (a documentation
+statement, a design decision), say so in one line in Notes and mark it
+`(no test — <reason>)`. Being explicit is fine. Pretending is not.
+
+## Order of work
+
+1. **Read the Story and every child Task first, before editing anything.**
+   Get both lists: markdown children and native sub-issues. If they
+   disagree, that is finding number one.
+2. **Tasks bottom-up, Story last.** A Story's criteria are only honest once
+   its Tasks are. Doing the Story first means rewriting it twice.
+3. Per Task: Gates 1 → 4, write any missing test, run it, edit the body
+   via `gh issue edit <n> --body-file <file>` using a scratchpad file per
+   issue.
+4. Then the Story: Gates 1 → 4. Its children are the native sub-issue
+   links, so there is no list in the body to reconcile. Check the links
+   themselves with the GraphQL query in Gate 3.
+5. **Cascade.** If every Task under the Story is closed and the Story now
+   genuinely meets the Definition of Done, close the Story and merge
+   `develop` → `main`. Then reach up into the parent Epic and do exactly
+   one thing: close it if every one of its Stories is now closed. There is
+   no box to tick, because the Epic body carries no child list. Never
+   leave an exhausted Story or Epic open.
+
+   That upward reach is the **only** edit a Story run may make to an Epic.
+   Do not rewrite the Epic's prose, criteria or Notes here — several
+   Stories share one Epic (#22 parents #87, #88 and #89), so two Story
+   runs rewriting one Epic body will overwrite each other. Full Epic
+   rewrites belong to Epic mode, which one Task owns.
+6. Commit code and test changes referencing the audit Task number. One
+   commit per Task is fine; do not batch unrelated issues into one commit.
+7. Post one short comment on the Story saying what changed and what is
+   still open.
+
+## Epic mode
+
+`/audit-artifacts epic 22` audits one Epic body. Run it **after** every
+Story under that Epic has been audited — an Epic's Child Stories list is
+only honest once its Stories are.
+
+Gates 1, 2 and 3 apply unchanged. Gate 4 does not: the Epic template has
+no acceptance-criteria section, so there is nothing to attach a test to.
+The native sub-issue links are the surface to check instead:
+
+- Every Story that belongs to this Epic is linked as a sub-issue.
+- Nothing is linked that does not belong.
+- No Task hangs directly off the Epic. Tasks belong to Stories. If one
+  does, re-parent it under a Story or open the Story it needs.
+- The body carries no markdown child list. If it does, delete it.
+
+Then the Epic's own text:
+
+- The title names an outcome, not a phase. "[EPIC] Project Setup Phase"
+  (#1) describes a slot in a schedule; the Epic template asks for the
+  value delivered.
+- `## Product Goal alignment` is filled in. "Indirectly serves it by ..."
+  is a valid answer for tooling and maintenance Epics — write that rather
+  than dropping the section.
+- `## Notes` holds decisions and rescopes, not retrofit archaeology.
+- A Story that was dropped rather than delivered gets one line in
+  `## Notes` naming it and the reason, since there is no list to hold it.
+- Close the Epic if every Story under it is closed.
+
+One Task owns each Epic. Never audit an Epic from inside a Story run.
+
+## Parallelism
+
+Child Tasks that touch different modules can be audited in parallel: a
+subagent in Claude Code, a separate agent run in Antigravity. Do this only
+if the user asked for it. Otherwise audit them in sequence in this session.
+Never parallelise the Story itself, because it depends on all its Tasks
+being finished.
+
+## Running outside Claude Code
+
+This file is plain Markdown. `.agents/skills` is a symlink to
+`.claude/skills`, so Antigravity reads the same file at
+`.agents/skills/audit-artifacts/SKILL.md`.
+
+- Claude Code: `/audit-artifacts 85`.
+- Antigravity or any other tool: point the agent at
+  `.agents/skills/audit-artifacts/SKILL.md` and give it the Story number.
+  Slash-command registration is Claude Code only.
+- The `tools:` line in the frontmatter lists Claude Code tool names. Other
+  tools ignore it. The skill needs `gh`, `git` and file access, nothing
+  else.
+- The subagent option under Parallelism is the only Claude Code specific
+  step, and it is optional.
+
+## Report
+
+A short table when the run ends:
+
+| Issue | Shape | Language | Truth | Proof | Action |
+|---|---|---|---|---|---|
+| #85 | fixed | fixed | 2 stale AC rescoped | 3/4 tested, 1 manual | closed |
+
+Then, in plain sentences: what tests were added, what could not be proven
+and why, anything flagged as too big to fit 5 criteria, and anything you
+were unsure how to rescope. Flag it — do not guess.
+
+## Non-goals
+
+- Not a cloud re-verification pass. Do not run a real `terraform apply` to
+  groom text. If a criterion truly needs live infrastructure, keep the
+  prior evidence, state it briefly, and mark the proof `(manual: …)`.
+- Do not touch issues outside this Story's subtree, with the single
+  exception in step 5: ticking this Story's box in its parent Epic, and
+  closing that Epic when it is exhausted.
+- Do not renumber, delete, or re-parent issues outside the subtree — that
+  is a structural change the user should see first.

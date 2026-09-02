@@ -31,6 +31,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
     implementation 'org.springframework.boot:spring-boot-starter-cache'
     implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
+    implementation 'org.springframework.cloud:spring-cloud-starter-config'
     // RestClient calls to movie-service ("lb://movie-service" — #36's
     // recommendation candidates come from LMDB's own catalog, not TMDB).
     implementation 'org.springframework.cloud:spring-cloud-starter-loadbalancer'

@@ -248,7 +248,10 @@ services:
       dockerfile: backend/config-service/Dockerfile
     container_name: lmdb-config-service
     ports:
-      - "${CONFIG_SERVICE_PORT:-8888}:8888"
+      # Bound to the loopback interface: the other services reach this over the
+      # lmdb-network bridge, so the published port is only for a developer
+      # curling it from this machine. It does not need to leave the host.
+      - "127.0.0.1:${CONFIG_SERVICE_PORT:-8888}:8888"
     networks:
       - lmdb-network
     environment:
@@ -283,7 +286,7 @@ services:
       SPRING_APPLICATION_NAME: api-gateway
       MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
-      SPRING_CONFIG_IMPORT: optional:configserver:http://config-service:8888
+      CONFIG_SERVER_URL: http://config-service:8888
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD}
@@ -326,7 +329,7 @@ services:
       SPRING_PROFILES_ACTIVE: prod
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
       EUREKA_SERVER_URL: http://discovery-service:8761/eureka/
-      SPRING_CONFIG_IMPORT: optional:configserver:http://config-service:8888
+      CONFIG_SERVER_URL: http://config-service:8888
       MONGODB_URI: mongodb://${MONGO_ROOT_USER:-admin}:${MONGO_ROOT_PASSWORD}@mongodb:27017/lmdb?authSource=admin
       REDIS_HOST: redis
       REDIS_PORT: 6379
@@ -369,7 +372,7 @@ services:
       SPRING_APPLICATION_NAME: user-service
       MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
-      SPRING_CONFIG_IMPORT: optional:configserver:http://config-service:8888
+      CONFIG_SERVER_URL: http://config-service:8888
       POSTGRES_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-lmdb}
       POSTGRES_USERNAME: ${POSTGRES_USER:-admin}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -408,7 +411,7 @@ services:
       SPRING_APPLICATION_NAME: actor-service
       MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
-      SPRING_CONFIG_IMPORT: optional:configserver:http://config-service:8888
+      CONFIG_SERVER_URL: http://config-service:8888
       POSTGRES_URL: jdbc:postgresql://postgres:5432/lmdb_actor
       POSTGRES_USERNAME: ${POSTGRES_USER:-admin}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -474,7 +477,7 @@ services:
       SPRING_APPLICATION_NAME: ai-service
       MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
-      SPRING_CONFIG_IMPORT: optional:configserver:http://config-service:8888
+      CONFIG_SERVER_URL: http://config-service:8888
       POSTGRES_URL: jdbc:postgresql://postgres:5432/lmdb_ai
       POSTGRES_USERNAME: ${POSTGRES_USER:-admin}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -528,7 +531,7 @@ services:
     environment:
       SPRING_APPLICATION_NAME: media-service
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
-      SPRING_CONFIG_IMPORT: optional:configserver:http://config-service:8888
+      CONFIG_SERVER_URL: http://config-service:8888
       MONGODB_URI: mongodb://${MONGO_ROOT_USER:-admin}:${MONGO_ROOT_PASSWORD}@mongodb:27017/lmdb?authSource=admin
       MINIO_ENDPOINT: http://minio:9000
       MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}

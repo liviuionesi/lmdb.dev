@@ -47,8 +47,8 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
 /**
- * Gateway-boundary integration tests for issues #19 (Service Integration Testing) and #33 (TMDB v3
- * facade routing + auth/account proxy).
+ * Gateway-boundary integration tests for issues #19 (Service Integration Testing), #33 (TMDB v3
+ * facade routing + auth/account proxy) and #237 (ADMIN-only gateway management API).
  *
  * <p>The services are separate modules with separate databases, so there is no direct
  * service-to-service DB join to exercise; "integration" here means the one place cross-service
@@ -65,20 +65,22 @@ import org.testcontainers.utility.DockerImageName;
  * movie-service would still pass. Splitting the ports makes the destination observable.
  *
  * <p>What is proven end to end through the real Netty server + full filter chain: path-based
- * routing to the correct downstream, public vs. authentication-required exchanges, JWT identity
- * propagation ({@code X-User-*} headers), downstream error passthrough, circuit-breaker fallback,
- * request rate limiting, CORS preflight, and — for #33 — the bare TMDB catalog surface, client
- * {@code api_key} stripping, and the auth/account proxy's key injection, {@code session_id}
- * forwarding and verbatim error passthrough. Behaviors that don't belong at this boundary (real
- * service discovery; the per-service data logic) are covered by the discovery-service and
- * per-service suites respectively — see {@code docs/architecture/INTEGRATION_TESTING.md}.
+ * routing to the correct downstream, public vs. authentication-required exchanges, role-gated
+ * access to the gateway's own {@code /admin/**} management API (#237 — the one surface where the
+ * gateway is the origin server rather than a proxy), JWT identity propagation ({@code X-User-*}
+ * headers), downstream error passthrough, circuit-breaker fallback, request rate limiting, CORS
+ * preflight, and — for #33 — the bare TMDB catalog surface, client {@code api_key} stripping, and
+ * the auth/account proxy's key injection, {@code session_id} forwarding and verbatim error
+ * passthrough. Behaviors that don't belong at this boundary (real service discovery; the
+ * per-service data logic) are covered by the discovery-service and per-service suites respectively
+ * — see {@code docs/architecture/INTEGRATION_TESTING.md}.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("gateway-it")
 @AutoConfigureWebTestClient
 @Testcontainers
 @WireMockTest(httpPort = 9971)
-@DisplayName("Gateway Integration Tests (#19, #33)")
+@DisplayName("Gateway Integration Tests (#19, #33, #237)")
 class GatewayIntegrationTest {
 
   /**
@@ -246,6 +248,85 @@ class GatewayIntegrationTest {
         getRequestedFor(urlEqualTo("/api/v1/users/profile"))
             .withHeader("X-User-Id", equalTo("u-123"))
             .withHeader("X-Username", equalTo("liviu")));
+  }
+
+  /**
+   * The gateway's own {@code /admin/**} API changes its live security posture (IP allow/deny lists,
+   * whitelist mode), so holding a valid token is not enough — a token carrying only {@code USER}
+   * must be refused with 403. This is the case that separates "signed in" from "operator": a 200
+   * here would mean every registered account can retune the gateway's IP filtering.
+   */
+  @Test
+  @DisplayName("Gateway admin API rejects a non-admin token")
+  void adminRouteRejectsNonAdminToken() {
+    client
+        .get()
+        .uri("/admin/security/status")
+        .header(HttpHeaders.AUTHORIZATION, "Bearer " + mintToken("liviu", "u-123"))
+        .exchange()
+        .expectStatus()
+        .isForbidden();
+  }
+
+  /**
+   * The counterpart to the rejection above: a token carrying {@code ADMIN} must actually reach the
+   * controller and get a real answer. Without this, the rule could be "deny everyone" and the 403
+   * test alone would still pass — locking operators out of their own management API.
+   */
+  @Test
+  @DisplayName("Gateway admin API serves a token carrying the ADMIN role")
+  void adminRouteAcceptsAdminToken() {
+    client
+        .get()
+        .uri("/admin/security/status")
+        .header(
+            HttpHeaders.AUTHORIZATION, "Bearer " + mintToken("liviu", "u-123", List.of("ADMIN")))
+        .exchange()
+        .expectStatus()
+        .isOk()
+        .expectBody()
+        .jsonPath("$.success")
+        .isEqualTo(true)
+        // Presence, not value: this asserts the request reached the real controller and got a
+        // well-formed envelope back. The concrete flag value is deliberately not asserted here —
+        // IpFilterGlobalFilter is a mutable singleton, so pinning the value would make this test
+        // order-dependent the moment a sibling test toggles whitelist mode. AdminControllerTest
+        // owns the value semantics.
+        .jsonPath("$.data.whitelistModeEnabled")
+        .exists();
+  }
+
+  /**
+   * The gateway must accept an already-{@code ROLE_}-prefixed roles claim as well as a bare one.
+   * {@link dev.lmdb.gateway.filter.JwtAuthenticationFilter} passes a prefixed role through
+   * unchanged instead of double-prefixing it, and the {@code /admin/**} rule's correctness depends
+   * on that branch. user-service currently issues bare enum names, so without this test the
+   * prefixed branch could be deleted and every other test would still pass.
+   */
+  @Test
+  @DisplayName("Gateway admin API accepts an already ROLE_-prefixed admin claim")
+  void adminRouteAcceptsPrefixedAdminClaim() {
+    client
+        .get()
+        .uri("/admin/security/status")
+        .header(
+            HttpHeaders.AUTHORIZATION,
+            "Bearer " + mintToken("liviu", "u-123", List.of("ROLE_ADMIN")))
+        .exchange()
+        .expectStatus()
+        .isOk();
+  }
+
+  /**
+   * A caller with no token must be turned away with 401, not 403: the role check does run and deny,
+   * but because the principal is anonymous the denial is translated into a challenge to
+   * authenticate rather than a refusal. Completes the three admin-access outcomes — this one is
+   * about the status an unauthenticated client sees, not about the ADMIN rule itself.
+   */
+  @Test
+  @DisplayName("Gateway admin API rejects an anonymous caller")
+  void adminRouteRejectsAnonymous() {
+    client.get().uri("/admin/security/status").exchange().expectStatus().isUnauthorized();
   }
 
   /**
@@ -637,20 +718,34 @@ class GatewayIntegrationTest {
   }
 
   /**
-   * Mints a valid HS256 JWT with the gateway's expected claim set (sub / userId / roles), signed
-   * with the shared secret.
+   * Mints a valid HS256 JWT for an ordinary user (the {@code USER} role), the claim set most tests
+   * here need.
    *
    * @param username subject claim
    * @param userId userId claim
    * @return a signed, currently-valid compact JWT
    */
   private static String mintToken(String username, String userId) {
+    return mintToken(username, userId, List.of("USER"));
+  }
+
+  /**
+   * Mints a valid HS256 JWT with the gateway's expected claim set (sub / userId / roles), signed
+   * with the shared secret. The roles overload exists so the admin-access tests can vary exactly
+   * one thing — the {@code roles} claim — between an accepted and a rejected request.
+   *
+   * @param username subject claim
+   * @param userId userId claim
+   * @param roles roles claim, mapped by the gateway to {@code ROLE_}-prefixed authorities
+   * @return a signed, currently-valid compact JWT
+   */
+  private static String mintToken(String username, String userId, List<String> roles) {
     SecretKey key = Keys.hmacShaKeyFor(JWT_SECRET.getBytes(StandardCharsets.UTF_8));
     Date now = new Date();
     return Jwts.builder()
         .subject(username)
         .claim("userId", userId)
-        .claim("roles", List.of("USER"))
+        .claim("roles", roles)
         .issuedAt(now)
         .expiration(new Date(now.getTime() + 3_600_000))
         .signWith(key)

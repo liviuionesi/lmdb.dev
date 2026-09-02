@@ -75,7 +75,9 @@ comment in the sweep.
    file count per module before starting — this sets expectations for how
    long the sweep takes.
 
-2. **Dispatch one Agent per module, in parallel**, each scoped ONLY to that
+2. **Dispatch one agent per module, in parallel** (a subagent in Claude
+   Code, a separate agent run in Antigravity, or module-by-module in this
+   session), each scoped ONLY to that
    module's files (main + test). Give each agent:
    - The standard and the before/after example above, verbatim.
    - The exact list of files in its module.

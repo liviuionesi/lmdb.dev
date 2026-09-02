@@ -12,17 +12,14 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 /**
- * Integration tests for Config Server functionality.
+ * Checks that the Config Server's HTTP endpoints are reachable.
  *
- * <p>This test class verifies the core functionality of the Config Service by testing the
- * configuration retrieval endpoints and actuator health endpoints.
+ * <p>Boots the real server on a random port with {@code @SpringBootTest} and calls it with {@link
+ * TestRestTemplate}. These tests cover reachability only. The values the server returns are
+ * asserted in {@link ServedConfigurationContentTest}, because a reachable endpoint and a correct
+ * payload are two different things.
  *
- * <p>Tests are executed with a random port to avoid conflicts and use the 'test' profile for
- * isolated test configuration.
- *
- * @author LMDB Team
- * @version 1.0.0
- * @see ConfigServiceApplication
+ * @see ServedConfigurationContentTest
  */
 @AutoConfigureTestRestTemplate
 @SpringBootTest(
@@ -63,7 +60,9 @@ class ConfigServerIntegrationTest {
     ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-    assertThat(response.getBody()).contains("UP");
+    // The top-level status, not just any UP in the body: a DOWN aggregate can
+    // still contain an UP component.
+    assertThat(response.getBody()).contains("\"status\":\"UP\"");
   }
 
   /**
@@ -116,10 +115,11 @@ class ConfigServerIntegrationTest {
    * <p>This test ensures that:
    *
    * <ul>
-   *   <li>Service-specific configuration files are accessible
-   *   <li>The Config Server properly resolves service names
-   *   <li>Configuration merging works correctly
+   *   <li>A service-specific path is routed and answered
    * </ul>
+   *
+   * <p>Only reachability. Whether the returned values are the right ones is asserted in {@link
+   * ServedConfigurationContentTest}.
    */
   @Test
   void canRetrieveServiceSpecificConfiguration() {
@@ -137,9 +137,10 @@ class ConfigServerIntegrationTest {
    * <p>This test ensures that:
    *
    * <ul>
-   *   <li>Environment profiles (dev, prod) are properly loaded
-   *   <li>Profile-specific configuration overrides work correctly
+   *   <li>A profile-specific path is routed and answered
    * </ul>
+   *
+   * <p>That dev and prod actually differ is asserted in {@link ServedConfigurationContentTest}.
    */
   @Test
   void canRetrieveEnvironmentSpecificConfiguration() {

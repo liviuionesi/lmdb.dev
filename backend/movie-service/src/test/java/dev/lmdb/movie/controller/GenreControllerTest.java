@@ -26,7 +26,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * <p>These verify the HTTP contract of the genres endpoint — routing, status, and the JSON
  * shape/order the React app's sidebar consumes — independent of how the service produces genres.
  */
-@WebMvcTest(GenreController.class)
+@WebMvcTest(value = GenreController.class, properties = "spring.cloud.config.enabled=false")
 @Import(TestCacheConfig.class)
 @DisplayName("GenreController Tests")
 class GenreControllerTest {

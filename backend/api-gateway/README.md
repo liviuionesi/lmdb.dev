@@ -144,7 +144,7 @@ docker run -p 8080:8080 \
 | `/api/v1/ai/**` | ai-service | AI recommendations | 5/sec | ✅ |
 | `/api/v1/recommendations/**` | ai-service | Movie recommendations | 5/sec | ✅ |
 | `/api/v1/media/**` | media-service | Media uploads | 20/sec | ✅ |
-| `/admin/security/**` | gateway | IP filter management | Auth required | ✅ |
+| `/admin/security/**` | gateway | IP filter management | ADMIN role | ✅ |
 
 **Note:** Global rate limit of 100 req/sec per IP applies to all routes.
 

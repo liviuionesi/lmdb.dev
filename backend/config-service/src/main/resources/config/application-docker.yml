@@ -8,6 +8,8 @@ eureka:
     prefer-ip-address: true
 
 spring:
+  mongodb:
+    uri: ${MONGODB_URI}
   datasource:
     url: ${POSTGRES_URL}
     username: ${POSTGRES_USERNAME}
@@ -17,5 +19,3 @@ spring:
       host: ${REDIS_HOST}
       port: ${REDIS_PORT}
       password: ${REDIS_PASSWORD}
-    mongodb:
-      uri: ${MONGODB_URI}

@@ -26,6 +26,10 @@
 
 spring:
   cloud:
+    # This profile is not `test`, so it does not pick up application-test.yml.
+    # Without this the gateway calls the config server on every context load.
+    config:
+      enabled: false
     gateway:
       server:
         webflux:

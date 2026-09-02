@@ -150,3 +150,14 @@ springdoc:
   swagger-ui:
     path: /swagger-ui.html
 
+---
+# Config Server is part of the docker-compose / bare-JVM profile only; the
+# Kubernetes overlays set spring.cloud.config.enabled=false and supply the
+# same values through ConfigMaps and Secrets instead (ADR-005).
+# `optional:` keeps startup working when no config server is reachable.
+# Excluded from the test profile so the suite never reaches for the network.
+spring:
+  config:
+    activate:
+      on-profile: "!test"
+    import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}

@@ -11,14 +11,16 @@ Service manifests decide to *name* their ports). What they DO depend on:
 
 | Service            | targetPort |
 |---------------------|-----------|
-| discovery-service    | 8761 |
-| config-service        | 8888 |
 | api-gateway            | 8080 |
 | movie-service          | 8081 |
 | user-service            | 8082 |
 | actor-service            | 8083 |
 | ai-service                | 8084 |
 | media-service              | 8085 |
+
+discovery-service and config-service have no monitor here: they are not
+deployed to Kubernetes at all (ADR-005). media-service has one, but it is not
+in the Kubernetes base yet, so it currently matches nothing.
 
 Apply after the kube-prometheus-stack release and the target Services both
 exist:

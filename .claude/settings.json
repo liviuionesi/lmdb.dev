@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/home/liviu/.local/bin/graphify hook-guard search"
+            "command": "sh -c '\"${CLAUDE_PROJECT_DIR:-.}\"/.claude/hooks/graphify-guard.sh search'"
           }
         ]
       },
@@ -15,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/home/liviu/.local/bin/graphify hook-guard read"
+            "command": "sh -c '\"${CLAUDE_PROJECT_DIR:-.}\"/.claude/hooks/graphify-guard.sh read'"
           }
         ]
       }

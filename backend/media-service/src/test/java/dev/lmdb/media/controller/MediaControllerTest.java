@@ -1,5 +1,7 @@
 package dev.lmdb.media.controller;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
@@ -15,7 +17,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -87,10 +88,10 @@ class MediaControllerTest {
             null,
             null);
 
-    Assertions.assertEquals(HttpStatus.CREATED, result.getStatusCode());
-    Assertions.assertNotNull(result.getBody());
-    Assertions.assertEquals("uuid-1234", result.getBody().id());
-    Assertions.assertEquals("usr-1", result.getBody().entityId());
+    assertEquals(HttpStatus.CREATED, result.getStatusCode());
+    assertNotNull(result.getBody());
+    assertEquals("uuid-1234", result.getBody().id());
+    assertEquals("usr-1", result.getBody().entityId());
   }
 
   /**
@@ -119,9 +120,9 @@ class MediaControllerTest {
 
     ResponseEntity<MediaFile> result = mediaController.getMediaFile(fileId);
 
-    Assertions.assertEquals(HttpStatus.OK, result.getStatusCode());
-    Assertions.assertNotNull(result.getBody());
-    Assertions.assertEquals(fileId, result.getBody().id());
+    assertEquals(HttpStatus.OK, result.getStatusCode());
+    assertNotNull(result.getBody());
+    assertEquals(fileId, result.getBody().id());
   }
 
   /**
@@ -153,9 +154,9 @@ class MediaControllerTest {
 
     ResponseEntity<Resource> result = mediaController.downloadMedia(fileId, "original");
 
-    Assertions.assertEquals(HttpStatus.OK, result.getStatusCode());
-    Assertions.assertNotNull(result.getBody());
-    Assertions.assertEquals("5000", result.getHeaders().getFirst("Content-Length"));
+    assertEquals(HttpStatus.OK, result.getStatusCode());
+    assertNotNull(result.getBody());
+    assertEquals("5000", result.getHeaders().getFirst("Content-Length"));
   }
 
   /**
@@ -167,7 +168,7 @@ class MediaControllerTest {
 
     ResponseEntity<Void> result = mediaController.deleteMediaFile("del-target-99");
 
-    Assertions.assertEquals(HttpStatus.NO_CONTENT, result.getStatusCode());
+    assertEquals(HttpStatus.NO_CONTENT, result.getStatusCode());
   }
 
   /** Asserts that querying media uploads by entity ID returns HTTP 200 with list of results. */
@@ -177,7 +178,7 @@ class MediaControllerTest {
 
     ResponseEntity<List<MediaFile>> result = mediaController.getMediaForEntity("usr-profile-1");
 
-    Assertions.assertEquals(HttpStatus.OK, result.getStatusCode());
-    Assertions.assertNotNull(result.getBody());
+    assertEquals(HttpStatus.OK, result.getStatusCode());
+    assertNotNull(result.getBody());
   }
 }

@@ -1,5 +1,8 @@
 package dev.lmdb.media.service;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -16,7 +19,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -58,12 +60,12 @@ class MediaServiceTest {
         mediaService.uploadMedia(
             mockFile, "user-789", EntityType.USER, MediaType.AVATAR, metadata, "test_user", null);
 
-    Assertions.assertNotNull(result.id());
-    Assertions.assertEquals("user-789", result.entityId());
-    Assertions.assertEquals("avatar.jpg", result.originalFilename());
-    Assertions.assertEquals(EntityType.USER, result.entityType());
-    Assertions.assertEquals(MediaType.AVATAR, result.mediaType());
-    Assertions.assertEquals("http://thumb-url", result.thumbnails().get("thumb"));
+    assertNotNull(result.id());
+    assertEquals("user-789", result.entityId());
+    assertEquals("avatar.jpg", result.originalFilename());
+    assertEquals(EntityType.USER, result.entityType());
+    assertEquals(MediaType.AVATAR, result.mediaType());
+    assertEquals("http://thumb-url", result.thumbnails().get("thumb"));
 
     verify(storageService)
         .putObject(any(), any(InputStream.class), eq(mockFile.getSize()), eq("image/jpeg"));
@@ -97,7 +99,7 @@ class MediaServiceTest {
 
     boolean result = mediaService.deleteMediaFile(testId);
 
-    Assertions.assertTrue(result);
+    assertTrue(result);
     verify(storageService).removeObject("movie_review/entity-id/doc.pdf");
     verify(mediaRepository).deleteById(testId);
   }
@@ -112,7 +114,7 @@ class MediaServiceTest {
     when(mediaRepository.findByEntityId(entityId)).thenReturn(List.of());
 
     List<MediaFile> list = mediaService.getMediaForEntity(entityId);
-    Assertions.assertNotNull(list);
+    assertNotNull(list);
     verify(mediaRepository).findByEntityId(entityId);
   }
 }

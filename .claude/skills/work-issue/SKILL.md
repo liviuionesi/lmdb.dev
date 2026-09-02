@@ -17,6 +17,12 @@ Args: `/work-issue` (pick the next one per the rules below) or `/work-issue
 scope-discipline checks: refuse if N is an Epic or an unbroken-down Story,
 per the same rule the picker follows).
 
+
+> Outside Claude Code: invoke this by pointing the agent at
+> `.agents/skills/work-issue/SKILL.md` with the issue number. Where the
+> steps below say `AskUserQuestion`, ask in chat and wait. See "Repo
+> skills, and how they translate between tools" in `AGENTS.md`.
+
 ## 0. Orient
 
 - `git fetch origin develop` and confirm the working tree is on `develop`
@@ -104,7 +110,9 @@ In order, for every module actually touched:
 
 ## 5. Two independent review passes, in parallel
 
-Spawn both as background `Agent` calls (they don't depend on each other),
+Run both independently (they don't depend on each other) — background
+`Agent` calls in Claude Code, separate agent runs in Antigravity, or one
+after the other in this session —
 then continue other prep work until both report back — don't block
 synchronously if there's other useful prep to do (issue-hygiene reading,
 drafting the resync).

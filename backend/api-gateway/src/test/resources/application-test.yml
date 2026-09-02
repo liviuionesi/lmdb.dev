@@ -12,6 +12,10 @@ spring:
       - org.springframework.boot.autoconfigure.data.redis.RedisReactiveAutoConfiguration
   
   cloud:
+    # No config server in tests; with the config client on the classpath
+    # Spring Cloud otherwise demands a spring.config.import.
+    config:
+      enabled: false
     gateway:
       server:
         webflux:
@@ -49,5 +53,5 @@ management:
 logging:
   level:
     root: INFO
-    dev.lmdb.gateway: DEBUG
+    "[dev.lmdb.gateway]": DEBUG
 

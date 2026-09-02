@@ -40,7 +40,9 @@ import org.springframework.web.client.ResourceAccessException;
  * database or external TMDB API. Verifies JSON serialization matching TMDB specifications,
  * client-side non-numeric ID rejection, and upstream error forwarding.
  */
-@WebMvcTest(controllers = PersonFacadeController.class)
+@WebMvcTest(
+    controllers = PersonFacadeController.class,
+    properties = "spring.cloud.config.enabled=false")
 @DisplayName("PersonFacadeController WebMvc Tests")
 class PersonFacadeControllerTest {
 
