@@ -9,7 +9,8 @@ labels: epic
      Writing: .claude/skills/audit-artifacts/VOICE.md. Short sentences,
      plain words, facts and numbers. No filler, no corporate vocabulary.
      Labels: one type (set by this template) and one priority, P0-critical
-     to P3-low. Assign the issue.
+     to P3-low. Assign the issue. The sprint is the milestone: sprint-N
+     labels are retired, do not add one.
      Project board: set Status, Priority, Size, Estimate, Start date and
      Target date. Size and Estimate come from the points or hours below.
      Check your work: infrastructure/scripts/audit-check.py <number> -->

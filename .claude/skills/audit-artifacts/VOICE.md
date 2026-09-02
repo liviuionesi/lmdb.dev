@@ -31,8 +31,7 @@ is, worth noting, importantly.
 - Rhetorical questions.
 - Sentence fragments used as punchlines.
 - Em dashes used as a dramatic pause. Use a comma, parentheses, or a new
-  sentence. The `- [ ] #N — label` separator the templates require is not
-  prose; leave it.
+  sentence.
 
 **Corporate vocabulary.** leverage, ensure, robust, seamless, holistic,
 streamline, align, drive, enable, unlock, surface (as a verb), journey,

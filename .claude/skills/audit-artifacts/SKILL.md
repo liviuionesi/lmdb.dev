@@ -47,15 +47,17 @@ section. Concretely:
 
 - Every section the template has is present. No extra sections invented.
 - Story: `As a / I want / So that`, Given/When/Then criteria, DoR box,
-  Story Points, Sprint, Closing this Story, DoD box, Notes.
+  Story Points, Closing this Story, DoD box, Notes. There is no `## Sprint`
+  section: the Milestone field holds the sprint, and two copies drift.
 - Task: `Task`, `Scope` (optional), criteria, `Hours`, Notes.
 - Epic: `Epic`, `Business Value`, `Product Goal alignment`, Closing this
   Epic, Notes.
 - No issue carries a child list or a `Parent: #N` line. Hierarchy is the
   native sub-issue link. An issue with no parent keeps a `## No parent`
   section holding the reason.
-- Bug: `Bug`, `Severity vs. Priority`, criteria, Notes. Bugs have no parent
-  section — that is deliberate, do not add one.
+- Bug: `Bug`, `Root Cause` (deleted while still investigating),
+  `Severity vs. Priority`, criteria, Notes. Bugs have no parent section.
+  That is deliberate, do not add one.
 - **At most 5 acceptance criteria.** More than 5 honest criteria means the
   issue is too big — flag it for a split, do not cram.
 
@@ -96,11 +98,17 @@ percentages, notes about what the environment could not run.
 
 **Run `infrastructure/scripts/audit-check.py <n> --tree` first.** It checks
 the mechanical half of this gate and Gate 1 across a whole subtree: label
-counts, assignee, retired `sprint-N`, banned sections, parent link or a
+counts, assignee, retired `sprint-N`, sections duplicating a GitHub field
+(`## Sprint`, `## Child Stories`, `## Technical Tasks`), parent link or a
 stated reason, template sections, dated criteria, criteria with no proof,
 closed issues with unchecked criteria or open children, and a Bug whose
 priority label disagrees with its body. Fix what it reports before reading
-anything by hand — it is faster than you and it does not get bored.
+anything by hand.
+
+The script is itself covered by `infrastructure/scripts/test_audit_check.py`
+(`python3 -m unittest discover -s infrastructure/scripts -p 'test_*.py'`).
+Add a test there when you add a rule, so the checker cannot drift the way
+the issues it checks once did.
 
 What it cannot check, and you must: whether a claim is true, whether a named
 test actually proves the criterion, and whether the prose reads well.
@@ -204,14 +212,15 @@ statement, a design decision), say so in one line in Notes and mark it
 3. Per Task: Gates 1 → 4, write any missing test, run it, edit the body
    via `gh issue edit <n> --body-file <file>` using a scratchpad file per
    issue.
-4. Then the Story: Gates 1 → 4, and make its `## Technical Tasks` list
-   match the real open/closed state of its children.
+4. Then the Story: Gates 1 → 4. Its children are the native sub-issue
+   links, so there is no list in the body to reconcile. Check the links
+   themselves with the GraphQL query in Gate 3.
 5. **Cascade.** If every Task under the Story is closed and the Story now
    genuinely meets the Definition of Done, close the Story and merge
    `develop` → `main`. Then reach up into the parent Epic and do exactly
-   two things: tick this Story's box in `## Child Stories`, and close the
-   Epic if every one of its Stories is now closed. Never leave an
-   exhausted Story or Epic open.
+   one thing: close it if every one of its Stories is now closed. There is
+   no box to tick, because the Epic body carries no child list. Never
+   leave an exhausted Story or Epic open.
 
    That upward reach is the **only** edit a Story run may make to an Epic.
    Do not rewrite the Epic's prose, criteria or Notes here — several
@@ -248,8 +257,8 @@ Then the Epic's own text:
   is a valid answer for tooling and maintenance Epics — write that rather
   than dropping the section.
 - `## Notes` holds decisions and rescopes, not retrofit archaeology.
-- A Story that was dropped rather than delivered gets a one-line reason in
-  the list, not a box left unchecked forever.
+- A Story that was dropped rather than delivered gets one line in
+  `## Notes` naming it and the reason, since there is no list to hold it.
 - Close the Epic if every Story under it is closed.
 
 One Task owns each Epic. Never audit an Epic from inside a Story run.
