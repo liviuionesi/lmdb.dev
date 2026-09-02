@@ -237,10 +237,27 @@ One Task owns each Epic. Never audit an Epic from inside a Story run.
 
 ## Parallelism
 
-Child Tasks that touch different modules can be audited in parallel with
-one Agent each — but **only** if the user asked for subagents. Otherwise do
-them in sequence in this session. Never parallelise the Story itself; it
-depends on all its Tasks being finished.
+Child Tasks that touch different modules can be audited in parallel: a
+subagent in Claude Code, a separate agent run in Antigravity. Do this only
+if the user asked for it. Otherwise audit them in sequence in this session.
+Never parallelise the Story itself, because it depends on all its Tasks
+being finished.
+
+## Running outside Claude Code
+
+This file is plain Markdown. `.agents/skills` is a symlink to
+`.claude/skills`, so Antigravity reads the same file at
+`.agents/skills/audit-artifacts/SKILL.md`.
+
+- Claude Code: `/audit-artifacts 85`.
+- Antigravity or any other tool: point the agent at
+  `.agents/skills/audit-artifacts/SKILL.md` and give it the Story number.
+  Slash-command registration is Claude Code only.
+- The `tools:` line in the frontmatter lists Claude Code tool names. Other
+  tools ignore it. The skill needs `gh`, `git` and file access, nothing
+  else.
+- The subagent option under Parallelism is the only Claude Code specific
+  step, and it is optional.
 
 ## Report
 

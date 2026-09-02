@@ -209,6 +209,14 @@ back to reality — this section is that force.
   infeasible, rescope the acceptance criteria to match reality in one line
   — don't leave it unchecked forever, and don't pile on caveats instead of
   rescoping.
+- Run `/audit-artifacts <story>` (repo-local skill,
+  `.claude/skills/audit-artifacts/`, reachable as
+  `.agents/skills/audit-artifacts/` in Antigravity) to take one Story and
+  its Tasks through four gates: Shape, Voice, Truth, Proof. It goes past
+  `/resync-tasks` by requiring every acceptance criterion to name the test
+  or command that proves it, and by writing that test when none exists. A
+  date is not a proof. The writing standard it enforces is `VOICE.md`
+  beside it.
 - Run `/resync-tasks` (repo-local skill, `.claude/skills/resync-tasks/`,
   reachable as `.agents/skills/resync-tasks/` in Antigravity)
   periodically as a backstop sweep across every open issue, not just the
