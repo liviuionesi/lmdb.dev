@@ -6,6 +6,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.Date;
+import java.util.TimeZone;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -192,6 +193,36 @@ class DateUtilsTest {
     long result = DateUtils.hoursBetween(start, end);
 
     assertThat(result).isEqualTo(5);
+  }
+
+  /**
+   * Pins the daylight-saving fix {@link DateUtils#hoursBetween(LocalDateTime, LocalDateTime)}
+   * received under issue #20, the one real bug SonarQube reported.
+   *
+   * <p>Given: 01:00 and 05:00 on 2023-03-26 in Europe/Bucharest, a spring-forward day where the
+   * clock jumps 03:00 to 04:00. When: the elapsed hours are counted. Then: the answer is 3, not the
+   * 4 the wall clock reads, because one hour of that span does not exist. Counting on bare {@code
+   * LocalDateTime} returns 4, so this test fails if the zone resolution is removed again.
+   *
+   * <p>The default time zone is set explicitly and restored afterwards: the method resolves against
+   * {@link java.util.TimeZone#getDefault()}, and CI runs in UTC, which has no transition to cross.
+   */
+  @Test
+  void hoursBetween_shouldCountRealElapsedHoursAcrossDaylightSaving() {
+    TimeZone original = TimeZone.getDefault();
+    try {
+      // 1. A zone that actually observes daylight saving, so the span has a gap in it.
+      TimeZone.setDefault(TimeZone.getTimeZone("Europe/Bucharest"));
+      LocalDateTime start = LocalDateTime.of(2023, 3, 26, 1, 0);
+      LocalDateTime end = LocalDateTime.of(2023, 3, 26, 5, 0);
+
+      // 2. Four hours on the wall clock, three hours of real time.
+      long result = DateUtils.hoursBetween(start, end);
+
+      assertThat(result).isEqualTo(3);
+    } finally {
+      TimeZone.setDefault(original);
+    }
   }
 
   /**
