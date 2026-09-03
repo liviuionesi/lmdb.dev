@@ -26,6 +26,17 @@ more than one call. See [ADR-020](../../docs/architecture/adr/020-nl-query-cross
 for why the frontend consumes ai-service this way instead of orchestrating
 multiple backend calls client-side.
 
+## Recommendations
+
+`/recommendations` (`src/components/Recommendations/Recommendations.jsx`, sign-in required)
+shows AI-generated movie picks, each with ai-service's own explanation for
+why it was suggested. The view calls `aiApi.getMovieRecommendations`
+(`src/services/AI.js`), which builds its request from the signed-in user's
+Favorites — resolving each favorited movie's title through the TMDB facade,
+since user-service only ever returns a movie id — then posts it to
+`POST /api/v1/ai/recommendations`. A user with no favorites yet sees a
+prompt to favorite some movies instead of an empty or erroring list.
+
 ## Voice Assistant Setup (Vosk Speech-to-Text)
 
 To enable click-to-talk voice commands:

@@ -34,6 +34,7 @@ frontend/lmdb/
 │   │   ├── MovieInformation/     # Detailed movie view (trailers, cast, recommendations)
 │   │   ├── Actors/               # Actor bio, profile photo, and filmography list
 │   │   ├── Profile/              # User profile, favorites list, and watchlist
+│   │   ├── Recommendations/      # AI-generated picks from the user's own Favorites (#220-#221)
 │   │   ├── Search/               # Autocomplete search input with debouncing
 │   │   ├── RatedCards/           # Horizontal / grid display for rated movies
 │   │   └── AlanVoice/            # Voice assistant control widget (Vosk modal)
