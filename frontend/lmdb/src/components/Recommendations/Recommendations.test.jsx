@@ -51,12 +51,15 @@ describe('Recommendations', () => {
     useGetMovieQuery.mockReturnValue({ data: undefined, isFetching: true });
   });
 
-  it('redirects an unauthenticated visitor to the home page', () => {
+  it('redirects an unauthenticated visitor to the home page, and skips the query', () => {
     useGetMovieRecommendationsQuery.mockReturnValue({ data: undefined, isFetching: false });
     renderAtRecommendationsRoute(buildStore(false));
 
     expect(screen.getByText('Home')).toBeInTheDocument();
     expect(screen.queryByText('Recommended For You')).not.toBeInTheDocument();
+    // Dropping `skip: !isAuthenticated` would still redirect (the check below wouldn't catch it
+    // alone) but would also fire the query for a logged-out visitor with no favorites to read.
+    expect(useGetMovieRecommendationsQuery).toHaveBeenCalledWith(undefined, { skip: true });
   });
 
   it('shows a centered spinner while the recommendations call is in flight', () => {
@@ -64,6 +67,17 @@ describe('Recommendations', () => {
     renderWithProviders(<Recommendations />, { store: buildStore(true) });
 
     expect(screen.getByRole('progressbar')).toBeInTheDocument();
+  });
+
+  it('shows the spinner (not the "zero picks" message) during the pre-fetch uninitialized tick', () => {
+    // RTK Query reports `isFetching: false, data: undefined, error: undefined` for the instant
+    // right after `skip` flips to false, before the request actually starts — falling through to
+    // the "zero picks" branch here would flash a wrong, permanent-looking message during that tick.
+    useGetMovieRecommendationsQuery.mockReturnValue({ data: undefined, error: undefined, isFetching: false });
+    renderWithProviders(<Recommendations />, { store: buildStore(true) });
+
+    expect(screen.getByRole('progressbar')).toBeInTheDocument();
+    expect(screen.queryByText(/No recommendations available right now/)).not.toBeInTheDocument();
   });
 
   it('shows a distinct error state when the call fails, not a blank screen', () => {
@@ -115,5 +129,58 @@ describe('Recommendations', () => {
 
     expect(screen.getByText('Fight Club')).toBeInTheDocument();
     expect(screen.getByText('Because you liked Se7en')).toBeInTheDocument();
+  });
+
+  it('hydrates each card by its own movieId, keeping title and reason correctly paired', () => {
+    // A mockReturnValue (one fixed value for every call) can't tell "the right movie per card"
+    // apart from "the same movie repeated" or "card i showing recommendation i-1's data" — this
+    // routes by the actual argument passed to useGetMovieQuery, the same way the real TMDB facade
+    // would key its response by id, so a swapped-index or always-first-id bug fails visibly.
+    const movies = {
+      550: { id: 550, title: 'Fight Club', poster_path: '/a.jpg', vote_average: 8.4 },
+      680: { id: 680, title: 'Pulp Fiction', poster_path: '/b.jpg', vote_average: 8.9 },
+    };
+    useGetMovieRecommendationsQuery.mockReturnValue({
+      data: {
+        isEmpty: false,
+        recommendations: [
+          { movieId: '550', score: 0.9, reason: 'Because you liked Se7en' },
+          { movieId: '680', score: 0.8, reason: 'Because you liked Reservoir Dogs' },
+        ],
+      },
+      isFetching: false,
+    });
+    useGetMovieQuery.mockImplementation((id) => ({ data: movies[id], isFetching: false }));
+
+    renderWithProviders(<Recommendations />, { store: buildStore(true) });
+
+    expect(useGetMovieQuery).toHaveBeenCalledWith(550);
+    expect(useGetMovieQuery).toHaveBeenCalledWith(680);
+    // Each title sits with its own reason, not the other card's.
+    expect(screen.getByText('Fight Club').closest('a')).toHaveTextContent('Because you liked Se7en');
+    expect(screen.getByText('Pulp Fiction').closest('a')).toHaveTextContent('Because you liked Reservoir Dogs');
+  });
+
+  it("doesn't render a card whose own TMDB lookup is still in flight, even once others resolve", () => {
+    // Guards RecommendedMovie's `isFetching || !movie` check — dropping it (or a `&&`/`||` typo)
+    // would render half-populated or stale content instead of simply skipping that one card.
+    useGetMovieRecommendationsQuery.mockReturnValue({
+      data: {
+        isEmpty: false,
+        recommendations: [
+          { movieId: '550', score: 0.9, reason: 'Because you liked Se7en' },
+          { movieId: '680', score: 0.8, reason: 'Because you liked Reservoir Dogs' },
+        ],
+      },
+      isFetching: false,
+    });
+    useGetMovieQuery.mockImplementation((id) => (id === 550
+      ? { data: { id: 550, title: 'Fight Club', poster_path: '/a.jpg', vote_average: 8.4 }, isFetching: false }
+      : { data: undefined, isFetching: true }));
+
+    renderWithProviders(<Recommendations />, { store: buildStore(true) });
+
+    expect(screen.getByText('Fight Club')).toBeInTheDocument();
+    expect(screen.queryByText('Because you liked Reservoir Dogs')).not.toBeInTheDocument();
   });
 });

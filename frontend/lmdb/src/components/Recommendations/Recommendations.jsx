@@ -39,8 +39,11 @@ function Recommendations() {
     return <Navigate to="/" replace />;
   }
 
-  // Loading: the same centered spinner Movies.jsx uses for its own network states.
-  if (isFetching) {
+  // Loading: the same centered spinner Movies.jsx uses for its own network states. Also covers the
+  // brief uninitialized tick right after `skip` flips to false (isFetching not yet true, data/error
+  // both still undefined) — without `!data && !error` here, that tick would fall through to the
+  // "zero picks" branch below and flash a wrong, permanent-looking message.
+  if (isFetching || (!data && !error)) {
     return (
       <Box
         sx={{
