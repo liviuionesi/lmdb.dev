@@ -32,4 +32,20 @@ describe('Movie', () => {
     // child rather than a plain HTML `title` attribute.
     expect(screen.getByLabelText('7.2 / 10')).toBeInTheDocument();
   });
+
+  it('renders an optional caption (#221: ai-service\'s recommendation reason)', () => {
+    const movie = { id: 3, title: 'Explained', poster_path: '/x.jpg', vote_average: 6 };
+    renderWithProviders(<Movie movie={movie} i={0} caption="Because you liked Fight Club" />);
+
+    expect(screen.getByText('Because you liked Fight Club')).toBeInTheDocument();
+  });
+
+  it('renders no caption text when none is passed (every other caller)', () => {
+    const movie = { id: 4, title: 'Plain', poster_path: '/x.jpg', vote_average: 6 };
+    const { container } = renderWithProviders(<Movie movie={movie} i={0} />);
+
+    // The caption is the only `body2` (rendered as a `<p>`) text this component ever shows —
+    // MUI's `variant="h5"` title renders as an `<h5>`, not a `<p>`.
+    expect(container.querySelectorAll('p').length).toBe(0);
+  });
 });
