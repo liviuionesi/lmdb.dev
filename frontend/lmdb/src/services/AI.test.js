@@ -224,4 +224,33 @@ describe('aiApi.getMovieRecommendations (#220)', () => {
     // reflects the successful (non-empty) path despite one favorite's lookup having failed.
     expect(result.data).toEqual({ recommendations: [], isEmpty: false });
   });
+
+  it('errors instead of calling /recommendations when every TMDB lookup fails (non-empty history)', async () => {
+    // Distinct from "no favorites": the user has one, but its title can't be resolved (e.g. the
+    // TMDB facade is down) — sending an empty recentMovies list here would look identical to a
+    // real, successful, unpersonalized response, so this must surface as an error instead.
+    global.fetch = vi.fn((request) => {
+      if (request.url.includes('/users/favorites')) {
+        return Promise.resolve(jsonResponse({ data: [{ movieId: 550 }] }));
+      }
+      if (request.url.includes('/movie/550')) {
+        return Promise.resolve({
+          ok: false,
+          status: 503,
+          headers: new Headers({ 'content-type': 'application/json' }),
+          json: async () => ({ message: 'facade down' }),
+          text: async () => JSON.stringify({ message: 'facade down' }),
+          clone() { return this; },
+        });
+      }
+      return Promise.reject(new Error(`unexpected fetch: ${request.url}`));
+    });
+
+    const result = await buildRecommendationsStore()
+      .dispatch(aiApi.endpoints.getMovieRecommendations.initiate());
+
+    expect(result.error).toBeDefined();
+    expect(result.data).toBeUndefined();
+    expect(global.fetch.mock.calls.some(([request]) => request.url.includes('/recommendations'))).toBe(false);
+  });
 });

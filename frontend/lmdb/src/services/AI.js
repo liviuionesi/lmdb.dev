@@ -32,7 +32,16 @@ export const aiApi = createApi({
     //* endpoints and call the real baseQuery itself, all before deciding what to send.
     //* `count` is the only caller-supplied argument; omitting it leaves ai-service's own default
     //* (`RecommendationRequestDto#countOrDefault`) in charge.
+    //* `keepUnusedDataFor: 0`: the backend refreshes the user's UserTasteProfile as a side effect
+    //* of every call (see RecommendationRequestBodyDto's Javadoc), so this is not a cacheable read
+    //* in the usual RTK Query sense — it must run again on every fresh mount rather than serve a
+    //* result computed from favorites that may since have changed. Zero keeps that guarantee
+    //* (evicting the cache entry the moment nothing is subscribed) without giving up `useQuery`'s
+    //* auto-fetch-on-mount, which is what #221's view needs. It does not cover a favorite changing
+    //* while the view stays mounted — #221 (or a later cache-tag-bridging task, if this proves not
+    //* enough) is responsible for calling `refetch()` after that.
     getMovieRecommendations: builder.query({
+      keepUnusedDataFor: 0,
       async queryFn(count, api, extraOptions, baseQuery) {
         // 1. Resolve the user's favorited movie ids (#219).
         const favoritesRequest = api.dispatch(userApi.endpoints.getFavorites.initiate());
@@ -58,6 +67,16 @@ export const aiApi = createApi({
         const recentMovies = movieResults
           .filter((result) => !result.error && result.data?.title)
           .map((result) => result.data.title);
+
+        // Distinct from "empty history": the user does have favorites, but every TMDB lookup for
+        // them failed (e.g. the facade is down). Sending an empty recentMovies list here would
+        // silently look identical to a successful, well-personalized response, so this is reported
+        // as an error instead of falling through to the recommendations call below.
+        if (recentMovies.length === 0) {
+          return {
+            error: { status: 'CUSTOM_ERROR', error: 'Could not resolve any favorited movie titles via TMDB' },
+          };
+        }
 
         // 4. The actual recommendations call, through the same dynamic base query every other
         //    ai-service endpoint here uses.
