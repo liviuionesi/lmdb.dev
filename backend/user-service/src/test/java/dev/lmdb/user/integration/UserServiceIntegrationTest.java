@@ -6,6 +6,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import dev.lmdb.user.model.Role;
+import dev.lmdb.user.repository.UserRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
@@ -49,10 +51,25 @@ class UserServiceIntegrationTest {
 
   @Autowired private ObjectMapper objectMapper;
 
+  @Autowired private UserRepository userRepository;
+
   /** Tokens captured along the journey and reused by later steps. */
   private static String accessToken;
 
   private static String refreshToken;
+
+  /**
+   * Issue #238's "unconfigured" acceptance criterion, proven against this class's real
+   * (unconfigured) Spring context: with no {@code admin.bootstrap.*} properties set, {@code
+   * AdminBootstrapRunner} must have created nothing at all. Ordered first, before any test in this
+   * class registers accounts of its own.
+   */
+  @Test
+  @Order(0)
+  @DisplayName("No ADMIN bootstrap configured: no admin account exists at startup")
+  void noAdminBootstrappedWithoutConfig() {
+    assertThat(userRepository.findAll()).noneMatch(user -> user.getRole() == Role.ADMIN);
+  }
 
   /**
    * Journey step 1: a real INSERT through the Flyway-migrated schema. The captured access/refresh

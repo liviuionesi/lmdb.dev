@@ -46,6 +46,18 @@ jwt:
   expiration: ${JWT_EXPIRATION:3600000}          # access token: 1 hour
   refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000}  # refresh: 7 days
 
+# ADMIN bootstrap (#238). All three are unset by default, and
+# AdminBootstrapService requires all three to be present before it creates
+# anything — an unconfigured deployment ends up with no admin account
+# rather than a default/guessable one. See
+# docs/security/DDOS_PROTECTION_IMPLEMENTED.md for the operational
+# procedure.
+admin:
+  bootstrap:
+    username: ${ADMIN_BOOTSTRAP_USERNAME:}
+    email: ${ADMIN_BOOTSTRAP_EMAIL:}
+    password: ${ADMIN_BOOTSTRAP_PASSWORD:}
+
 management:
   endpoints:
     web:

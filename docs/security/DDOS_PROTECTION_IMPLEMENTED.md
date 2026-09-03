@@ -227,11 +227,24 @@ public class IpFilterGlobalFilter implements GlobalFilter, Ordered {
 **Security:** `/admin/**` requires a token carrying the `ADMIN` role (#237), not merely a
 signed-in account.
 
-**Bootstrap (#238):** registration always issues `Role.USER`, and there is no promotion endpoint
-yet, so a fresh deployment has no ADMIN account. Until #238 lands, mint one directly against the
-user-service database (`UPDATE users SET role = 'ADMIN' WHERE username = '<you>'`) and re-login to
-pick up the new claim — do this *before* you need the emergency lever below, not during an
-incident.
+**Bootstrap (#238):** registration always issues `Role.USER` and there is no promotion endpoint,
+so a fresh deployment provisions its one ADMIN account by setting three environment variables on
+user-service before first startup:
+
+```bash
+ADMIN_BOOTSTRAP_USERNAME=ops-admin
+ADMIN_BOOTSTRAP_EMAIL=ops-admin@example.com
+ADMIN_BOOTSTRAP_PASSWORD=<a real secret, 12+ characters>
+```
+
+`AdminBootstrapService` runs once at startup: if all three are set (and the password is at least
+12 characters), it creates the account with the `ADMIN` role; if any are unset, it creates nothing
+and logs that fact — there is no default credential, so an unconfigured deployment never ends up
+with a guessable admin. It's safe to leave these variables set permanently: re-running against an
+already-bootstrapped deployment is a no-op, and a username collision with an existing non-admin
+account is left untouched rather than silently promoted. Do this *before* you need the emergency
+lever below, not during an incident — log in with the bootstrap credentials to get a token carrying
+the `ADMIN` claim.
 
 ---
 
