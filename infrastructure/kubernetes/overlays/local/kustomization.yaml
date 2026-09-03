@@ -38,6 +38,7 @@ configMapGenerator:
     literals:
       - EUREKA_CLIENT_ENABLED=false
       - MOVIE_SERVICE_BASE_URL=http://movie-service:8081
+      - ACTOR_SERVICE_BASE_URL=http://actor-service:8083
 
 # Remap the base placeholder image names to the published GHCR images.
 # Matches the same pattern used in overlays/aws and overlays/azure.
