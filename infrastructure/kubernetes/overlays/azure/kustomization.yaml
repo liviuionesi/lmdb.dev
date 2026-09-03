@@ -59,6 +59,7 @@ configMapGenerator:
     literals:
       - EUREKA_CLIENT_ENABLED=false
       - MOVIE_SERVICE_BASE_URL=http://movie-service:8081
+      - ACTOR_SERVICE_BASE_URL=http://actor-service:8083
 
 images:
   - name: lmdb/api-gateway

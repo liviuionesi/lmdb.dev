@@ -4,7 +4,10 @@ import { Link } from 'react-router-dom';
 
 import useStyles from './styles';
 
-function Movie({ movie, i }) {
+// `caption` is optional (#221): the recommendations view is this component's only caller that
+// passes one, to show ai-service's explanation text under an otherwise ordinary movie card
+// instead of duplicating this whole card just to add one line.
+function Movie({ movie, i, caption }) {
   const { classes } = useStyles();
 
   return (
@@ -31,6 +34,7 @@ function Movie({ movie, i }) {
               <Rating readOnly value={movie.vote_average / 2} precision={0.1} />
             </div>
           </Tooltip>
+          {caption && <Typography className={classes.caption} variant="body2">{caption}</Typography>}
         </Link>
       </Grow>
     </Grid>

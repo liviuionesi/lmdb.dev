@@ -7,6 +7,7 @@ import { configureStore } from '@reduxjs/toolkit';
 
 import Sidebar from './Sidebar';
 import genreOrCategoryReducer from '../../features/currentGenreOrCategory';
+import authReducer from '../../features/auth';
 import { renderWithProviders } from '../../test-utils/render';
 import { useGetGenresQuery } from '../../services/TMDB';
 
@@ -15,7 +16,7 @@ vi.mock('../../services/TMDB', () => ({
 }));
 
 const buildStore = (preloadedState) => configureStore({
-  reducer: { currentGenreOrCategory: genreOrCategoryReducer },
+  reducer: { currentGenreOrCategory: genreOrCategoryReducer, user: authReducer },
   preloadedState,
 });
 
@@ -97,5 +98,18 @@ describe('Sidebar', () => {
   it('renders About & Credits platform link in the sidebar', () => {
     renderWithProviders(<Sidebar setMobileOpen={() => {}} />, { store: buildStore() });
     expect(screen.getByText('About & Credits')).toBeInTheDocument();
+  });
+
+  it('hides the Recommendations link for an unauthenticated visitor (#221)', () => {
+    renderWithProviders(<Sidebar setMobileOpen={() => {}} />, { store: buildStore() });
+    expect(screen.queryByText('Recommendations')).not.toBeInTheDocument();
+  });
+
+  it('shows a Recommendations link to /recommendations once signed in (#221)', () => {
+    const store = buildStore({ user: { user: { id: 1 }, isAuthenticated: true } });
+    renderWithProviders(<Sidebar setMobileOpen={() => {}} />, { store });
+
+    const link = screen.getByText('Recommendations').closest('a');
+    expect(link).toHaveAttribute('href', '/recommendations');
   });
 });

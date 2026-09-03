@@ -17,6 +17,7 @@ import {
   Movies,
   NavBar,
   Profile,
+  Recommendations,
 } from '.';
 
 function App() {
@@ -41,6 +42,7 @@ function App() {
           <Route path="/about" element={<About />} />
           <Route path="/" element={<Movies />} />
           <Route path="/profile/:id" element={<Profile />} />
+          <Route path="/recommendations" element={<Recommendations />} />
         </Routes>
         <Footer />
       </main>

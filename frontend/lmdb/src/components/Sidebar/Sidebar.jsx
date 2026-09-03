@@ -4,8 +4,10 @@ import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import RecommendIcon from '@mui/icons-material/Recommend';
 import { selectGenreOrCategory } from '../../features/currentGenreOrCategory';
 import { useGetGenresQuery } from '../../services/TMDB';
+import { userSelector } from '../../features/auth';
 import useStyles from './styles';
 import genreIcons from '../../assets/genres';
 
@@ -19,6 +21,7 @@ const categories = [
 
 function Sidebar({ setMobileOpen }) {
   const { genreIdOrCategoryName } = useSelector((state) => state.currentGenreOrCategory);
+  const { isAuthenticated } = useSelector(userSelector);
   const { classes } = useStyles();
   const { data, isFetching } = useGetGenresQuery();
   const dispatch = useDispatch();
@@ -75,6 +78,22 @@ function Sidebar({ setMobileOpen }) {
           );
         })}
       </List>
+      {isAuthenticated && (
+        <>
+          <Divider />
+          <List>
+            <ListSubheader>For You</ListSubheader>
+            <Link className={classes.links} to="/recommendations">
+              <ListItemButton onClick={() => setMobileOpen(false)}>
+                <ListItemIcon>
+                  <RecommendIcon color="primary" />
+                </ListItemIcon>
+                <ListItemText primary="Recommendations" />
+              </ListItemButton>
+            </Link>
+          </List>
+        </>
+      )}
       <Divider />
       <List>
         <ListSubheader>Platform</ListSubheader>

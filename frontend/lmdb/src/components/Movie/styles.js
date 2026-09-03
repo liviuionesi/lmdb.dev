@@ -34,4 +34,10 @@ export default makeStyles()((theme) => ({
     marginBottom: 0,
     textAlign: 'center',
   },
+  caption: {
+    color: theme.palette.text.secondary,
+    width: '230px',
+    textAlign: 'center',
+    marginTop: '6px',
+  },
 }));
