@@ -1,6 +1,6 @@
 # LMDB Shared Library
 
-Common library containing DTOs, exceptions, utilities, constants, and annotations used across all LMDB microservices.
+Common library containing DTOs, exceptions, utilities, and constants used across all LMDB microservices.
 
 ## 📋 Contents
 
@@ -8,7 +8,6 @@ Common library containing DTOs, exceptions, utilities, constants, and annotation
 - **Exceptions** - Custom exception classes for error handling
 - **Utilities** - Helper classes for common operations
 - **Constants** - Shared constants and error codes
-- **Annotations** - Custom annotations for cross-cutting concerns
 
 ## 🚀 Quick Start
 
@@ -433,114 +432,6 @@ ErrorCodes.DATABASE_ERROR          // "ERR_9005"
 // Get description
 String desc = ErrorCodes.getDescription("ERR_1002");
 ```
-
-### Annotations
-
-#### @LogExecutionTime
-
-Logs method execution time:
-
-```java
-@LogExecutionTime
-public void expensiveOperation() {
-    // Implementation
-}
-
-// With custom message and threshold
-@LogExecutionTime(value = "Processing movie", level = LogLevel.WARN, thresholdMillis = 1000)
-public void processMovie() {
-    // Implementation
-}
-```
-
-**Attributes:**
-- `value` - Custom message prefix
-- `level` - Log level (DEBUG, INFO, WARN, ERROR)
-- `thresholdMillis` - Only log if execution exceeds this (ms)
-
-#### @ValidateRequest
-
-Enables automatic request validation:
-
-```java
-@ValidateRequest
-@PostMapping("/users")
-public ResponseEntity<User> createUser(@Valid @RequestBody UserDTO dto) {
-    // Implementation
-}
-
-// With validation groups and fail-fast
-@ValidateRequest(groups = {CreateGroup.class}, failFast = true)
-public ResponseEntity<User> create(@Validated(CreateGroup.class) @RequestBody UserDTO dto) {
-    // Implementation
-}
-```
-
-**Attributes:**
-- `groups` - Validation groups
-- `failFast` - Stop on first error
-
-#### @CacheResult
-
-Caches method results:
-
-```java
-@CacheResult(key = "movie", ttl = 3600)
-public Movie getMovieById(String id) {
-    return movieRepository.findById(id).orElseThrow();
-}
-
-// With custom configuration
-@CacheResult(
-    key = "user:profile",
-    ttl = 1800,
-    timeUnit = TimeUnit.SECONDS,
-    cacheNull = false,
-    condition = "#userId != null"
-)
-public UserProfile getProfile(String userId) {
-    return userService.findProfile(userId);
-}
-```
-
-**Attributes:**
-- `key` - Cache key prefix
-- `ttl` - Time to live
-- `timeUnit` - Time unit for TTL
-- `cacheNull` - Cache null values
-- `condition` - SpEL condition for caching
-
-#### @RateLimited
-
-Applies rate limiting:
-
-```java
-@RateLimited(requests = 100, per = 1, timeUnit = TimeUnit.MINUTES)
-@GetMapping("/api/movies")
-public ResponseEntity<List<Movie>> getMovies() {
-    return ResponseEntity.ok(movieService.findAll());
-}
-
-// Per-user rate limiting
-@RateLimited(
-    requests = 10,
-    per = 1,
-    timeUnit = TimeUnit.MINUTES,
-    keyPrefix = "api:search",
-    perUser = true
-)
-@GetMapping("/api/search")
-public ResponseEntity<?> search(@RequestParam String query) {
-    return ResponseEntity.ok(searchService.search(query));
-}
-```
-
-**Attributes:**
-- `requests` - Number of allowed requests
-- `per` - Time window duration
-- `timeUnit` - Time unit for window
-- `keyPrefix` - Rate limit key prefix
-- `perUser` - Apply limit per user
 
 ## 🧪 Testing
 
