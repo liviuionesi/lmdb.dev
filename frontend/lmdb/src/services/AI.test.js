@@ -121,6 +121,16 @@ describe('aiApi.getMovieRecommendations (#220)', () => {
     localStorage.clear();
   });
 
+  it('is a query endpoint, not a mutation, so useGetMovieRecommendationsQuery is real', () => {
+    // AC: "RTK Query endpoint added". A query and a mutation both dispatch/await the same way, so
+    // nothing above would fail if `builder.query` were swapped for `builder.mutation` — only the
+    // shape of the generated endpoint (and which hook RTK Query actually generates) tells them
+    // apart, so that's what this checks directly rather than through initiate()'s return value.
+    expect(typeof aiApi.endpoints.getMovieRecommendations.useQuery).toBe('function');
+    expect(aiApi.endpoints.getMovieRecommendations.useMutation).toBeUndefined();
+    expect(aiApi.useGetMovieRecommendationsQuery).toBe(aiApi.endpoints.getMovieRecommendations.useQuery);
+  });
+
   it('resolves favorites to titles via TMDB and posts them as recentMovies, plus count', async () => {
     global.fetch = routeFetch({
       '/users/favorites': { data: [{ movieId: 550 }, { movieId: 680 }] },
@@ -135,6 +145,9 @@ describe('aiApi.getMovieRecommendations (#220)', () => {
     const recommendationsCall = global.fetch.mock.calls
       .map(([request]) => request)
       .find((request) => request.url.includes('/recommendations'));
+    // The full URL (not just a substring match, which is all routeFetch itself checks) proves the
+    // dynamic-base-query prefix (#220's AC) actually landed on this specific request.
+    expect(recommendationsCall.url).toBe(`${baseUrl}/recommendations`);
     expect(recommendationsCall.method).toBe('POST');
     expect(JSON.parse(await recommendationsCall.text())).toEqual({
       recentMovies: ['Fight Club', 'Pulp Fiction'],
@@ -169,7 +182,10 @@ describe('aiApi.getMovieRecommendations (#220)', () => {
     const result = await buildRecommendationsStore()
       .dispatch(aiApi.endpoints.getMovieRecommendations.initiate());
 
-    expect(result.error).toBeDefined();
+    // Asserts the real upstream failure is what surfaces, not just "some truthy error" — a bug
+    // that discarded it and substituted a generic error object would still pass a bare
+    // `toBeDefined()` check.
+    expect(result.error).toMatchObject({ status: 500, data: { message: 'boom' } });
     expect(global.fetch.mock.calls.some(([request]) => request.url.includes('/recommendations'))).toBe(false);
   });
 
@@ -197,11 +213,15 @@ describe('aiApi.getMovieRecommendations (#220)', () => {
       return Promise.reject(new Error(`unexpected fetch: ${request.url}`));
     });
 
-    await buildRecommendationsStore().dispatch(aiApi.endpoints.getMovieRecommendations.initiate());
+    const result = await buildRecommendationsStore()
+      .dispatch(aiApi.endpoints.getMovieRecommendations.initiate());
 
     const recommendationsCall = global.fetch.mock.calls
       .map(([request]) => request)
       .find((request) => request.url.includes('/recommendations'));
     expect(JSON.parse(await recommendationsCall.text())).toEqual({ recentMovies: ['Fight Club'] });
+    // The outgoing request isn't the whole story — confirms the final hook-visible result also
+    // reflects the successful (non-empty) path despite one favorite's lookup having failed.
+    expect(result.data).toEqual({ recommendations: [], isEmpty: false });
   });
 });
