@@ -1,13 +1,16 @@
 package dev.lmdb.user.service;
 
+import dev.lmdb.user.dto.AuthDtos;
 import dev.lmdb.user.model.Role;
 import dev.lmdb.user.model.User;
 import dev.lmdb.user.repository.UserRepository;
 import java.time.LocalDateTime;
 import java.util.Optional;
+import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,6 +38,17 @@ public class AdminBootstrapService {
    * outright rather than merely discouraged.
    */
   static final int MIN_PASSWORD_LENGTH = 12;
+
+  /** Matches {@code users.username}'s {@code @Size(min = 3, max = 50)} ({@link AuthDtos}). */
+  static final int MIN_USERNAME_LENGTH = 3;
+
+  static final int MAX_USERNAME_LENGTH = 50;
+
+  /** Matches {@code users.email VARCHAR(255)} ({@code V1__init_user_schema.sql}). */
+  static final int MAX_EMAIL_LENGTH = 255;
+
+  /** Same shape as {@code RegisterRequest}'s {@code @Email} constraint, applied by hand here. */
+  private static final Pattern EMAIL_PATTERN = Pattern.compile("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$");
 
   private final UserRepository userRepository;
   private final PasswordEncoder passwordEncoder;
@@ -68,7 +82,30 @@ public class AdminBootstrapService {
       return;
     }
 
-    // 2. Refuse a weak credential outright rather than provisioning an
+    // 2. Bounds/format, matching RegisterRequest's constraints on the same
+    //    columns — without this, an oversized or malformed value reaches
+    //    save() below and fails as a raw DataIntegrityViolationException,
+    //    which is caught (see step 5) but gives a far less actionable log
+    //    than refusing here with the specific reason.
+    if (bootstrapUsername.length() < MIN_USERNAME_LENGTH
+        || bootstrapUsername.length() > MAX_USERNAME_LENGTH) {
+      log.warn(
+          "ADMIN_BOOTSTRAP_USERNAME must be between {} and {} characters — refusing to "
+              + "provision an admin account.",
+          MIN_USERNAME_LENGTH,
+          MAX_USERNAME_LENGTH);
+      return;
+    }
+    if (bootstrapEmail.length() > MAX_EMAIL_LENGTH
+        || !EMAIL_PATTERN.matcher(bootstrapEmail).matches()) {
+      log.warn(
+          "ADMIN_BOOTSTRAP_EMAIL is not a valid address (max {} characters) — refusing to "
+              + "provision an admin account.",
+          MAX_EMAIL_LENGTH);
+      return;
+    }
+
+    // 3. Refuse a weak credential outright rather than provisioning an
     //    administrator account that's trivial to brute-force.
     if (bootstrapPassword.length() < MIN_PASSWORD_LENGTH) {
       log.warn(
@@ -78,7 +115,7 @@ public class AdminBootstrapService {
       return;
     }
 
-    // 3. Idempotent: a username collision means either this deployment was
+    // 4. Idempotent: a username collision means either this deployment was
     //    already bootstrapped (fine, skip) or the name is taken by an
     //    unrelated USER account (do not silently promote it).
     Optional<User> existing = userRepository.findByUsername(bootstrapUsername);
@@ -101,20 +138,32 @@ public class AdminBootstrapService {
       return;
     }
 
-    // 4. Clear to create: same shape as a normal registration, but with the
-    //    ADMIN role a fresh deployment otherwise has no way to grant.
-    User admin =
-        userRepository.save(
-            User.builder()
-                .username(bootstrapUsername)
-                .email(bootstrapEmail)
-                .passwordHash(passwordEncoder.encode(bootstrapPassword))
-                .role(Role.ADMIN)
-                .enabled(true)
-                .accountNonLocked(true)
-                .createdAt(LocalDateTime.now())
-                .build());
-
-    log.info("Provisioned ADMIN account '{}' from bootstrap configuration.", admin.getUsername());
+    // 5. Clear to create: same shape as a normal registration, but with the
+    //    ADMIN role a fresh deployment otherwise has no way to grant. The
+    //    catch below is the safety net for a race this check-then-insert
+    //    can't close on its own (two instances starting concurrently against
+    //    the same database): without it, the loser's unique-constraint
+    //    violation would escape AdminBootstrapRunner uncaught and fail that
+    //    instance's entire startup instead of just skipping bootstrap.
+    try {
+      User admin =
+          userRepository.save(
+              User.builder()
+                  .username(bootstrapUsername)
+                  .email(bootstrapEmail)
+                  .passwordHash(passwordEncoder.encode(bootstrapPassword))
+                  .role(Role.ADMIN)
+                  .enabled(true)
+                  .accountNonLocked(true)
+                  .createdAt(LocalDateTime.now())
+                  .build());
+      log.info("Provisioned ADMIN account '{}' from bootstrap configuration.", admin.getUsername());
+    } catch (DataIntegrityViolationException e) {
+      log.warn(
+          "Failed to provision ADMIN bootstrap account '{}': another instance likely created it "
+              + "concurrently. Skipping.",
+          bootstrapUsername,
+          e);
+    }
   }
 }

@@ -242,9 +242,11 @@ ADMIN_BOOTSTRAP_PASSWORD=<a real secret, 12+ characters>
 and logs that fact — there is no default credential, so an unconfigured deployment never ends up
 with a guessable admin. It's safe to leave these variables set permanently: re-running against an
 already-bootstrapped deployment is a no-op, and a username collision with an existing non-admin
-account is left untouched rather than silently promoted. Do this *before* you need the emergency
-lever below, not during an incident — log in with the bootstrap credentials to get a token carrying
-the `ADMIN` claim.
+account is left untouched rather than silently promoted. This mechanism does **not** rotate the
+password — once the account exists, changing `ADMIN_BOOTSTRAP_PASSWORD` and restarting has no
+effect; change the account's password through the normal `/api/v1/users/password` endpoint
+instead. Do this *before* you need the emergency lever below, not during an incident — log in with
+the bootstrap credentials to get a token carrying the `ADMIN` claim.
 
 ---
 

@@ -1,6 +1,7 @@
 package dev.lmdb.user.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -19,6 +20,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -35,6 +37,10 @@ class AdminBootstrapServiceTest {
 
   @Mock private UserRepository userRepository;
 
+  /**
+   * Real encoder (strength 4 for test speed — behavior identical), matching {@link
+   * AuthServiceTest}.
+   */
   private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder(4);
 
   private AdminBootstrapService adminBootstrapService;
@@ -58,14 +64,73 @@ class AdminBootstrapServiceTest {
   }
 
   /**
-   * A partially-filled config (e.g. username set but password blank) is far more likely to be a
+   * A partially-filled config (username and email set, password blank) is far more likely to be a
    * typo than a deliberate request, so it must be treated the same as "nothing configured" — not an
    * attempt to fill in the gaps.
    */
   @Test
   @DisplayName("Partial config (password missing): no admin is created")
-  void skipsWhenConfigIsPartial() {
+  void skipsWhenPasswordMissing() {
     configure("bootadmin", "bootadmin@example.com", "");
+
+    adminBootstrapService.bootstrapIfConfigured();
+
+    verify(userRepository, never()).save(any(User.class));
+  }
+
+  /**
+   * Same guard, the other two fields: a blank username with email/password set must be refused
+   * exactly like the all-blank case, not treated as "two thirds configured".
+   */
+  @Test
+  @DisplayName("Partial config (username missing): no admin is created")
+  void skipsWhenUsernameMissing() {
+    configure("   ", "bootadmin@example.com", "correct-horse-battery");
+
+    adminBootstrapService.bootstrapIfConfigured();
+
+    verify(userRepository, never()).save(any(User.class));
+  }
+
+  /**
+   * Same guard, the email field: covers the one combination the other partial-config tests don't
+   * (username and password present, email blank) so a bug in any single one of the three {@code
+   * hasText} checks would fail at least one test.
+   */
+  @Test
+  @DisplayName("Partial config (email missing): no admin is created")
+  void skipsWhenEmailMissing() {
+    configure("bootadmin", "", "correct-horse-battery");
+
+    adminBootstrapService.bootstrapIfConfigured();
+
+    verify(userRepository, never()).save(any(User.class));
+  }
+
+  /**
+   * A username longer than the {@code users.username VARCHAR(50)} column would otherwise reach
+   * {@code save()} and fail as a raw {@link DataIntegrityViolationException} instead of this clear,
+   * actionable refusal.
+   */
+  @Test
+  @DisplayName("Username longer than the column allows: no admin is created")
+  void skipsWhenUsernameTooLong() {
+    configure("a".repeat(51), "bootadmin@example.com", "correct-horse-battery");
+
+    adminBootstrapService.bootstrapIfConfigured();
+
+    verify(userRepository, never()).save(any(User.class));
+  }
+
+  /**
+   * A malformed email must be refused the same way {@code RegisterRequest}'s {@code @Email}
+   * constraint would refuse it on the public endpoint — this bootstrap path bypasses bean
+   * validation entirely, so the check has to be re-done here by hand.
+   */
+  @Test
+  @DisplayName("Malformed email: no admin is created")
+  void skipsWhenEmailMalformed() {
+    configure("bootadmin", "not-an-email", "correct-horse-battery");
 
     adminBootstrapService.bootstrapIfConfigured();
 
@@ -84,6 +149,42 @@ class AdminBootstrapServiceTest {
     adminBootstrapService.bootstrapIfConfigured();
 
     verify(userRepository, never()).save(any(User.class));
+  }
+
+  /**
+   * Exact-boundary coverage for {@link AdminBootstrapService#MIN_PASSWORD_LENGTH}: one character
+   * under the floor must still be refused — an off-by-one here (e.g. {@code <=} instead of {@code
+   * <}) would silently accept a weaker password than documented.
+   */
+  @Test
+  @DisplayName("Password exactly one character under the minimum: no admin is created")
+  void skipsWhenPasswordOneCharUnderMinimum() {
+    configure(
+        "bootadmin",
+        "bootadmin@example.com",
+        "1".repeat(AdminBootstrapService.MIN_PASSWORD_LENGTH - 1));
+
+    adminBootstrapService.bootstrapIfConfigured();
+
+    verify(userRepository, never()).save(any(User.class));
+  }
+
+  /**
+   * The other half of the boundary: a password of exactly the minimum length must be accepted, not
+   * refused — otherwise the documented floor would be a lie by one character.
+   */
+  @Test
+  @DisplayName("Password exactly at the minimum length: admin is created")
+  void createsAdminWhenPasswordExactlyAtMinimum() {
+    String exactLengthPassword = "1".repeat(AdminBootstrapService.MIN_PASSWORD_LENGTH);
+    configure("bootadmin", "bootadmin@example.com", exactLengthPassword);
+    when(userRepository.findByUsername("bootadmin")).thenReturn(Optional.empty());
+    when(userRepository.existsByEmail("bootadmin@example.com")).thenReturn(false);
+    when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    adminBootstrapService.bootstrapIfConfigured();
+
+    verify(userRepository).save(any(User.class));
   }
 
   /**
@@ -172,6 +273,25 @@ class AdminBootstrapServiceTest {
     assertThat(saved.isAccountNonLocked()).isTrue();
     assertThat(saved.getPasswordHash()).isNotEqualTo("correct-horse-battery");
     assertThat(passwordEncoder.matches("correct-horse-battery", saved.getPasswordHash())).isTrue();
+  }
+
+  /**
+   * The check-then-insert above the {@code save()} call isn't atomic across instances: two replicas
+   * starting concurrently could both pass the collision checks and race on the unique constraint.
+   * The loser must swallow that as a clean skip, not let it escape — an uncaught exception here
+   * would propagate out of {@code AdminBootstrapRunner} (an {@code ApplicationRunner}) and fail
+   * that instance's entire startup over a race this service is supposed to tolerate.
+   */
+  @Test
+  @DisplayName("Save races with a concurrent instance: exception is swallowed, not propagated")
+  void toleratesConcurrentUniqueConstraintViolation() {
+    configure("bootadmin", "bootadmin@example.com", "correct-horse-battery");
+    when(userRepository.findByUsername("bootadmin")).thenReturn(Optional.empty());
+    when(userRepository.existsByEmail("bootadmin@example.com")).thenReturn(false);
+    when(userRepository.save(any(User.class)))
+        .thenThrow(new DataIntegrityViolationException("duplicate key"));
+
+    assertThatCode(() -> adminBootstrapService.bootstrapIfConfigured()).doesNotThrowAnyException();
   }
 
   /**
