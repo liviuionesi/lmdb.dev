@@ -12,6 +12,7 @@ import {
   Actors,
   AdminDashboard,
   BackendStandbyModal,
+  ChatWidget,
   Footer,
   MovieInformation,
   Movies,
@@ -48,6 +49,7 @@ function App() {
       </main>
       <BackendStandbyModal onBackendReady={handleBackendReady} />
       <VoiceControl />
+      <ChatWidget />
     </div>
   );
 }
