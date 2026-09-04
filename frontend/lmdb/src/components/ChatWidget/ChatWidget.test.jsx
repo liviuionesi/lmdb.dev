@@ -8,10 +8,12 @@
 // conversation" header button clears that id from state/storage/the list so the next message is a
 // genuine first message again (#224's own AC), and a second send fired before the first resolves
 // is a no-op rather than racing it into two split conversations. #225 adds the loading/error visual
-// states below: a visible "typing" indicator while a send is pending, a dismissible error Alert on
-// failure, a screen-reader announcement of each new assistant message/error via a live region, and
-// an automated accessibility (jest-axe) pass over the widget with a message, an error, and the
-// typing indicator all present.
+// states below: a visible "typing" indicator while a send is pending (aria-hidden, since it's a
+// sighted-user-only echo of the live region's own "typing" announcement), a dismissible error Alert
+// on failure (its own accessible announcement via MUI's role="alert" default — deliberately NOT
+// duplicated into the live region), a screen-reader announcement of each new assistant message via
+// a visually-hidden live region, and automated accessibility (jest-axe) passes over the widget in
+// both its message/error state and its pending/typing state.
 //
 // ChatWidget now depends on useSendChatMessageMutation (services/AI.js), an RTK Query hook, so
 // every render here needs a real Redux store with aiApi mounted — the same store shape
@@ -402,6 +404,36 @@ describe('ChatWidget "start a new conversation" (#224)', () => {
 
     expect(screen.getByLabelText('Chat message')).toHaveFocus();
   });
+
+  it('is disabled again while a second send is still pending (#225), so it cannot discard messages a still-in-flight request would otherwise repopulate', async () => {
+    // Without this guard, clicking "Start a new conversation" while `secondResponsePromise` below
+    // is still pending would clear the list/id, and the late response would then silently
+    // re-append the *old* conversation's reply and re-persist its id once it resolves.
+    let resolveSecondResponse;
+    const secondResponsePromise = new Promise((resolve) => { resolveSecondResponse = resolve; });
+    global.fetch = vi.fn()
+      .mockResolvedValueOnce(jsonResponse({
+        conversationId: '11111111-1111-1111-1111-111111111111',
+        reply: 'First reply',
+      }))
+      .mockReturnValueOnce(secondResponsePromise);
+    const user = userEvent.setup();
+    await openPanel(user);
+    const input = screen.getByLabelText('Chat message');
+
+    await user.type(input, 'First message{Enter}');
+    await screen.findByText('First reply');
+    await user.type(input, 'Second message{Enter}');
+
+    expect(screen.getByRole('button', { name: 'Start a new conversation' })).toBeDisabled();
+
+    resolveSecondResponse(jsonResponse({
+      conversationId: '11111111-1111-1111-1111-111111111111',
+      reply: 'Second reply',
+    }));
+    await screen.findByText('Second reply');
+    expect(screen.getByRole('button', { name: 'Start a new conversation' })).not.toBeDisabled();
+  });
 });
 
 describe('ChatWidget loading indicator (#225 AC2)', () => {
@@ -421,7 +453,12 @@ describe('ChatWidget loading indicator (#225 AC2)', () => {
 
     await user.type(screen.getByLabelText('Chat message'), 'What should I watch?{Enter}');
 
-    expect(await screen.findByTestId('chat-typing-indicator')).toBeInTheDocument();
+    const indicator = await screen.findByTestId('chat-typing-indicator');
+    expect(indicator).toBeInTheDocument();
+    // The indicator is purely a sighted-user visual — aria-hidden so it doesn't shadow the live
+    // region's own "Assistant is typing…" announcement (a plain Paper's aria-label wouldn't
+    // reliably become its accessible name anyway, since it carries no ARIA role of its own).
+    expect(indicator).toHaveAttribute('aria-hidden', 'true');
 
     resolveResponse(jsonResponse({
       conversationId: '11111111-1111-1111-1111-111111111111',
@@ -464,13 +501,16 @@ describe('ChatWidget error state (#225 AC1)', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
-  it('clears the previous error once a retry succeeds', async () => {
+  it('clears the previous error the moment a retry is sent, not only once it resolves', async () => {
+    // The retry's own response is held pending (rather than resolved immediately) so there's a
+    // real window to assert the error is already gone *before* the retry settles — proving
+    // handleSend's `setError(null)` fires at send-time (per its own code comment) rather than only
+    // as a side effect of the retry's eventual success clearing it some other way.
+    let resolveRetry;
+    const retryPromise = new Promise((resolve) => { resolveRetry = resolve; });
     global.fetch = vi.fn()
       .mockRejectedValueOnce(new Error('network down'))
-      .mockResolvedValueOnce(jsonResponse({
-        conversationId: '11111111-1111-1111-1111-111111111111',
-        reply: 'Assistant reply',
-      }));
+      .mockReturnValueOnce(retryPromise);
     const user = userEvent.setup();
     await openPanel(user);
     const input = screen.getByLabelText('Chat message');
@@ -479,6 +519,12 @@ describe('ChatWidget error state (#225 AC1)', () => {
     await screen.findByRole('alert');
     await user.type(input, 'Second try{Enter}');
 
+    await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument());
+
+    resolveRetry(jsonResponse({
+      conversationId: '11111111-1111-1111-1111-111111111111',
+      reply: 'Assistant reply',
+    }));
     await screen.findByText('Assistant reply');
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
@@ -490,20 +536,37 @@ describe('ChatWidget screen-reader announcements (#225 AC4)', () => {
     await user.click(screen.getByRole('button', { name: 'Open chat assistant' }));
   };
 
-  it('announces a new assistant reply through a live region, distinct from the visible bubble', async () => {
+  it('announces "Assistant is typing…" the moment a send starts, and the reply once it arrives', async () => {
+    // Held pending so there's a real window to assert the "typing" announcement specifically —
+    // otherwise a broken/reordered isSending branch in the liveAnnouncement derivation could go
+    // unnoticed as long as the *final* (reply) announcement still happened to be right.
+    let resolveResponse;
+    const responsePromise = new Promise((resolve) => { resolveResponse = resolve; });
+    global.fetch = vi.fn().mockReturnValueOnce(responsePromise);
     const user = userEvent.setup();
     await openPanel(user);
 
     await user.type(screen.getByLabelText('Chat message'), 'Hello{Enter}');
-    await screen.findByText('Assistant reply');
 
     // role="status" carries an implicit aria-live="polite", the same mechanism a screen reader
     // uses to pick up the change — this asserts the announcement text itself, not just that some
-    // element with that role exists.
-    expect(screen.getByRole('status')).toHaveTextContent('Assistant: Assistant reply');
+    // element with that role exists. Scoped by testid since a future addition of another
+    // role="status" element elsewhere in the panel would otherwise make this query ambiguous.
+    const liveRegion = screen.getByTestId('chat-live-region');
+    expect(liveRegion).toHaveTextContent('Assistant is typing…');
+
+    resolveResponse(jsonResponse({
+      conversationId: '11111111-1111-1111-1111-111111111111',
+      reply: 'Assistant reply',
+    }));
+    await screen.findByText('Assistant reply');
+    expect(liveRegion).toHaveTextContent('Assistant: Assistant reply');
   });
 
-  it('announces a failed send through the same live region', async () => {
+  it('does NOT echo a failed send into the live region, since the error Alert already announces itself via role="alert"', async () => {
+    // Locks in the fix for a real bug an earlier version of this widget had: the error text was
+    // fed into both the assertive role="alert" Alert AND this polite live region, so a
+    // screen-reader user heard the same failure announced twice.
     global.fetch = vi.fn().mockRejectedValue(new Error('network down'));
     const user = userEvent.setup();
     await openPanel(user);
@@ -511,7 +574,36 @@ describe('ChatWidget screen-reader announcements (#225 AC4)', () => {
     await user.type(screen.getByLabelText('Chat message'), 'Still here?{Enter}');
     await screen.findByRole('alert');
 
-    expect(screen.getByRole('status')).toHaveTextContent('Something went wrong sending your message. Please try again.');
+    // toHaveTextContent('') would trivially pass on ANY content (every string "contains" the
+    // empty string) — toBeEmptyDOMElement is the assertion that actually requires no text.
+    expect(screen.getByTestId('chat-live-region')).toBeEmptyDOMElement();
+  });
+
+  it('changes the announcement text even when the assistant repeats the exact same reply twice in a row', async () => {
+    // A React text node left with an unchanged value between renders is never re-announced by a
+    // screen reader (no DOM mutation occurs) — this proves the implementation forces a real
+    // change (the parity marker) rather than relying on the reply text happening to differ.
+    global.fetch = vi.fn().mockResolvedValue(jsonResponse({
+      conversationId: '11111111-1111-1111-1111-111111111111',
+      reply: 'Same reply every time',
+    }));
+    const user = userEvent.setup();
+    await openPanel(user);
+    const input = screen.getByLabelText('Chat message');
+
+    await user.type(input, 'one{Enter}');
+    await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(1));
+    const firstAnnouncement = screen.getByTestId('chat-live-region').textContent;
+
+    await user.type(input, 'two{Enter}');
+    await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(2));
+    const secondAnnouncement = screen.getByTestId('chat-live-region').textContent;
+
+    expect(firstAnnouncement).not.toBe(secondAnnouncement);
+    // Both still read as the same reply to a sighted user / a substring-based query — only the
+    // trailing, inaudible marker differs.
+    expect(firstAnnouncement).toContain('Assistant: Same reply every time');
+    expect(secondAnnouncement).toContain('Assistant: Same reply every time');
   });
 });
 
@@ -534,6 +626,30 @@ describe('ChatWidget accessibility (#225 AC3)', () => {
     await screen.findByRole('alert');
 
     expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it('has no axe violations while the "assistant is typing" indicator is on screen', async () => {
+    // A separate pass from the test above: that one's two `fetch` mocks both settle immediately,
+    // so isSending (and therefore chat-typing-indicator/the CircularProgress it renders) is never
+    // true at the point axe() runs — this is the only test that actually exercises AC3 against
+    // AC2's own loading state.
+    let resolveResponse;
+    const responsePromise = new Promise((resolve) => { resolveResponse = resolve; });
+    global.fetch = vi.fn().mockReturnValueOnce(responsePromise);
+    const user = userEvent.setup();
+    const { container } = renderChatWidget();
+    await user.click(screen.getByRole('button', { name: 'Open chat assistant' }));
+
+    await user.type(screen.getByLabelText('Chat message'), 'What should I watch?{Enter}');
+    await screen.findByTestId('chat-typing-indicator');
+
+    expect(await axe(container)).toHaveNoViolations();
+
+    resolveResponse(jsonResponse({
+      conversationId: '11111111-1111-1111-1111-111111111111',
+      reply: 'Assistant reply',
+    }));
+    await screen.findByText('Assistant reply');
   });
 });
 

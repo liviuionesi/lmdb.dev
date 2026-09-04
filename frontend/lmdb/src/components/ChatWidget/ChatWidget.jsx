@@ -90,6 +90,11 @@ function ChatWidget() {
   // Local monotonic counter for message keys/ids — the backend never assigns one, so this is the
   // only id either bubble (user or assistant) ever has; nothing here needs to survive a remount.
   const nextIdRef = useRef(0);
+  // Flipped on every new assistant reply (see handleSend below) purely so the live-region text
+  // below is guaranteed to change even if the assistant repeats the exact same reply twice in a
+  // row — React leaves an unchanged text node alone, and a screen reader only fires on a real DOM
+  // mutation, so an identical announcement would otherwise be silently swallowed (#225 AC4).
+  const announceParityRef = useRef(false);
 
   const handleToggle = () => setOpen((wasOpen) => !wasOpen);
 
@@ -107,7 +112,9 @@ function ChatWidget() {
   // must leave the stored id alone so useState's lazy initializer above picks it back up).
   // Clearing the visible message list alongside it is deliberate too: leaving old bubbles on
   // screen while silently starting a new conversation server-side would show the user a
-  // conversation that no longer matches what they're about to continue.
+  // conversation that no longer matches what they're about to continue. Guarded by `isSending`
+  // (#225): clearing while a send is still in flight would let that request's late response
+  // repopulate the "new" conversation with the old one's reply/id once it resolves.
   const handleNewConversation = () => {
     clearStoredConversationId();
     setConversationId(null);
@@ -158,6 +165,7 @@ function ChatWidget() {
       setStoredConversationId(response.conversationId);
       nextIdRef.current += 1;
       setMessages((prev) => [...prev, { id: nextIdRef.current, role: 'assistant', text: response.reply }]);
+      announceParityRef.current = !announceParityRef.current;
     } catch (requestError) {
       // #225 AC1: a dedicated, visible error state — the user's typed message above is untouched,
       // so this only adds a failure indication on top of it rather than replacing anything.
@@ -182,19 +190,21 @@ function ChatWidget() {
   // about a new assistant message without the sighted UI announcing anything extra. Derived
   // (rather than tracked in its own state) so it always reflects the current render: it flips to
   // the "typing" notice the instant a send starts, then to the reply's own text once `messages`
-  // gains that reply and `isSending` drops back to false — the same transition an error, from the
-  // catch block above, also produces (it takes priority so a failure is heard, not just seen).
+  // gains that reply and `isSending` drops back to false. A failed send is deliberately NOT
+  // repeated here — the error Alert below already has its own accessible name via MUI's default
+  // role="alert", which is announced on its own; adding the same text to this region too would
+  // announce the same failure to a screen-reader user twice.
   const lastMessage = messages[messages.length - 1];
   let liveAnnouncement = '';
-  if (error) {
-    liveAnnouncement = error;
-  } else if (isSending) {
+  if (isSending) {
     liveAnnouncement = 'Assistant is typing…';
   } else if (lastMessage?.role === 'assistant') {
     // Prefixed rather than the bare reply text: this lives in the DOM alongside the visible
     // ChatMessage bubble carrying the identical reply, and an exact-text duplicate would make the
     // two indistinguishable to a `getByText` query in tests (and to an axe/browser "find on page").
-    liveAnnouncement = `Assistant: ${lastMessage.text}`;
+    // The trailing zero-width space, flipped once per reply by announceParityRef, forces this
+    // text to differ from the previous announcement even when the reply text itself repeats.
+    liveAnnouncement = `Assistant: ${lastMessage.text}${announceParityRef.current ? '\u200B' : ''}`;
   }
 
   return (
@@ -221,7 +231,7 @@ function ChatWidget() {
                 <IconButton
                   size="small"
                   onClick={handleNewConversation}
-                  disabled={messages.length === 0}
+                  disabled={messages.length === 0 || isSending}
                   aria-label="Start a new conversation"
                 >
                   <NewConversationIcon fontSize="small" />
@@ -239,12 +249,17 @@ function ChatWidget() {
             ))}
             {/* #225 AC2: a visible "assistant is typing" indicator while a send is in flight —
                 a plain ChatMessage-style bubble (same alignment/color as an assistant reply) so it
-                reads as "the assistant is about to speak", not a generic page-wide spinner. */}
+                reads as "the assistant is about to speak", not a generic page-wide spinner.
+                aria-hidden rather than aria-label'd: a plain, roleless Paper doesn't reliably
+                expose an aria-label as its accessible name, so a screen reader would otherwise
+                land on the bare CircularProgress/"Typing…" text inside instead — the live region
+                below already announces "Assistant is typing…" through a channel that does work,
+                so this bubble is purely a sighted-user visual and has nothing to add for AT. */}
             {isSending && (
               <Paper
                 elevation={0}
                 className={cx(classes.message, classes.messageAssistant)}
-                aria-label="Assistant is typing"
+                aria-hidden="true"
                 data-testid="chat-typing-indicator"
               >
                 <span className={classes.typingIndicator}>
@@ -271,10 +286,12 @@ function ChatWidget() {
           )}
 
           {/* #225 AC4: visually hidden, so it adds nothing for sighted users — its only audience is
-              assistive tech, announcing the assistant's reply (or a "typing"/error transition) as it
-              happens, since the visible bubbles above aren't themselves an aria-live region (that
-              would re-announce the entire history on every render, not just what's new). */}
-          <div aria-live="polite" role="status" className={classes.visuallyHidden}>
+              assistive tech, announcing a send starting ("typing…") and the assistant's reply as
+              they happen, since the visible bubbles above aren't themselves an aria-live region
+              (that would re-announce the entire history on every render, not just what's new). A
+              failed send is deliberately NOT echoed here — see the error Alert's own comment above.
+              role="status" already implies aria-live="polite"; both are set for clarity. */}
+          <div aria-live="polite" role="status" data-testid="chat-live-region" className={classes.visuallyHidden}>
             {liveAnnouncement}
           </div>
 
@@ -300,7 +317,12 @@ function ChatWidget() {
               aria-label="Send message"
               color="primary"
             >
-              {isSending ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
+              {/* aria-hidden: a role="progressbar" element needs its own accessible name (axe's
+                  aria-progressbar-name rule) regardless of the button wrapping it — SendIcon gets
+                  this for free from @mui/icons-material's default aria-hidden, CircularProgress
+                  doesn't. The button's own "Send message" label (unaffected by isSending) is
+                  already the accessible name that matters here. */}
+              {isSending ? <CircularProgress size={20} color="inherit" aria-hidden="true" /> : <SendIcon />}
             </IconButton>
           </div>
         </Paper>
