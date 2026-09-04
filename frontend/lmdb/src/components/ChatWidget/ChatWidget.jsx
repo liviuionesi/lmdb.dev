@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  Fab, Paper, Typography, IconButton, TextField, Tooltip,
+  Fab, Paper, Typography, IconButton, TextField, Tooltip, Alert, CircularProgress,
 } from '@mui/material';
 import {
   AddComment as NewConversationIcon,
@@ -59,9 +59,9 @@ export function ChatMessage({ role, text }) {
  * in flight ({@code isSending}), since the backend assigns a fresh conversation id per call with
  * no `conversationId` in the request — two concurrent first-messages would otherwise each start
  * their own conversation and the slower response's id would silently overwrite the faster one's.
- * The remaining loading/error *visual* states (a spinner, a dedicated error bubble) are #225 —
- * this Task is data-fetching and conversation-id state only, so a failed send here still leaves
- * the user's typed message in the list (nothing removes it), but doesn't yet render one.
+ * The loading/error *visual* states (a "typing" indicator bubble, a dismissible error Alert, and a
+ * screen-reader announcement of each new assistant message) are #225, layered on top without
+ * touching the data-fetching logic above.
  *
  * <p>Placement (#223 AC3): a fixed launcher on the bottom-LEFT, deliberately the opposite corner
  * from VoiceControl's mic Fab + language toggle (both bottom-right) so the two persistent widgets
@@ -70,7 +70,7 @@ export function ChatMessage({ role, text }) {
  * @returns {JSX.Element}
  */
 function ChatWidget() {
-  const { classes } = useStyles();
+  const { classes, cx } = useStyles();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState([]);
   const [draft, setDraft] = useState('');
@@ -79,6 +79,10 @@ function ChatWidget() {
   // clearStoredConversationId, which "starting a genuinely new conversation" (#224's own AC,
   // distinct from a reload) is for.
   const [conversationId, setConversationId] = useState(() => getStoredConversationId());
+  // #225 AC1: a failed send's user-facing message, distinct from the console.error below (which is
+  // for diagnostics, not the user). Cleared at the start of the next send attempt so a successful
+  // retry doesn't leave a stale error Alert on screen.
+  const [error, setError] = useState(null);
   const [sendChatMessage, { isLoading: isSending }] = useSendChatMessageMutation();
   const inputRef = useRef(null);
   const launcherRef = useRef(null);
@@ -108,6 +112,7 @@ function ChatWidget() {
     clearStoredConversationId();
     setConversationId(null);
     setMessages([]);
+    setError(null);
     inputRef.current?.focus();
   };
 
@@ -135,11 +140,13 @@ function ChatWidget() {
     if (!trimmed || isSending) return;
 
     // 1. Append the user's bubble and clear the draft immediately — this must not wait on (or be
-    // undone by) the backend call, so the typed message is never lost on a failed send (#197 AC4;
-    // the error bubble itself is #225's polish layer, not this Task's).
+    // undone by) the backend call, so the typed message is never lost on a failed send (#197 AC4).
+    // Also drop any error Alert left over from a previous failed attempt, so a retry starts clean
+    // rather than showing a stale failure next to a request that hasn't resolved yet.
     nextIdRef.current += 1;
     setMessages((prev) => [...prev, { id: nextIdRef.current, role: 'user', text: trimmed }]);
     setDraft('');
+    setError(null);
 
     // 2. Send it — omitting conversationId entirely (not as null) when this is the first message
     // of a brand-new conversation (#197 AC3).
@@ -151,12 +158,12 @@ function ChatWidget() {
       setStoredConversationId(response.conversationId);
       nextIdRef.current += 1;
       setMessages((prev) => [...prev, { id: nextIdRef.current, role: 'assistant', text: response.reply }]);
-    } catch (error) {
-      // A dedicated error state (without discarding the message already in the list above) is
-      // #225 — this Task only guarantees the failure doesn't crash the widget or silently drop
-      // the user's input.
+    } catch (requestError) {
+      // #225 AC1: a dedicated, visible error state — the user's typed message above is untouched,
+      // so this only adds a failure indication on top of it rather than replacing anything.
       // eslint-disable-next-line no-console
-      console.error('Chat assistant request failed', error);
+      console.error('Chat assistant request failed', requestError);
+      setError('Something went wrong sending your message. Please try again.');
     }
   };
 
@@ -170,6 +177,25 @@ function ChatWidget() {
     event.preventDefault();
     handleSend();
   };
+
+  // #225 AC4: text for the visually-hidden aria-live region below, so a screen-reader user hears
+  // about a new assistant message without the sighted UI announcing anything extra. Derived
+  // (rather than tracked in its own state) so it always reflects the current render: it flips to
+  // the "typing" notice the instant a send starts, then to the reply's own text once `messages`
+  // gains that reply and `isSending` drops back to false — the same transition an error, from the
+  // catch block above, also produces (it takes priority so a failure is heard, not just seen).
+  const lastMessage = messages[messages.length - 1];
+  let liveAnnouncement = '';
+  if (error) {
+    liveAnnouncement = error;
+  } else if (isSending) {
+    liveAnnouncement = 'Assistant is typing…';
+  } else if (lastMessage?.role === 'assistant') {
+    // Prefixed rather than the bare reply text: this lives in the DOM alongside the visible
+    // ChatMessage bubble carrying the identical reply, and an exact-text duplicate would make the
+    // two indistinguishable to a `getByText` query in tests (and to an axe/browser "find on page").
+    liveAnnouncement = `Assistant: ${lastMessage.text}`;
+  }
 
   return (
     <>
@@ -211,7 +237,45 @@ function ChatWidget() {
             {messages.map((message) => (
               <ChatMessage key={message.id} role={message.role} text={message.text} />
             ))}
+            {/* #225 AC2: a visible "assistant is typing" indicator while a send is in flight —
+                a plain ChatMessage-style bubble (same alignment/color as an assistant reply) so it
+                reads as "the assistant is about to speak", not a generic page-wide spinner. */}
+            {isSending && (
+              <Paper
+                elevation={0}
+                className={cx(classes.message, classes.messageAssistant)}
+                aria-label="Assistant is typing"
+                data-testid="chat-typing-indicator"
+              >
+                <span className={classes.typingIndicator}>
+                  <CircularProgress size={12} thickness={6} color="inherit" />
+                  <Typography variant="body2">Typing…</Typography>
+                </span>
+              </Paper>
+            )}
             <div ref={listEndRef} />
+          </div>
+
+          {/* #225 AC1: a dismissible, visible error state that leaves the message list (and the
+              user's typed input, cleared into it before the request was ever sent) untouched. MUI's
+              Alert defaults to role="alert", so this is announced the moment it appears without a
+              second aria-live region duplicating it. */}
+          {error && (
+            <Alert
+              severity="error"
+              onClose={() => setError(null)}
+              className={classes.errorAlert}
+            >
+              {error}
+            </Alert>
+          )}
+
+          {/* #225 AC4: visually hidden, so it adds nothing for sighted users — its only audience is
+              assistive tech, announcing the assistant's reply (or a "typing"/error transition) as it
+              happens, since the visible bubbles above aren't themselves an aria-live region (that
+              would re-announce the entire history on every render, not just what's new). */}
+          <div aria-live="polite" role="status" className={classes.visuallyHidden}>
+            {liveAnnouncement}
           </div>
 
           <div className={classes.inputRow}>
@@ -236,7 +300,7 @@ function ChatWidget() {
               aria-label="Send message"
               color="primary"
             >
-              <SendIcon />
+              {isSending ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
             </IconButton>
           </div>
         </Paper>

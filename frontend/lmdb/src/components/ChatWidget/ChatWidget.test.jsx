@@ -7,9 +7,11 @@
 // returned by the most recent response on every message after it (#197 AC2), the "start a new
 // conversation" header button clears that id from state/storage/the list so the next message is a
 // genuine first message again (#224's own AC), and a second send fired before the first resolves
-// is a no-op rather than racing it into two split conversations. A deeper error-state pass (what
-// the UI shows while a send is pending or after it fails) is #225's; this file only proves a
-// failed send doesn't crash the widget or drop the user's typed message.
+// is a no-op rather than racing it into two split conversations. #225 adds the loading/error visual
+// states below: a visible "typing" indicator while a send is pending, a dismissible error Alert on
+// failure, a screen-reader announcement of each new assistant message/error via a live region, and
+// an automated accessibility (jest-axe) pass over the widget with a message, an error, and the
+// typing indicator all present.
 //
 // ChatWidget now depends on useSendChatMessageMutation (services/AI.js), an RTK Query hook, so
 // every render here needs a real Redux store with aiApi mounted — the same store shape
@@ -19,6 +21,7 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { configureStore } from '@reduxjs/toolkit';
 import { Provider } from 'react-redux';
+import { axe } from 'jest-axe';
 
 import ChatWidget, { ChatMessage } from './ChatWidget';
 import { aiApi } from '../../services/AI';
@@ -47,8 +50,10 @@ const buildStore = () => configureStore({
 
 const renderChatWidget = () => {
   const store = buildStore();
-  renderWithProviders(<Provider store={store}><ChatWidget /></Provider>);
-  return store;
+  // `container` is only consumed by the #225 axe test below; every other call site here just fires
+  // this for its side effect (mounting into document.body) and ignores the return value.
+  const { container } = renderWithProviders(<Provider store={store}><ChatWidget /></Provider>);
+  return { store, container };
 };
 
 beforeEach(() => {
@@ -396,6 +401,139 @@ describe('ChatWidget "start a new conversation" (#224)', () => {
     await user.click(screen.getByRole('button', { name: 'Start a new conversation' }));
 
     expect(screen.getByLabelText('Chat message')).toHaveFocus();
+  });
+});
+
+describe('ChatWidget loading indicator (#225 AC2)', () => {
+  const openPanel = async (user) => {
+    renderChatWidget();
+    await user.click(screen.getByRole('button', { name: 'Open chat assistant' }));
+  };
+
+  it('shows a visible "assistant is typing" indicator while a send is pending, and hides it once the reply arrives', async () => {
+    // Holds the response pending, same trick as the "ignores a second send" test above, so there's
+    // a real window in which isSending is true and the indicator's mount/unmount can be observed.
+    let resolveResponse;
+    const responsePromise = new Promise((resolve) => { resolveResponse = resolve; });
+    global.fetch = vi.fn().mockReturnValueOnce(responsePromise);
+    const user = userEvent.setup();
+    await openPanel(user);
+
+    await user.type(screen.getByLabelText('Chat message'), 'What should I watch?{Enter}');
+
+    expect(await screen.findByTestId('chat-typing-indicator')).toBeInTheDocument();
+
+    resolveResponse(jsonResponse({
+      conversationId: '11111111-1111-1111-1111-111111111111',
+      reply: 'Assistant reply',
+    }));
+    await screen.findByText('Assistant reply');
+    expect(screen.queryByTestId('chat-typing-indicator')).not.toBeInTheDocument();
+  });
+});
+
+describe('ChatWidget error state (#225 AC1)', () => {
+  const openPanel = async (user) => {
+    renderChatWidget();
+    await user.click(screen.getByRole('button', { name: 'Open chat assistant' }));
+  };
+
+  it('shows a dismissible error alert on a failed send, without discarding the typed message', async () => {
+    global.fetch = vi.fn().mockRejectedValue(new Error('network down'));
+    const user = userEvent.setup();
+    await openPanel(user);
+
+    await user.type(screen.getByLabelText('Chat message'), 'Still here?{Enter}');
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Something went wrong sending your message. Please try again.');
+    // #197 AC4's other half, re-asserted alongside the new error Alert this Task adds: the failure
+    // must not have removed the message the user already sent.
+    expect(screen.getByText('Still here?')).toBeInTheDocument();
+  });
+
+  it('dismisses the error alert via its own close button', async () => {
+    global.fetch = vi.fn().mockRejectedValue(new Error('network down'));
+    const user = userEvent.setup();
+    await openPanel(user);
+    await user.type(screen.getByLabelText('Chat message'), 'Still here?{Enter}');
+    await screen.findByRole('alert');
+
+    await user.click(screen.getByRole('button', { name: 'Close' }));
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('clears the previous error once a retry succeeds', async () => {
+    global.fetch = vi.fn()
+      .mockRejectedValueOnce(new Error('network down'))
+      .mockResolvedValueOnce(jsonResponse({
+        conversationId: '11111111-1111-1111-1111-111111111111',
+        reply: 'Assistant reply',
+      }));
+    const user = userEvent.setup();
+    await openPanel(user);
+    const input = screen.getByLabelText('Chat message');
+
+    await user.type(input, 'First try{Enter}');
+    await screen.findByRole('alert');
+    await user.type(input, 'Second try{Enter}');
+
+    await screen.findByText('Assistant reply');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+});
+
+describe('ChatWidget screen-reader announcements (#225 AC4)', () => {
+  const openPanel = async (user) => {
+    renderChatWidget();
+    await user.click(screen.getByRole('button', { name: 'Open chat assistant' }));
+  };
+
+  it('announces a new assistant reply through a live region, distinct from the visible bubble', async () => {
+    const user = userEvent.setup();
+    await openPanel(user);
+
+    await user.type(screen.getByLabelText('Chat message'), 'Hello{Enter}');
+    await screen.findByText('Assistant reply');
+
+    // role="status" carries an implicit aria-live="polite", the same mechanism a screen reader
+    // uses to pick up the change — this asserts the announcement text itself, not just that some
+    // element with that role exists.
+    expect(screen.getByRole('status')).toHaveTextContent('Assistant: Assistant reply');
+  });
+
+  it('announces a failed send through the same live region', async () => {
+    global.fetch = vi.fn().mockRejectedValue(new Error('network down'));
+    const user = userEvent.setup();
+    await openPanel(user);
+
+    await user.type(screen.getByLabelText('Chat message'), 'Still here?{Enter}');
+    await screen.findByRole('alert');
+
+    expect(screen.getByRole('status')).toHaveTextContent('Something went wrong sending your message. Please try again.');
+  });
+});
+
+describe('ChatWidget accessibility (#225 AC3)', () => {
+  it('has no axe violations with a sent message, an assistant reply, and a failed-send error all present', async () => {
+    const user = userEvent.setup();
+    global.fetch = vi.fn()
+      .mockResolvedValueOnce(jsonResponse({
+        conversationId: '11111111-1111-1111-1111-111111111111',
+        reply: 'Assistant reply',
+      }))
+      .mockRejectedValueOnce(new Error('network down'));
+    const { container } = renderChatWidget();
+    await user.click(screen.getByRole('button', { name: 'Open chat assistant' }));
+    const input = screen.getByLabelText('Chat message');
+
+    await user.type(input, 'First message{Enter}');
+    await screen.findByText('Assistant reply');
+    await user.type(input, 'Second message{Enter}');
+    await screen.findByRole('alert');
+
+    expect(await axe(container)).toHaveNoViolations();
   });
 });
 

@@ -60,4 +60,27 @@ export default makeStyles()((theme) => ({
     padding: theme.spacing(1, 1.5),
     borderTop: `1px solid ${theme.palette.divider}`,
   },
+  errorAlert: {
+    margin: theme.spacing(0, 1.5, 1),
+  },
+  typingIndicator: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: theme.spacing(0.75),
+  },
+  // Standard clip-based visually-hidden pattern (content stays in the accessibility tree and is
+  // announced by a screen reader via the aria-live region it's attached to, but never rendered on
+  // screen) — used for the #225 AC4 "new assistant message" announcement, which would otherwise
+  // duplicate the visible bubble for sighted users.
+  visuallyHidden: {
+    position: 'absolute',
+    width: 1,
+    height: 1,
+    padding: 0,
+    margin: -1,
+    overflow: 'hidden',
+    clip: 'rect(0, 0, 0, 0)',
+    whiteSpace: 'nowrap',
+    border: 0,
+  },
 }));
