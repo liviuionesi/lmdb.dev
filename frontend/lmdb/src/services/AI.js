@@ -91,6 +91,20 @@ export const aiApi = createApi({
         return { data: { recommendations: response.data?.recommendations ?? [], isEmpty: false } };
       },
     }),
+    //* Send a message to the chat assistant (#224), continuing an existing conversation or
+    //* starting a new one. `conversationId` is omitted from the request body entirely (rather than
+    //* sent as `null`/`undefined`) when the caller doesn't have one yet — #197 AC3's "first message
+    //* in a session omits conversationId" — so the backend's own new-vs-continuing branch (absent
+    //* vs. present, not null-vs-present) is what actually decides. The returned conversationId
+    //* (new or echoed) is the caller's responsibility to persist for the next call; see
+    //* `utils/chatConversation.js`, which ChatWidget.jsx wires this endpoint to.
+    sendChatMessage: builder.mutation({
+      query: ({ conversationId, message }) => ({
+        url: '/chat',
+        method: 'POST',
+        body: conversationId ? { conversationId, message } : { message },
+      }),
+    }),
   }),
 });
 
@@ -98,4 +112,5 @@ export const {
   useExecuteSearchMutation,
   useParseQueryMutation,
   useGetMovieRecommendationsQuery,
+  useSendChatMessageMutation,
 } = aiApi;

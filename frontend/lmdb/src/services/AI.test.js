@@ -100,6 +100,104 @@ describe('aiApi endpoints', () => {
   });
 });
 
+// Tests the endpoint itself (URL/method/request-body shape, response passthrough), the same level
+// AI.js's other endpoint tests operate at. ChatWidget.test.jsx covers the component-level behavior
+// this endpoint is wired into (conversation-id state across sends, the new-conversation reset).
+describe('aiApi.sendChatMessage (#224)', () => {
+  let store;
+
+  beforeEach(() => {
+    pinStaticApiUrl();
+    store = buildStore();
+  });
+
+  afterEach(() => {
+    delete global.fetch;
+    localStorage.clear();
+  });
+
+  it('posts to /chat and resolves with the conversationId/reply response unwrapped', async () => {
+    global.fetch = vi.fn().mockResolvedValue(jsonResponse({
+      conversationId: '11111111-1111-1111-1111-111111111111',
+      reply: 'Sure, here are a few picks.',
+    }));
+
+    const result = await store.dispatch(aiApi.endpoints.sendChatMessage.initiate({
+      conversationId: null,
+      message: 'What should I watch tonight?',
+    }));
+
+    const request = global.fetch.mock.calls[0][0];
+    expect(request.url).toBe(`${baseUrl}/chat`);
+    expect(request.method).toBe('POST');
+    expect(result.data).toEqual({
+      conversationId: '11111111-1111-1111-1111-111111111111',
+      reply: 'Sure, here are a few picks.',
+    });
+  });
+
+  it('omits conversationId from the request body when starting a brand-new conversation (#197 AC3)', async () => {
+    global.fetch = vi.fn().mockResolvedValue(jsonResponse({
+      conversationId: '11111111-1111-1111-1111-111111111111',
+      reply: 'Hi!',
+    }));
+
+    await store.dispatch(aiApi.endpoints.sendChatMessage.initiate({
+      conversationId: null,
+      message: 'Hello',
+    }));
+
+    const request = global.fetch.mock.calls[0][0];
+    // Asserts the key is genuinely absent, not sent as `null` — a body of `{message, conversationId:
+    // null}` would still pass a `.conversationId == null` check but is a different wire shape than
+    // "omitted", which is what the backend's own new-vs-continuing branch (ChatRequestBodyDto) keys
+    // off of.
+    expect(JSON.parse(await request.text())).toEqual({ message: 'Hello' });
+  });
+
+  it('includes conversationId in the request body when continuing an existing conversation (#197 AC2)', async () => {
+    global.fetch = vi.fn().mockResolvedValue(jsonResponse({
+      conversationId: '11111111-1111-1111-1111-111111111111',
+      reply: 'Noted.',
+    }));
+
+    await store.dispatch(aiApi.endpoints.sendChatMessage.initiate({
+      conversationId: '11111111-1111-1111-1111-111111111111',
+      message: 'Follow-up question',
+    }));
+
+    const request = global.fetch.mock.calls[0][0];
+    expect(JSON.parse(await request.text())).toEqual({
+      conversationId: '11111111-1111-1111-1111-111111111111',
+      message: 'Follow-up question',
+    });
+  });
+
+  it('is a mutation, not a query, so useSendChatMessageMutation is real', () => {
+    expect(typeof aiApi.endpoints.sendChatMessage.useMutation).toBe('function');
+    expect(aiApi.endpoints.sendChatMessage.useQuery).toBeUndefined();
+    expect(aiApi.useSendChatMessageMutation).toBe(aiApi.endpoints.sendChatMessage.useMutation);
+  });
+
+  it('surfaces the upstream error rather than swallowing it', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+      headers: new Headers({ 'content-type': 'application/json' }),
+      json: async () => ({ message: 'assistant unavailable' }),
+      text: async () => JSON.stringify({ message: 'assistant unavailable' }),
+      clone() { return this; },
+    });
+
+    const result = await store.dispatch(aiApi.endpoints.sendChatMessage.initiate({
+      conversationId: null,
+      message: 'Hello',
+    }));
+
+    expect(result.error).toMatchObject({ status: 500, data: { message: 'assistant unavailable' } });
+  });
+});
+
 describe('aiApi.getMovieRecommendations (#220)', () => {
   // Routes the shared fetch mock by URL substring, since one dispatch of getMovieRecommendations
   // fans out into three real requests: favorites, then one TMDB lookup per favorite, then the

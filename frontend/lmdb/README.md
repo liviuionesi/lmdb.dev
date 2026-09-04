@@ -37,6 +37,20 @@ since user-service only ever returns a movie id — then posts it to
 `POST /api/v1/ai/recommendations`. A user with no favorites yet sees a
 prompt to favorite some movies instead of an empty or erroring list.
 
+## Chat Assistant
+
+A persistent chat launcher (`src/components/ChatWidget/ChatWidget.jsx`), fixed to the bottom-left
+corner, is available on every page. It opens a panel with a message list and an input, independent
+of the voice control Fab (bottom-right, see below), so the two never overlap.
+
+Sending a message posts to `POST /api/v1/ai/chat` (`aiApi.sendChatMessage`, `src/services/AI.js`)
+and appends the assistant's reply. The `conversationId` the backend returns is stored via
+`src/utils/chatConversation.js` and survives a page reload; it is sent on every following message so
+the conversation continues server-side, and omitted on the first message of a new one. The header's
+"Start a new conversation" button clears the stored id and the visible history. A failed send shows
+a dismissible error and keeps the typed message; a pending send shows a "typing" indicator. Both, and
+each new assistant reply, are announced to screen readers via an `aria-live="polite"` region.
+
 ## Voice Assistant Setup (Vosk Speech-to-Text)
 
 To enable click-to-talk voice commands:
