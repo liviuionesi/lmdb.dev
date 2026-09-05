@@ -1,5 +1,6 @@
 // Tests MovieInformation: loading/error states, core detail rendering, the
-// favorite/watchlist toggle mutations, and the trailer modal fallback.
+// favorite/watchlist toggle mutations, the trailer modal fallback, and
+// resilience to sparse movie data (missing spoken_languages).
 import React from 'react';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -158,5 +159,26 @@ describe('MovieInformation', () => {
     await userEvent.click(screen.getByRole('button', { name: /watchlist/i }));
 
     expect(addToWatchlist).toHaveBeenCalledWith('550');
+  });
+
+  /**
+   * Regression check for the "movie-detail crash on list-sourced movies" class of bug (#34,
+   * commit 2deaeb2): a movie can reach this page with a sparse `spoken_languages` array (or none
+   * at all) when the backend hasn't populated it, since every other detail-only field is already
+   * read with optional chaining. `data?.spoken_languages[0].name` was not — indexing an empty
+   * array yields `undefined`, and reading `.name` off that throws, crashing the whole page instead
+   * of just omitting the language.
+   */
+  it('renders without crashing when spoken_languages is empty', () => {
+    useGetMovieQuery.mockReturnValue({
+      data: { ...fullMovie, spoken_languages: [] },
+      isFetching: false,
+      error: undefined,
+    });
+
+    expect(() => renderWithProviders(<MovieInformation />, {
+      route: '/movie/550', path: '/movie/:id', store: buildStore(),
+    })).not.toThrow();
+    expect(screen.getByText('Fight Club (1999)')).toBeInTheDocument();
   });
 });
