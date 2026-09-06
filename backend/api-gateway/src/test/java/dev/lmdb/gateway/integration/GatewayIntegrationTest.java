@@ -48,7 +48,8 @@ import org.testcontainers.utility.DockerImageName;
 
 /**
  * Gateway-boundary integration tests for issues #19 (Service Integration Testing), #33 (TMDB v3
- * facade routing + auth/account proxy) and #237 (ADMIN-only gateway management API).
+ * facade routing + auth/account proxy), #68/#69 (public speech-to-text route) and #237 (ADMIN-only
+ * gateway management API).
  *
  * <p>The services are separate modules with separate databases, so there is no direct
  * service-to-service DB join to exercise; "integration" here means the one place cross-service
@@ -57,30 +58,32 @@ import org.testcontainers.utility.DockerImageName;
  * points its routes at WireMock servers standing in for the downstreams (see {@code
  * application-gateway-it.yml}). Eureka is disabled; a Testcontainers Redis backs the rate limiter.
  *
- * <p><strong>Two WireMock servers, on purpose.</strong> Port 9971 (the {@code @WireMockTest}
+ * <p><strong>Three WireMock servers, on purpose.</strong> Port 9971 (the {@code @WireMockTest}
  * instance, reachable via the static {@code WireMock.*} helpers) plays movie-service and — on its
- * {@code /3/**} paths — the real TMDB. Port 9972 ({@link #actorMock}) plays actor-service. Several
- * assertions are about routing reaching the <em>correct</em> downstream, and one shared server
- * cannot prove that: every route would hit the same port, so a person request mis-routed to
- * movie-service would still pass. Splitting the ports makes the destination observable.
+ * {@code /3/**} paths — the real TMDB. Port 9972 ({@link #actorMock}) plays actor-service. Port
+ * 9976 ({@link #aiMock}) plays ai-service. Several assertions are about routing reaching the
+ * <em>correct</em> downstream, and one shared server cannot prove that: every route would hit the
+ * same port, so a person request mis-routed to movie-service would still pass. Splitting the ports
+ * makes the destination observable.
  *
  * <p>What is proven end to end through the real Netty server + full filter chain: path-based
  * routing to the correct downstream, public vs. authentication-required exchanges, role-gated
  * access to the gateway's own {@code /admin/**} management API (#237 — the one surface where the
  * gateway is the origin server rather than a proxy), JWT identity propagation ({@code X-User-*}
  * headers), downstream error passthrough, circuit-breaker fallback, request rate limiting, CORS
- * preflight, and — for #33 — the bare TMDB catalog surface, client {@code api_key} stripping, and
- * the auth/account proxy's key injection, {@code session_id} forwarding and verbatim error
- * passthrough. Behaviors that don't belong at this boundary (real service discovery; the
- * per-service data logic) are covered by the discovery-service and per-service suites respectively
- * — see {@code docs/architecture/INTEGRATION_TESTING.md}.
+ * preflight, the one carved-out public exception inside an otherwise JWT-gated service surface
+ * (#68/#69 — {@code /api/v1/ai/speech-to-text}), and — for #33 — the bare TMDB catalog surface,
+ * client {@code api_key} stripping, and the auth/account proxy's key injection, {@code session_id}
+ * forwarding and verbatim error passthrough. Behaviors that don't belong at this boundary (real
+ * service discovery; the per-service data logic) are covered by the discovery-service and
+ * per-service suites respectively — see {@code docs/architecture/INTEGRATION_TESTING.md}.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("gateway-it")
 @AutoConfigureWebTestClient
 @Testcontainers
 @WireMockTest(httpPort = 9971)
-@DisplayName("Gateway Integration Tests (#19, #33, #237)")
+@DisplayName("Gateway Integration Tests (#19, #33, #68, #237)")
 class GatewayIntegrationTest {
 
   /**
@@ -97,6 +100,9 @@ class GatewayIntegrationTest {
    */
   private static final int ACTOR_MOCK_PORT = 9972;
 
+  /** Port the ai-service stand-in listens on; matches the {@code ai-service} route URI. */
+  private static final int AI_MOCK_PORT = 9976;
+
   /** Real Redis backing the RequestRateLimiter (no auth). */
   @Container
   @SuppressWarnings("resource")
@@ -108,6 +114,12 @@ class GatewayIntegrationTest {
    * configures only one instance per class.
    */
   private static WireMockServer actorMock;
+
+  /**
+   * Third stand-in downstream: ai-service. Managed manually for the same reason as {@link
+   * #actorMock}.
+   */
+  private static WireMockServer aiMock;
 
   @LocalServerPort private int port;
 
@@ -128,25 +140,33 @@ class GatewayIntegrationTest {
     registry.add("spring.data.redis.port", () -> redis.getMappedPort(6379));
   }
 
-  /** Starts the actor-service stand-in on its fixed port. */
+  /** Starts the actor-service and ai-service stand-ins on their fixed ports. */
   @BeforeAll
   static void startActorMock() {
     actorMock = new WireMockServer(options().port(ACTOR_MOCK_PORT));
     actorMock.start();
+    aiMock = new WireMockServer(options().port(AI_MOCK_PORT));
+    aiMock.start();
   }
 
-  /** Stops the actor-service stand-in so the port is free for the next class. */
+  /**
+   * Stops the actor-service and ai-service stand-ins so their ports are free for the next class.
+   */
   @AfterAll
   static void stopActorMock() {
     if (actorMock != null) {
       actorMock.stop();
     }
+    if (aiMock != null) {
+      aiMock.stop();
+    }
   }
 
   /**
    * Builds a client bound to the random server port with a generous timeout (some tests fire many
-   * requests), and clears the manually-managed actor mock — {@code @WireMockTest} resets the 9971
-   * instance itself, but 9972 would otherwise leak stubs and request counts across tests.
+   * requests), and clears the manually-managed actor/ai mocks — {@code @WireMockTest} resets the
+   * 9971 instance itself, but 9972 and 9976 would otherwise leak stubs and request counts across
+   * tests.
    */
   @BeforeEach
   void setUp() {
@@ -156,6 +176,7 @@ class GatewayIntegrationTest {
             .responseTimeout(Duration.ofSeconds(15))
             .build();
     actorMock.resetAll();
+    aiMock.resetAll();
   }
 
   /**
@@ -453,6 +474,51 @@ class GatewayIntegrationTest {
         .is2xxSuccessful()
         .expectHeader()
         .valueEquals("Access-Control-Allow-Origin", "http://localhost:3000");
+  }
+
+  // ------------------------------------------------------------------
+  // #68/#69 — ai-service: one public route inside an otherwise JWT-gated service
+  // ------------------------------------------------------------------
+
+  /**
+   * {@code POST /api/v1/ai/speech-to-text} is the one ai-service route carved out as public
+   * (#68/#69): voice control must work for anonymous visitors too (theme toggle, genre browsing),
+   * since it touches no user-owned data. A request with no token must still reach the downstream.
+   */
+  @Test
+  @DisplayName("AI speech-to-text route is public and reaches the downstream without a token")
+  void speechToTextRouteIsPublic() {
+    aiMock.stubFor(
+        post(urlEqualTo("/api/v1/ai/speech-to-text"))
+            .willReturn(okJson("{\"text\":\"dark mode please\"}")));
+
+    client
+        .post()
+        .uri("/api/v1/ai/speech-to-text")
+        .exchange()
+        .expectStatus()
+        .isOk()
+        .expectBody()
+        .jsonPath("$.text")
+        .isEqualTo("dark mode please");
+
+    aiMock.verify(postRequestedFor(urlEqualTo("/api/v1/ai/speech-to-text")));
+  }
+
+  /**
+   * The counterpart to the public speech-to-text carve-out: every other ai-service route is
+   * user-scoped (conversations and taste profiles, per ADR-012) and stays behind the {@code
+   * /api/v1/ai/**} authentication rule. Without this, the speech-to-text exception could silently
+   * widen into "all of ai-service is public" and nothing here would catch it.
+   */
+  @Test
+  @DisplayName("Other AI service routes still require authentication")
+  void otherAiRoutesRequireAuthentication() {
+    aiMock.stubFor(post(urlEqualTo("/api/v1/ai/chat")).willReturn(okJson("{}")));
+
+    client.post().uri("/api/v1/ai/chat").exchange().expectStatus().isUnauthorized();
+
+    aiMock.verify(0, postRequestedFor(urlEqualTo("/api/v1/ai/chat")));
   }
 
   // ------------------------------------------------------------------
