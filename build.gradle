@@ -327,7 +327,13 @@ subprojects {
             // runtimeOnly because nothing compiles against it.
             runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
             implementation "net.logstash.logback:logstash-logback-encoder:${logstashEncoderVersion}"
-            // Distributed Tracing (ADR-007, Task #42) — Micrometer Tracing + Zipkin
+            // Distributed Tracing (ADR-007, Task #42) — Micrometer Tracing + Zipkin.
+            // spring-boot-micrometer-tracing-brave is the piece that actually matters: Spring Boot 4
+            // split tracing autoconfiguration out of spring-boot-starter-actuator (unlike metrics,
+            // which actuator still pulls in via spring-boot-starter-micrometer-metrics), so the
+            // bridge and reporter libraries below carry no Tracer bean without it — every service
+            // built tracing dependencies but never exported a span (#97 audit, story #97).
+            implementation 'org.springframework.boot:spring-boot-micrometer-tracing-brave'
             implementation 'io.micrometer:micrometer-tracing-bridge-brave'
             implementation 'io.zipkin.reporter2:zipkin-reporter-brave'
         }
