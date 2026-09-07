@@ -32,10 +32,21 @@ import org.testcontainers.mongodb.MongoDBContainer;
  * {@link #mongoProperties} on the superclass automatically (a documented
  * {@code @DynamicPropertySource} behavior), so no per-subclass wiring is needed for the Mongo URI
  * itself.
+ *
+ * <p>{@code GLIBC_TUNABLES=glibc.pthread.rseq=1} (below) works around a TCMalloc/rseq
+ * incompatibility between MongoDB 8.0's vendored TCMalloc and Linux kernel 6.19 through 7.0.13
+ * (MongoDB Jira SERVER-121912): without it, {@code mongo:8.0} aborts on startup with {@code "Linux
+ * kernel versions 6.19 and newer has a known incompatibility with this version of MongoDB"} on any
+ * host in that kernel range (see #250). The env var disables the rseq fast path glibc otherwise
+ * negotiates with the kernel, which is what the incompatible TCMalloc build mishandles; it is a
+ * no-op on unaffected kernels, so it is safe to set unconditionally rather than detecting the host
+ * kernel. No permanent fix exists yet upstream, so this stays until MongoDB ships a patched
+ * TCMalloc and #250 is revisited.
  */
 public abstract class AbstractMongoIntegrationTest {
 
-  protected static final MongoDBContainer MONGO_CONTAINER = new MongoDBContainer("mongo:8.0");
+  protected static final MongoDBContainer MONGO_CONTAINER =
+      new MongoDBContainer("mongo:8.0").withEnv("GLIBC_TUNABLES", "glibc.pthread.rseq=1");
 
   static {
     MONGO_CONTAINER.start();
