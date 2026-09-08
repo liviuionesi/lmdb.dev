@@ -1,0 +1,99 @@
+[
+  {
+    "file": "en/scottish-dark-mode.wav",
+    "language": "en",
+    "voice": "en-gb-scotland",
+    "accentLabel": "Scottish English (genuinely regional espeak-ng voice)",
+    "phrase": "dark mode please",
+    "expectedKeywords": ["dark", "mode"],
+    "expectedCommand": "CHANGE_MODE",
+    "expectedMode": "DARK"
+  },
+  {
+    "file": "en/lancaster-light-mode.wav",
+    "language": "en",
+    "voice": "en-gb-x-gbclan",
+    "accentLabel": "Lancaster English (genuinely regional espeak-ng voice)",
+    "phrase": "light mode please",
+    "expectedKeywords": ["light", "mode"],
+    "expectedCommand": "CHANGE_MODE",
+    "expectedMode": "LIGHT"
+  },
+  {
+    "file": "en/west-midlands-logout.wav",
+    "language": "en",
+    "voice": "en-gb-x-gbcwmd",
+    "accentLabel": "West Midlands English (genuinely regional espeak-ng voice)",
+    "phrase": "log me out",
+    "expectedKeywords": ["log", "out"],
+    "expectedCommand": "LOGOUT"
+  },
+  {
+    "file": "en/caribbean-search.wav",
+    "language": "en",
+    "voice": "en-029",
+    "accentLabel": "Caribbean English (genuinely regional espeak-ng voice)",
+    "phrase": "search for inception",
+    "expectedKeywords": ["search", "inception"],
+    "expectedCommand": "SEARCH"
+  },
+  {
+    "file": "en/romanian-accented-light-mode.wav",
+    "language": "en",
+    "voice": "en-romanian",
+    "accentLabel": "Romanian-accented English (genuinely non-native espeak-ng/mbrola voice)",
+    "phrase": "switch to light mode",
+    "expectedKeywords": ["light", "mode"],
+    "expectedCommand": "CHANGE_MODE",
+    "expectedMode": "LIGHT"
+  },
+  {
+    "file": "en/german-accented-genre.wav",
+    "language": "en",
+    "voice": "en-german-2",
+    "accentLabel": "German-accented English (genuinely non-native espeak-ng/mbrola voice)",
+    "phrase": "show me action movies",
+    "expectedKeywords": ["action", "movies"],
+    "expectedCommand": "CHOOSE_GENRE",
+    "expectedGenre": "Action"
+  },
+  {
+    "file": "de/speaker1-dark-mode.wav",
+    "language": "de",
+    "voice": "mb-de1",
+    "accentLabel": "Standard German, speaker profile 1 (acoustic diversity only — not dialectal, see script header)",
+    "phrase": "dunkler Modus bitte",
+    "expectedKeywords": ["dunkler", "modus"],
+    "expectedCommand": "CHANGE_MODE",
+    "expectedMode": "DARK"
+  },
+  {
+    "file": "de/speaker4-light-mode.wav",
+    "language": "de",
+    "voice": "mb-de4",
+    "accentLabel": "Standard German, speaker profile 4 (acoustic diversity only — not dialectal, see script header)",
+    "phrase": "heller Modus bitte",
+    "expectedKeywords": ["heller", "modus"],
+    "expectedCommand": "CHANGE_MODE",
+    "expectedMode": "LIGHT"
+  },
+  {
+    "file": "de/speaker7-logout.wav",
+    "language": "de",
+    "voice": "mb-de7",
+    "accentLabel": "Standard German, speaker profile 7 (acoustic diversity only — not dialectal, see script header)",
+    "phrase": "melde mich ab",
+    "expectedKeywords": ["melde", "ab"],
+    "expectedCommand": "LOGOUT"
+  },
+  {
+    "file": "de/bavarian-genre.wav",
+    "language": "de",
+    "voice": "mb-de8",
+    "accentLabel": "German-Bavarian (genuinely dialectal mbrola voice)",
+    "phrase": "zeig mir Actionfilme",
+    "expectedKeywords": ["zeig", "actionfilme"],
+    "expectedCommand": "CHOOSE_GENRE",
+    "expectedGenre": "Action"
+  }
+]
