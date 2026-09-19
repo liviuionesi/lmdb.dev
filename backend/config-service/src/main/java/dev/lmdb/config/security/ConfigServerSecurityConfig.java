@@ -1,6 +1,7 @@
 package dev.lmdb.config.security;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -47,18 +48,21 @@ public class ConfigServerSecurityConfig {
   }
 
   /**
-   * Active when {@code config.security.enabled} is {@code false} or unset — the default. Matches
-   * this server's behavior before access control existed: every request is permitted.
+   * Active whenever {@link #securedConfigServerFilterChain} isn't — {@code config.security.enabled}
+   * false, unset, or any other value that isn't exactly {@code true}. Matches this server's
+   * behavior before access control existed: every request is permitted.
+   *
+   * <p>Deliberately keyed off {@link ConditionalOnMissingBean} rather than a second, mirrored
+   * {@code @ConditionalOnProperty(havingValue = "false")}: a typo'd value (neither {@code true} nor
+   * {@code false}) would then match neither bean, leaving this server with no {@link
+   * SecurityFilterChain} at all — an undefined state, not a safely-open one.
    *
    * @param http the security builder
    * @return the permissive filter chain
    * @throws Exception per Spring Security's builder contract
    */
   @Bean
-  @ConditionalOnProperty(
-      name = "config.security.enabled",
-      havingValue = "false",
-      matchIfMissing = true)
+  @ConditionalOnMissingBean(SecurityFilterChain.class)
   public SecurityFilterChain openConfigServerFilterChain(HttpSecurity http) throws Exception {
     http.csrf(csrf -> csrf.disable()).authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
     return http.build();

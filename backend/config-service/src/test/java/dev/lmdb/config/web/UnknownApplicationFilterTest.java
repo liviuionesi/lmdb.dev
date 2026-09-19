@@ -78,4 +78,40 @@ class UnknownApplicationFilterTest {
 
     assertThat(response.getStatusCode()).isNotEqualTo(HttpStatus.NOT_FOUND);
   }
+
+  /**
+   * The three-segment {@code /{application}/{profile}/{label}} shape must be checked the same way
+   * as the two-segment one — the upper bound of the segment-count check is real code ({@code
+   * segments.length > 3}) that only the {@link #knownApplicationStillServed} and {@link
+   * #unknownApplicationReturns404} tests, both two-segment, would never exercise.
+   */
+  @Test
+  @DisplayName("An unrecognised application still 404s with a label segment")
+  void unknownApplicationWithLabelReturns404() {
+    ResponseEntity<String> response = get("/totally-unknown-app/default/main");
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+  }
+
+  /** The matching known application must still work with a label segment. */
+  @Test
+  @DisplayName("A known application with a label segment is still served")
+  void knownApplicationWithLabelStillServed() {
+    ResponseEntity<String> response = get("/movie-service/default/main");
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+  }
+
+  /**
+   * {@code config.server.known-applications} is matched case-sensitively, the same as the URL path
+   * segment it's compared against. Documented here rather than left implicit, so a future change to
+   * case-insensitive matching is a deliberate choice, not an accident.
+   */
+  @Test
+  @DisplayName("Application name matching is case-sensitive")
+  void applicationNameMatchIsCaseSensitive() {
+    ResponseEntity<String> response = get("/Movie-Service/default");
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+  }
 }

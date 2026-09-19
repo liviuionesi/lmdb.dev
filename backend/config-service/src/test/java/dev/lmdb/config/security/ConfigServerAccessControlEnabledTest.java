@@ -54,6 +54,32 @@ class ConfigServerAccessControlEnabledTest {
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
   }
 
+  /**
+   * An unrecognised application must still 404, not 401, once access control is enabled. {@link
+   * dev.lmdb.config.web.UnknownApplicationFilter} is registered ahead of the security chain
+   * specifically so this holds regardless of credentials — a client probing application names
+   * shouldn't learn anything by whether it's authenticated.
+   *
+   * <p>This guards a real regression this feature shipped with once: the filter originally called
+   * {@code HttpServletResponse.sendError()}, which Tomcat turns into an internal forward to Boot's
+   * {@code /error} handler. That forward re-enters the filter chain on the {@code ERROR} dispatch
+   * type, which Spring Security's chain also covers by default, so the 404 was silently replaced
+   * with a 401 the moment access control was turned on.
+   */
+  @Test
+  @DisplayName("Unknown application 404s regardless of credentials")
+  void unknownApplicationReturns404NotUnauthorized() {
+    ResponseEntity<String> anonymous =
+        restTemplate.getForEntity(url("/totally-unknown-app/default"), String.class);
+    ResponseEntity<String> authenticated =
+        restTemplate
+            .withBasicAuth(USERNAME, PASSWORD)
+            .getForEntity(url("/totally-unknown-app/default"), String.class);
+
+    assertThat(anonymous.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    assertThat(authenticated.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+  }
+
   /** The wrong password must also be rejected — not merely "any credential passes". */
   @Test
   @DisplayName("Config endpoint rejects the wrong password")
@@ -100,5 +126,23 @@ class ConfigServerAccessControlEnabledTest {
         .isEqualTo(HttpStatus.OK);
     assertThat(restTemplate.getForEntity(url("/actuator/prometheus"), String.class).getStatusCode())
         .isEqualTo(HttpStatus.OK);
+  }
+
+  /**
+   * {@code /actuator/**} is permitted regardless of credentials, including a sub-path actuator
+   * itself doesn't expose (e.g. {@code env}, left off {@code
+   * management.endpoints.web.exposure.include}) — that falls through to Spring Cloud Config's own
+   * {@code /{application}/{profile}} controller, which treats "actuator" as just another
+   * unrecognised-but-permitted application name and answers 200 with the common {@code
+   * application.yml} properties. That response is harmless (it's the same file every real client
+   * already receives), but it must never carry {@link #PASSWORD} — this is the actual risk the
+   * blanket actuator exemption creates, not any particular status code.
+   */
+  @Test
+  @DisplayName("A non-exposed actuator sub-path never leaks the config-server credential")
+  void actuatorFallthroughNeverLeaksCredential() {
+    ResponseEntity<String> response = restTemplate.getForEntity(url("/actuator/env"), String.class);
+
+    assertThat(response.getBody()).doesNotContain(PASSWORD);
   }
 }

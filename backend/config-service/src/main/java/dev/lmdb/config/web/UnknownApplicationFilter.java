@@ -61,7 +61,13 @@ public class UnknownApplicationFilter extends OncePerRequestFilter {
       return;
     }
 
-    response.sendError(HttpServletResponse.SC_NOT_FOUND);
+    // response.sendError() would trigger Boot's internal forward to /error, which runs back
+    // through the filter chain on an ERROR dispatch — one Spring Security's chain also covers by
+    // default, and it would replace this 404 with a 401 once access control is enabled. Writing
+    // the response directly finishes it here, before that forward can happen.
+    response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+    response.setContentType("application/json");
+    response.getWriter().write("{\"status\":404,\"error\":\"Not Found\"}");
   }
 
   /**
