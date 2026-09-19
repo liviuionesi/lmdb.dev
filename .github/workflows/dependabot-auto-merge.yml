@@ -2,7 +2,7 @@ name: Dependabot Auto Merge
 
 on:
   schedule:
-    - cron: '30 * * * *' # Run every hour at minute 30
+    - cron: '0 0 */3 * *' # Run every 3 days
   workflow_dispatch:
 
 permissions:
