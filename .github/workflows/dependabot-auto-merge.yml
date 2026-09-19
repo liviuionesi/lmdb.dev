@@ -1,0 +1,35 @@
+name: Dependabot Auto Merge
+
+on:
+  schedule:
+    - cron: '0 0 */3 * *' # Run every 3 days
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  merge-green-prs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Merge passing Dependabot PRs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Fetch open Dependabot PRs and check if all their CI checks have passed successfully
+          PRS=$(gh pr list --repo ${{ github.repository }} --author "app/dependabot" --state open --json number,statusCheckRollup -q '[.[] | {number: .number, checks_passed: (if .statusCheckRollup == null or (.statusCheckRollup | length == 0) then false else (.statusCheckRollup | map(select(.conclusion != "SUCCESS" and .state != "SUCCESS" and .conclusion != "NEUTRAL" and .conclusion != "SKIPPED")) | length == 0) end)}] | map(select(.checks_passed))')
+          
+          if [ -z "$PRS" ] || [ "$PRS" = "[]" ]; then
+            echo "No passing Dependabot PRs found."
+            exit 0
+          fi
+
+          echo "$PRS" | jq -c '.[]' | while read -r pr; do
+            NUMBER=$(echo "$pr" | jq -r '.number')
+            echo "Merging PR #$NUMBER..."
+            gh pr merge "$NUMBER" --squash --repo ${{ github.repository }}
+          done

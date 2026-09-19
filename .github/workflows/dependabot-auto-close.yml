@@ -1,0 +1,44 @@
+name: Dependabot Auto Close
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+
+permissions:
+  pull-requests: write
+
+jobs:
+  close-stale-prs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Close stale Dependabot PRs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          CUTOFF_DATE=$(date -d '14 days ago' -I)
+          echo "Cutoff date: $CUTOFF_DATE"
+          
+          PRS=$(gh pr list --author "app/dependabot" --state open --search "created:<$CUTOFF_DATE" --json number,statusCheckRollup -q '[.[] | {number: .number, checks_failed: (if .statusCheckRollup == null or (.statusCheckRollup | length == 0) then true else (.statusCheckRollup | map(select(.conclusion != "SUCCESS" and .state != "SUCCESS" and .conclusion != "NEUTRAL" and .conclusion != "SKIPPED")) | length > 0) end)}]')
+          
+          # If no PRs found, exit
+          if [ -z "$PRS" ] || [ "$PRS" = "[]" ]; then
+            echo "No stale Dependabot PRs found."
+            exit 0
+          fi
+
+          echo "$PRS" | jq -c '.[]' | while read -r pr; do
+            NUMBER=$(echo "$pr" | jq -r '.number')
+            FAILED=$(echo "$pr" | jq -r '.checks_failed')
+            
+            if [ "$FAILED" = "true" ]; then
+              echo "Closing PR #$NUMBER..."
+              gh pr comment "$NUMBER" -b "Automatically closing this PR because it is older than 14 days and its CI checks have not all passed."
+              gh pr close "$NUMBER"
+            else
+              echo "PR #$NUMBER has all checks passed, leaving open."
+            fi
+          done
