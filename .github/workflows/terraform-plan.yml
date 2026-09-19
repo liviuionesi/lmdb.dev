@@ -45,7 +45,7 @@ jobs:
       TF_VAR_alert_emails: '["${{ vars.ALERT_EMAIL }}"]'
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Azure login (OIDC)
         uses: azure/login@v3

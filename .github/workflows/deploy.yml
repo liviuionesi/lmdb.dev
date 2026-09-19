@@ -64,7 +64,7 @@ jobs:
           echo "✅ Passphrase validated successfully."
 
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Azure login (OIDC)
         uses: azure/login@v3
@@ -186,7 +186,7 @@ jobs:
           echo "✅ Passphrase validated successfully."
 
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v6
