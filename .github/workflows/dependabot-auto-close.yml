@@ -2,7 +2,7 @@ name: Dependabot Auto Close
 
 on:
   schedule:
-    - cron: '0 0 * * 0,4'
+    - cron: '0 0 * * 0'
   workflow_dispatch:
 
 permissions:
