@@ -21,6 +21,20 @@ spring:
         #   default-label: main
         #   clone-on-start: true
 
+# Access control for the config endpoints (#244). Off by default so local
+# development (no ${CONFIG_SECURITY_ENABLED} set) keeps working without
+# credentials; a deployment turns it on by setting CONFIG_SECURITY_ENABLED=true
+# plus CONFIG_SECURITY_PASSWORD. See ADR-022.
+config:
+  security:
+    enabled: ${CONFIG_SECURITY_ENABLED:false}
+    username: ${CONFIG_SECURITY_USERNAME:config}
+  server:
+    # Every {application} this server actually has a file for (see
+    # src/main/resources/config/). A request for anything else 404s instead
+    # of silently answering with just the common application.yml values.
+    known-applications: application,movie-service,user-service,actor-service,media-service,ai-service,api-gateway
+
 eureka:
   client:
     service-url:

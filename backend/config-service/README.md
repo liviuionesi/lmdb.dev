@@ -251,9 +251,30 @@ The Config Service monitors:
 1. **Use Git Backend:** Store configurations in a private Git repository
 2. **Enable Encryption:** Encrypt sensitive values (passwords, API keys)
 3. **Setup Spring Cloud Bus:** Enable dynamic configuration refresh
-4. **Configure Security:** Add authentication for config endpoints
+4. **Configure Security:** Done — see [Access Control](#access-control) below (#244, ADR-022)
 5. **Enable Audit:** Track configuration changes
 6. **Use Profiles:** Separate dev, staging, and prod configurations
+
+## Access Control
+
+Config endpoints (`/{application}/{profile}`) are open by default — the right
+setting for local development, where nothing is exposed beyond the developer's
+own machine. A deployment that needs the endpoints gated turns on HTTP Basic
+auth with three environment variables:
+
+```bash
+CONFIG_SECURITY_ENABLED=true
+CONFIG_SECURITY_USERNAME=config       # optional, defaults to "config"
+CONFIG_SECURITY_PASSWORD=<a real secret>
+```
+
+`/actuator/**` (health, readiness, liveness, the Prometheus scrape path) stays
+open either way, so enabling this never breaks a health check or a scrape.
+
+A request for an `{application}` this server has no file for — a typo, or a
+service that was never onboarded — returns 404 rather than an empty-but-200
+configuration document, regardless of the access-control setting above. See
+`config.server.known-applications` in `application.yml`.
 
 ## Troubleshooting
 
