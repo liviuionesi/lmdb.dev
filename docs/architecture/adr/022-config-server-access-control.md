@@ -48,6 +48,17 @@ request whose first segment isn't in `config.server.known-applications`.
 This applies regardless of the access-control setting above — a typo'd
 application name should 404 whether or not auth is even in the picture.
 
+The same filter also checks `/actuator/*` against
+`management.endpoints.web.exposure.include` rather than exempting the whole
+`/actuator/**` shape. An actuator sub-path Boot doesn't expose (`env`,
+`beans`, ...) has no actuator mapping, so it would otherwise fall through to
+Spring Cloud Config's own `/{application}/{profile}` controller and be
+served as `application=actuator` — an unauthenticated route to the common
+configuration documents that bypasses `config.security.enabled` entirely.
+An independent review caught this during #244; reading the exposure list
+from the same property Boot's own actuator autoconfiguration uses keeps the
+two from drifting apart.
+
 ## Options Considered
 
 **JWT, reusing user-service/api-gateway's existing filter** — rejected: pulls

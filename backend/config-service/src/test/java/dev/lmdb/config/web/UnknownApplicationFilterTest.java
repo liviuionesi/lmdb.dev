@@ -59,15 +59,32 @@ class UnknownApplicationFilterTest {
 
   /**
    * {@code /actuator/health} also has two path segments ("actuator", "health"), the same shape as
-   * {@code /{application}/{profile}}. Without an explicit exemption, this filter would treat
-   * "actuator" as an unrecognised application and 404 every actuator endpoint.
+   * {@code /{application}/{profile}}. This filter must recognise "health" as an actually-exposed
+   * actuator endpoint ID and let it through rather than treating "actuator" as an unrecognised
+   * application.
    */
   @Test
-  @DisplayName("Actuator paths are exempt from the application check")
-  void actuatorPathIsExempt() {
+  @DisplayName("An exposed actuator endpoint is served")
+  void exposedActuatorEndpointIsServed() {
     ResponseEntity<String> response = get("/actuator/health");
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+  }
+
+  /**
+   * {@code env} is deliberately left off {@code management.endpoints.web.exposure.include}, so
+   * Boot's actuator has no mapping for it. Without this filter treating "actuator" as anything
+   * other than a blanket bypass, that unmapped request would fall through to Spring Cloud Config's
+   * generic {@code /{application}/{profile}} controller and be served — an unauthenticated back
+   * door to the common configuration documents that bypasses {@code config.security.enabled}
+   * entirely. This must 404 the same as any other unrecognised application.
+   */
+  @Test
+  @DisplayName("A non-exposed actuator endpoint 404s rather than falling through to config-server")
+  void nonExposedActuatorEndpointReturns404() {
+    ResponseEntity<String> response = get("/actuator/env");
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
   }
 
   /** A bare, single-segment path (no profile) is not an application request and passes through. */

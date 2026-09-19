@@ -129,20 +129,20 @@ class ConfigServerAccessControlEnabledTest {
   }
 
   /**
-   * {@code /actuator/**} is permitted regardless of credentials, including a sub-path actuator
-   * itself doesn't expose (e.g. {@code env}, left off {@code
-   * management.endpoints.web.exposure.include}) — that falls through to Spring Cloud Config's own
-   * {@code /{application}/{profile}} controller, which treats "actuator" as just another
-   * unrecognised-but-permitted application name and answers 200 with the common {@code
-   * application.yml} properties. That response is harmless (it's the same file every real client
-   * already receives), but it must never carry {@link #PASSWORD} — this is the actual risk the
-   * blanket actuator exemption creates, not any particular status code.
+   * A sub-path actuator itself doesn't expose (e.g. {@code env}, left off {@code
+   * management.endpoints.web.exposure.include}) must not become an unauthenticated back door to the
+   * common configuration documents. {@link dev.lmdb.config.web.UnknownApplicationFilter} checks
+   * {@code /actuator/*} against the actually-exposed endpoint IDs rather than exempting the whole
+   * shape, specifically so this 404s instead of falling through to Spring Cloud Config's generic
+   * {@code /{application}/{profile}} controller — which would otherwise serve it, unauthenticated,
+   * regardless of {@code config.security.enabled}.
    */
   @Test
-  @DisplayName("A non-exposed actuator sub-path never leaks the config-server credential")
-  void actuatorFallthroughNeverLeaksCredential() {
+  @DisplayName("A non-exposed actuator endpoint never becomes an unauthenticated back door")
+  void nonExposedActuatorEndpointCannotBypassAccessControl() {
     ResponseEntity<String> response = restTemplate.getForEntity(url("/actuator/env"), String.class);
 
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     assertThat(response.getBody()).doesNotContain(PASSWORD);
   }
 }

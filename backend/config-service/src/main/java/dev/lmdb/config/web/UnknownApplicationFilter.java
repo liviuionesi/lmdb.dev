@@ -23,24 +23,36 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * path segment into a 404 before the config server ever sees the request.
  *
  * <p>Only requests shaped like {@code /{application}/{profile}[/{label}]} are checked — that is
- * exactly two or three non-empty path segments. Everything else ({@code /actuator/**}, {@code
- * /encrypt}, {@code /{name}-{profile}.yml}, the root path) is left alone.
+ * exactly two or three non-empty path segments. {@code /encrypt}, {@code /{name}-{profile}.yml} and
+ * the root path are single-segment and left alone. {@code /actuator/*} is checked against the
+ * actually-exposed endpoint IDs rather than exempted wholesale: an actuator sub-path Boot doesn't
+ * expose (e.g. {@code env}) has no actuator mapping, and without this check it would fall through
+ * to the config-server controller and be served as {@code application=actuator} — an
+ * unauthenticated route to the common configuration documents that bypasses {@code
+ * config.security.enabled} entirely.
  */
 public class UnknownApplicationFilter extends OncePerRequestFilter {
 
   private final Set<String> knownApplications;
+  private final Set<String> exposedActuatorEndpoints;
 
   /**
    * @param knownApplications every {@code {application}} name this server actually serves a file
    *     for (see {@code config.server.known-applications})
+   * @param exposedActuatorEndpoints the actuator endpoint IDs actually reachable (see {@code
+   *     management.endpoints.web.exposure.include}) — an {@code /actuator/{id}} request for
+   *     anything else is treated the same as an unknown application
    */
-  public UnknownApplicationFilter(Set<String> knownApplications) {
+  public UnknownApplicationFilter(
+      Set<String> knownApplications, Set<String> exposedActuatorEndpoints) {
     this.knownApplications = knownApplications;
+    this.exposedActuatorEndpoints = exposedActuatorEndpoints;
   }
 
   /**
-   * Passes through requests this filter doesn't apply to, and 404s a two/three-segment request
-   * whose first segment isn't a known application.
+   * Passes through requests this filter doesn't apply to, and 404s everything else: a two/three
+   * segment application request whose first segment isn't known, or an {@code /actuator/*} request
+   * for an endpoint ID that isn't actually exposed.
    *
    * @param request the incoming request
    * @param response the response, written to directly on rejection
@@ -54,9 +66,7 @@ public class UnknownApplicationFilter extends OncePerRequestFilter {
       throws ServletException, IOException {
     String[] segments = splitPath(request.getRequestURI(), request.getContextPath());
 
-    boolean notAnApplicationRequest = segments.length < 2 || segments.length > 3;
-    boolean actuator = segments.length > 0 && "actuator".equals(segments[0]);
-    if (notAnApplicationRequest || actuator || knownApplications.contains(segments[0])) {
+    if (isPassThrough(segments)) {
       filterChain.doFilter(request, response);
       return;
     }
@@ -68,6 +78,23 @@ public class UnknownApplicationFilter extends OncePerRequestFilter {
     response.setStatus(HttpServletResponse.SC_NOT_FOUND);
     response.setContentType("application/json");
     response.getWriter().write("{\"status\":404,\"error\":\"Not Found\"}");
+  }
+
+  /**
+   * @param segments the request's non-empty path segments
+   * @return {@code true} if this filter has nothing to say about the request — either it isn't
+   *     shaped like an application or actuator request, or it names a known application / an
+   *     actually-exposed actuator endpoint
+   */
+  private boolean isPassThrough(String[] segments) {
+    if (segments.length == 0) {
+      return true;
+    }
+    if ("actuator".equals(segments[0])) {
+      return segments.length == 1 || exposedActuatorEndpoints.contains(segments[1]);
+    }
+    boolean applicationShaped = segments.length == 2 || segments.length == 3;
+    return !applicationShaped || knownApplications.contains(segments[0]);
   }
 
   /**
@@ -91,15 +118,21 @@ public class UnknownApplicationFilter extends OncePerRequestFilter {
     /**
      * @param knownApplicationsCsv comma-separated known application names from {@code
      *     config.server.known-applications}
+     * @param exposedActuatorEndpointsCsv comma-separated actuator endpoint IDs from {@code
+     *     management.endpoints.web.exposure.include} — read from the same property Boot's actuator
+     *     autoconfiguration uses, so the two can never drift apart
      * @return the filter, wired at {@link Ordered#HIGHEST_PRECEDENCE} so it runs before Spring
      *     Security can authenticate (or reject) a request for an application that doesn't exist
      */
     @Bean
     FilterRegistrationBean<UnknownApplicationFilter> unknownApplicationFilter(
-        @Value("${config.server.known-applications}") String knownApplicationsCsv) {
+        @Value("${config.server.known-applications}") String knownApplicationsCsv,
+        @Value("${management.endpoints.web.exposure.include}") String exposedActuatorEndpointsCsv) {
       Set<String> knownApplications = Set.of(knownApplicationsCsv.split("\\s*,\\s*"));
+      Set<String> exposedActuatorEndpoints = Set.of(exposedActuatorEndpointsCsv.split("\\s*,\\s*"));
       FilterRegistrationBean<UnknownApplicationFilter> registration =
-          new FilterRegistrationBean<>(new UnknownApplicationFilter(knownApplications));
+          new FilterRegistrationBean<>(
+              new UnknownApplicationFilter(knownApplications, exposedActuatorEndpoints));
       registration.setOrder(Ordered.HIGHEST_PRECEDENCE);
       return registration;
     }
