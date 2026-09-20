@@ -26,7 +26,10 @@ services:
       - postgres_data:/var/lib/postgresql/data
       # Runs only when postgres_data is empty. To add a database to an
       # already-provisioned volume, create it by hand or `down -v` first.
-      - ./init-scripts:/docker-entrypoint-initdb.d:ro
+      # `z` relabels the folder for containers. Without it SELinux (Fedora,
+      # RHEL) denies the read and a fresh Postgres cannot start. It has no
+      # effect where SELinux is off. ai-service's ./models mount needs it too.
+      - ./init-scripts:/docker-entrypoint-initdb.d:ro,z
     networks:
       - lmdb-network
     healthcheck:
@@ -497,7 +500,7 @@ services:
       VOSK_MODEL_PATH: /models/vosk-model-en-us-0.22-lgraph
       VOSK_MODEL_PATH_DE: /models/vosk-model-small-de-0.15
     volumes:
-      - ./models:/models:ro
+      - ./models:/models:ro,z
     logging:
       driver: k8s-file
     depends_on:
@@ -620,6 +623,12 @@ services:
 
 volumes:
   postgres_data:
+    # Explicit name on purpose. Compose prefixes volume names with the folder
+    # name, which here is just `docker`, so every project that keeps its
+    # compose file in a folder called `docker` shares `docker_postgres_data`.
+    # Another project's data and admin password ended up in ours, and
+    # user-service, actor-service and ai-service could not log in.
+    name: lmdb_postgres_data
     driver: local
   mongo_data:
     driver: local
