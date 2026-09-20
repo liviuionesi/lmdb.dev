@@ -141,7 +141,7 @@ else
   echo -e "  Skipped:        ${SKIPPED} cloud(s) (not configured)"
   echo -e ""
   if [ "$STOPPED_COUNT" -gt 0 ]; then
-    echo -e "  ${GREEN}💰 Cloud compute scaled to \$0. Residual disk/IP cost: ~\$0.25/day.${NC}"
+    echo -e "  ${GREEN}💰 Cloud compute scaled to \$0. Residual disk cost: ~\$0.25/day.${NC}"
   else
     echo -e "  ${GREEN}💰 No compute was running — already at minimum cost.${NC}"
   fi

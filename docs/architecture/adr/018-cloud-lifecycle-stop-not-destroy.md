@@ -86,7 +86,7 @@ model weights). This costs ~$0.25/day for Azure (~$7.50/month if idle all month)
 - `stop-all-clouds.sh --dry-run` is safe to add to end-of-day reminders.
 
 ### Negative
-- ~$0.25/day idle cost even when stopped (Azure Disk PVCs + public IP).
+- ~$0.25/day idle cost even when stopped (Azure Disk PVCs).
 - If the developer forgets to stop, the cluster runs indefinitely at full cost.
   Mitigation: `auto-stop-watchdog.sh` checks inactivity and can stop automatically.
 

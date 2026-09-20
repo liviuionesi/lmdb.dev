@@ -88,11 +88,12 @@ else
   echo -e "\n${GREEN}✅ Cluster is now Stopped.${NC}"
 fi
 
-# 5. Print cost summary
+# 5. Print cost summary. Disk-only, per ADR-018's decision table: the
+# static public IP is not de-allocated by `az aks stop` but its cost is
+# separately negligible and outside this total (see ADR-018).
 echo -e "\n${CYAN}💰 Cost Summary (approximate):${NC}"
 echo -e "  ${GREEN}VM Compute (Standard_D4ls_v7): \$0.00/hr  ← saved!${NC}"
 echo -e "  ${YELLOW}Azure Disk PVCs (~16 GiB):     ~\$0.01/hr${NC}"
-echo -e "  ${YELLOW}Static Public IP:              ~\$0.004/hr${NC}"
 echo -e "  ─────────────────────────────────────────"
 echo -e "  ${YELLOW}Total idle cost:               ~\$0.25/day  (vs ~\$5.06/day running)${NC}"
 echo -e "\n  📦 Your data (Postgres, MongoDB, Redis, Ollama) is preserved on PVCs."
