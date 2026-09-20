@@ -571,4 +571,54 @@ class MovieControllerTest {
 
     return CreditsDto.builder().movieId(movieId).cast(cast).crew(crew).build();
   }
+
+  /**
+   * Collection search must bind the {@code query} param and return the list the service gives.
+   *
+   * @throws Exception if the mock request fails
+   */
+  @Test
+  @DisplayName("GET /api/v1/movies/collections/search - Should return matching collections")
+  void searchCollections_ShouldReturnMatchingCollections() throws Exception {
+    when(movieService.searchCollections("James Bond"))
+        .thenReturn(List.of(new CollectionSummaryDto(645L, "James Bond Collection", "/bond.jpg")));
+
+    mockMvc
+        .perform(get("/api/v1/movies/collections/search").param("query", "James Bond"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$", hasSize(1)))
+        .andExpect(jsonPath("$[0].id").value(645))
+        .andExpect(jsonPath("$[0].name").value("James Bond Collection"));
+  }
+
+  /**
+   * A missing {@code query} must be rejected, not passed to the service as null.
+   *
+   * @throws Exception if the mock request fails
+   */
+  @Test
+  @DisplayName("GET /api/v1/movies/collections/search - Should reject a missing query")
+  void searchCollections_WithoutAQuery_ShouldBeRejected() throws Exception {
+    mockMvc.perform(get("/api/v1/movies/collections/search")).andExpect(status().isBadRequest());
+  }
+
+  /**
+   * The collection id in the path must reach the service, and the movies must come back.
+   *
+   * @throws Exception if the mock request fails
+   */
+  @Test
+  @DisplayName("GET /api/v1/movies/collections/{id} - Should return the collection's movies")
+  void getCollection_ShouldReturnTheCollectionsMovies() throws Exception {
+    MovieListDto movie = MovieListDto.builder().tmdbId(36557L).title("Casino Royale").build();
+    when(movieService.getCollection(645L))
+        .thenReturn(new CollectionDto(645L, "James Bond Collection", List.of(movie)));
+
+    mockMvc
+        .perform(get("/api/v1/movies/collections/645"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.name").value("James Bond Collection"))
+        .andExpect(jsonPath("$.movies", hasSize(1)))
+        .andExpect(jsonPath("$.movies[0].title").value("Casino Royale"));
+  }
 }

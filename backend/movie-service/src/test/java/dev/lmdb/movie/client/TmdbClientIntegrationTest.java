@@ -4,6 +4,8 @@ import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
+import dev.lmdb.movie.client.dto.TmdbCollectionResponse;
+import dev.lmdb.movie.client.dto.TmdbCollectionSearchResponse;
 import dev.lmdb.movie.client.dto.TmdbMovieListResponse;
 import dev.lmdb.movie.client.dto.TmdbMovieResponse;
 import java.time.Duration;
@@ -194,5 +196,71 @@ class TmdbClientIntegrationTest {
     // A single token trickles in every 250ms (10000ms / 40).
     // Request 41 adds ~250ms, Request 42 adds ~250ms -> >500ms guaranteed delay
     assertThat(executionTime.toMillis()).isGreaterThan(200);
+  }
+
+  /**
+   * Given TMDB knows a collection named "James Bond", when {@code searchCollections} is called,
+   * then the query and the API key reach {@code /search/collection} and the reply is read into
+   * collection ids and names. WireMock matches only when both params are sent, so a non-null reply
+   * is itself proof of the request.
+   */
+  @Test
+  @DisplayName("searchCollections: sends the query to /search/collection and reads id and name")
+  void shouldSearchCollections() {
+    // Given: WireMock only matches if both params are present
+    stubFor(
+        get(urlPathEqualTo("/search/collection"))
+            .withQueryParam("query", equalTo("James Bond"))
+            .withQueryParam("api_key", equalTo("test-api-key"))
+            .willReturn(
+                aResponse()
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        """
+                        {"page":1,"results":[
+                          {"id":645,"name":"James Bond Collection","poster_path":"/bond.jpg"}]}
+                        """)));
+
+    // When
+    TmdbCollectionSearchResponse response =
+        tmdbClient.searchCollections("test-api-key", "James Bond", 1);
+
+    // Then
+    assertThat(response.results()).hasSize(1);
+    assertThat(response.results().get(0).id()).isEqualTo(645L);
+    assertThat(response.results().get(0).name()).isEqualTo("James Bond Collection");
+    assertThat(response.results().get(0).posterPath()).isEqualTo("/bond.jpg");
+  }
+
+  /**
+   * Given a collection id, when {@code getCollection} is called, then {@code /collection/{id}} is
+   * requested and each part is read as a movie list item, including its release date.
+   */
+  @Test
+  @DisplayName("getCollection: reads the collection's parts as movie list items")
+  void shouldFetchACollectionWithItsParts() {
+    // Given
+    stubFor(
+        get(urlPathEqualTo("/collection/645"))
+            .withQueryParam("api_key", equalTo("test-api-key"))
+            .willReturn(
+                aResponse()
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        """
+                        {"id":645,"name":"James Bond Collection","parts":[
+                          {"id":36557,"title":"Casino Royale","release_date":"2006-11-14"},
+                          {"id":10764,"title":"Quantum of Solace","release_date":"2008-10-30"}]}
+                        """)));
+
+    // When
+    TmdbCollectionResponse response = tmdbClient.getCollection(645L, "test-api-key");
+
+    // Then
+    assertThat(response.name()).isEqualTo("James Bond Collection");
+    assertThat(response.parts())
+        .extracting("title")
+        .containsExactly("Casino Royale", "Quantum of Solace");
+    assertThat(response.parts().get(0).releaseDate()).isEqualTo("2006-11-14");
   }
 }

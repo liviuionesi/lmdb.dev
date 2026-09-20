@@ -898,4 +898,82 @@ class MovieServiceTest {
             Genre.builder().id(28L).name("Action").build(),
             Genre.builder().id(18L).name("Drama").build()));
   }
+
+  /**
+   * Given TMDB returns collections for a name, when {@code searchCollections} runs, then the query
+   * is forwarded and each collection is mapped to its id, name and poster.
+   */
+  @Test
+  @DisplayName("searchCollections - Should forward the query and map the collections")
+  void searchCollections_ShouldForwardTheQueryAndMapTheResults() {
+    // Arrange
+    when(tmdbClient.searchCollections(tmdbApiKey, "James Bond", 1))
+        .thenReturn(
+            new TmdbCollectionSearchResponse(
+                1,
+                List.of(
+                    new TmdbCollectionSearchResponse.TmdbCollectionItem(
+                        645L, "James Bond Collection", "/bond.jpg"))));
+
+    // Act
+    List<CollectionSummaryDto> result = movieService.searchCollections("James Bond");
+
+    // Assert
+    assertThat(result)
+        .containsExactly(new CollectionSummaryDto(645L, "James Bond Collection", "/bond.jpg"));
+  }
+
+  /** A TMDB reply with no results must give an empty list, not a null pointer. */
+  @Test
+  @DisplayName("searchCollections - Should return an empty list when TMDB finds nothing")
+  void searchCollections_WhenTmdbFindsNothing_ShouldReturnEmpty() {
+    when(tmdbClient.searchCollections(tmdbApiKey, "zzz", 1))
+        .thenReturn(new TmdbCollectionSearchResponse(1, null));
+
+    assertThat(movieService.searchCollections("zzz")).isEmpty();
+  }
+
+  /**
+   * Given a collection with two movies, when {@code getCollection} runs, then both movies are saved
+   * to MongoDB and both come back in the result. Saving them is what makes a later lookup of one of
+   * these movies a local read.
+   */
+  @Test
+  @DisplayName("getCollection - Should save every part and return them")
+  void getCollection_ShouldSaveEveryPartAndReturnThem() {
+    // Arrange
+    TmdbMovieListResponse.TmdbMovieItem first =
+        collectionPart(36557L, "Casino Royale", "2006-11-14");
+    TmdbMovieListResponse.TmdbMovieItem second =
+        collectionPart(10764L, "Quantum of Solace", "2008-10-30");
+    when(tmdbClient.getCollection(645L, tmdbApiKey))
+        .thenReturn(
+            new TmdbCollectionResponse(645L, "James Bond Collection", List.of(first, second)));
+    when(movieRepository.findByTmdbId(any())).thenReturn(Optional.empty());
+    when(movieRepository.save(any(Movie.class))).thenAnswer(call -> call.getArgument(0));
+
+    // Act
+    CollectionDto result = movieService.getCollection(645L);
+
+    // Assert
+    assertThat(result.name()).isEqualTo("James Bond Collection");
+    assertThat(result.movies())
+        .extracting(MovieListDto::title)
+        .containsExactly("Casino Royale", "Quantum of Solace");
+    verify(movieRepository, times(2)).save(any(Movie.class));
+  }
+
+  /**
+   * Builds one movie as TMDB lists it inside a collection.
+   *
+   * @param id TMDB movie id
+   * @param title the title
+   * @param releaseDate release date as {@code yyyy-MM-dd}
+   * @return the list item
+   */
+  private static TmdbMovieListResponse.TmdbMovieItem collectionPart(
+      Long id, String title, String releaseDate) {
+    return new TmdbMovieListResponse.TmdbMovieItem(
+        id, title, "Overview", null, null, releaseDate, 7.0, 100, List.of(28L), 1.0, false, "en");
+  }
 }

@@ -68,6 +68,31 @@ public interface TmdbClient {
       @RequestParam(value = "page", defaultValue = "1") Integer page);
 
   /**
+   * Search movie collections (franchises) by name.
+   *
+   * @param apiKey API key
+   * @param query the collection name, such as "James Bond"
+   * @param page Page number
+   * @return the matching collections
+   */
+  @GetExchange("/search/collection")
+  TmdbCollectionSearchResponse searchCollections(
+      @RequestParam("api_key") String apiKey,
+      @RequestParam("query") String query,
+      @RequestParam(value = "page", defaultValue = "1") Integer page);
+
+  /**
+   * Get one movie collection and the movies in it.
+   *
+   * @param collectionId TMDB collection id
+   * @param apiKey API key
+   * @return the collection with its movies
+   */
+  @GetExchange("/collection/{collectionId}")
+  TmdbCollectionResponse getCollection(
+      @PathVariable("collectionId") Long collectionId, @RequestParam("api_key") String apiKey);
+
+  /**
    * Get trending movies.
    *
    * @param timeWindow Time window (day or week)

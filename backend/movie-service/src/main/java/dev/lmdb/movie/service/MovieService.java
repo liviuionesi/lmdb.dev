@@ -411,6 +411,42 @@ public class MovieService {
   }
 
   /**
+   * Searches movie collections (franchises) by name on TMDB.
+   *
+   * @param query the collection name, such as "James Bond"
+   * @return the matching collections, best match first; empty if TMDB returns none
+   */
+  @Cacheable(value = "movieLists", key = "'collection-search-' + #query", sync = true)
+  public List<CollectionSummaryDto> searchCollections(String query) {
+    log.info("Searching collections: query={}", query);
+    TmdbCollectionSearchResponse response = tmdbClient.searchCollections(tmdbApiKey, query, 1);
+    if (response == null || response.results() == null) {
+      return List.of();
+    }
+    return response.results().stream()
+        .map(item -> new CollectionSummaryDto(item.id(), item.name(), item.posterPath()))
+        .toList();
+  }
+
+  /**
+   * Fetches a collection and its movies from TMDB and saves each movie like any other list result,
+   * so a later lookup of one of them is served from MongoDB.
+   *
+   * @param collectionId TMDB collection id
+   * @return the collection with its movies
+   */
+  @Cacheable(value = "movieLists", key = "'collection-' + #collectionId", sync = true)
+  public CollectionDto getCollection(Long collectionId) {
+    log.info("Fetching collection: id={}", collectionId);
+    TmdbCollectionResponse response = tmdbClient.getCollection(collectionId, tmdbApiKey);
+    List<TmdbMovieListResponse.TmdbMovieItem> parts =
+        response.parts() == null ? List.of() : response.parts();
+    parts.forEach(this::upsertFromListItem);
+    List<MovieListDto> movies = parts.stream().map(this::convertTmdbItemToListDto).toList();
+    return new CollectionDto(response.id(), response.name(), movies);
+  }
+
+  /**
    * Get trending movies.
    *
    * @param timeWindow Time window (day or week)

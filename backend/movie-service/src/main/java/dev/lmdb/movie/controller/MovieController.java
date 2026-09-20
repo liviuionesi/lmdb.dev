@@ -146,6 +146,41 @@ public class MovieController {
   }
 
   /**
+   * Searches movie collections (franchises) by name.
+   *
+   * @param query the collection name, such as "James Bond"
+   * @return the matching collections
+   */
+  @GetMapping("/collections/search")
+  @Operation(
+      summary = "Search movie collections",
+      description = "Finds movie franchises such as \"James Bond Collection\" by name")
+  public ResponseEntity<List<CollectionSummaryDto>> searchCollections(
+      @Parameter(description = "Collection name", example = "James Bond", required = true)
+          @RequestParam(value = "query")
+          String query) {
+    log.info("GET /api/v1/movies/collections/search - query={}", query);
+    return ResponseEntity.ok(movieService.searchCollections(query));
+  }
+
+  /**
+   * Gets a movie collection with its movies.
+   *
+   * @param collectionId TMDB collection id
+   * @return the collection and its movies
+   */
+  @GetMapping("/collections/{collectionId}")
+  @Operation(
+      summary = "Get a movie collection",
+      description = "Returns a franchise and the movies in it")
+  public ResponseEntity<CollectionDto> getCollection(
+      @Parameter(description = "TMDB collection id", example = "645") @PathVariable
+          Long collectionId) {
+    log.info("GET /api/v1/movies/collections/{}", collectionId);
+    return ResponseEntity.ok(movieService.getCollection(collectionId));
+  }
+
+  /**
    * Get trending movies.
    *
    * @param timeWindow Time window (day or week)

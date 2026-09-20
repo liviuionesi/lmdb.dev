@@ -177,6 +177,42 @@ public class TmdbClientTestStubConfig {
         return buildStubMovieList(page);
       }
 
+      /**
+       * Returns one stub collection whose name echoes the query, so callers can see it flow
+       * through.
+       */
+      @Override
+      public TmdbCollectionSearchResponse searchCollections(
+          String apiKey, String query, Integer page) {
+        return new TmdbCollectionSearchResponse(
+            1,
+            List.of(
+                new TmdbCollectionSearchResponse.TmdbCollectionItem(
+                    1L, query + " Collection", "/stub/collection-poster.jpg")));
+      }
+
+      /** Returns a stub collection with a single part whose id echoes the collection id. */
+      @Override
+      public TmdbCollectionResponse getCollection(Long collectionId, String apiKey) {
+        return new TmdbCollectionResponse(
+            collectionId,
+            "Stub Collection " + collectionId,
+            List.of(
+                new TmdbMovieListResponse.TmdbMovieItem(
+                    collectionId * 10,
+                    "Stub Part",
+                    "Overview",
+                    null,
+                    null,
+                    "2001-01-01",
+                    7.0,
+                    10,
+                    List.of(28L),
+                    1.0,
+                    false,
+                    "en")));
+      }
+
       @Override
       public TmdbGenresResponse getGenres(String apiKey) {
         return new TmdbGenresResponse(
