@@ -20,6 +20,7 @@ Run: python3 -m unittest discover -s infrastructure/scripts -p 'test_*.py'
 """
 import os
 import pathlib
+import re
 import stat
 import subprocess
 import tempfile
@@ -145,6 +146,30 @@ class AzureLifecycleTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertFalse(any(c.startswith("aks stop") for c in self._az_calls_list()))
         self.assertIn("already Stopped", result.stdout)
+
+    def test_cost_summary_total_matches_its_own_itemized_rate(self):
+        """The printed "Total idle cost" must equal the itemized hourly rate x 24.
+
+        Story #160's AC1 claims an "itemized, internally-consistent cost
+        summary". Audited by #304: the summary used to itemize both an
+        Azure Disk PVC rate and a separate Static Public IP rate, then
+        print a Total that only reflected the disk rate (ADR-018's
+        decision table always priced the stopped state as disk-only) —
+        stated one cost, itemized a second one adding up to something
+        else. This locks the invariant so the total can never again
+        silently drift from what the summary itemizes above it.
+        """
+        self._state_file.write_text("Running")
+        result = subprocess.run(
+            ["bash", str(STOP_SCRIPT)], env=self._env, capture_output=True,
+            text=True, cwd=REPO_ROOT,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+        disk_rate = float(re.search(r"Azure Disk PVCs[^\n]*\$([\d.]+)/hr", result.stdout).group(1))
+        total_daily = float(re.search(r"Total idle cost:\s*~\$([\d.]+)/day", result.stdout).group(1))
+        self.assertAlmostEqual(disk_rate * 24, total_daily, delta=0.015)
+        self.assertNotIn("Static Public IP", result.stdout)
 
 
 if __name__ == "__main__":

@@ -2333,7 +2333,7 @@ primary target. When either cloud is up, all 9 workloads are deployed:
 | State                           | What's billed                    | Rate      | Daily cost     |
 | ------------------------------- | -------------------------------- | --------- | -------------- |
 | Running (`az aks start`)        | VM + disks + IP                  | ~$0.21/hr | ~**$5.06/day** |
-| Stopped (`az aks stop`)         | Disks (~16 GiB) + public IP only | ~$0.01/hr | ~**$0.25/day** |
+| Stopped (`az aks stop`)         | Disks (~16 GiB) only              | ~$0.01/hr | ~**$0.25/day** |
 | Destroyed (`terraform destroy`) | Nothing                          | $0        | $0             |
 
 `az aks stop` de-allocates the VM while preserving all 4 PVCs (Postgres,
