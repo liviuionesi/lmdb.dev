@@ -22,8 +22,8 @@ import org.junit.jupiter.api.Test;
  * {@code RedisCacheManager}, whose default value serializer is JDK serialization — not Jackson.
  * That means every type reachable from a cached {@link Actor}, {@link Actor} itself included, must
  * implement {@link java.io.Serializable} or the cache write throws at runtime. Task #34 recorded a
- * live crash of exactly this shape ("Redis serialization crash on actor detail", commit
- * {@code 4b84d7d}); this test is the regression check that criterion never named.
+ * live crash of exactly this shape ("Redis serialization crash on actor detail", commit {@code
+ * 4b84d7d}); this test is the regression check that criterion never named.
  *
  * <p>Runs a real JDK serialize/deserialize round-trip rather than mocking anything, so it fails the
  * same way the original bug did if {@link Actor} or {@link ActorProfileImage} ever stops being
@@ -33,11 +33,11 @@ import org.junit.jupiter.api.Test;
 class ActorTest {
 
   /**
-   * Given a fully populated {@link Actor}, including its {@link ActorProfileImage} collection,
-   * when it is written to and read back from a JDK {@link ObjectOutputStream}/{@link
-   * ObjectInputStream} pair (what {@code RedisCacheManager}'s default serializer does internally),
-   * then the round-trip succeeds and every field survives unchanged. A non-serializable field
-   * anywhere in this object graph would throw {@link java.io.NotSerializableException} here.
+   * Given a fully populated {@link Actor}, including its {@link ActorProfileImage} collection, when
+   * it is written to and read back from a JDK {@link ObjectOutputStream}/{@link ObjectInputStream}
+   * pair (what {@code RedisCacheManager}'s default serializer does internally), then the round-trip
+   * succeeds and every field survives unchanged. A non-serializable field anywhere in this object
+   * graph would throw {@link java.io.NotSerializableException} here.
    */
   @Test
   @DisplayName("round-trips through JDK serialization, matching Redis's default cache serializer")
@@ -79,7 +79,8 @@ class ActorTest {
 
     // 2. Deserialize back and confirm the whole graph survived, not just that no exception fired.
     Actor restored;
-    try (ObjectInputStream in = new ObjectInputStream(new ByteArrayInputStream(bytes.toByteArray()))) {
+    try (ObjectInputStream in =
+        new ObjectInputStream(new ByteArrayInputStream(bytes.toByteArray()))) {
       restored = (Actor) in.readObject();
     }
 
