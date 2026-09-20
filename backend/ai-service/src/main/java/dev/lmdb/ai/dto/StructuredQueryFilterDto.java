@@ -136,18 +136,42 @@ public record StructuredQueryFilterDto(
     negated = negated == null ? List.of() : negated;
 
     boolean hasStructure =
-        personName != null
-            || role != null
-            || yearFrom != null
-            || yearTo != null
-            || !collaborators.isEmpty()
-            || genre != null
-            || franchise != null
-            || !keywords.isEmpty()
-            || !negated.isEmpty();
+        hasStructure(
+            personName, role, yearFrom, yearTo, collaborators, genre, negated, franchise, keywords);
     if (hasStructure) {
       plainTitle = null;
     }
+  }
+
+  /**
+   * Tells whether the query was read into any search criterion.
+   *
+   * @return {@code true} if any field other than {@code plainTitle} has a value
+   */
+  public boolean hasStructure() {
+    return hasStructure(
+        personName, role, yearFrom, yearTo, collaborators, genre, negated, franchise, keywords);
+  }
+
+  private static boolean hasStructure(
+      String personName,
+      QueryFilterRole role,
+      Integer yearFrom,
+      Integer yearTo,
+      List<String> collaborators,
+      String genre,
+      List<String> negated,
+      String franchise,
+      List<String> keywords) {
+    return personName != null
+        || role != null
+        || yearFrom != null
+        || yearTo != null
+        || !collaborators.isEmpty()
+        || genre != null
+        || franchise != null
+        || !keywords.isEmpty()
+        || !negated.isEmpty();
   }
 
   /**

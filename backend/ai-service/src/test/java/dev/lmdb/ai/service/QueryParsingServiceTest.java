@@ -250,6 +250,55 @@ class QueryParsingServiceTest {
   }
 
   /**
+   * llama3.2 invented a person, a role and collaborators for a franchise query, and named no
+   * franchise. Nothing usable is left after the query-text check except the year, so the parse
+   * keeps only what the user said.
+   */
+  @Test
+  @DisplayName("removes people and roles the model invented")
+  void removesInventedValues() {
+    stubReplies(
+        """
+        {"personName":"Daniel Craig","role":"ACTED","yearFrom":2000,"yearTo":2015,
+         "collaborators":["Olga Kurylenko","Jesper Christensen"],"genre":null,"negated":[],
+         "franchise":null,"keywords":[],"plainTitle":null}
+        """);
+
+    StructuredQueryFilterDto filter =
+        service.parse("list me the movies from the James Bond franchise after year 2000");
+
+    assertThat(filter.personName()).isNull();
+    assertThat(filter.role()).isNull();
+    assertThat(filter.collaborators()).isEmpty();
+    assertThat(filter.yearFrom()).isEqualTo(2000);
+    assertThat(filter.yearTo()).isNull();
+  }
+
+  /**
+   * A reply that is valid JSON but says nothing the query supports is as useless as broken JSON, so
+   * it gets the same retry.
+   */
+  @Test
+  @DisplayName("retries when nothing in the reply is supported by the query")
+  void retriesWhenNothingIsSupported() {
+    stubReplies(
+        """
+        {"personName":"Daniel Craig","role":"ACTED","yearFrom":null,"yearTo":null,
+         "collaborators":[],"genre":null,"negated":[],"franchise":null,"keywords":[],
+         "plainTitle":null}
+        """,
+        """
+        {"personName":null,"role":null,"yearFrom":2000,"yearTo":null,"collaborators":[],
+         "genre":null,"negated":[],"franchise":"James Bond","keywords":[],"plainTitle":null}
+        """);
+
+    StructuredQueryFilterDto filter = service.parse("James Bond movies after 2000");
+
+    assertThat(filter.franchise()).isEqualTo("James Bond");
+    verify(chatModel, times(2)).call(any(Prompt.class));
+  }
+
+  /**
    * Makes the mocked model return the given raw texts in order. The last one repeats if the service
    * calls more often than there are replies.
    *

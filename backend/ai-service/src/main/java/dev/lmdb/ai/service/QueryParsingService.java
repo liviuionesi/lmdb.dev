@@ -101,13 +101,17 @@ public class QueryParsingService {
     StructuredQueryFilterDto filter = null;
     for (int attempt = 1; attempt <= MAX_ATTEMPTS && filter == null; attempt++) {
       try {
-        filter =
+        StructuredQueryFilterDto parsed =
             chatClient
                 .prompt()
                 .system(SYSTEM_PROMPT)
                 .user(sanitized)
                 .call()
                 .entity(StructuredQueryFilterDto.class);
+        filter = usable(parsed == null ? null : FilterGrounding.ground(parsed, sanitized));
+        if (filter == null) {
+          log.warn("Query-parsing reply had nothing the query supports (attempt {})", attempt);
+        }
       } catch (Exception e) {
         // The reply was not valid JSON for the schema, for example cut off half way. The model
         // answers differently each time, so one more attempt usually works.
@@ -139,6 +143,17 @@ public class QueryParsingService {
     String sanitized = PromptSanitizer.sanitize(rawQuery);
     StructuredQueryFilterDto filter = parse(sanitized);
     return new QueryParseResponseDto(filter, QuerySpanExtractor.extract(sanitized, filter));
+  }
+
+  /**
+   * Accepts a filter only if it says something: some structure, or a plain title.
+   *
+   * @param filter a grounded filter, or {@code null}
+   * @return the filter, or {@code null} if it is empty or {@code null}
+   */
+  private static StructuredQueryFilterDto usable(StructuredQueryFilterDto filter) {
+    boolean hasContent = filter != null && (filter.hasStructure() || filter.plainTitle() != null);
+    return hasContent ? filter : null;
   }
 
   /**
