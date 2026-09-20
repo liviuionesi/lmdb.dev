@@ -82,6 +82,14 @@ check_has_not() {
   done
 }
 
+# No title equals any given text exactly. $@ — the texts
+check_lacks_title() {
+  local text
+  for text in "$@"; do
+    jq -r --arg t "$text" 'if any(.results[]; .title == $t) then "should not contain the title \"\($t)\"" else empty end' <<< "$RESPONSE"
+  done
+}
+
 # Every movie has at least this rating. $1 — the rating
 check_rated() { jq -r --argjson r "$1" '[.results[] | select((.voteAverage // 0) < $r) | .title] | if length == 0 then empty else "rated below \($r): \(.[0:3] | join(", "))" end' <<< "$RESPONSE"; }
 
@@ -146,7 +154,7 @@ run "movies produced by Steven Spielberg after 2000" \
 run "movies with Brad Pitt and Edward Norton" \
   "min 1" "has 'Fight Club'"
 run "films Quentin Tarantino didn't direct" \
-  "min 3" "has_not 'Pulp Fiction' 'Django Unchained'"
+  "min 3" "lacks_title 'Pulp Fiction' 'Django Unchained' 'Reservoir Dogs'"
 run "Meryl Streep movies rated above 7" \
   "min 10" "rated 7"
 

@@ -83,8 +83,7 @@ public class RestClientConfig {
 
   /**
    * Builds the client for Wikidata's public query service, which lists Academy Award winners. It is
-   * not load balanced; it calls an outside host, with short timeouts so a slow reply cannot hold a
-   * search for long.
+   * not load balanced; it calls an outside host.
    *
    * @param wikidataBaseUrl the query service's base URL
    * @return the client
@@ -94,7 +93,8 @@ public class RestClientConfig {
       @Value("${awards.wikidata-url:https://query.wikidata.org}") String wikidataBaseUrl) {
     HttpClient httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
     JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(httpClient);
-    requestFactory.setReadTimeout(Duration.ofSeconds(20));
+    // Wikidata can take more than ten seconds to answer a category it has not cached.
+    requestFactory.setReadTimeout(Duration.ofSeconds(45));
     // Wikidata asks every client to say who it is.
     return RestClient.builder()
         .baseUrl(wikidataBaseUrl)

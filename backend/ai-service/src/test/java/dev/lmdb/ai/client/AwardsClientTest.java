@@ -18,6 +18,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
+import org.springframework.test.web.client.ExpectedCount;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
@@ -177,5 +178,26 @@ class AwardsClientTest {
     clock.advance(Duration.ofHours(25));
 
     assertThat(client.findWinningMovieIds(OscarCategory.BEST_ACTOR)).containsExactly(872585L, 98L);
+  }
+
+  /** Every category is fetched once in the warm-up, and one that fails does not stop the rest. */
+  @Test
+  @DisplayName("warm-up fetches every category and survives a failing one")
+  void warmUpFetchesEveryCategory() {
+    RestClient.Builder builder = RestClient.builder().baseUrl(BASE);
+    MockRestServiceServer eachOrder =
+        MockRestServiceServer.bindTo(builder).ignoreExpectOrder(true).build();
+    AwardsClient warmed = new AwardsClient(builder.build(), clock);
+    eachOrder
+        .expect(
+            ExpectedCount.times(5), requestTo(org.hamcrest.Matchers.startsWith(BASE + "/sparql")))
+        .andRespond(withSuccess(TWO_WINNERS, MediaType.APPLICATION_JSON));
+    eachOrder
+        .expect(once(), requestTo(org.hamcrest.Matchers.startsWith(BASE + "/sparql")))
+        .andRespond(withServerError());
+
+    warmed.warmUp();
+
+    eachOrder.verify();
   }
 }

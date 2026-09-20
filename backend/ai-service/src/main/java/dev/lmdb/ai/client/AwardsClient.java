@@ -11,6 +11,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
@@ -96,6 +98,26 @@ public class AwardsClient {
   AwardsClient(RestClient awardsRestClient, Clock clock) {
     this.restClient = awardsRestClient;
     this.clock = clock;
+  }
+
+  /**
+   * Fetches every category once, in the background, when the service has started. Wikidata can take
+   * more than ten seconds for a category, so the first search that asks for an award should find
+   * the answer already cached.
+   */
+  @EventListener(ApplicationReadyEvent.class)
+  void warmUpInBackground() {
+    Thread.startVirtualThread(this::warmUp);
+  }
+
+  /**
+   * Fetches every category and keeps the answers. A category that fails is skipped; it is asked
+   * again when a search needs it.
+   */
+  void warmUp() {
+    for (OscarCategory category : OscarCategory.values()) {
+      findWinningMovieIds(category);
+    }
   }
 
   /**
