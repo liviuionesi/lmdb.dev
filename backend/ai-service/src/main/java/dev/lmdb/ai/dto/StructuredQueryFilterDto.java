@@ -1,6 +1,9 @@
 package dev.lmdb.ai.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 
 /**
  * Response body for {@code POST /api/v1/ai/search/query} — a structured filter extracted from a
@@ -28,7 +31,12 @@ import java.util.List;
  */
 public record StructuredQueryFilterDto(
     String personName,
-    QueryFilterRole role,
+    @JsonFormat(
+            with = {
+              JsonFormat.Feature.READ_UNKNOWN_ENUM_VALUES_AS_NULL,
+              JsonFormat.Feature.ACCEPT_CASE_INSENSITIVE_VALUES
+            })
+        QueryFilterRole role,
     Integer yearFrom,
     Integer yearTo,
     List<String> collaborators,
@@ -36,16 +44,26 @@ public record StructuredQueryFilterDto(
     List<String> negated,
     String plainTitle) {
 
+  /** Words a model writes in {@code genre} that name no genre. */
+  private static final Set<String> NON_GENRES = Set.of("movie", "movies", "film", "films");
+
+  /** Texts a model writes instead of a real JSON null. */
+  private static final Set<String> NULL_TEXTS = Set.of("null", "none", "n/a");
+
   /**
-   * Normalizes {@code collaborators}/{@code negated} to an empty list when the model's JSON
-   * response simply omits either key. Jackson leaves an omitted record component {@code null}
-   * rather than failing deserialization, so an incomplete-but-valid model response isn't caught by
-   * {@link dev.lmdb.ai.service.QueryParsingService#parse}'s parse-failure handling — without this,
-   * this record's own "never {@code null}" contract on those two fields could be silently violated
-   * on the ordinary success path, not just avoided via the explicit fallback.
+   * Cleans up what the model returned, so the rest of the code can trust the fields.
+   *
+   * <ul>
+   *   <li>{@code collaborators} and {@code negated} become empty lists when omitted.
+   *   <li>Blank text, and the text "null", in {@code personName}, {@code genre} and {@code
+   *       plainTitle} become {@code null}.
+   *   <li>A {@code genre} that only says "movie" or "film" becomes {@code null}.
+   *   <li>{@code plainTitle} becomes {@code null} when any other field carries a value. It means
+   *       "no structure was found", and models often copy the whole query into it anyway.
+   * </ul>
    *
    * @param personName see the field Javadoc above
-   * @param role see the field Javadoc above
+   * @param role see the field Javadoc above; an unknown or "null" value is read as {@code null}
    * @param yearFrom see the field Javadoc above
    * @param yearTo see the field Javadoc above
    * @param collaborators see the field Javadoc above; defaulted to {@link List#of()} when omitted
@@ -54,7 +72,40 @@ public record StructuredQueryFilterDto(
    * @param plainTitle see the field Javadoc above
    */
   public StructuredQueryFilterDto {
+    personName = cleanText(personName);
+    genre = cleanText(genre);
+    if (genre != null && NON_GENRES.contains(genre.toLowerCase(Locale.ROOT))) {
+      genre = null;
+    }
+    plainTitle = cleanText(plainTitle);
     collaborators = collaborators == null ? List.of() : collaborators;
     negated = negated == null ? List.of() : negated;
+
+    boolean hasStructure =
+        personName != null
+            || role != null
+            || yearFrom != null
+            || yearTo != null
+            || !collaborators.isEmpty()
+            || genre != null
+            || !negated.isEmpty();
+    if (hasStructure) {
+      plainTitle = null;
+    }
+  }
+
+  /**
+   * Trims {@code text} and turns blank text, or a written-out "null", into {@code null}.
+   *
+   * @param text a text field from the model, possibly {@code null}
+   * @return the trimmed text, or {@code null} if it holds no value
+   */
+  private static String cleanText(String text) {
+    if (text == null) {
+      return null;
+    }
+    String trimmed = text.trim();
+    boolean empty = trimmed.isEmpty() || NULL_TEXTS.contains(trimmed.toLowerCase(Locale.ROOT));
+    return empty ? null : trimmed;
   }
 }

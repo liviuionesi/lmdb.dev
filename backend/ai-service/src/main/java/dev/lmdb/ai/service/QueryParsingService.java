@@ -19,6 +19,9 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class QueryParsingService {
 
+  /** How often the model is asked before the query is searched as a plain title. */
+  private static final int MAX_ATTEMPTS = 2;
+
   private static final String SYSTEM_PROMPT =
       """
         You extract a structured search filter from a free-text movie query.
@@ -77,23 +80,25 @@ public class QueryParsingService {
     String sanitized = PromptSanitizer.sanitize(rawQuery);
     log.info("Parsing natural-language query ({} chars)", sanitized.length());
 
-    StructuredQueryFilterDto filter;
-    try {
-      filter =
-          chatClient
-              .prompt()
-              .system(SYSTEM_PROMPT)
-              .user(sanitized)
-              .call()
-              .entity(StructuredQueryFilterDto.class);
-    } catch (Exception e) {
-      // The model's response didn't match the target schema (ambiguous/malformed output, or a
-      // schema mismatch like a lowercase role value). Falling back here — instead of letting this
-      // propagate to a 500 — gives the caller a usable plain-title result instead of an opaque
-      // error, though see the "Known limitation" note in this method's own Javadoc above: this
-      // path is not distinguishable from "the model found no structure" by the caller today.
-      log.warn("Query-parsing model call failed, falling back to plain title: {}", e.getMessage());
-      filter = null;
+    StructuredQueryFilterDto filter = null;
+    for (int attempt = 1; attempt <= MAX_ATTEMPTS && filter == null; attempt++) {
+      try {
+        filter =
+            chatClient
+                .prompt()
+                .system(SYSTEM_PROMPT)
+                .user(sanitized)
+                .call()
+                .entity(StructuredQueryFilterDto.class);
+      } catch (Exception e) {
+        // The reply was not valid JSON for the schema, for example cut off half way. The model
+        // answers differently each time, so one more attempt usually works.
+        log.warn(
+            "Query-parsing model call failed (attempt {} of {}): {}",
+            attempt,
+            MAX_ATTEMPTS,
+            e.getMessage());
+      }
     }
 
     return filter == null ? plainTitleFallback(sanitized) : filter;
