@@ -37,9 +37,9 @@ echo ""
 # Change to docker directory
 cd "$DOCKER_DIR"
 
-# Must match start-infrastructure.sh's compose file set, or `down` won't see
-# the ELK-overlay containers/network and will leave them running.
-COMPOSE_FILES="-f docker-compose.yml -f docker-compose.elk.yml"
+# Same compose file set as start-infrastructure.sh, or `down` would leave
+# containers from the other files running.
+source "$SCRIPT_DIR/compose-files.sh"
 
 # Stop any running Cloudflare tunnel
 if [ -f "$SCRIPT_DIR/stop-tunnel.sh" ]; then

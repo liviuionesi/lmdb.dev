@@ -56,13 +56,11 @@ echo ""
 source "$SCRIPT_DIR/env.sh"
 echo ""
 
-# Voice control (#68, #200) needs the offline Vosk speech-to-text models.
-# They are not in git, and ai-service only mounts them, so they must be on
-# disk before `up`. The download script skips any model already present and
-# checks each archive's SHA256. If it fails, stop here: a stack that starts
-# without them looks healthy but every voice command returns 503.
+# Downloads the Vosk speech-to-text models that ai-service mounts. Models
+# already on disk are skipped. If a download or checksum fails, the script
+# stops here.
 echo -e "${BLUE}🎙  Ensuring Vosk speech-to-text models are present...${NC}"
-# VOSK_DOWNLOAD_SCRIPT exists only so tests can run this script without network.
+# VOSK_DOWNLOAD_SCRIPT lets a test replace the download step.
 if ! "${VOSK_DOWNLOAD_SCRIPT:-$SCRIPT_DIR/download-vosk-model.sh}"; then
     echo -e "${RED}❌ Vosk models are missing or failed verification — not starting the stack.${NC}"
     exit 1
@@ -72,9 +70,17 @@ echo ""
 # Change to docker directory
 cd "$DOCKER_DIR"
 
-# Both files together bring up the app stack plus the ELK overlay
-# (Elasticsearch/Logstash/Kibana/Filebeat) in one `up`.
-COMPOSE_FILES="-f docker-compose.yml -f docker-compose.elk.yml"
+# The app stack, the ELK overlay (Elasticsearch/Logstash/Kibana/Filebeat) and,
+# when an NVIDIA GPU is usable, the GPU overlay for Ollama.
+source "$SCRIPT_DIR/compose-files.sh"
+if [ "$GPU_STATUS" = "gpu" ]; then
+    echo -e "${GREEN}✓ NVIDIA GPU found — Ollama will use it${NC}"
+elif command -v nvidia-smi &> /dev/null; then
+    echo -e "${YELLOW}⚠ nvidia-smi is installed but the GPU cannot be passed to a container" \
+        "(missing /dev/nvidia0 or the driver's libcuda). Ollama will run on the CPU and be slow.${NC}"
+else
+    echo -e "${BLUE}ℹ No NVIDIA GPU found — Ollama will run on the CPU.${NC}"
+fi
 
 # Pull images first (skip for build services like discovery-service)
 # --profile dev-tools brings up Adminer/Mongo Express/Redis Commander too —
@@ -87,17 +93,14 @@ echo ""
 echo -e "${BLUE}🚀 Starting infrastructure services (incl. ELK)...${NC}"
 $COMPOSE_CMD $COMPOSE_FILES --profile dev-tools up -d --build
 
-# ai-service's chat, voice-command parsing and semantic search all call Ollama,
-# and the Ollama image ships with no models. Same two models the cloud deploy
-# scripts pull (deploy-aws.sh, deploy-azure.sh) and ai-service's application.yml
-# defaults to. A model already present is skipped, so restarts stay offline.
+# Pulls the two Ollama models ai-service uses: llama3.2 (chat and voice-command
+# parsing) and nomic-embed-text (search). Models already installed are skipped.
 echo ""
 echo -e "${BLUE}🧠 Ensuring Ollama models are present (first run downloads ~2.3GB)...${NC}"
 OLLAMA_CONTAINER="lmdb-ollama"
 OLLAMA_MODELS=("llama3.2" "nomic-embed-text")
 
-# `ollama list` is also the container's own healthcheck, so this waits for the
-# same readiness `depends_on` uses.
+# Waits up to 60 seconds for the container to answer `ollama list`.
 ollama_ready=false
 for _ in $(seq 1 30); do
     if $CONTAINER_RUNTIME exec "$OLLAMA_CONTAINER" ollama list > /dev/null 2>&1; then

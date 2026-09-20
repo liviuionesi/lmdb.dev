@@ -1,0 +1,23 @@
+# Gives the ollama container the host's NVIDIA GPU. Rootless podman and
+# Docker cannot see the card without this. start-infrastructure.sh adds this
+# file on its own when compose-files.sh finds a usable GPU, and sets
+# NVIDIA_DRIVER_VERSION and NVIDIA_LIB_DIR for it.
+#
+# The device files and the driver libraries are passed straight through, so no
+# NVIDIA container toolkit or root access is needed. `label=disable` keeps
+# SELinux from blocking the GPU device files.
+services:
+  ollama:
+    security_opt:
+      - label=disable
+    devices:
+      - /dev/nvidia0
+      - /dev/nvidiactl
+      - /dev/nvidia-uvm
+      - /dev/nvidia-uvm-tools
+    volumes:
+      - ${NVIDIA_LIB_DIR:?set by compose-files.sh}/libcuda.so.${NVIDIA_DRIVER_VERSION:?set by compose-files.sh}:/usr/lib/x86_64-linux-gnu/libcuda.so.1:ro
+      - ${NVIDIA_LIB_DIR}/libnvidia-ml.so.${NVIDIA_DRIVER_VERSION}:/usr/lib/x86_64-linux-gnu/libnvidia-ml.so.1:ro
+      - ${NVIDIA_LIB_DIR}/libnvidia-ptxjitcompiler.so.${NVIDIA_DRIVER_VERSION}:/usr/lib/x86_64-linux-gnu/libnvidia-ptxjitcompiler.so.1:ro
+      - ${NVIDIA_LIB_DIR}/libnvidia-nvvm.so.${NVIDIA_DRIVER_VERSION}:/usr/lib/x86_64-linux-gnu/libnvidia-nvvm.so.4:ro
+      - ${NVIDIA_LIB_DIR}/libnvidia-gpucomp.so.${NVIDIA_DRIVER_VERSION}:/usr/lib/x86_64-linux-gnu/libnvidia-gpucomp.so.${NVIDIA_DRIVER_VERSION}:ro

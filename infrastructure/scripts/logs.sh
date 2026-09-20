@@ -31,9 +31,8 @@ fi
 
 cd "$DOCKER_DIR"
 
-# Must match start-infrastructure.sh's compose file set, or the ELK-overlay
-# containers (elasticsearch/logstash/kibana/filebeat) won't be found.
-COMPOSE_FILES="-f docker-compose.yml -f docker-compose.elk.yml"
+# Same compose file set as start-infrastructure.sh, so every container is found.
+source "$SCRIPT_DIR/compose-files.sh"
 
 SERVICE="$1"
 if [ "$SERVICE" == "frontend" ]; then
