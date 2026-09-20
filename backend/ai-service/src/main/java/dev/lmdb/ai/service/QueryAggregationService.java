@@ -48,11 +48,8 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class QueryAggregationService {
 
-  /**
-   * Bound on how many movie-service {@code /discover} results back a year-range constraint,
-   * matching {@link MovieCatalogClient#discoverMovieIdsInYearRange}'s own documented reasoning.
-   */
-  private static final int YEAR_RANGE_RESULT_CAP = 200;
+  /** How many movies a title search asks movie-service for. */
+  private static final int TITLE_SEARCH_RESULT_CAP = 200;
 
   private final QueryParsingService queryParsingService;
   private final ActorCatalogClient actorCatalogClient;
@@ -100,7 +97,7 @@ public class QueryAggregationService {
    * @return matching movies, most relevant first as movie-service ranks them
    */
   private List<SearchResultMovieDto> toSearchResults(String title) {
-    return movieCatalogClient.searchByTitle(title, YEAR_RANGE_RESULT_CAP).stream()
+    return movieCatalogClient.searchByTitle(title, TITLE_SEARCH_RESULT_CAP).stream()
         .map(QueryAggregationService::toSearchResult)
         .toList();
   }
@@ -132,12 +129,12 @@ public class QueryAggregationService {
       return List.of();
     }
 
-    // 2. Year range: intersect against movie-service's discover results for that range (#218).
+    // 2. Year range: keep the credits whose own release date falls inside it.
     if (filter.yearFrom() != null || filter.yearTo() != null) {
-      Set<Long> inRange =
-          movieCatalogClient.discoverMovieIdsInYearRange(
-              filter.yearFrom(), filter.yearTo(), YEAR_RANGE_RESULT_CAP);
-      candidates.keySet().retainAll(inRange);
+      candidates
+          .values()
+          .removeIf(
+              movie -> !releasedWithin(movie.releaseDate(), filter.yearFrom(), filter.yearTo()));
       if (candidates.isEmpty()) {
         return List.of();
       }
@@ -212,6 +209,29 @@ public class QueryAggregationService {
 
     // role == ACTED or null: cast filmography is the correct/default signal either way.
     return toMap(actorCatalogClient.fetchCastCredits(personId));
+  }
+
+  /**
+   * Tells whether a release date falls inside a year range, both ends inclusive.
+   *
+   * @param releaseDate a date starting with a four-digit year, such as {@code 1994-06-23}; may be
+   *     {@code null} or blank
+   * @param yearFrom first year of the range, or {@code null} for no lower bound
+   * @param yearTo last year of the range, or {@code null} for no upper bound
+   * @return {@code true} if the year is in range; {@code false} if it is outside, or if the date is
+   *     missing or has no readable year
+   */
+  private static boolean releasedWithin(String releaseDate, Integer yearFrom, Integer yearTo) {
+    if (releaseDate == null || releaseDate.length() < 4) {
+      return false;
+    }
+    int year;
+    try {
+      year = Integer.parseInt(releaseDate.substring(0, 4));
+    } catch (NumberFormatException e) {
+      return false;
+    }
+    return (yearFrom == null || year >= yearFrom) && (yearTo == null || year <= yearTo);
   }
 
   /**
