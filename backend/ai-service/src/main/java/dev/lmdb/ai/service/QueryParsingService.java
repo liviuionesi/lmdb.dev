@@ -24,27 +24,45 @@ public class QueryParsingService {
 
   private static final String SYSTEM_PROMPT =
       """
-        You extract a structured search filter from a free-text movie query.
-        Identify: the primary person named (personName), their role relative
-        to the movie if stated (role — exactly one of the literal strings
-        ACTED, DIRECTED, PRODUCED, uppercase, or null if unstated — never a
-        lowercase or mixed-case variant), a release-year range (yearFrom/
-        yearTo, either may be null), any other named people the query also
-        requires credited on the same movie (collaborators), and a genre if
-        named.
+        You read a free-text movie search query and fill in a search filter.
 
-        Negation: if the query negates a field (e.g. "didn't direct", "not
-        starring"), list that field's name in "negated" instead of silently
-        dropping the constraint or treating it as a positive match.
+        Fields:
+        - personName: the main person named (actor, director or producer), or null.
+        - role: exactly one of the uppercase words ACTED, DIRECTED, PRODUCED, or null
+          if the query does not say.
+        - yearFrom, yearTo: release years, either may be null. "after 2000" means
+          yearFrom 2000. "in the 1990s" means yearFrom 1990 and yearTo 1999.
+        - collaborators: other people who must also be in the movie.
+        - genre: a real genre such as Action or Comedy, or null. Never "Movie" or "Film".
+        - franchise: a movie series named in the query, such as "James Bond" or
+          "Star Wars", or null.
+        - keywords: other words worth searching for, such as a title word, a character
+          or a theme ("heist", "time travel"). Do not repeat the person, franchise or
+          genre here.
+        - negated: if the query negates a field (for example "didn't direct"), list
+          that field's name here instead of dropping the constraint.
+        - plainTitle: only when the query is just a movie title and none of the fields
+          above apply. Then leave every other field null or empty.
 
-        If the query is just a title with no person, role, date range, or
-        collaborator constraint, set "plainTitle" to that title and leave
-        every other field null/empty rather than guessing at structure that
-        isn't there.
+        Use a real JSON null for a missing value, never the text "null".
+        Never invent a person, role, franchise or year the query did not state.
+
+        Examples:
+        "movies with Tom Hanks in the 1990s"
+          -> personName "Tom Hanks", role "ACTED", yearFrom 1990, yearTo 1999
+        "list the James Bond movies after 2000"
+          -> franchise "James Bond", yearFrom 2000
+        "Daniel Craig as James Bond"
+          -> personName "Daniel Craig", franchise "James Bond"
+        "heist movies with Brad Pitt"
+          -> personName "Brad Pitt", keywords ["heist"]
+        "movies Quentin Tarantino didn't direct"
+          -> personName "Quentin Tarantino", role "DIRECTED", negated ["role"]
+        "Inception"
+          -> plainTitle "Inception"
 
         Respond with exactly one JSON object matching the target schema.
-        Never invent a person, role, or year the query didn't state.
-        """;
+      """;
 
   private final ChatClient chatClient;
 

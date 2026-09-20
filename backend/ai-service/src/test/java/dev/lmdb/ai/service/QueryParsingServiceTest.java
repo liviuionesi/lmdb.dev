@@ -194,6 +194,62 @@ class QueryParsingServiceTest {
   }
 
   /**
+   * A franchise ("James Bond") is not a person. The model must be able to name it in its own field,
+   * and the years in the same reply must survive.
+   */
+  @Test
+  @DisplayName("reads a franchise and keeps the years")
+  void readsAFranchise() {
+    stubReplies(
+        """
+        {"personName":null,"role":null,"yearFrom":2000,"yearTo":null,"collaborators":[],
+         "genre":null,"negated":[],"franchise":"James Bond","keywords":[],
+         "plainTitle":"list me the movies from the James Bond franchise after year 2000"}
+        """);
+
+    StructuredQueryFilterDto filter =
+        service.parse("list me the movies from the James Bond franchise after year 2000");
+
+    assertThat(filter.franchise()).isEqualTo("James Bond");
+    assertThat(filter.yearFrom()).isEqualTo(2000);
+    assertThat(filter.plainTitle()).isNull();
+  }
+
+  /** Keywords alone are structure: an echoed {@code plainTitle} next to them must be dropped. */
+  @Test
+  @DisplayName("treats keywords as structure, so an echoed plainTitle is dropped")
+  void keywordsCountAsStructure() {
+    stubReplies(
+        """
+        {"personName":null,"role":null,"yearFrom":null,"yearTo":null,"collaborators":[],
+         "genre":null,"negated":[],"franchise":null,"keywords":["heist"],
+         "plainTitle":"heist movies"}
+        """);
+
+    StructuredQueryFilterDto filter = service.parse("heist movies");
+
+    assertThat(filter.keywords()).containsExactly("heist");
+    assertThat(filter.plainTitle()).isNull();
+  }
+
+  /** Blank entries and the text "null" in the keyword list are noise, not keywords. */
+  @Test
+  @DisplayName("drops blank and \"null\" keywords and trims the rest")
+  void cleansTheKeywordList() {
+    stubReplies(
+        """
+        {"personName":"Brad Pitt","role":"ACTED","yearFrom":null,"yearTo":null,
+         "collaborators":[],"genre":null,"negated":[],"franchise":"null",
+         "keywords":["", "null", "  heist  ", "heist"],"plainTitle":null}
+        """);
+
+    StructuredQueryFilterDto filter = service.parse("Brad Pitt heist movies");
+
+    assertThat(filter.keywords()).containsExactly("heist");
+    assertThat(filter.franchise()).isNull();
+  }
+
+  /**
    * Makes the mocked model return the given raw texts in order. The last one repeats if the service
    * calls more often than there are replies.
    *

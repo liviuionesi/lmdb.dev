@@ -164,6 +164,10 @@ final class QuerySpanExtractor {
       addEntitySpan(spans, text, collaborator);
     }
     addEntitySpan(spans, text, filter.genre());
+    addEntitySpan(spans, text, filter.franchise());
+    for (String keyword : filter.keywords()) {
+      addEntitySpan(spans, text, keyword);
+    }
     addEntitySpan(
         spans, text, filter.yearFrom() == null ? null : String.valueOf(filter.yearFrom()));
     addEntitySpan(spans, text, filter.yearTo() == null ? null : String.valueOf(filter.yearTo()));

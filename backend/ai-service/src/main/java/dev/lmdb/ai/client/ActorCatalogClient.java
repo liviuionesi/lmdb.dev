@@ -26,10 +26,9 @@ import org.springframework.web.client.RestClient;
 public class ActorCatalogClient {
 
   /**
-   * Bound on a single cast-filmography fetch, mirroring {@link
-   * MovieCatalogClient#discoverMovieIdsInYearRange}'s own stated limit — most people's cast
-   * filmography fits well inside this; a person with more (a prolific character actor) is a known,
-   * accepted gap rather than an unbounded pagination loop.
+   * Bound on a single cast-filmography fetch. Most people's cast filmography fits well inside this;
+   * a person with more (a prolific character actor) is a known, accepted gap rather than an
+   * unbounded pagination loop.
    */
   private static final int CAST_RESULT_CAP = 200;
 

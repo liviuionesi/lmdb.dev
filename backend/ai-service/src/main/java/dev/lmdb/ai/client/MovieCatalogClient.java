@@ -2,8 +2,7 @@ package dev.lmdb.ai.client;
 
 import dev.lmdb.shared.dto.PageResponse;
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.ParameterizedTypeReference;
@@ -12,9 +11,9 @@ import org.springframework.web.client.RestClient;
 
 /**
  * Calls movie-service's own persisted catalog (via Eureka/{@code lb://}), never TMDB directly:
- * {@code /api/v1/movies/popular} for recommendation candidates, {@code /api/v1/movies/search} for
- * the natural-language search feature's plain-title fallback, and {@code /api/v1/movies/discover}
- * to resolve a release-year range (#203, ADR-020).
+ * popular movies for recommendation candidates, title search, movie discovery by year and genre,
+ * the genre list, and franchise (collection) search and details. movie-service fetches from TMDB
+ * and saves what it fetches, so these calls also fill the local catalog.
  */
 @Component
 @Slf4j
@@ -94,23 +93,92 @@ public class MovieCatalogClient {
   }
 
   /**
-   * Resolves which movie ids fall within a release-year range, via movie-service's {@code
-   * /discover} endpoint (#218) — the aggregation step intersects this set against a person's credit
-   * movie ids to apply a year-range constraint (#203).
+   * Finds a movie collection (franchise) by name and returns the best match's id.
    *
-   * <p>Bounded to {@code count} results rather than paging through movie-service's full discover
-   * result set — a deliberate, stated limit (matching {@link
-   * dev.lmdb.ai.security.PromptSanitizer}'s own capped-list philosophy elsewhere in this service),
-   * not an oversight: a year range this narrow rarely has more than a few hundred TMDB releases,
-   * and the caller already intersects against a much smaller, person-specific credit list.
+   * @param name the franchise name, such as "James Bond"
+   * @return the id of the first collection movie-service lists, or empty if none match or
+   *     movie-service is unreachable
+   */
+  public Optional<Long> findCollectionId(String name) {
+    try {
+      List<CollectionSummary> found =
+          restClient
+              .get()
+              .uri(
+                  uriBuilder ->
+                      uriBuilder
+                          .path("/api/v1/movies/collections/search")
+                          .queryParam("query", name)
+                          .build())
+              .retrieve()
+              .body(new ParameterizedTypeReference<List<CollectionSummary>>() {});
+      return found == null || found.isEmpty()
+          ? Optional.empty()
+          : Optional.ofNullable(found.get(0).id());
+    } catch (Exception e) {
+      log.warn("movie-service unreachable while searching collections: {}", e.getMessage());
+      return Optional.empty();
+    }
+  }
+
+  /**
+   * Fetches the movies in a collection (franchise).
+   *
+   * @param collectionId TMDB collection id
+   * @return the collection's movies with their release dates; empty if movie-service is unreachable
+   */
+  public List<MovieListItem> fetchCollectionMovies(Long collectionId) {
+    try {
+      CollectionMovies collection =
+          restClient
+              .get()
+              .uri("/api/v1/movies/collections/{id}", collectionId)
+              .retrieve()
+              .body(CollectionMovies.class);
+      return collection == null || collection.movies() == null ? List.of() : collection.movies();
+    } catch (Exception e) {
+      log.warn("movie-service unreachable while fetching a collection: {}", e.getMessage());
+      return List.of();
+    }
+  }
+
+  /**
+   * Looks up a genre id by name.
+   *
+   * @param genreName a genre such as "Action"; compared without regard to case
+   * @return the genre's id, or empty if movie-service has no genre with that name or is unreachable
+   */
+  public Optional<Long> findGenreId(String genreName) {
+    try {
+      List<GenreSummary> genres =
+          restClient
+              .get()
+              .uri("/api/v1/genres")
+              .retrieve()
+              .body(new ParameterizedTypeReference<List<GenreSummary>>() {});
+      if (genres == null) {
+        return Optional.empty();
+      }
+      return genres.stream()
+          .filter(genre -> genre.name() != null && genre.name().equalsIgnoreCase(genreName))
+          .map(GenreSummary::id)
+          .findFirst();
+    } catch (Exception e) {
+      log.warn("movie-service unreachable while listing genres: {}", e.getMessage());
+      return Optional.empty();
+    }
+  }
+
+  /**
+   * Discovers movies by release-year range and genre, most popular first.
    *
    * @param yearFrom inclusive range start, or {@code null} for no lower bound
    * @param yearTo inclusive range end, or {@code null} for no upper bound
-   * @param count how many discover results to request (the bound described above)
-   * @return the movie ids TMDB reports in this range; empty if movie-service is unreachable,
-   *     degrading rather than failing the whole search request
+   * @param genreId a genre id, or {@code null} for any genre
+   * @param count how many movies to request
+   * @return the movies with their release dates; empty if movie-service is unreachable
    */
-  public Set<Long> discoverMovieIdsInYearRange(Integer yearFrom, Integer yearTo, int count) {
+  public List<MovieListItem> discover(Integer yearFrom, Integer yearTo, Long genreId, int count) {
     try {
       PageResponse<MovieListItem> page =
           restClient
@@ -121,24 +189,25 @@ public class MovieCatalogClient {
                         .path("/api/v1/movies/discover")
                         .queryParam("page", 1)
                         .queryParam("size", count);
-                    // 1. Only attach each bound if the caller actually gave one — movie-service
-                    //    treats an absent param as "no constraint on this side," not zero.
+                    // 1. Attach only the constraints the caller gave; an absent parameter means
+                    //    "no limit on this side" to movie-service.
                     if (yearFrom != null) {
                       uriBuilder.queryParam("yearFrom", yearFrom);
                     }
                     if (yearTo != null) {
                       uriBuilder.queryParam("yearTo", yearTo);
                     }
+                    if (genreId != null) {
+                      uriBuilder.queryParam("genreId", genreId);
+                    }
                     return uriBuilder.build();
                   })
               .retrieve()
               .body(new ParameterizedTypeReference<PageResponse<MovieListItem>>() {});
-      return page == null || page.getContent() == null
-          ? Set.of()
-          : page.getContent().stream().map(MovieListItem::tmdbId).collect(Collectors.toSet());
+      return page == null || page.getContent() == null ? List.of() : page.getContent();
     } catch (Exception e) {
-      log.warn("movie-service unreachable while resolving a year-range filter: {}", e.getMessage());
-      return Set.of();
+      log.warn("movie-service unreachable while discovering movies: {}", e.getMessage());
+      return List.of();
     }
   }
 }
