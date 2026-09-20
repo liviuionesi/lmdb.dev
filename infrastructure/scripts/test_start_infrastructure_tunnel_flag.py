@@ -34,13 +34,13 @@ FAKE_LOG_LINE = (
 # Records every invocation, then answers just enough for both the compose
 # detection/orchestration calls and the nested start-tunnel.sh's docker
 # calls to succeed without a real daemon.
-FAKE_DOCKER = """#!/usr/bin/env bash
+FAKE_DOCKER = f"""#!/usr/bin/env bash
 echo "$*" >> "$FAKE_DOCKER_CALLS"
 case "$1" in
-  logs) echo "{log_line}" ;;
+  logs) echo "{FAKE_LOG_LINE}" ;;
   *) exit 0 ;;
 esac
-""".format(log_line=FAKE_LOG_LINE)
+"""
 
 
 class StartInfrastructureTunnelFlagTest(unittest.TestCase):
@@ -60,6 +60,8 @@ class StartInfrastructureTunnelFlagTest(unittest.TestCase):
         # lives outside both, so "command -v npm" genuinely fails here.
         self._env["PATH"] = f"{self._tmp.name}:/usr/bin:/bin"
         self._env["FAKE_DOCKER_CALLS"] = str(self._calls_file)
+        # Model setup has its own tests; here it must not touch the network.
+        self._env["VOSK_DOWNLOAD_SCRIPT"] = "/usr/bin/true"
 
     def tearDown(self):
         POINTER_FILE.write_text(self._original_pointer)
@@ -76,7 +78,7 @@ class StartInfrastructureTunnelFlagTest(unittest.TestCase):
         """
         result = subprocess.run(
             ["bash", str(SCRIPT)], env=self._env, capture_output=True, text=True,
-            cwd=REPO_ROOT,
+            cwd=REPO_ROOT, check=False,
         )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertFalse(any(c.startswith("run ") for c in self._calls()))
@@ -91,7 +93,7 @@ class StartInfrastructureTunnelFlagTest(unittest.TestCase):
         """
         result = subprocess.run(
             ["bash", str(SCRIPT), "--tunnel"], env=self._env,
-            capture_output=True, text=True, cwd=REPO_ROOT,
+            capture_output=True, text=True, cwd=REPO_ROOT, check=False,
         )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertTrue(any(c.startswith("run ") for c in self._calls()))
@@ -105,7 +107,7 @@ class StartInfrastructureTunnelFlagTest(unittest.TestCase):
         """
         result = subprocess.run(
             ["bash", str(SCRIPT), "--live"], env=self._env,
-            capture_output=True, text=True, cwd=REPO_ROOT,
+            capture_output=True, text=True, cwd=REPO_ROOT, check=False,
         )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertTrue(any(c.startswith("run ") for c in self._calls()))

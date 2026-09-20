@@ -56,6 +56,19 @@ echo ""
 source "$SCRIPT_DIR/env.sh"
 echo ""
 
+# Voice control (#68, #200) needs the offline Vosk speech-to-text models.
+# They are not in git, and ai-service only mounts them, so they must be on
+# disk before `up`. The download script skips any model already present and
+# checks each archive's SHA256. If it fails, stop here: a stack that starts
+# without them looks healthy but every voice command returns 503.
+echo -e "${BLUE}🎙  Ensuring Vosk speech-to-text models are present...${NC}"
+# VOSK_DOWNLOAD_SCRIPT exists only so tests can run this script without network.
+if ! "${VOSK_DOWNLOAD_SCRIPT:-$SCRIPT_DIR/download-vosk-model.sh}"; then
+    echo -e "${RED}❌ Vosk models are missing or failed verification — not starting the stack.${NC}"
+    exit 1
+fi
+echo ""
+
 # Change to docker directory
 cd "$DOCKER_DIR"
 
@@ -73,6 +86,41 @@ $COMPOSE_CMD $COMPOSE_FILES --profile dev-tools pull || echo -e "${YELLOW}⚠ So
 echo ""
 echo -e "${BLUE}🚀 Starting infrastructure services (incl. ELK)...${NC}"
 $COMPOSE_CMD $COMPOSE_FILES --profile dev-tools up -d --build
+
+# ai-service's chat, voice-command parsing and semantic search all call Ollama,
+# and the Ollama image ships with no models. Same two models the cloud deploy
+# scripts pull (deploy-aws.sh, deploy-azure.sh) and ai-service's application.yml
+# defaults to. A model already present is skipped, so restarts stay offline.
+echo ""
+echo -e "${BLUE}🧠 Ensuring Ollama models are present (first run downloads ~2.3GB)...${NC}"
+OLLAMA_CONTAINER="lmdb-ollama"
+OLLAMA_MODELS=("llama3.2" "nomic-embed-text")
+
+# `ollama list` is also the container's own healthcheck, so this waits for the
+# same readiness `depends_on` uses.
+ollama_ready=false
+for _ in $(seq 1 30); do
+    if $CONTAINER_RUNTIME exec "$OLLAMA_CONTAINER" ollama list > /dev/null 2>&1; then
+        ollama_ready=true
+        break
+    fi
+    sleep 2
+done
+if [ "$ollama_ready" != true ]; then
+    echo -e "${RED}❌ $OLLAMA_CONTAINER did not become ready within 60s — Ollama models not pulled.${NC}"
+    exit 1
+fi
+
+for model in "${OLLAMA_MODELS[@]}"; do
+    if $CONTAINER_RUNTIME exec "$OLLAMA_CONTAINER" ollama list | awk 'NR>1 {print $1}' | grep -qE "^${model}(:|$)"; then
+        echo -e "${GREEN}✓${NC} Ollama model $model already present"
+    elif $CONTAINER_RUNTIME exec "$OLLAMA_CONTAINER" ollama pull "$model"; then
+        echo -e "${GREEN}✓${NC} Ollama model $model pulled"
+    else
+        echo -e "${RED}❌ Could not pull Ollama model $model — chat, voice and search will not work.${NC}"
+        exit 1
+    fi
+done
 
 echo ""
 echo -e "${BLUE}⏳ Waiting for services to be healthy...${NC}"
