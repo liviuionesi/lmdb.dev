@@ -1,13 +1,12 @@
 package dev.lmdb.ai.config;
 
 import java.net.URI;
-import java.net.http.HttpClient;
 import java.time.Duration;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.client.loadbalancer.BlockingLoadBalancerInterceptor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.client.JdkClientHttpRequestFactory;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 
 /**
@@ -91,10 +90,10 @@ public class RestClientConfig {
   @Bean
   public RestClient awardsRestClient(
       @Value("${awards.wikidata-url:https://query.wikidata.org}") String wikidataBaseUrl) {
-    HttpClient httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
-    JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(httpClient);
-    // Wikidata can take more than ten seconds to answer a category it has not cached.
-    requestFactory.setReadTimeout(Duration.ofSeconds(45));
+    SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+    requestFactory.setConnectTimeout(Duration.ofSeconds(5));
+    // Wikidata stops a query after 60 seconds, so the client waits a little longer than that.
+    requestFactory.setReadTimeout(Duration.ofSeconds(65));
     // Wikidata asks every client to say who it is.
     return RestClient.builder()
         .baseUrl(wikidataBaseUrl)

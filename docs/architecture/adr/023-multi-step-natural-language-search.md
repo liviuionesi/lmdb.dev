@@ -48,6 +48,10 @@ winning film with its TMDB id. The answer is kept for 24 hours. If Wikidata cann
 last answer is used, or none. An award lookup never fails a search. It is free and needs no key, so
 it fits ADR-004.
 
+A query Wikidata has not answered lately can take up to a minute. So the service asks for every
+category in the background at startup, in up to three passes. Only one question per category is in
+flight at a time; a search that arrives meanwhile waits for that answer.
+
 **The chat model depends on the machine.** A GPU with 5.5 GB of memory or more runs
 `qwen2.5:7b-instruct`. Anything else runs `llama3.2`. `compose-files.sh` decides, and a value in
 `.env` wins. qwen2.5 read 8 of 8 test queries correctly in about 1.5 seconds on an RTX 3060.

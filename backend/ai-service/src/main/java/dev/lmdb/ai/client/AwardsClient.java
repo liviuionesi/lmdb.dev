@@ -5,9 +5,12 @@ import dev.lmdb.ai.dto.OscarCategory;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantLock;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -31,6 +34,9 @@ public class AwardsClient {
 
   /** How long a category's answer is reused. */
   static final Duration CACHE_TTL = Duration.ofHours(24);
+
+  /** How many times the warm-up goes through the categories that still have no answer. */
+  static final int WARM_UP_PASSES = 3;
 
   /** Wikidata ids of the award for each category. */
   private static final Map<OscarCategory, String> AWARD_IDS =
@@ -78,6 +84,7 @@ public class AwardsClient {
   private final RestClient restClient;
   private final Clock clock;
   private final Map<OscarCategory, Cached> cache = new ConcurrentHashMap<>();
+  private final Map<OscarCategory, ReentrantLock> locks = new EnumMap<>(OscarCategory.class);
 
   /**
    * Builds the client.
@@ -98,12 +105,15 @@ public class AwardsClient {
   AwardsClient(RestClient awardsRestClient, Clock clock) {
     this.restClient = awardsRestClient;
     this.clock = clock;
+    for (OscarCategory category : OscarCategory.values()) {
+      locks.put(category, new ReentrantLock());
+    }
   }
 
   /**
    * Fetches every category once, in the background, when the service has started. Wikidata can take
-   * more than ten seconds for a category, so the first search that asks for an award should find
-   * the answer already cached.
+   * up to a minute for a category, so the first search that asks for an award should find the
+   * answer already cached.
    */
   @EventListener(ApplicationReadyEvent.class)
   void warmUpInBackground() {
@@ -111,12 +121,20 @@ public class AwardsClient {
   }
 
   /**
-   * Fetches every category and keeps the answers. A category that fails is skipped; it is asked
-   * again when a search needs it.
+   * Fetches every category and keeps the answers. A category that has no answer yet is asked again
+   * in the next pass, up to {@link #WARM_UP_PASSES} passes: Wikidata keeps working on a query after
+   * the client stops waiting, so the second ask is usually fast. A category that still has no
+   * answer is asked again when a search needs it.
    */
   void warmUp() {
-    for (OscarCategory category : OscarCategory.values()) {
-      findWinningMovieIds(category);
+    for (int pass = 1; pass <= WARM_UP_PASSES; pass++) {
+      boolean missing = false;
+      for (OscarCategory category : OscarCategory.values()) {
+        missing |= findWinningMovieIds(category).isEmpty();
+      }
+      if (!missing) {
+        return;
+      }
     }
   }
 
@@ -128,11 +146,46 @@ public class AwardsClient {
    *     nothing was fetched before
    */
   public List<Long> findWinningMovieIds(OscarCategory category) {
+    Optional<List<Long>> fresh = freshAnswer(category);
+    if (fresh.isPresent()) {
+      return fresh.get();
+    }
+    // One question per category at a time: a search that arrives while the warm-up is still asking
+    // Wikidata waits for that answer, instead of sending the same slow query again.
+    ReentrantLock lock = locks.get(category);
+    lock.lock();
+    try {
+      // The call that held the lock may have just stored the answer.
+      return freshAnswer(category).orElseGet(() -> fetch(category));
+    } finally {
+      lock.unlock();
+    }
+  }
+
+  /**
+   * Reads the kept answer for a category if it is still recent enough.
+   *
+   * @param category the category
+   * @return the kept movie ids, or empty if there is none or it is older than {@link #CACHE_TTL}
+   */
+  private Optional<List<Long>> freshAnswer(OscarCategory category) {
+    Cached cached = cache.get(category);
+    if (cached == null
+        || Duration.between(cached.fetchedAt(), clock.instant()).compareTo(CACHE_TTL) >= 0) {
+      return Optional.empty();
+    }
+    return Optional.of(cached.movieIds());
+  }
+
+  /**
+   * Asks Wikidata and keeps a non-empty answer.
+   *
+   * @param category the category
+   * @return the winners' TMDB ids; the last kept answer, or none, if Wikidata fails or knows none
+   */
+  private List<Long> fetch(OscarCategory category) {
     Cached cached = cache.get(category);
     Instant now = clock.instant();
-    if (cached != null && Duration.between(cached.fetchedAt(), now).compareTo(CACHE_TTL) < 0) {
-      return cached.movieIds();
-    }
     try {
       List<Long> ids = query(category);
       if (!ids.isEmpty()) {
@@ -140,9 +193,26 @@ public class AwardsClient {
       }
       return ids.isEmpty() && cached != null ? cached.movieIds() : ids;
     } catch (Exception e) {
-      log.warn("Wikidata award lookup failed for {}: {}", category, e.getMessage());
+      log.warn("Wikidata award lookup failed for {}: {}", category, describe(e));
       return cached == null ? List.of() : cached.movieIds();
     }
+  }
+
+  /**
+   * Writes an exception and its causes on one line, so a log line shows why a call really failed.
+   *
+   * @param error the exception
+   * @return each exception's class and message, from the outermost to the root cause
+   */
+  private static String describe(Throwable error) {
+    StringBuilder text = new StringBuilder();
+    for (Throwable cause = error; cause != null; cause = cause.getCause()) {
+      if (text.length() > 0) {
+        text.append(" <- ");
+      }
+      text.append(cause.getClass().getSimpleName()).append(": ").append(cause.getMessage());
+    }
+    return text.toString();
   }
 
   /**
@@ -180,7 +250,8 @@ public class AwardsClient {
 
   /**
    * Writes the query for a category. A film wins Best Picture itself. For the acting and directing
-   * categories the award belongs to a person, and the "for work" qualifier names the film.
+   * categories the award belongs to a person: the query starts from the award statements and
+   * follows each one's "for work" qualifier to the film, so it never lists the people.
    *
    * @param category the category
    * @return the SPARQL text
@@ -192,7 +263,7 @@ public class AwardsClient {
           + award
           + " . ?film wdt:P4947 ?tmdb . }";
     }
-    return "SELECT DISTINCT ?tmdb WHERE { ?person p:P166 ?award . ?award ps:P166 wd:"
+    return "SELECT DISTINCT ?tmdb WHERE { ?statement ps:P166 wd:"
         + award
         + " ; pq:P1686 ?film . ?film wdt:P4947 ?tmdb . }";
   }
