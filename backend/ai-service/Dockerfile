@@ -66,20 +66,12 @@ WORKDIR /app
 # same reason: without it curl writes an HTTP error page to the output file
 # and the build carries on treating it as an archive.
 #
-# KNOWN LIMITATION (both ARGs below): these are UNVERIFIED placeholder
-# hashes, not real published checksums — the autonomous-run environment that
-# wrote this has no network egress to alphacephei.com (same constraint
-# ADR-021 documents) to actually fetch either archive and hash it for real.
-# `sha256sum -c` will fail on any real download, by design (a safe build
-# failure, not silently trusting unverified native code) until someone with
-# real network access downloads each archive, hashes it, and replaces the
-# placeholder below and in infrastructure/scripts/download-vosk-model.sh.
-# Tracked as a follow-up; this build step is not exercised by CI on
-# `develop` (backend-ci.yml doesn't build this image) — it starts mattering
-# once Story #200 closes and `develop` merges to `main`, which triggers
-# docker-publish.yml.
-ARG VOSK_MODEL_SHA256=0000000000000000000000000000000000000000000000000000000000000000
-ARG VOSK_MODEL_SHA256_DE=0000000000000000000000000000000000000000000000000000000000000000
+# Hashes were computed from the archives downloaded from alphacephei.com on
+# 2026-09-20. Vosk does not publish checksums, so these pin what that download
+# contained; a mismatch later means the upstream file changed and needs review.
+# Keep them in step with infrastructure/scripts/download-vosk-model.sh.
+ARG VOSK_MODEL_SHA256=d9838b4aaa82a75c4a17f5aca300eaca129aaab2a7cbf951bafbb500eb9c4334
+ARG VOSK_MODEL_SHA256_DE=b7e53c90b1f0a38456f4cd62b366ecd58803cd97cd42b06438e2c131713d5e43
 RUN curl -fsSL -o /tmp/vosk-model.zip https://alphacephei.com/vosk/models/vosk-model-en-us-0.22-lgraph.zip \
     && echo "${VOSK_MODEL_SHA256}  /tmp/vosk-model.zip" | sha256sum -c - \
     && unzip -q /tmp/vosk-model.zip -d models \

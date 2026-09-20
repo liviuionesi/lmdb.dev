@@ -28,16 +28,9 @@ NC='\033[0m'
 # VOSK_MODEL_SHA256_* build arg in backend/ai-service/Dockerfile, which pins
 # the same archives for the image build.
 #
-# KNOWN LIMITATION (both entries below): the checksums for these two archives
-# are UNVERIFIED placeholders, not real published hashes. The autonomous-run
-# environment that wrote this script has no network egress to
-# alphacephei.com (same constraint ADR-021 already documents for its own WER
-# research) or to any mirror checked, so the actual archive bytes were never
-# fetched here to hash them for real. `sha256sum -c` below will therefore
-# always fail — by design, a safe failure, not silent unverified execution —
-# until someone with real network access downloads each archive, runs
-# `sha256sum` on it, and replaces the placeholder with the real value here
-# and in the Dockerfile. Tracked as a follow-up (see #212's issue comments).
+# Hashes were computed from the archives downloaded from alphacephei.com on
+# 2026-09-20. Vosk does not publish checksums, so these pin what that download
+# contained; a mismatch later means the upstream file changed and needs review.
 declare -A MODEL_URL=(
   [en]="https://alphacephei.com/vosk/models/vosk-model-en-us-0.22-lgraph.zip"
   [de]="https://alphacephei.com/vosk/models/vosk-model-small-de-0.15.zip"
@@ -47,8 +40,8 @@ declare -A MODEL_NAME=(
   [de]="vosk-model-small-de-0.15"
 )
 declare -A MODEL_SHA256=(
-  [en]="0000000000000000000000000000000000000000000000000000000000000000"
-  [de]="0000000000000000000000000000000000000000000000000000000000000000"
+  [en]="d9838b4aaa82a75c4a17f5aca300eaca129aaab2a7cbf951bafbb500eb9c4334"
+  [de]="b7e53c90b1f0a38456f4cd62b366ecd58803cd97cd42b06438e2c131713d5e43"
 )
 declare -A MODEL_SIZE_HINT=(
   [en]="~128MB"
@@ -72,8 +65,8 @@ download_model() {
 
   echo "Verifying checksum..."
   if ! echo "${sha256}  /tmp/${name}.zip" | sha256sum -c -; then
-    echo -e "${RED}✗${NC} Checksum mismatch for $name — see this script's header comment:" \
-      "the pinned hash is an unverified placeholder pending real network access."
+    echo -e "${RED}✗${NC} Checksum mismatch for $name — the archive at $url changed," \
+      "or the download is corrupt. Check it before updating the pinned hash."
     rm -f "/tmp/${name}.zip"
     return 1
   fi
