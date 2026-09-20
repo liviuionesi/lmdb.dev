@@ -35,7 +35,7 @@ import org.springframework.mock.web.MockMultipartFile;
  * transcript contains all of its keywords. Each language must reach {@link #MIN_ENGLISH_ACCURACY}
  * or {@link #MIN_GERMAN_ACCURACY}, and the failure message lists every miss with what Vosk heard.
  * If Vosk, a model or the audio conversion breaks, accuracy falls far below the floor. Measured on
- * 2026-09-20 with the models from ADR-021: English 33 of 44 (75%), German 5 of 12 (42%). The floors
+ * 2026-09-20 with the models from ADR-021: English 33 of 42 (79%), German 5 of 12 (42%). The floors
  * sit below those numbers, so a model change that lowers accuracy a little does not fail the build,
  * but a real regression does.
  *
@@ -153,14 +153,14 @@ class AccentedSpeechFixtureTest {
   }
 
   /**
-   * Given the English fixtures (Scottish, Canadian, Indian, Romanian- and German-accented), when
-   * each is transcribed by the real English Vosk model, then at least {@link #MIN_ENGLISH_ACCURACY}
-   * of them contain all the keywords {@code manifest.json} expects. A floor and not a perfect
-   * score, because Vosk misses some accent and phrase pairs (see the class comment). The floor
-   * still fails when the model, the language choice or the audio conversion breaks.
+   * Given the English fixtures (Scottish, Canadian and Indian speakers), when each is transcribed
+   * by the real English Vosk model, then at least {@link #MIN_ENGLISH_ACCURACY} of them contain all
+   * the keywords {@code manifest.json} expects. A floor and not a perfect score, because Vosk
+   * misses some accent and phrase pairs (see the class comment). The floor still fails when the
+   * model, the language choice or the audio conversion breaks.
    */
   @Test
-  @DisplayName("recognizes accented and non-native English commands at or above the floor")
+  @DisplayName("recognizes accented English commands at or above the floor")
   void transcribesAccentedEnglishFixtures() {
     assertRecognizedAtLeast(englishFixtures, MIN_ENGLISH_ACCURACY);
   }

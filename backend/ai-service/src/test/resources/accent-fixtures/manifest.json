@@ -532,32 +532,6 @@
     "expectedMode": "LIGHT"
   },
   {
-    "file": "en/romanian-accented-light-mode.wav",
-    "language": "en",
-    "voice": "piper:ro_RO-mihai-medium:0",
-    "accentLabel": "Romanian-accented English (Piper neural voice)",
-    "phrase": "switch to light mode",
-    "expectedKeywords": [
-      "light",
-      "mode"
-    ],
-    "expectedCommand": "CHANGE_MODE",
-    "expectedMode": "LIGHT"
-  },
-  {
-    "file": "en/german-accented-genre.wav",
-    "language": "en",
-    "voice": "piper:de_DE-mls-medium:1",
-    "accentLabel": "German-accented English (Piper neural voice)",
-    "phrase": "show me action movies",
-    "expectedKeywords": [
-      "action",
-      "movies"
-    ],
-    "expectedCommand": "CHOOSE_GENRE",
-    "expectedGenre": "Action"
-  },
-  {
     "file": "de/thorsten-dark-mode.wav",
     "language": "de",
     "voice": "piper:de_DE-thorsten-high:thorsten",

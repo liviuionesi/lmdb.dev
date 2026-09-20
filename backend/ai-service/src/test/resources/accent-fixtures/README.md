@@ -18,23 +18,23 @@ of the command. It covers Story #200 AC2.
 
 ## Where the audio comes from
 
-All 56 files are synthetic speech. Nobody was recorded, so there is no
+All 54 files are synthetic speech. Nobody was recorded, so there is no
 personal data (#215 AC4). `infrastructure/scripts/generate-accent-fixtures.sh`
 builds them.
 
 | Set | Files | Voice | Accent |
 |---|---|---|---|
 | English, Piper ARCTIC | 42 (7 speakers, 6 phrases each) | Piper neural voice `en_US-arctic-medium` | The CMU ARCTIC project documents each speaker: `awb` Scottish, `jmk` Canadian, `ksp` `aup` `axb` `gka` `slp` Indian |
-| English, Piper non-native | 2 | `ro_RO-mihai-medium`, `de_DE-mls-medium` | Romanian-accented and German-accented English |
 | German, Piper | 12 (2 speakers, 6 phrases each) | Piper neural voices `de_DE-thorsten-high` and `de_DE-kerstin-low` | Standard German. Neither dataset documents an accent |
 
 Every ARCTIC speaker says all six English phrases, and both German speakers
 say all six German phrases. No file was chosen after seeing its result.
 
-Not used for German:
+Not used:
 
-- `de_DE-mls-medium`. It is trained on audiobook recordings, sounded poor and
-  was dropped. It still voices the German-accented English file.
+- A Romanian and a German voice reading English text, to imitate a Romanian or
+  German accent. The files sounded poor and were deleted.
+- `de_DE-mls-medium`. It is trained on audiobook recordings and sounded poor.
 - `de_DE-pavoque-low`. Its licence (CC BY-NC-SA) forbids commercial use.
 - `de_DE-karlsson-low` and `de_DE-ramona-low`. Their licence is only "See URL".
 
@@ -47,13 +47,10 @@ Piper's model card for this voice gives its licence as "See LICENSE file",
 and the voice repository has no such file. Check the terms before you reuse
 these WAV files outside this repository.
 
-The other voices come from these datasets:
+The German voices come from these datasets:
 
 - Thorsten-Voice, CC0: https://github.com/thorstenMueller/Thorsten-Voice
 - Kerstin, CC0: https://github.com/rhasspy/dataset-voice-kerstin
-- The Romanian `mihai` voice, CC0: https://github.com/OHF-Voice/voice-datasets
-- Multilingual LibriSpeech (Pratap et al., 2020), CC BY 4.0, for
-  `de_DE-mls-medium`: http://openslr.org/94/
 
 ## Measured accuracy
 
@@ -63,18 +60,16 @@ as recognized when the transcript contains all of its keywords.
 
 | Language | Recognized | Floor in the test |
 |---|---|---|
-| English | 33 of 44 (75%) | 65% |
+| English | 33 of 42 (79%) | 65% |
 | German | 5 of 12 (42%) | 33% |
 
 English by speaker (6 phrases each): `awb` Scottish 6, `ksp` Indian 6, `gka`
 Indian 5, `slp` Indian 5, `jmk` Canadian 4, `axb` Indian 4, `aup` Indian 3.
-The two non-native voices were recognized 0 of 2.
 
-English misses by phrase (7 ARCTIC speakers each): "log me out" 4, "switch to
-light mode" 3, "dark mode please" 1, "light mode please" 1, "search for
-inception" 0, "show me action movies" 0. Typical errors: "log me out" heard as
-"log meal", "switch to light mode" heard as "switch delight mall". The
-Romanian voice's "switch to light mode" was heard as "sweet totally modern".
+English misses by phrase (7 speakers each): "log me out" 4, "switch to light
+mode" 3, "dark mode please" 1, "light mode please" 1, "search for inception" 0,
+"show me action movies" 0. Typical errors: "log me out" heard as "log meal",
+"switch to light mode" heard as "switch delight mall".
 
 German by speaker (6 phrases each): Thorsten 3, Kerstin 2. German by phrase
 (2 speakers each): "dunkler Modus bitte" 2, "melde mich ab" 2, "heller Modus

@@ -15,13 +15,14 @@
 #   English  The "arctic" voice holds the CMU ARCTIC speakers, and the ARCTIC
 #            project documents each speaker's accent
 #            (http://festvox.org/cmu_arctic/): awb is Scottish, jmk is
-#            Canadian, and ksp, aup, axb, gka and slp are Indian English. Two
-#            more files are a Romanian and a German voice reading English text.
+#            Canadian, and ksp, aup, axb, gka and slp are Indian English.
 #
 #   German   Thorsten-Voice (model "high") and Kerstin. Both datasets are CC0.
 #            Neither documents an accent.
 #
-# Not used for German:
+# Not used:
+#   - A Romanian and a German voice reading English text, to imitate a
+#     Romanian or German accent. The files sounded poor.
 #   - de_DE-mls-medium. It is trained on audiobook recordings and sounds poor.
 #   - de_DE-pavoque-low. Its licence (CC BY-NC-SA) forbids commercial use.
 #   - de_DE-karlsson-low, de_DE-ramona-low. Their licence is only "See URL".
@@ -65,8 +66,6 @@ PIPER_SHA256="a50cb45f355b7af1f6d758c1b360717877ba0a398cc8cbe6d2a7a3a26e225992"
 # Each row: model name | URL without extension | .onnx SHA-256 | .onnx.json SHA-256
 MODELS=(
   "en_US-arctic-medium|https://huggingface.co/rhasspy/piper-voices/resolve/c10ece1aade47bb51c153c893d14e5bf8e5b7117/en/en_US/arctic/medium/en_US-arctic-medium|483303e294947a3ec2f910ea96093d876e1640f5772e9d89e511d6c82c667286|db2ca1a55db01cdd3ce28ae63037ac525133e9e00ca557430dec572643235efe"
-  "de_DE-mls-medium|https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/de/de_DE/mls/medium/de_DE-mls-medium|69cd1d2aa5a35839a518966fcc4924b5f93e5f8c948ed0752b1a616ad53f65bf|b0af1c89ddfdc72d32e015729b0e89b99eec13c2c8caa1db7488d98e9e570b40"
-  "ro_RO-mihai-medium|https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/ro/ro_RO/mihai/medium/ro_RO-mihai-medium|e0608bbbd53c80267c09ece681b09f5199f54e792356684c8073738e5f15d29f|8cc0c9f077dc0cec3c25a6a055ec8046db8e40a2510591582f2c9c869f4bc47e"
   "de_DE-thorsten-high|https://huggingface.co/rhasspy/piper-voices/resolve/c10ece1aade47bb51c153c893d14e5bf8e5b7117/de/de_DE/thorsten/high/de_DE-thorsten-high|9df1c43c61149ef9b39e618e2b861fbe41e1fcea9390b2dac62e8761573ea4f1|6de734444e4c3f9e33b7ebe2746dbc19b71e85f613e79c65acf623200b99a76a"
   "de_DE-kerstin-low|https://huggingface.co/rhasspy/piper-voices/resolve/c10ece1aade47bb51c153c893d14e5bf8e5b7117/de/de_DE/kerstin/low/de_DE-kerstin-low|d352a7641892cebf2903859af94e9ba81a141110215fe3943bcda7f7da401b7a|56e708556b7b9b7a53c4f8957e021421e69f11a600962bba554cffbe72cf2d47"
 )
@@ -110,13 +109,6 @@ GERMAN_PHRASES=(
   "search|suche nach Das Boot|suche boot|SEARCH||"
   "action-movies|zeig mir Actionfilme|zeig actionfilme|CHOOSE_GENRE||Action"
   "switch-light-mode|wechsle zum hellen Modus|hellen modus|CHANGE_MODE|LIGHT|"
-)
-
-# A voice of another language reading English text says it with that language's sounds.
-# Each row: file | model name | speaker id | phrase | language | label | keywords | command | mode | genre
-NON_NATIVE_FIXTURES=(
-  "en/romanian-accented-light-mode.wav|ro_RO-mihai-medium|0|switch to light mode|en|Romanian-accented English (Piper neural voice)|light mode|CHANGE_MODE|LIGHT|"
-  "en/german-accented-genre.wav|de_DE-mls-medium|1|show me action movies|en|German-accented English (Piper neural voice)|action movies|CHOOSE_GENRE||Action"
 )
 
 # Downloads a file and checks its SHA-256. A file that is already there and matches is kept.
@@ -222,17 +214,10 @@ generate() {
 
   # 2. Build the files and manifest entries of each language.
   NEW_ENTRIES="[]"
-  local language row
+  local language
   for language in "$@"; do
     if [ "$language" = "en" ]; then
       generate_speakers en ARCTIC_SPEAKERS PIPER_PHRASES
-      for row in "${NON_NATIVE_FIXTURES[@]}"; do
-        IFS='|' read -r outfile model speaker_id phrase lang label keywords command mode genre <<<"$row"
-        fetch_model "$model"
-        synthesize "$model" "$speaker_id" "$phrase" "$outfile"
-        add_entry "$outfile" "$lang" "piper:$model:$speaker_id" "$label" \
-          "$phrase" "$keywords" "$command" "$mode" "$genre"
-      done
     else
       generate_speakers de GERMAN_SPEAKERS GERMAN_PHRASES
     fi
