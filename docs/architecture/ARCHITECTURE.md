@@ -374,6 +374,8 @@ public class Movie {
 **Native Internal Microservice Endpoints (`/api/v1/movies/...`):**
 - `GET /api/v1/movies/{id}` - Get movie DTO
 - `GET /api/v1/movies/search?query={query}` - Native search
+- `GET /api/v1/movies/collections/search?query={name}` - Find a movie franchise (TMDB collection) by name (#334, ADR-023)
+- `GET /api/v1/movies/collections/{id}` - A franchise and its movies, each saved like any list result (#334, ADR-023)
 - `GET /api/v1/genres` - Native genres DTO
 
 **Service Layer (Constructor Injection - NO Field Injection):**
@@ -748,6 +750,12 @@ nearest-neighbour search over `user_taste_profiles` embeddings specifically
    direct movie-service title search (#198, #202-#207); a plain-title query
    with no detected structure falls back to movie-service's existing
    `/search` unchanged, so the frontend never branches on query shape.
+   **ADR-023** extends this to a five-step search: read (model plus
+   fixed-phrase rules for years, sort, "top N", rating and Oscar category),
+   ground (drop what the query does not say), look up (people, franchises,
+   Oscar winners from Wikidata), filter (release dates and a model check),
+   then arrange (rating, sort, count). If nothing is left, the weakest
+   criterion is dropped and the response names it.
 
 **Domain Model (JPA entities on PostgreSQL — ADR-012):**
 
