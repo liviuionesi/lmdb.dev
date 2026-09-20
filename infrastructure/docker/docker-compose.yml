@@ -487,6 +487,7 @@ services:
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD}
       OLLAMA_BASE_URL: http://ollama:11434
+      OLLAMA_CHAT_MODEL: ${OLLAMA_CHAT_MODEL:-llama3.2}
       MOVIE_SERVICE_BASE_URL: lb://movie-service
       # Shared token every gRPC caller must present (GrpcAuthInterceptor).
       # Unset means ai-service rejects every RPC — fail-closed by design.

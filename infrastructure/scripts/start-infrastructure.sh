@@ -93,12 +93,13 @@ echo ""
 echo -e "${BLUE}🚀 Starting infrastructure services (incl. ELK)...${NC}"
 $COMPOSE_CMD $COMPOSE_FILES --profile dev-tools up -d --build
 
-# Pulls the two Ollama models ai-service uses: llama3.2 (chat and voice-command
-# parsing) and nomic-embed-text (search). Models already installed are skipped.
+# Pulls the two Ollama models ai-service uses: the chat model (chat, voice-command and search
+# parsing; chosen in compose-files.sh) and nomic-embed-text (search). Models already installed
+# are skipped.
 echo ""
-echo -e "${BLUE}🧠 Ensuring Ollama models are present (first run downloads ~2.3GB)...${NC}"
+echo -e "${BLUE}🧠 Ensuring Ollama models are present (the first run can download several GB)...${NC}"
 OLLAMA_CONTAINER="lmdb-ollama"
-OLLAMA_MODELS=("llama3.2" "nomic-embed-text")
+OLLAMA_MODELS=("$OLLAMA_CHAT_MODEL" "nomic-embed-text")
 
 # Waits up to 60 seconds for the container to answer `ollama list`.
 ollama_ready=false

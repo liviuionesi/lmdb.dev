@@ -23,12 +23,14 @@ check() {
   if [ "$2" = "true" ]; then echo "PASS  $1"; else echo "FAIL  $1"; failures=$((failures + 1)); fi
 }
 
-# Builds a fake machine and prints "<status> <files> <version> <libdir>" as the
+# Builds a fake machine and prints "<status>|<files>|<version>|<libdir>|<model>" as the
 # script sees it. Options are environment variables:
 #   HAS_SMI=0            no nvidia-smi
 #   HAS_DEVICE=0         no /dev/nvidia0
 #   LIB_VERSION=x        version of the libcuda file (default matches nvidia-smi)
 #   LISTS_LIBCUDA=0      ldconfig does not list libcuda
+#   FAKE_VRAM_MB=n       GPU memory in MiB (default 6144)
+#   OLLAMA_CHAT_MODEL=x  a value already set, as from .env
 run_case() {
   local root="$TMP/case-$RANDOM"
   mkdir -p "$root/bin" "$root/dev" "$root/lib"
@@ -37,7 +39,7 @@ run_case() {
   done
 
   if [ "${HAS_SMI:-1}" = "1" ]; then
-    printf '#!/bin/sh\necho 615.71.09\n' > "$root/bin/nvidia-smi"
+    printf '#!/bin/sh\ncase "$*" in *memory.total*) echo "${FAKE_VRAM_MB:-6144}" ;; *) echo 615.71.09 ;; esac\n' > "$root/bin/nvidia-smi"
     chmod +x "$root/bin/nvidia-smi"
   fi
   [ "${HAS_DEVICE:-1}" = "1" ] && : > "$root/dev/nvidia0"
@@ -52,14 +54,15 @@ run_case() {
   chmod +x "$root/bin/ldconfig"
 
   PATH="$root/bin" NVIDIA_DEV_DIR="$root/dev" LDCONFIG="$root/bin/ldconfig" \
-    "$root/bin/bash" -c "source '$SCRIPT_DIR/compose-files.sh'; echo \"\$GPU_STATUS|\$COMPOSE_FILES|\${NVIDIA_DRIVER_VERSION:-}|\${NVIDIA_LIB_DIR:-}\""
+    FAKE_VRAM_MB="${FAKE_VRAM_MB:-6144}" OLLAMA_CHAT_MODEL="${OLLAMA_CHAT_MODEL:-}" \
+    "$root/bin/bash" -c "source '$SCRIPT_DIR/compose-files.sh'; echo \"\$GPU_STATUS|\$COMPOSE_FILES|\${NVIDIA_DRIVER_VERSION:-}|\${NVIDIA_LIB_DIR:-}|\$OLLAMA_CHAT_MODEL\""
 }
 
 # A machine with everything in place uses the GPU overlay and passes the driver
 # version and library folder to it.
 out="$(run_case)"
 check "adds the GPU file when the GPU is usable" \
-  "$([[ "$out" == gpu\|*-f\ docker-compose.gpu.yml\|615.71.09\|*/lib ]] && echo true || echo false)"
+  "$([[ "$out" == gpu\|*-f\ docker-compose.gpu.yml\|615.71.09\|*/lib\|* ]] && echo true || echo false)"
 
 # The base files are always kept.
 check "keeps the app and ELK files" \
@@ -68,7 +71,7 @@ check "keeps the app and ELK files" \
 # Without nvidia-smi there is no GPU to use.
 out="$(HAS_SMI=0 run_case)"
 check "uses the CPU when nvidia-smi is missing" \
-  "$([[ "$out" == cpu\|-f\ docker-compose.yml\ -f\ docker-compose.elk.yml\|\|  ]] && echo true || echo false)"
+  "$([[ "$out" == cpu\|-f\ docker-compose.yml\ -f\ docker-compose.elk.yml\|\|\|llama3.2 ]] && echo true || echo false)"
 
 # The driver is installed but the device file is not there (module not loaded).
 out="$(HAS_DEVICE=0 run_case)"
@@ -88,5 +91,23 @@ check "uses the CPU when ldconfig does not list libcuda" \
 # The GPU overlay must not silently drop the GPU-only files when there is no GPU.
 check "does not add the GPU file on a CPU-only machine" \
   "$([[ "$out" != *gpu.yml* ]] && echo true || echo false)"
+
+# The 7B model needs about 5GB of GPU memory.
+out="$(run_case)"
+check "uses the 7B chat model on a GPU with 6GB" \
+  "$([[ "$out" == *\|qwen2.5:7b-instruct ]] && echo true || echo false)"
+
+out="$(FAKE_VRAM_MB=4096 run_case)"
+check "uses the 3B chat model on a GPU with only 4GB" \
+  "$([[ "$out" == gpu\|*\|llama3.2 ]] && echo true || echo false)"
+
+out="$(HAS_SMI=0 run_case)"
+check "uses the 3B chat model with no GPU" \
+  "$([[ "$out" == cpu\|*\|llama3.2 ]] && echo true || echo false)"
+
+# A model chosen in .env is never replaced.
+out="$(OLLAMA_CHAT_MODEL=mistral run_case)"
+check "keeps a chat model that is already set" \
+  "$([[ "$out" == *\|mistral ]] && echo true || echo false)"
 
 [ "$failures" -eq 0 ]

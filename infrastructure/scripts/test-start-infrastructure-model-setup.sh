@@ -65,6 +65,8 @@ reset() {
   export FAKE_OLLAMA_LIST=""
   export FAKE_PULL_EXIT=0
   export VOSK_DOWNLOAD_SCRIPT=/usr/bin/true
+  # Fixed, so the result does not depend on this machine's GPU.
+  export OLLAMA_CHAT_MODEL=llama3.2
 }
 
 # Given an empty Ollama, both models are pulled.
