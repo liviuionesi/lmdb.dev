@@ -26,9 +26,8 @@ services:
       - postgres_data:/var/lib/postgresql/data
       # Runs only when postgres_data is empty. To add a database to an
       # already-provisioned volume, create it by hand or `down -v` first.
-      # `z` relabels the folder for containers. Without it SELinux (Fedora,
-      # RHEL) denies the read and a fresh Postgres cannot start. It has no
-      # effect where SELinux is off. ai-service's ./models mount needs it too.
+      # `z` lets the container read this folder when SELinux is on (Fedora,
+      # RHEL). It does nothing when SELinux is off.
       - ./init-scripts:/docker-entrypoint-initdb.d:ro,z
     networks:
       - lmdb-network
@@ -623,11 +622,9 @@ services:
 
 volumes:
   postgres_data:
-    # Explicit name on purpose. Compose prefixes volume names with the folder
-    # name, which here is just `docker`, so every project that keeps its
-    # compose file in a folder called `docker` shares `docker_postgres_data`.
-    # Another project's data and admin password ended up in ours, and
-    # user-service, actor-service and ai-service could not log in.
+    # Fixed name. Without it Compose names the volume after the folder
+    # (`docker_postgres_data`), which any project in a folder called `docker`
+    # would share.
     name: lmdb_postgres_data
     driver: local
   mongo_data:

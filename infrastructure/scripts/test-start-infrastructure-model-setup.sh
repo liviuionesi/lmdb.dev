@@ -1,12 +1,7 @@
 #!/bin/bash
 #
-# Tests for the model setup in start-infrastructure.sh (#200).
-#
-# Voice control needs two things the Compose files do not provide: the Vosk
-# models on disk, and the Ollama models inside the Ollama container.
-# start-infrastructure.sh must do both itself, and stop with an error when it
-# cannot. A stack that starts without them looks healthy but every voice
-# command fails.
+# Tests the model setup in start-infrastructure.sh: it downloads the Vosk
+# models and pulls the Ollama models, and stops with an error if either fails.
 #
 # A fake `docker` goes first on PATH and records every call. Its answers come
 # from environment variables set per test. `npm` is left off PATH so the
@@ -72,16 +67,14 @@ reset() {
   export VOSK_DOWNLOAD_SCRIPT=/usr/bin/true
 }
 
-# Given an empty Ollama, both models are pulled. The image ships with none;
-# without the pull, chat, voice parsing and semantic search fail.
+# Given an empty Ollama, both models are pulled.
 reset
 run_script
 check "pulls both Ollama models when none are present" \
   "$([ "$EXIT_CODE" -eq 0 ] && [ "$(pulls)" = "exec lmdb-ollama ollama pull llama3.2
 exec lmdb-ollama ollama pull nomic-embed-text" ] && echo true || echo false)"
 
-# Given llama3.2 is installed, only the missing model is pulled. A restart
-# must not need the network when nothing is missing.
+# Given llama3.2 is installed, only the missing model is pulled.
 reset
 export FAKE_OLLAMA_LIST=$'llama3.2:latest abc 2.0 GB now\n'
 run_script
@@ -95,24 +88,22 @@ run_script
 check "pulls nothing when both models are present" \
   "$([ "$EXIT_CODE" -eq 0 ] && [ -z "$(pulls)" ] && echo true || echo false)"
 
-# Given only llama3.2-vision is installed, llama3.2 is still pulled. A prefix
-# match would take the vision model for the chat model and skip the pull.
+# Given only llama3.2-vision is installed, llama3.2 is still pulled. The name
+# check must match the whole name, not a prefix.
 reset
 export FAKE_OLLAMA_LIST=$'llama3.2-vision:latest abc 8 GB now\n'
 run_script
 check "does not mistake llama3.2-vision for llama3.2" \
   "$(echo "$(pulls)" | grep -q 'ollama pull llama3.2$' && echo true || echo false)"
 
-# Given a pull error, the script exits non-zero and names the model. A missing
-# model must stop the start, not print a warning and carry on.
+# Given a pull error, the script exits non-zero and names the model.
 reset
 export FAKE_PULL_EXIT=1
 run_script
 check "fails when an Ollama pull fails" \
   "$([ "$EXIT_CODE" -ne 0 ] && echo "$OUTPUT" | grep -q 'Could not pull Ollama model llama3.2' && echo true || echo false)"
 
-# Given the Vosk download fails, no container starts. Voice control would
-# return 503 for every command while all services show healthy.
+# Given the Vosk download fails, the script stops before it starts any container.
 reset
 export VOSK_DOWNLOAD_SCRIPT=/usr/bin/false
 run_script

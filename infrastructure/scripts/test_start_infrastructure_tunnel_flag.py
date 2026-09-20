@@ -60,7 +60,7 @@ class StartInfrastructureTunnelFlagTest(unittest.TestCase):
         # lives outside both, so "command -v npm" genuinely fails here.
         self._env["PATH"] = f"{self._tmp.name}:/usr/bin:/bin"
         self._env["FAKE_DOCKER_CALLS"] = str(self._calls_file)
-        # Model setup has its own tests; here it must not touch the network.
+        # Skips the Vosk download so this test needs no network.
         self._env["VOSK_DOWNLOAD_SCRIPT"] = "/usr/bin/true"
 
     def tearDown(self):

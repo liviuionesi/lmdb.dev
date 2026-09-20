@@ -28,9 +28,7 @@ NC='\033[0m'
 # VOSK_MODEL_SHA256_* build arg in backend/ai-service/Dockerfile, which pins
 # the same archives for the image build.
 #
-# Hashes were computed from the archives downloaded from alphacephei.com on
-# 2026-09-20. Vosk does not publish checksums, so these pin what that download
-# contained; a mismatch later means the upstream file changed and needs review.
+# SHA256 of each archive. A mismatch means the download changed or is corrupt.
 declare -A MODEL_URL=(
   [en]="https://alphacephei.com/vosk/models/vosk-model-en-us-0.22-lgraph.zip"
   [de]="https://alphacephei.com/vosk/models/vosk-model-small-de-0.15.zip"

@@ -1,16 +1,11 @@
 #!/bin/bash
 #
-# Checks two things in docker-compose.yml that broke Postgres on a real
-# machine (Fedora, rootless podman, SELinux enforcing):
+# Checks docker-compose.yml for two settings:
 #
-# 1. Postgres keeps its own named volume. Compose prefixes a volume with the
-#    folder name, which here is `docker`. Any other project that keeps its
-#    compose file in a folder called `docker` then shares
-#    `docker_postgres_data`, with its own data and admin password. That left
-#    user-service, actor-service and ai-service unable to log in.
-# 2. The bind mounts that containers must read carry the `z` label. Without
-#    it SELinux denies the read: a fresh Postgres cannot read its init
-#    scripts, and ai-service cannot read the Vosk models.
+# 1. Postgres uses a fixed volume name, `lmdb_postgres_data`. Without one,
+#    Compose names the volume after the folder (`docker_postgres_data`).
+# 2. The bind mounts for the Postgres init scripts and the Vosk models carry
+#    the `z` label, so containers can read them when SELinux is on.
 #
 # Run: infrastructure/scripts/test-compose-volume-names.sh
 

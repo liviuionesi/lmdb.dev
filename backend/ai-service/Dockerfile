@@ -66,9 +66,7 @@ WORKDIR /app
 # same reason: without it curl writes an HTTP error page to the output file
 # and the build carries on treating it as an archive.
 #
-# Hashes were computed from the archives downloaded from alphacephei.com on
-# 2026-09-20. Vosk does not publish checksums, so these pin what that download
-# contained; a mismatch later means the upstream file changed and needs review.
+# SHA256 of each archive. A mismatch means the download changed or is corrupt.
 # Keep them in step with infrastructure/scripts/download-vosk-model.sh.
 ARG VOSK_MODEL_SHA256=d9838b4aaa82a75c4a17f5aca300eaca129aaab2a7cbf951bafbb500eb9c4334
 ARG VOSK_MODEL_SHA256_DE=b7e53c90b1f0a38456f4cd62b366ecd58803cd97cd42b06438e2c131713d5e43
