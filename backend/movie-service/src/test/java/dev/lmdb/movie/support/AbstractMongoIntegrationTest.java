@@ -45,6 +45,11 @@ import org.testcontainers.mongodb.MongoDBContainer;
  */
 public abstract class AbstractMongoIntegrationTest {
 
+  /**
+   * Never closed on purpose — see the class Javadoc. Closing it would stop the container that every
+   * other test class in this module is still sharing; Ryuk reaps it when the JVM exits.
+   */
+  @SuppressWarnings("resource")
   protected static final MongoDBContainer MONGO_CONTAINER =
       new MongoDBContainer("mongo:8.0").withEnv("GLIBC_TUNABLES", "glibc.pthread.rseq=1");
 
