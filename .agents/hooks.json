@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "./hooks/graphify-guard.py search",
+            "command": "./hooks/graphify-guard.sh search",
             "timeout": 15
           }
         ]
@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "./hooks/graphify-guard.py read",
+            "command": "./hooks/graphify-guard.sh read",
             "timeout": 15
           }
         ]

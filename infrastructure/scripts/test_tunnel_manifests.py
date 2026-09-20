@@ -8,7 +8,7 @@ at a hardcoded public address, so a Vercel-deployed frontend can reach a
 local or Minikube backend over public HTTPS.
 
 No YAML library: every other Python script in this repo (`audit-check.py`,
-`test_audit_check.py`, `test_check_hardcoded_secrets.py`) is stdlib-only,
+`test_audit_check.py`) is stdlib-only,
 and there is no `requirements.txt` anywhere to declare a dependency in.
 Both manifests are small and flat enough to check with plain string and
 regex matching instead.

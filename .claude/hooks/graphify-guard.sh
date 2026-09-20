@@ -7,7 +7,7 @@
 # does not exist. Resolve the binary at call time and exit quietly when it
 # is missing, so a tool call is never blocked by an absent optional tool.
 #
-# Mirrors .agents/hooks/graphify-guard.py, which already resolves
+# Mirrors .agents/hooks/graphify-guard.sh, which already resolves
 # GRAPHIFY_BIN and checks for executability.
 #
 # Usage: graphify-guard.sh <search|read>   (Claude Code hook payload on stdin)
