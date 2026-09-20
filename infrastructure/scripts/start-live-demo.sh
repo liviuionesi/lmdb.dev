@@ -42,6 +42,15 @@ for entry in "${SERVICES[@]}"; do
 done
 
 echo ""
+if [ "$ALL_HEALTHY" = false ]; then
+  echo "=================================================="
+  echo "  ❌ Live Demo Stack is NOT fully healthy"
+  echo "=================================================="
+  echo "  One or more core services failed their health check. See above."
+  echo "=================================================="
+  exit 1
+fi
+
 echo "=================================================="
 echo "  🚀 Live Demo Stack is Ready!"
 echo "=================================================="
