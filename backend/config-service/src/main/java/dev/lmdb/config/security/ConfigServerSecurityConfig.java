@@ -8,6 +8,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
@@ -23,6 +24,13 @@ import org.springframework.security.web.SecurityFilterChain;
  * of the two {@link SecurityFilterChain} beans below is active at a time, chosen by that property.
  * Both leave {@code /actuator/**} open regardless, so health/readiness/liveness probes and the
  * Prometheus scrape never need a credential.
+ *
+ * <p>Both chains are stateless and disable CSRF. CSRF protection defends against a browser silently
+ * attaching an ambient credential (a session cookie) to a cross-site request. This server has no
+ * such credential to attach: clients are other services sending HTTP Basic per request, and {@link
+ * SessionCreationPolicy#STATELESS} means no session is ever created to ride along. That makes the
+ * disable safe here rather than merely convenient, which is why the {@code java:S4502} hotspot is
+ * suppressed on both beans below.
  */
 @Configuration
 @EnableWebSecurity
@@ -39,8 +47,13 @@ public class ConfigServerSecurityConfig {
    */
   @Bean
   @ConditionalOnProperty(name = "config.security.enabled", havingValue = "true")
+  // S112: HttpSecurity.build() declares `throws Exception`; a @Bean method must let it propagate so
+  // Spring fails startup on a misconfigured chain. S4502: see the class Javadoc.
+  @SuppressWarnings({"java:S112", "java:S4502"})
   public SecurityFilterChain securedConfigServerFilterChain(HttpSecurity http) throws Exception {
     http.csrf(csrf -> csrf.disable())
+        .sessionManagement(
+            session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(
             auth -> auth.requestMatchers("/actuator/**").permitAll().anyRequest().authenticated())
         .httpBasic(Customizer.withDefaults());
@@ -63,8 +76,13 @@ public class ConfigServerSecurityConfig {
    */
   @Bean
   @ConditionalOnMissingBean(SecurityFilterChain.class)
+  // Suppressed for the same reasons as securedConfigServerFilterChain above.
+  @SuppressWarnings({"java:S112", "java:S4502"})
   public SecurityFilterChain openConfigServerFilterChain(HttpSecurity http) throws Exception {
-    http.csrf(csrf -> csrf.disable()).authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
+    http.csrf(csrf -> csrf.disable())
+        .sessionManagement(
+            session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+        .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
     return http.build();
   }
 

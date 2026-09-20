@@ -24,11 +24,11 @@ import org.springframework.boot.test.context.SpringBootTest;
  * shared JSON log format ({@code backend/observability/logback-spring.xml}), not just that a span
  * can be created.
  *
- * <p>{@link StructuredLoggingTest} proves the JSON format itself; this test proves the specific
- * MDC contract {@code logback-spring.xml} declares ({@code includeMdcKeyName} for {@code traceId}
- * and {@code spanId}) actually fires. A log line emitted with no active span would leave those
- * fields null, so the encoder configuration alone does not prove correlation — only a log line
- * captured inside an active span does.
+ * <p>{@link StructuredLoggingTest} proves the JSON format itself; this test proves the specific MDC
+ * contract {@code logback-spring.xml} declares ({@code includeMdcKeyName} for {@code traceId} and
+ * {@code spanId}) actually fires. A log line emitted with no active span would leave those fields
+ * null, so the encoder configuration alone does not prove correlation — only a log line captured
+ * inside an active span does.
  */
 @SpringBootTest
 @DisplayName("Tracing/Log Correlation Tests (#42)")
