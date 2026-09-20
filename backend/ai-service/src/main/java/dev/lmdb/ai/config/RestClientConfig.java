@@ -1,10 +1,13 @@
 package dev.lmdb.ai.config;
 
 import java.net.URI;
+import java.net.http.HttpClient;
+import java.time.Duration;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.client.loadbalancer.BlockingLoadBalancerInterceptor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 
 /**
@@ -76,6 +79,28 @@ public class RestClientConfig {
       BlockingLoadBalancerInterceptor loadBalancerInterceptor,
       @Value("${actor-service.base-url:lb://actor-service}") String actorServiceBaseUrl) {
     return buildRestClient(loadBalancerInterceptor, actorServiceBaseUrl);
+  }
+
+  /**
+   * Builds the client for Wikidata's public query service, which lists Academy Award winners. It is
+   * not load balanced; it calls an outside host, with short timeouts so a slow reply cannot hold a
+   * search for long.
+   *
+   * @param wikidataBaseUrl the query service's base URL
+   * @return the client
+   */
+  @Bean
+  public RestClient awardsRestClient(
+      @Value("${awards.wikidata-url:https://query.wikidata.org}") String wikidataBaseUrl) {
+    HttpClient httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
+    JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(httpClient);
+    requestFactory.setReadTimeout(Duration.ofSeconds(20));
+    // Wikidata asks every client to say who it is.
+    return RestClient.builder()
+        .baseUrl(wikidataBaseUrl)
+        .requestFactory(requestFactory)
+        .defaultHeader("User-Agent", "lmdb.dev/1.0 (https://lmdb.dev; movie search)")
+        .build();
   }
 
   /**

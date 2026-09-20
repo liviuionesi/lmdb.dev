@@ -1,6 +1,7 @@
 package dev.lmdb.ai.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -30,6 +31,11 @@ import java.util.Set;
  * @param franchise a movie series named in the query, such as "James Bond", or {@code null}
  * @param keywords other words worth searching for: title words, character names or themes; never
  *     {@code null}
+ * @param sortBy the order asked for, or {@code null}. Set from the query text, never by the model.
+ * @param limit how many results to keep, or {@code null}. Set from the query text.
+ * @param minRating the lowest average vote allowed, or {@code null}. Set from the query text.
+ * @param award the Oscar category whose winners are wanted, or {@code null}. Set from the query
+ *     text.
  * @param plainTitle set instead of the fields above when the query carries no detected structured
  *     intent — the caller falls back to a literal title search on this value
  */
@@ -48,7 +54,54 @@ public record StructuredQueryFilterDto(
     List<String> negated,
     String franchise,
     List<String> keywords,
+    @JsonFormat(with = JsonFormat.Feature.READ_UNKNOWN_ENUM_VALUES_AS_NULL) SearchSort sortBy,
+    Integer limit,
+    Double minRating,
+    @JsonFormat(with = JsonFormat.Feature.READ_UNKNOWN_ENUM_VALUES_AS_NULL) OscarCategory award,
     String plainTitle) {
+
+  /**
+   * Builds a filter with no sort, limit, minimum rating or award. Kept for callers that only know
+   * the fields the model fills in.
+   *
+   * @param personName see the field Javadoc above
+   * @param role see the field Javadoc above
+   * @param yearFrom see the field Javadoc above
+   * @param yearTo see the field Javadoc above
+   * @param collaborators see the field Javadoc above
+   * @param genre see the field Javadoc above
+   * @param negated see the field Javadoc above
+   * @param franchise see the field Javadoc above
+   * @param keywords see the field Javadoc above
+   * @param plainTitle see the field Javadoc above
+   */
+  public StructuredQueryFilterDto(
+      String personName,
+      QueryFilterRole role,
+      Integer yearFrom,
+      Integer yearTo,
+      List<String> collaborators,
+      String genre,
+      List<String> negated,
+      String franchise,
+      List<String> keywords,
+      String plainTitle) {
+    this(
+        personName,
+        role,
+        yearFrom,
+        yearTo,
+        collaborators,
+        genre,
+        negated,
+        franchise,
+        keywords,
+        null,
+        null,
+        null,
+        null,
+        plainTitle);
+  }
 
   /**
    * Builds a filter with no franchise and no keywords. Kept for callers that only know the fields
@@ -85,6 +138,9 @@ public record StructuredQueryFilterDto(
         plainTitle);
   }
 
+  /** The most results a query may ask for. */
+  private static final int MAX_LIMIT = 100;
+
   /** Words a model writes in {@code genre} that name no genre. */
   private static final Set<String> NON_GENRES = Set.of("movie", "movies", "film", "films");
 
@@ -114,6 +170,10 @@ public record StructuredQueryFilterDto(
    * @param negated see the field Javadoc above; defaulted to {@link List#of()} when omitted
    * @param franchise see the field Javadoc above
    * @param keywords see the field Javadoc above; defaulted to {@link List#of()} when omitted
+   * @param sortBy see the field Javadoc above
+   * @param limit see the field Javadoc above; a value outside 1 to 100 becomes {@code null}
+   * @param minRating see the field Javadoc above; a value outside 0 to 10 becomes {@code null}
+   * @param award see the field Javadoc above
    * @param plainTitle see the field Javadoc above
    */
   public StructuredQueryFilterDto {
@@ -135,9 +195,24 @@ public record StructuredQueryFilterDto(
     collaborators = collaborators == null ? List.of() : collaborators;
     negated = negated == null ? List.of() : negated;
 
+    limit = limit != null && limit >= 1 && limit <= MAX_LIMIT ? limit : null;
+    minRating = minRating != null && minRating >= 0 && minRating <= 10 ? minRating : null;
+
     boolean hasStructure =
-        hasStructure(
-            personName, role, yearFrom, yearTo, collaborators, genre, negated, franchise, keywords);
+        anySet(
+                personName,
+                role,
+                yearFrom,
+                yearTo,
+                genre,
+                franchise,
+                sortBy,
+                limit,
+                minRating,
+                award)
+            || !collaborators.isEmpty()
+            || !negated.isEmpty()
+            || !keywords.isEmpty();
     if (hasStructure) {
       plainTitle = null;
     }
@@ -149,29 +224,21 @@ public record StructuredQueryFilterDto(
    * @return {@code true} if any field other than {@code plainTitle} has a value
    */
   public boolean hasStructure() {
-    return hasStructure(
-        personName, role, yearFrom, yearTo, collaborators, genre, negated, franchise, keywords);
+    return anySet(
+            personName, role, yearFrom, yearTo, genre, franchise, sortBy, limit, minRating, award)
+        || !collaborators.isEmpty()
+        || !negated.isEmpty()
+        || !keywords.isEmpty();
   }
 
-  private static boolean hasStructure(
-      String personName,
-      QueryFilterRole role,
-      Integer yearFrom,
-      Integer yearTo,
-      List<String> collaborators,
-      String genre,
-      List<String> negated,
-      String franchise,
-      List<String> keywords) {
-    return personName != null
-        || role != null
-        || yearFrom != null
-        || yearTo != null
-        || !collaborators.isEmpty()
-        || genre != null
-        || franchise != null
-        || !keywords.isEmpty()
-        || !negated.isEmpty();
+  /**
+   * Tells whether any of the values is set.
+   *
+   * @param values the fields to check
+   * @return {@code true} if at least one is not {@code null}
+   */
+  private static boolean anySet(Object... values) {
+    return Arrays.stream(values).anyMatch(Objects::nonNull);
   }
 
   /**

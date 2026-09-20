@@ -35,7 +35,8 @@ class MovieCatalogClientTest {
   @BeforeEach
   void setUp() {
     RestClient.Builder builder = RestClient.builder().baseUrl(BASE);
-    server = MockRestServiceServer.bindTo(builder).build();
+    // Movie details are fetched in parallel, so requests can arrive in any order.
+    server = MockRestServiceServer.bindTo(builder).ignoreExpectOrder(true).build();
     client = new MovieCatalogClient(builder.build());
   }
 
@@ -164,6 +165,41 @@ class MovieCatalogClientTest {
     List<MovieListItem> movies = client.discover(2015, 2020, 28L, 50);
 
     assertThat(movies).extracting(MovieListItem::title).containsExactly("Mad Max: Fury Road");
+    server.verify();
+  }
+
+  /** Details of several movies are fetched, and a movie that fails is left out, not fatal. */
+  @Test
+  @DisplayName("fetchMovieDetails returns the details it could fetch, including revenue")
+  void fetchesTheDetailsOfSeveralMovies() {
+    server
+        .expect(requestTo(BASE + "/api/v1/movies/1"))
+        .andRespond(
+            withSuccess(
+                """
+                {"tmdbId":1,"title":"One","releaseDate":"2001-01-01","voteAverage":7.5,
+                 "revenue":1000,"_links":{}}
+                """,
+                MediaType.APPLICATION_JSON));
+    server.expect(requestTo(BASE + "/api/v1/movies/2")).andRespond(withServerError());
+    server
+        .expect(requestTo(BASE + "/api/v1/movies/3"))
+        .andRespond(
+            withSuccess(
+                "{\"tmdbId\":3,\"title\":\"Three\",\"revenue\":300}", MediaType.APPLICATION_JSON));
+
+    List<MovieDetails> details = client.fetchMovieDetails(List.of(1L, 2L, 3L));
+
+    assertThat(details).extracting(MovieDetails::title).containsExactly("One", "Three");
+    assertThat(details.get(0).revenue()).isEqualTo(1000L);
+    assertThat(details.get(0).releaseDate()).isEqualTo("2001-01-01");
+  }
+
+  /** With nothing to fetch there are no requests. */
+  @Test
+  @DisplayName("fetchMovieDetails returns nothing for an empty list")
+  void fetchesNothingForAnEmptyList() {
+    assertThat(client.fetchMovieDetails(List.of())).isEmpty();
     server.verify();
   }
 }

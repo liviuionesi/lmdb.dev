@@ -1,14 +1,20 @@
 package dev.lmdb.ai.service;
 
 import dev.lmdb.ai.client.ActorCatalogClient;
+import dev.lmdb.ai.client.AwardsClient;
 import dev.lmdb.ai.client.MovieCatalogClient;
+import dev.lmdb.ai.client.MovieDetails;
 import dev.lmdb.ai.client.MovieListItem;
 import dev.lmdb.ai.client.PersonCredit;
 import dev.lmdb.ai.dto.NaturalLanguageSearchResponseDto;
+import dev.lmdb.ai.dto.OscarCategory;
 import dev.lmdb.ai.dto.QueryFilterRole;
 import dev.lmdb.ai.dto.SearchResultMovieDto;
+import dev.lmdb.ai.dto.SearchSort;
 import dev.lmdb.ai.dto.StructuredQueryFilterDto;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,17 +33,19 @@ import org.springframework.stereotype.Service;
  * <ol>
  *   <li><b>Parse.</b> {@link QueryParsingService} turns the text into a {@link
  *       StructuredQueryFilterDto}. A query that is only a title is searched as a title.
- *   <li><b>Anchors.</b> A named person, franchise and collaborators each give a set of movies. A
- *       movie must be in every set. actor-service and movie-service fetch from TMDB when they do
- *       not know a name yet, and save what they fetch.
+ *   <li><b>Anchors.</b> A named person, franchise, Oscar category and collaborators each give a set
+ *       of movies. A movie must be in every set. actor-service and movie-service fetch from TMDB
+ *       when they do not know a name yet, and save what they fetch.
  *   <li><b>Pool.</b> With no anchor, keywords are searched by title, and years and genre are
  *       discovered.
  *   <li><b>Years.</b> Each movie's own release date must fall inside the range.
  *   <li><b>Model check.</b> A genre on an anchored set, keywords, and title-search guesses cannot
  *       be checked by data, so {@link RelevanceFilterService} asks the model which movies fit.
+ *   <li><b>Arranging.</b> Movies below a minimum rating are dropped, the rest are sorted, and the
+ *       first N are kept.
  *   <li><b>Relaxing.</b> If nothing is left, the weakest criterion is dropped and the search runs
- *       again: keywords, then genre, then collaborators, then years. The response names what was
- *       dropped. The person and the franchise are never dropped.
+ *       again: keywords, minimum rating, genre, collaborators, then years. The response names what
+ *       was dropped. The person and the franchise are never dropped.
  * </ol>
  *
  * <p>Negation is supported for a role only ("didn't direct"). A negated {@code ACTED} role ("not
@@ -59,9 +67,16 @@ public class QueryAggregationService {
   /** The most movies sent to the model check. Later movies are left out of the result. */
   private static final int MODEL_CHECK_LIMIT = 80;
 
+  /** The most award winners whose details are fetched. */
+  private static final int AWARD_DETAILS_CAP = 150;
+
+  /** The most movies whose revenue is fetched for a sort by revenue. */
+  private static final int REVENUE_DETAILS_CAP = 60;
+
   /** The criteria that may be dropped when nothing matches, weakest first. */
   private enum Criterion {
     KEYWORDS("keywords"),
+    MIN_RATING("minRating"),
     GENRE("genre"),
     COLLABORATORS("collaborators"),
     YEARS("years");
@@ -81,6 +96,7 @@ public class QueryAggregationService {
     boolean isUsedBy(StructuredQueryFilterDto filter) {
       return switch (this) {
         case KEYWORDS -> !filter.keywords().isEmpty();
+        case MIN_RATING -> filter.minRating() != null;
         case GENRE -> filter.genre() != null;
         case COLLABORATORS -> !filter.collaborators().isEmpty();
         case YEARS -> filter.yearFrom() != null || filter.yearTo() != null;
@@ -104,6 +120,10 @@ public class QueryAggregationService {
           filter.negated(),
           filter.franchise(),
           this == KEYWORDS ? List.of() : filter.keywords(),
+          filter.sortBy(),
+          filter.limit(),
+          this == MIN_RATING ? null : filter.minRating(),
+          filter.award(),
           null);
     }
   }
@@ -112,6 +132,7 @@ public class QueryAggregationService {
   private final ActorCatalogClient actorCatalogClient;
   private final MovieCatalogClient movieCatalogClient;
   private final RelevanceFilterService relevanceFilterService;
+  private final AwardsClient awardsClient;
 
   /**
    * The outcome of one search pass.
@@ -145,16 +166,19 @@ public class QueryAggregationService {
    * @param actorCatalogClient looks up people and their credits
    * @param movieCatalogClient looks up franchises, titles, genres and discovered movies
    * @param relevanceFilterService asks the model which movies fit the query
+   * @param awardsClient looks up Academy Award winners
    */
   public QueryAggregationService(
       QueryParsingService queryParsingService,
       ActorCatalogClient actorCatalogClient,
       MovieCatalogClient movieCatalogClient,
-      RelevanceFilterService relevanceFilterService) {
+      RelevanceFilterService relevanceFilterService,
+      AwardsClient awardsClient) {
     this.queryParsingService = queryParsingService;
     this.actorCatalogClient = actorCatalogClient;
     this.movieCatalogClient = movieCatalogClient;
     this.relevanceFilterService = relevanceFilterService;
+    this.awardsClient = awardsClient;
   }
 
   /**
@@ -196,7 +220,8 @@ public class QueryAggregationService {
   }
 
   /**
-   * Runs one search pass for a filter: anchors, pool, years, then the model check.
+   * Runs one search pass for a filter: anchors, pool, years, the model check, then rating, sort and
+   * count.
    *
    * @param rawQuery the user's text, shown to the model check
    * @param filter the criteria to apply
@@ -229,8 +254,11 @@ public class QueryAggregationService {
     keepReleasedWithin(candidates, filter.yearFrom(), filter.yearTo());
 
     // 4. Model check, for what data cannot verify.
-    return new Attempt(
-        modelCheck(rawQuery, filter, candidates, anchors.guessed(), genreApplied), false);
+    List<SearchResultMovieDto> checked =
+        modelCheck(rawQuery, filter, candidates, anchors.guessed(), genreApplied);
+
+    // 5. Minimum rating, sort order and count.
+    return new Attempt(arrange(checked, filter), false);
   }
 
   /**
@@ -252,6 +280,9 @@ public class QueryAggregationService {
       // No collection with that name: series names often appear in their titles.
       guessed = franchise.isEmpty();
       movies = intersect(movies, franchise.orElseGet(() -> titleSearch(filter.franchise())));
+    }
+    if (filter.award() != null) {
+      movies = intersect(movies, awardMovies(filter.award()));
     }
     return new Anchors(movies, guessed);
   }
@@ -295,7 +326,8 @@ public class QueryAggregationService {
 
   /**
    * Builds the starting movies when the query names no person or franchise: keyword title searches,
-   * plus discover for years and genre.
+   * plus discover for years and genre. A query with neither keywords, years nor genre, such as "top
+   * 10 highest rated movies", starts from the most popular movies.
    *
    * @param filter the criteria
    * @return the movies, and whether discover applied the genre
@@ -307,7 +339,8 @@ public class QueryAggregationService {
     }
 
     boolean hasYears = filter.yearFrom() != null || filter.yearTo() != null;
-    if (!hasYears && filter.genre() == null) {
+    boolean nothingElse = filter.keywords().isEmpty();
+    if (!hasYears && filter.genre() == null && !nothingElse) {
       return new Pool(movies, false);
     }
 
@@ -360,6 +393,124 @@ public class QueryAggregationService {
     List<SearchResultMovieDto> judged =
         movies.size() > MODEL_CHECK_LIMIT ? movies.subList(0, MODEL_CHECK_LIMIT) : movies;
     return relevanceFilterService.filter(rawQuery, judged);
+  }
+
+  /**
+   * Lists the movies that won an Oscar category, with their details.
+   *
+   * @param category the category
+   * @return the winning movies keyed by id; empty if the award lookup found none
+   */
+  private Map<Long, SearchResultMovieDto> awardMovies(OscarCategory category) {
+    List<Long> ids = awardsClient.findWinningMovieIds(category);
+    List<Long> capped = ids.size() > AWARD_DETAILS_CAP ? ids.subList(0, AWARD_DETAILS_CAP) : ids;
+    Map<Long, SearchResultMovieDto> movies = new LinkedHashMap<>();
+    for (MovieDetails details : movieCatalogClient.fetchMovieDetails(capped)) {
+      movies.put(details.tmdbId(), toSearchResult(details));
+    }
+    return movies;
+  }
+
+  /**
+   * Applies the minimum rating, the sort order and the count, in that order.
+   *
+   * @param movies the movies that passed the other checks
+   * @param filter the criteria
+   * @return the movies to return
+   */
+  private List<SearchResultMovieDto> arrange(
+      List<SearchResultMovieDto> movies, StructuredQueryFilterDto filter) {
+    Double minRating = filter.minRating();
+    List<SearchResultMovieDto> rated =
+        minRating == null
+            ? movies
+            : movies.stream()
+                .filter(movie -> movie.voteAverage() != null && movie.voteAverage() >= minRating)
+                .toList();
+    List<SearchResultMovieDto> sorted = sorted(rated, filter.sortBy());
+    Integer limit = filter.limit();
+    return limit == null || limit >= sorted.size() ? sorted : sorted.subList(0, limit);
+  }
+
+  /**
+   * Sorts movies. A sort by revenue first fetches the revenue, because lists and credits do not
+   * carry it.
+   *
+   * @param movies the movies to sort
+   * @param sort the order, or {@code null} to keep the source order
+   * @return the sorted movies; movies with no value for the sort go last
+   */
+  private List<SearchResultMovieDto> sorted(List<SearchResultMovieDto> movies, SearchSort sort) {
+    if (sort == null) {
+      return movies;
+    }
+    List<SearchResultMovieDto> source = sort == SearchSort.REVENUE ? withRevenue(movies) : movies;
+    return source.stream().sorted(comparatorFor(sort)).toList();
+  }
+
+  /**
+   * Adds revenue to the first movies of a list. Movies past the cap, or with no known revenue, get
+   * none and sort last.
+   *
+   * @param movies the movies
+   * @return the same movies, with revenue where it is known
+   */
+  private List<SearchResultMovieDto> withRevenue(List<SearchResultMovieDto> movies) {
+    List<Long> ids =
+        movies.stream().limit(REVENUE_DETAILS_CAP).map(SearchResultMovieDto::movieId).toList();
+    Map<Long, Long> revenueById = new HashMap<>();
+    for (MovieDetails details : movieCatalogClient.fetchMovieDetails(ids)) {
+      if (details.revenue() != null && details.revenue() > 0) {
+        revenueById.put(details.tmdbId(), details.revenue());
+      }
+    }
+    return movies.stream()
+        .map(
+            movie ->
+                new SearchResultMovieDto(
+                    movie.movieId(),
+                    movie.title(),
+                    movie.overview(),
+                    movie.releaseDate(),
+                    movie.posterPath(),
+                    movie.voteAverage(),
+                    revenueById.get(movie.movieId())))
+        .toList();
+  }
+
+  /**
+   * Builds the comparator for a sort order. A missing value sorts last, whatever the direction.
+   *
+   * @param sort the order
+   * @return the comparator
+   */
+  private static Comparator<SearchResultMovieDto> comparatorFor(SearchSort sort) {
+    return switch (sort) {
+      case RATING ->
+          Comparator.comparing(
+              SearchResultMovieDto::voteAverage, Comparator.nullsLast(Comparator.reverseOrder()));
+      case REVENUE ->
+          Comparator.comparing(
+              SearchResultMovieDto::revenue, Comparator.nullsLast(Comparator.reverseOrder()));
+      case NEWEST ->
+          Comparator.comparing(
+              QueryAggregationService::dateOf, Comparator.nullsLast(Comparator.reverseOrder()));
+      case OLDEST ->
+          Comparator.comparing(
+              QueryAggregationService::dateOf, Comparator.nullsLast(Comparator.naturalOrder()));
+    };
+  }
+
+  /**
+   * Reads a movie's release date for sorting. Dates are {@code yyyy-MM-dd}, so text order is date
+   * order.
+   *
+   * @param movie a movie
+   * @return the release date, or {@code null} if it is missing or blank
+   */
+  private static String dateOf(SearchResultMovieDto movie) {
+    String date = movie.releaseDate();
+    return date == null || date.isBlank() ? null : date;
   }
 
   /**
@@ -530,5 +681,23 @@ public class QueryAggregationService {
         movie.releaseDate(),
         movie.posterPath(),
         movie.voteAverage());
+  }
+
+  /**
+   * Converts movie details into a search result.
+   *
+   * @param details the details
+   * @return the result, with revenue where it is known
+   */
+  private static SearchResultMovieDto toSearchResult(MovieDetails details) {
+    Long revenue = details.revenue() != null && details.revenue() > 0 ? details.revenue() : null;
+    return new SearchResultMovieDto(
+        details.tmdbId(),
+        details.title(),
+        details.overview(),
+        details.releaseDate(),
+        details.posterPath(),
+        details.voteAverage(),
+        revenue);
   }
 }

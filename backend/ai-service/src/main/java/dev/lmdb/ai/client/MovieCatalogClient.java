@@ -1,8 +1,15 @@
 package dev.lmdb.ai.client;
 
 import dev.lmdb.shared.dto.PageResponse;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.Semaphore;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.ParameterizedTypeReference;
@@ -18,6 +25,9 @@ import org.springframework.web.client.RestClient;
 @Component
 @Slf4j
 public class MovieCatalogClient {
+
+  /** How many movie-detail requests may run at the same time. */
+  private static final int DETAILS_PARALLELISM = 8;
 
   private final RestClient restClient;
 
@@ -208,6 +218,58 @@ public class MovieCatalogClient {
     } catch (Exception e) {
       log.warn("movie-service unreachable while discovering movies: {}", e.getMessage());
       return List.of();
+    }
+  }
+
+  /**
+   * Fetches the details of several movies at once. movie-service serves a movie from its own
+   * database when it has one, and fetches and saves it from TMDB when it does not.
+   *
+   * <p>At most {@link #DETAILS_PARALLELISM} requests run at the same time, so a long list does not
+   * flood movie-service or TMDB.
+   *
+   * @param movieIds TMDB movie ids
+   * @return the details of every movie that could be fetched, in the order of {@code movieIds}; a
+   *     movie that fails is left out
+   */
+  public List<MovieDetails> fetchMovieDetails(Collection<Long> movieIds) {
+    Semaphore permits = new Semaphore(DETAILS_PARALLELISM);
+    try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
+      List<Future<Optional<MovieDetails>>> pending =
+          movieIds.stream().map(id -> executor.submit(() -> fetchOne(id, permits))).toList();
+      List<MovieDetails> details = new ArrayList<>();
+      for (Future<Optional<MovieDetails>> future : pending) {
+        future.get().ifPresent(details::add);
+      }
+      return details;
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return List.of();
+    } catch (ExecutionException e) {
+      log.warn("Fetching movie details failed: {}", e.getMessage());
+      return List.of();
+    }
+  }
+
+  /**
+   * Fetches one movie's details, waiting for a free slot first.
+   *
+   * @param movieId TMDB movie id
+   * @param permits limits how many requests run at once
+   * @return the details, or empty if the request failed
+   * @throws InterruptedException if the thread is interrupted while waiting for a slot
+   */
+  private Optional<MovieDetails> fetchOne(Long movieId, Semaphore permits)
+      throws InterruptedException {
+    permits.acquire();
+    try {
+      return Optional.ofNullable(
+          restClient.get().uri("/api/v1/movies/{id}", movieId).retrieve().body(MovieDetails.class));
+    } catch (Exception e) {
+      log.warn("Could not fetch details for movie {}: {}", movieId, e.getMessage());
+      return Optional.empty();
+    } finally {
+      permits.release();
     }
   }
 }

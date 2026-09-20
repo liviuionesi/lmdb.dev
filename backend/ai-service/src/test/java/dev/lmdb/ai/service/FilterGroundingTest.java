@@ -2,8 +2,11 @@ package dev.lmdb.ai.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.lmdb.ai.dto.OscarCategory;
 import dev.lmdb.ai.dto.QueryFilterRole;
+import dev.lmdb.ai.dto.SearchSort;
 import dev.lmdb.ai.dto.StructuredQueryFilterDto;
+import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -321,6 +324,97 @@ class FilterGroundingTest {
     assertThat(grounded.personName()).isNull();
     assertThat(grounded.role()).isNull();
     assertThat(grounded.negated()).isEmpty();
+  }
+
+  // ------------------------------------------------------------------- modifiers from the text
+
+  /**
+   * "The last 20 years" is counted from today. The model cannot know today's date, so whatever
+   * years it gave are replaced.
+   */
+  @Test
+  @DisplayName("replaces the model's years with a relative range read from the text")
+  void relativeYearsReplaceTheModelsYears() {
+    StructuredQueryFilterDto parsed =
+        filter("Tom Cruise", QueryFilterRole.ACTED, 2010, 2020, List.of(), null);
+
+    StructuredQueryFilterDto grounded =
+        FilterGrounding.ground(
+            parsed, "Tom Cruise movies from the last 20 years", LocalDate.of(2026, 9, 20));
+
+    assertThat(grounded.yearFrom()).isEqualTo(2006);
+    assertThat(grounded.yearTo()).isNull();
+  }
+
+  /** Sort, count, minimum rating and award come from the text, never from the model. */
+  @Test
+  @DisplayName("reads sort, count, minimum rating and award from the text")
+  void modifiersComeFromTheText() {
+    StructuredQueryFilterDto grounded =
+        FilterGrounding.ground(
+            filter("Meryl Streep", QueryFilterRole.ACTED, null, null, List.of(), null),
+            "top 5 Meryl Streep movies rated above 7 sorted by revenue");
+
+    assertThat(grounded.sortBy()).isEqualTo(SearchSort.REVENUE);
+    assertThat(grounded.limit()).isEqualTo(5);
+    assertThat(grounded.minRating()).isEqualTo(7.0);
+  }
+
+  /** A sort the model made up is ignored when the text has no sort words. */
+  @Test
+  @DisplayName("ignores a sort or limit the model made up")
+  void ignoresModifiersTheModelMadeUp() {
+    StructuredQueryFilterDto parsed =
+        new StructuredQueryFilterDto(
+            "Tom Hanks",
+            QueryFilterRole.ACTED,
+            null,
+            null,
+            List.of(),
+            null,
+            List.of(),
+            null,
+            List.of(),
+            SearchSort.REVENUE,
+            3,
+            9.0,
+            OscarCategory.BEST_ACTOR,
+            null);
+
+    StructuredQueryFilterDto grounded = FilterGrounding.ground(parsed, "Tom Hanks movies");
+
+    assertThat(grounded.sortBy()).isNull();
+    assertThat(grounded.limit()).isNull();
+    assertThat(grounded.minRating()).isNull();
+    assertThat(grounded.award()).isNull();
+  }
+
+  /**
+   * "Best actor" is the award, not a person, and "oscar" is not a topic. The model put both in its
+   * reply; only the award stays.
+   */
+  @Test
+  @DisplayName("drops award words that the model used as a person or a keyword")
+  void awardWordsAreNotAPersonOrAKeyword() {
+    StructuredQueryFilterDto parsed =
+        new StructuredQueryFilterDto(
+            "Best Actor",
+            null,
+            null,
+            null,
+            List.of(),
+            null,
+            List.of(),
+            null,
+            List.of("oscar", "actor"),
+            null);
+
+    StructuredQueryFilterDto grounded =
+        FilterGrounding.ground(parsed, "all the movies that won the oscar for the best actor");
+
+    assertThat(grounded.award()).isEqualTo(OscarCategory.BEST_ACTOR);
+    assertThat(grounded.personName()).isNull();
+    assertThat(grounded.keywords()).isEmpty();
   }
 
   // ------------------------------------------------------------------------------------- genre

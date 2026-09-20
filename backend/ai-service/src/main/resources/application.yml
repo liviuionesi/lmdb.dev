@@ -93,6 +93,10 @@ spring:
         # migration to alter that column's dimension.
         model: ${OLLAMA_EMBEDDING_MODEL:nomic-embed-text}
 
+# Academy Award winners come from Wikidata's public query service (TMDB has no award data).
+awards:
+  wikidata-url: ${WIKIDATA_URL:https://query.wikidata.org}
+
 # Candidate pool for recommendations comes from movie-service's own catalog
 # (LMDB's persisted data), not TMDB directly — see MovieCatalogClient.
 movie-service:

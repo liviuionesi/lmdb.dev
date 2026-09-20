@@ -2,6 +2,7 @@ package dev.lmdb.ai.service;
 
 import dev.lmdb.ai.dto.QueryFilterRole;
 import dev.lmdb.ai.dto.StructuredQueryFilterDto;
+import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -27,6 +28,10 @@ import java.util.regex.Pattern;
  *   <li>A directing role needs "direct" or "by" in the query; a producing role needs "produc".
  *   <li>A negation needs a negating word such as "not", "didn't" or "without".
  *   <li>A role and a negation belong to the person, so they go when the person goes.
+ *   <li>Relative years ("the last 20 years"), sort order, "top N", a minimum rating and an Oscar
+ *       category are read from the text by {@link QueryModifiers}. Whatever the model put in those
+ *       fields is ignored. When the query names an Oscar category, a person or keyword made only of
+ *       award words ("best actor") is dropped.
  *   <li>A genre stays if the query has a word that starts like it ("comedies" for Comedy).
  * </ul>
  *
@@ -37,6 +42,33 @@ final class FilterGrounding {
   /** Words that name no search topic. */
   private static final Set<String> GENERIC_WORDS =
       Set.of("movie", "movies", "film", "films", "show", "shows", "list");
+
+  /** Words that only describe an award, so they are not a person or a topic. */
+  private static final Set<String> AWARD_WORDS =
+      Set.of(
+          "oscar",
+          "oscars",
+          "academy",
+          "award",
+          "awards",
+          "best",
+          "actor",
+          "actress",
+          "supporting",
+          "director",
+          "picture",
+          "film",
+          "movie",
+          "movies",
+          "films",
+          "winner",
+          "winners",
+          "won",
+          "winning",
+          "the",
+          "for",
+          "all",
+          "that");
 
   private static final Pattern FOUR_DIGIT_YEAR = Pattern.compile("\\b(\\d{4})\\b");
   private static final Pattern FOUR_DIGIT_DECADE = Pattern.compile("\\b(\\d{3})0s\\b");
@@ -50,17 +82,35 @@ final class FilterGrounding {
   private FilterGrounding() {}
 
   /**
+   * Returns the filter with every unsupported value removed, using today's date.
+   *
+   * @param filter what the model returned
+   * @param query the text the user typed or said
+   * @return a copy that keeps only values the query supports
+   */
+  static StructuredQueryFilterDto ground(StructuredQueryFilterDto filter, String query) {
+    return ground(filter, query, LocalDate.now());
+  }
+
+  /**
    * Returns the filter with every unsupported value removed.
    *
    * @param filter what the model returned
    * @param query the text the user typed or said
+   * @param today today's date, used for "the last 20 years" and "this year"
    * @return a copy that keeps only values the query supports; {@code plainTitle} is unchanged
    */
-  static StructuredQueryFilterDto ground(StructuredQueryFilterDto filter, String query) {
-    String text = query.toLowerCase(Locale.ROOT).replace('’', '\'');
+  static StructuredQueryFilterDto ground(
+      StructuredQueryFilterDto filter, String query, LocalDate today) {
+    String text = query.toLowerCase(Locale.ROOT).replace('\u2019', '\'');
     Set<String> words = wordsOf(text);
+    QueryModifiers modifiers = QueryModifiers.extract(text, today);
+    boolean awardQuery = modifiers.award() != null;
 
     String person = supportedName(filter.personName(), words);
+    if (awardQuery && isOnlyAwardWords(person)) {
+      person = null;
+    }
     String franchise = supportedPhrase(filter.franchise(), words);
     Set<String> franchiseWords = new HashSet<>(tokensOf(franchise));
     List<String> collaborators =
@@ -70,25 +120,48 @@ final class FilterGrounding {
             .toList();
 
     Set<String> named = new HashSet<>(tokensOf(person));
-    named.addAll(tokensOf(franchise));
+    named.addAll(franchiseWords);
     collaborators.forEach(name -> named.addAll(tokensOf(name)));
+    if (awardQuery) {
+      named.addAll(AWARD_WORDS);
+    }
     List<String> keywords =
         filter.keywords().stream()
             .filter(keyword -> supportedPhrase(keyword, words) != null)
             .filter(keyword -> !isRedundant(keyword, named))
             .toList();
 
+    // A relative range ("the last 20 years") replaces whatever years the model gave.
+    boolean relative = modifiers.yearFrom() != null;
+    Integer yearFrom = relative ? modifiers.yearFrom() : supportedYear(filter.yearFrom(), text);
+    Integer yearTo = relative ? modifiers.yearTo() : supportedYear(filter.yearTo(), text);
+
     return new StructuredQueryFilterDto(
         person,
         person == null ? null : supportedRole(filter.role(), text),
-        supportedYear(filter.yearFrom(), text),
-        supportedYear(filter.yearTo(), text),
+        yearFrom,
+        yearTo,
         collaborators,
         supportedGenre(filter.genre(), words),
         person != null && NEGATION.matcher(text).find() ? filter.negated() : List.of(),
         franchise,
         keywords,
+        modifiers.sortBy(),
+        modifiers.limit(),
+        modifiers.minRating(),
+        modifiers.award(),
         filter.plainTitle());
+  }
+
+  /**
+   * Tells whether a name is made only of award words, such as "Best Actor".
+   *
+   * @param name a person's name, or {@code null}
+   * @return {@code true} if the name has words and all of them are award words
+   */
+  private static boolean isOnlyAwardWords(String name) {
+    List<String> tokens = tokensOf(name);
+    return !tokens.isEmpty() && AWARD_WORDS.containsAll(tokens);
   }
 
   /**

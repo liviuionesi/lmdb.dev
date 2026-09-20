@@ -10,12 +10,16 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import dev.lmdb.ai.client.ActorCatalogClient;
+import dev.lmdb.ai.client.AwardsClient;
 import dev.lmdb.ai.client.MovieCatalogClient;
+import dev.lmdb.ai.client.MovieDetails;
 import dev.lmdb.ai.client.MovieListItem;
 import dev.lmdb.ai.client.PersonCredit;
 import dev.lmdb.ai.dto.NaturalLanguageSearchResponseDto;
+import dev.lmdb.ai.dto.OscarCategory;
 import dev.lmdb.ai.dto.QueryFilterRole;
 import dev.lmdb.ai.dto.SearchResultMovieDto;
+import dev.lmdb.ai.dto.SearchSort;
 import dev.lmdb.ai.dto.StructuredQueryFilterDto;
 import java.util.List;
 import java.util.Optional;
@@ -39,6 +43,7 @@ class QueryAggregationServiceTest {
   private ActorCatalogClient actors;
   private MovieCatalogClient movies;
   private RelevanceFilterService relevance;
+  private AwardsClient awards;
   private QueryAggregationService service;
 
   /**
@@ -51,7 +56,8 @@ class QueryAggregationServiceTest {
     actors = mock(ActorCatalogClient.class);
     movies = mock(MovieCatalogClient.class);
     relevance = mock(RelevanceFilterService.class);
-    service = new QueryAggregationService(parser, actors, movies, relevance);
+    awards = mock(AwardsClient.class);
+    service = new QueryAggregationService(parser, actors, movies, relevance, awards);
     when(actors.findPersonId("Tom Hanks")).thenReturn(Optional.of(HANKS));
     when(actors.findPersonId("Daniel Craig")).thenReturn(Optional.of(CRAIG));
     when(relevance.filter(anyString(), any())).thenAnswer(call -> call.getArgument(1));
@@ -359,6 +365,203 @@ class QueryAggregationServiceTest {
     assertThat(response.relaxedCriteria()).isEmpty();
   }
 
+  // ------------------------------------------------------------------ sorting, count, rating
+
+  /** "Sorted by rating" puts the best-rated movie first; a movie with no rating goes last. */
+  @Test
+  @DisplayName("sorts by rating, best first, unrated last")
+  void sortsByRating() {
+    stubFilter(sorted(SearchSort.RATING, null, null));
+    stubCastCredits(
+        HANKS,
+        rated(1L, "Middle", "1994-01-01", 7.0),
+        rated(2L, "Best", "1995-01-01", 8.8),
+        rated(3L, "Unrated", "1996-01-01", null),
+        rated(4L, "Worst", "1997-01-01", 5.1));
+
+    assertThat(titlesOf(service.search("q"))).containsExactly("Best", "Middle", "Worst", "Unrated");
+  }
+
+  /**
+   * "Sorted by revenue" needs the revenue, which credits do not carry, so it is fetched from movie
+   * details. Movies with no known revenue go last.
+   */
+  @Test
+  @DisplayName("sorts by revenue using the movie details")
+  void sortsByRevenue() {
+    stubFilter(sorted(SearchSort.REVENUE, null, null));
+    stubCastCredits(
+        HANKS,
+        credit(1L, "Small", "2001-01-01"),
+        credit(2L, "Huge", "2002-01-01"),
+        credit(3L, "Unknown", "2003-01-01"),
+        credit(4L, "Medium", "2004-01-01"));
+    when(movies.fetchMovieDetails(any()))
+        .thenReturn(
+            List.of(
+                details(1L, "Small", 1_000L),
+                details(2L, "Huge", 900_000_000L),
+                details(3L, "Unknown", 0L),
+                details(4L, "Medium", 50_000_000L)));
+
+    NaturalLanguageSearchResponseDto response = service.search("q");
+
+    assertThat(titlesOf(response)).containsExactly("Huge", "Medium", "Small", "Unknown");
+    assertThat(response.results().get(0).revenue()).isEqualTo(900_000_000L);
+  }
+
+  /** Revenue is only fetched when the query asks for it. */
+  @Test
+  @DisplayName("does not fetch details when no sort by revenue was asked for")
+  void doesNotFetchDetailsWithoutARevenueSort() {
+    stubFilter(sorted(SearchSort.RATING, null, null));
+    stubCastCredits(HANKS, rated(1L, "One", "2001-01-01", 7.0));
+
+    service.search("q");
+
+    verify(movies, never()).fetchMovieDetails(any());
+  }
+
+  /** Release-date sorts read the date text. */
+  @Test
+  @DisplayName("sorts by release date, newest or oldest first")
+  void sortsByReleaseDate() {
+    stubCastCredits(
+        HANKS,
+        credit(1L, "Middle", "1995-05-05"),
+        credit(2L, "Newest", "2010-01-01"),
+        credit(3L, "Oldest", "1980-12-31"));
+
+    stubFilter(sorted(SearchSort.NEWEST, null, null));
+    assertThat(titlesOf(service.search("q"))).containsExactly("Newest", "Middle", "Oldest");
+
+    stubFilter(sorted(SearchSort.OLDEST, null, null));
+    assertThat(titlesOf(service.search("q"))).containsExactly("Oldest", "Middle", "Newest");
+  }
+
+  /** "Top 2 highest rated": the count is taken after sorting, so it keeps the two best. */
+  @Test
+  @DisplayName("keeps the first N after sorting")
+  void limitIsAppliedAfterSorting() {
+    stubFilter(sorted(SearchSort.RATING, 2, null));
+    stubCastCredits(
+        HANKS,
+        rated(1L, "Third", "1994-01-01", 7.0),
+        rated(2L, "First", "1995-01-01", 9.0),
+        rated(3L, "Second", "1996-01-01", 8.0));
+
+    assertThat(titlesOf(service.search("q"))).containsExactly("First", "Second");
+  }
+
+  /** A minimum rating drops movies below it, and movies with no rating. */
+  @Test
+  @DisplayName("drops movies below the minimum rating")
+  void minimumRatingDropsLowRatedMovies() {
+    stubFilter(sorted(null, null, 7.0));
+    stubCastCredits(
+        HANKS,
+        rated(1L, "Good", "1994-01-01", 7.0),
+        rated(2L, "Bad", "1995-01-01", 6.9),
+        rated(3L, "Unrated", "1996-01-01", null));
+
+    assertThat(titlesOf(service.search("q"))).containsExactly("Good");
+  }
+
+  /** A threshold nothing reaches is the weakest criterion after keywords, so it is dropped. */
+  @Test
+  @DisplayName("drops the minimum rating when nothing reaches it, and says so")
+  void relaxesTheMinimumRating() {
+    stubFilter(sorted(null, null, 9.5));
+    stubCastCredits(HANKS, rated(1L, "Good", "1994-01-01", 8.0));
+
+    NaturalLanguageSearchResponseDto response = service.search("q");
+
+    assertThat(titlesOf(response)).containsExactly("Good");
+    assertThat(response.relaxedCriteria()).containsExactly("minRating");
+  }
+
+  /** "Top 10 highest rated movies" names nothing to look up, so it starts from popular movies. */
+  @Test
+  @DisplayName("starts from popular movies when a query only sorts and counts")
+  void startsFromPopularMoviesWhenNothingIsNamed() {
+    stubFilter(
+        new StructuredQueryFilterDto(
+            null,
+            null,
+            null,
+            null,
+            List.of(),
+            null,
+            List.of(),
+            null,
+            List.of(),
+            SearchSort.RATING,
+            2,
+            null,
+            null,
+            null));
+    when(movies.discover(null, null, null, 100))
+        .thenReturn(
+            List.of(
+                new MovieListItem(1L, "A", "", "2001-01-01", null, 6.0),
+                new MovieListItem(2L, "B", "", "2002-01-01", null, 9.0),
+                new MovieListItem(3L, "C", "", "2003-01-01", null, 8.0)));
+
+    assertThat(titlesOf(service.search("top 2 highest rated movies"))).containsExactly("B", "C");
+  }
+
+  // ------------------------------------------------------------------------------------ awards
+
+  /** "Movies that won the Oscar for best actor": the winners' details become the results. */
+  @Test
+  @DisplayName("returns the movies that won an Oscar category")
+  void awardWinnersAreReturned() {
+    stubFilter(award(OscarCategory.BEST_ACTOR, null, null));
+    when(awards.findWinningMovieIds(OscarCategory.BEST_ACTOR)).thenReturn(List.of(872585L, 98L));
+    when(movies.fetchMovieDetails(List.of(872585L, 98L)))
+        .thenReturn(
+            List.of(
+                new MovieDetails(872585L, "Oppenheimer", "", "2023-07-19", null, 8.1, 950_000_000L),
+                new MovieDetails(98L, "Gladiator", "", "2000-05-01", null, 8.2, 460_000_000L)));
+
+    NaturalLanguageSearchResponseDto response = service.search("movies that won best actor");
+
+    assertThat(titlesOf(response)).containsExactly("Oppenheimer", "Gladiator");
+    verify(actors, never()).findPersonId(any());
+  }
+
+  /** "Best picture winners from the last 20 years": the award set is cut by the year range. */
+  @Test
+  @DisplayName("applies the year range to award winners")
+  void awardWinnersAreCutByYears() {
+    stubFilter(award(OscarCategory.BEST_PICTURE, 2006, null));
+    when(awards.findWinningMovieIds(OscarCategory.BEST_PICTURE)).thenReturn(List.of(1L, 2L, 3L));
+    when(movies.fetchMovieDetails(any()))
+        .thenReturn(
+            List.of(
+                new MovieDetails(1L, "Old Winner", "", "1994-01-01", null, 8.0, 1L),
+                new MovieDetails(2L, "Recent Winner", "", "2016-01-01", null, 8.0, 1L),
+                new MovieDetails(3L, "Newest Winner", "", "2024-01-01", null, 8.0, 1L)));
+
+    assertThat(titlesOf(service.search("q"))).containsExactly("Recent Winner", "Newest Winner");
+  }
+
+  /**
+   * When Wikidata has nothing, dropping other criteria cannot help. The result is empty and nothing
+   * is reported as dropped.
+   */
+  @Test
+  @DisplayName("returns nothing, and drops nothing, when there are no award winners")
+  void noAwardWinnersGivesNothing() {
+    stubFilter(award(OscarCategory.BEST_ACTOR, 2000, null));
+    when(awards.findWinningMovieIds(OscarCategory.BEST_ACTOR)).thenReturn(List.of());
+
+    NaturalLanguageSearchResponseDto response = service.search("q");
+
+    assertThat(response.results()).isEmpty();
+    assertThat(response.relaxedCriteria()).isEmpty();
+  }
+
   // ------------------------------------------------------------------------------- plain title
 
   /** A query that is just a title is searched as a title, as before. */
@@ -475,6 +678,72 @@ class QueryAggregationServiceTest {
    */
   private static SearchResultMovieDto movie(long id, String title, String releaseDate) {
     return new SearchResultMovieDto(id, title, "", releaseDate, null, 7.0);
+  }
+
+  /**
+   * Builds a filter for Tom Hanks with a sort, a count and a minimum rating.
+   *
+   * @param sort the order, or null
+   * @param limit the count, or null
+   * @param minRating the minimum rating, or null
+   * @return the filter
+   */
+  private static StructuredQueryFilterDto sorted(SearchSort sort, Integer limit, Double minRating) {
+    return new StructuredQueryFilterDto(
+        "Tom Hanks",
+        QueryFilterRole.ACTED,
+        null,
+        null,
+        List.of(),
+        null,
+        List.of(),
+        null,
+        List.of(),
+        sort,
+        limit,
+        minRating,
+        null,
+        null);
+  }
+
+  /**
+   * Builds a filter that asks only for the winners of an Oscar category.
+   *
+   * @param category the category
+   * @param yearFrom first year, or null
+   * @param yearTo last year, or null
+   * @return the filter
+   */
+  private static StructuredQueryFilterDto award(
+      OscarCategory category, Integer yearFrom, Integer yearTo) {
+    return new StructuredQueryFilterDto(
+        null, null, yearFrom, yearTo, List.of(), null, List.of(), null, List.of(), null, null, null,
+        category, null);
+  }
+
+  /**
+   * Builds a cast credit with a rating.
+   *
+   * @param id movie id
+   * @param title movie title
+   * @param releaseDate release date
+   * @param rating average vote, or null
+   * @return the credit
+   */
+  private static PersonCredit rated(long id, String title, String releaseDate, Double rating) {
+    return new PersonCredit(id, title, releaseDate, null, rating);
+  }
+
+  /**
+   * Builds movie details with a revenue.
+   *
+   * @param id movie id
+   * @param title movie title
+   * @param revenue revenue in dollars
+   * @return the details
+   */
+  private static MovieDetails details(long id, String title, long revenue) {
+    return new MovieDetails(id, title, "", "2000-01-01", null, 7.0, revenue);
   }
 
   /**

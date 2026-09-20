@@ -3,10 +3,13 @@ package dev.lmdb.ai.service;
 import dev.lmdb.ai.dto.QueryParseResponseDto;
 import dev.lmdb.ai.dto.StructuredQueryFilterDto;
 import dev.lmdb.ai.security.PromptSanitizer;
+import java.time.Clock;
+import java.time.LocalDate;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.prompt.ChatOptions;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
@@ -66,13 +69,30 @@ public class QueryParsingService {
       """;
 
   private final ChatClient chatClient;
+  private final Clock clock;
 
   /**
+   * Builds the service with the system clock.
+   *
    * @param chatClientBuilder builder for the Spring AI {@link ChatClient} used to extract the
    *     filter
    */
+  @Autowired
   public QueryParsingService(ChatClient.Builder chatClientBuilder) {
+    this(chatClientBuilder, Clock.systemDefaultZone());
+  }
+
+  /**
+   * Builds the service with a given clock, so a test can fix the date that "the last 20 years" is
+   * counted from.
+   *
+   * @param chatClientBuilder builder for the Spring AI {@link ChatClient} used to extract the
+   *     filter
+   * @param clock the clock that gives today's date
+   */
+  public QueryParsingService(ChatClient.Builder chatClientBuilder, Clock clock) {
     this.chatClient = chatClientBuilder.build();
+    this.clock = clock;
   }
 
   /**
@@ -111,7 +131,11 @@ public class QueryParsingService {
                 .user(sanitized)
                 .call()
                 .entity(StructuredQueryFilterDto.class);
-        filter = usable(parsed == null ? null : FilterGrounding.ground(parsed, sanitized));
+        filter =
+            usable(
+                parsed == null
+                    ? null
+                    : FilterGrounding.ground(parsed, sanitized, LocalDate.now(clock)));
         if (filter == null) {
           log.warn("Query-parsing reply had nothing the query supports (attempt {})", attempt);
         }

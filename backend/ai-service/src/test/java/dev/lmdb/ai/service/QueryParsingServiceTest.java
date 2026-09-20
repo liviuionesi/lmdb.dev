@@ -8,7 +8,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import dev.lmdb.ai.dto.QueryFilterRole;
+import dev.lmdb.ai.dto.SearchSort;
 import dev.lmdb.ai.dto.StructuredQueryFilterDto;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -315,6 +319,31 @@ class QueryParsingServiceTest {
     ArgumentCaptor<Prompt> prompt = ArgumentCaptor.forClass(Prompt.class);
     verify(chatModel).call(prompt.capture());
     assertThat(prompt.getValue().getOptions().getTemperature()).isEqualTo(0.0);
+  }
+
+  /**
+   * The user's own example: "Tom Cruise movies from the last 20 years sorted by rating". The model
+   * gives the person, and code reads the years and the sort from the text, counted from a fixed
+   * date so the answer does not change with the calendar.
+   */
+  @Test
+  @DisplayName("reads 'the last 20 years' and 'sorted by rating' from the text")
+  void readsRelativeYearsAndSortFromTheText() {
+    Clock fixed = Clock.fixed(Instant.parse("2026-09-20T10:00:00Z"), ZoneOffset.UTC);
+    QueryParsingService dated = new QueryParsingService(ChatClient.builder(chatModel), fixed);
+    stubReplies(
+        """
+        {"personName":"Tom Cruise","role":"ACTED","yearFrom":null,"yearTo":null,
+         "collaborators":[],"genre":null,"negated":[],"franchise":null,"keywords":[],
+         "plainTitle":null}
+        """);
+
+    StructuredQueryFilterDto filter =
+        dated.parse("Tom Cruise movies from the last 20 years sorted by rating");
+
+    assertThat(filter.personName()).isEqualTo("Tom Cruise");
+    assertThat(filter.yearFrom()).isEqualTo(2006);
+    assertThat(filter.sortBy()).isEqualTo(SearchSort.RATING);
   }
 
   /**
