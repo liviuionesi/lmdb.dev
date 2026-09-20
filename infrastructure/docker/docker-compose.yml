@@ -629,28 +629,38 @@ volumes:
     name: lmdb_postgres_data
     driver: local
   mongo_data:
+    name: lmdb_mongo_data
     driver: local
   mongo_config:
+    name: lmdb_mongo_config
     driver: local
   redis_data:
+    name: lmdb_redis_data
     driver: local
   minio_data:
+    name: lmdb_minio_data
     driver: local
   ollama_data:
+    name: lmdb_ollama_data
     driver: local
   kafka_data:
+    name: lmdb_kafka_data
     driver: local
   # SonarQube (#20). NOTE: do not reuse volumes across major SonarQube
   # versions — a data dir written by an older image (e.g. the old
   # lts-community) makes the new web server crash-loop on startup while
   # cleaning its work dir. On a version bump, `docker volume rm` these first.
   sonarqube_db_data:
+    name: lmdb_sonarqube_db_data
     driver: local
   sonarqube_data:
+    name: lmdb_sonarqube_data
     driver: local
   sonarqube_extensions:
+    name: lmdb_sonarqube_extensions
     driver: local
   sonarqube_logs:
+    name: lmdb_sonarqube_logs
     driver: local
 
 networks:

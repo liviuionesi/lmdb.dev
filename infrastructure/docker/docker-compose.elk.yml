@@ -134,6 +134,7 @@ services:
 
 volumes:
   elk_es_data:
+    name: lmdb_elk_es_data
     driver: local
 
 # No `external: true` here: this file is meant to run combined with
