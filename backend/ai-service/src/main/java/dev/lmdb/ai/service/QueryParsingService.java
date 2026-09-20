@@ -6,6 +6,7 @@ import dev.lmdb.ai.security.PromptSanitizer;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.prompt.ChatOptions;
 import org.springframework.stereotype.Service;
 
 /**
@@ -105,6 +106,8 @@ public class QueryParsingService {
             chatClient
                 .prompt()
                 .system(SYSTEM_PROMPT)
+                // No randomness: the same query should always be read the same way.
+                .options(ChatOptions.builder().temperature(0.0))
                 .user(sanitized)
                 .call()
                 .entity(StructuredQueryFilterDto.class);

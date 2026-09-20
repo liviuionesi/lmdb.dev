@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.prompt.ChatOptions;
 import org.springframework.stereotype.Service;
 
 /**
@@ -87,6 +88,8 @@ public class RelevanceFilterService {
           chatClient
               .prompt()
               .system(SYSTEM_PROMPT)
+              // No randomness: the same query should always be read the same way.
+              .options(ChatOptions.builder().temperature(0.0))
               .user(describe(query, chunk))
               .call()
               .entity(RelevanceVerdict.class);

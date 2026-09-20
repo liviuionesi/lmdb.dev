@@ -13,6 +13,7 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.model.ChatModel;
@@ -296,6 +297,24 @@ class QueryParsingServiceTest {
 
     assertThat(filter.franchise()).isEqualTo("James Bond");
     verify(chatModel, times(2)).call(any(Prompt.class));
+  }
+
+  /** Reading a query must not vary from run to run, so the model is asked with no randomness. */
+  @Test
+  @DisplayName("asks the model with temperature 0")
+  void asksWithNoRandomness() {
+    stubReplies(
+        """
+        {"personName":"Tom Hanks","role":"ACTED","yearFrom":null,"yearTo":null,
+         "collaborators":[],"genre":null,"negated":[],"franchise":null,"keywords":[],
+         "plainTitle":null}
+        """);
+
+    service.parse("Tom Hanks movies");
+
+    ArgumentCaptor<Prompt> prompt = ArgumentCaptor.forClass(Prompt.class);
+    verify(chatModel).call(prompt.capture());
+    assertThat(prompt.getValue().getOptions().getTemperature()).isEqualTo(0.0);
   }
 
   /**

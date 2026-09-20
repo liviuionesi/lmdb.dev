@@ -75,6 +75,33 @@ class FilterGroundingTest {
     assertThat(grounded.collaborators()).containsExactly("Edward Norton");
   }
 
+  /**
+   * For "Daniel Craig as James Bond" the model listed the character as a collaborator. It is the
+   * franchise, not a second person.
+   */
+  @Test
+  @DisplayName("drops a collaborator that only repeats the franchise")
+  void dropsACollaboratorThatRepeatsTheFranchise() {
+    StructuredQueryFilterDto parsed =
+        new StructuredQueryFilterDto(
+            "Daniel Craig",
+            QueryFilterRole.ACTED,
+            null,
+            null,
+            List.of("James Bond"),
+            null,
+            List.of(),
+            "James Bond",
+            List.of(),
+            null);
+
+    StructuredQueryFilterDto grounded =
+        FilterGrounding.ground(parsed, "movies with Daniel Craig as James Bond");
+
+    assertThat(grounded.collaborators()).isEmpty();
+    assertThat(grounded.franchise()).isEqualTo("James Bond");
+  }
+
   // ------------------------------------------------------------------- franchise and keywords
 
   /** Every word of the franchise must be in the query. */

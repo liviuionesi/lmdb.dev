@@ -81,6 +81,21 @@ class RelevanceFilterServiceTest {
         .contains("2. Titanic (1995)");
   }
 
+  /**
+   * The same movies must get the same verdict every time, so the model is asked with no randomness.
+   */
+  @Test
+  @DisplayName("asks the model with temperature 0")
+  void asksWithNoRandomness() {
+    stubReply("{\"matches\":[1]}");
+
+    service.filter("q", List.of(movie(1, "One")));
+
+    ArgumentCaptor<Prompt> prompt = ArgumentCaptor.forClass(Prompt.class);
+    verify(chatModel).call(prompt.capture());
+    assertThat(prompt.getValue().getOptions().getTemperature()).isEqualTo(0.0);
+  }
+
   /** A number outside the list is a model mistake and must not become a result or an exception. */
   @Test
   @DisplayName("ignores numbers that are not in the list")

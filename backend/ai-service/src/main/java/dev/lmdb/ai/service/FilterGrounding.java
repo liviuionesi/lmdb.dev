@@ -19,7 +19,7 @@ import java.util.regex.Pattern;
  *
  * <ul>
  *   <li>A person or collaborator stays if the last word of the name is in the query. A user may
- *       type only a surname.
+ *       type only a surname. A collaborator that only repeats the franchise name is dropped.
  *   <li>A franchise or keyword stays if all its words are in the query. Keywords that only repeat
  *       the person, the franchise or a word like "movies" are dropped.
  *   <li>A year stays if the query has that year, a year next to it (for "before 2010"), or a decade
@@ -61,9 +61,13 @@ final class FilterGrounding {
     Set<String> words = wordsOf(text);
 
     String person = supportedName(filter.personName(), words);
-    List<String> collaborators =
-        filter.collaborators().stream().filter(name -> supportedName(name, words) != null).toList();
     String franchise = supportedPhrase(filter.franchise(), words);
+    Set<String> franchiseWords = new HashSet<>(tokensOf(franchise));
+    List<String> collaborators =
+        filter.collaborators().stream()
+            .filter(name -> supportedName(name, words) != null)
+            .filter(name -> !franchiseWords.containsAll(tokensOf(name)))
+            .toList();
 
     Set<String> named = new HashSet<>(tokensOf(person));
     named.addAll(tokensOf(franchise));
