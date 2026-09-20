@@ -8,11 +8,11 @@ import java.util.regex.Pattern;
 
 /**
  * What a query says about time, order, count, rating and awards, read straight from its text. These
- * parts follow fixed phrasing ("the last 20 years", "top 10", "rated above 7"), so plain patterns
- * read them exactly and a model cannot get them wrong. {@link FilterGrounding} adds the result to
- * the filter the model produced.
+ * parts follow fixed phrasing ("the last 20 years", "the 1990s", "top 10", "rated above 7"), so
+ * plain patterns read them exactly and a model cannot get them wrong. {@link FilterGrounding} adds
+ * the result to the filter the model produced.
  *
- * @param yearFrom first year of a relative range such as "the last 20 years", or {@code null}
+ * @param yearFrom first year of a range such as "the last 20 years" or "the 1990s", or {@code null}
  * @param yearTo last year of a relative range such as "this year", or {@code null}
  * @param sortBy the order asked for, or {@code null} for the source order
  * @param limit how many results to keep, or {@code null} for all
@@ -30,6 +30,8 @@ record QueryModifiers(
   private static final Pattern LAST_N_YEARS =
       Pattern.compile("\\b(?:last|past|previous)\\s+(\\d{1,2})\\s+years?\\b");
   private static final Pattern LAST_DECADE = Pattern.compile("\\b(?:last|past)\\s+decade\\b");
+  private static final Pattern FOUR_DIGIT_DECADE = Pattern.compile("\\b(\\d{3})0'?s\\b");
+  private static final Pattern TWO_DIGIT_DECADE = Pattern.compile("\\b(\\d)0'?s\\b");
   private static final Pattern THIS_YEAR = Pattern.compile("\\bthis\\s+year\\b");
   private static final Pattern LAST_YEAR = Pattern.compile("\\blast\\s+year\\b");
 
@@ -91,6 +93,10 @@ record QueryModifiers(
     if (LAST_DECADE.matcher(text).find()) {
       return new Integer[] {year - 10, null};
     }
+    Integer[] decade = decadeIn(text);
+    if (decade != null) {
+      return decade;
+    }
     if (THIS_YEAR.matcher(text).find()) {
       return new Integer[] {year, year};
     }
@@ -98,6 +104,28 @@ record QueryModifiers(
       return new Integer[] {year - 1, year - 1};
     }
     return new Integer[] {null, null};
+  }
+
+  /**
+   * Reads a decade such as "the 2010s", "the 1990s" or "the 80s". A two-digit decade from 30 to 90
+   * is the 1900s; from 00 to 20 it is the 2000s.
+   *
+   * @param text the lower-case query
+   * @return the first and last year of the decade, or {@code null} if the query names none
+   */
+  private static Integer[] decadeIn(String text) {
+    Matcher full = FOUR_DIGIT_DECADE.matcher(text);
+    if (full.find()) {
+      int first = Integer.parseInt(full.group(1)) * 10;
+      return new Integer[] {first, first + 9};
+    }
+    Matcher shortForm = TWO_DIGIT_DECADE.matcher(text);
+    if (shortForm.find()) {
+      int tens = Integer.parseInt(shortForm.group(1)) * 10;
+      int first = tens >= 30 ? 1900 + tens : 2000 + tens;
+      return new Integer[] {first, first + 9};
+    }
+    return null;
   }
 
   /**

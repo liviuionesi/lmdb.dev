@@ -18,6 +18,12 @@ class QueryModifiersTest {
 
   private static final LocalDate TODAY = LocalDate.of(2026, 9, 20);
 
+  /**
+   * Reads a query with today fixed.
+   *
+   * @param query the query as typed
+   * @return the modifiers it carries
+   */
   private static QueryModifiers read(String query) {
     return QueryModifiers.extract(query.toLowerCase(), TODAY);
   }
@@ -59,6 +65,20 @@ class QueryModifiersTest {
 
     assertThat(modifiers.yearFrom()).isEqualTo(2025);
     assertThat(modifiers.yearTo()).isEqualTo(2025);
+  }
+
+  /** A decade is a fixed range, whatever the model said. */
+  @Test
+  @DisplayName("reads decades such as the 2010s, the 1990s and the 80s")
+  void decades() {
+    assertThat(read("Leonardo DiCaprio movies in the 2010s").yearFrom()).isEqualTo(2010);
+    assertThat(read("Leonardo DiCaprio movies in the 2010s").yearTo()).isEqualTo(2019);
+    assertThat(read("comedies of the 1990s").yearFrom()).isEqualTo(1990);
+    assertThat(read("comedies of the 1990s").yearTo()).isEqualTo(1999);
+    assertThat(read("action movies from the 80s").yearFrom()).isEqualTo(1980);
+    assertThat(read("action movies from the 80's").yearTo()).isEqualTo(1989);
+    assertThat(read("indie movies of the 00s").yearFrom()).isEqualTo(2000);
+    assertThat(read("indie movies of the 00s").yearTo()).isEqualTo(2009);
   }
 
   /** A query with no relative time leaves the years to the model and the other rules. */
