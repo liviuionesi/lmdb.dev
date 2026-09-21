@@ -36,9 +36,9 @@ test.describe('LMDB Core User Journeys', () => {
 
   test('Given a user using the navigation input, when entering a movie title, then matching search results populate the grid', async ({ page }) => {
     await page.goto('/');
-    const searchInput = page.locator('input[type="text"]').first();
+    const searchInput = page.locator('textarea[placeholder*="Search"]').first();
     await searchInput.fill('Inception');
-    await searchInput.press('Enter');
+    await searchInput.press('Shift+Enter');
     await expect(page.locator('.movie-card').first()).toBeVisible();
   });
 
@@ -48,7 +48,7 @@ test.describe('LMDB Core User Journeys', () => {
     await firstMovie.click();
     // Validate Movie Information title, video trailers button, and actor credits
     await expect(page).toHaveURL(/.*\/movie\/.*/);
-    await expect(page.locator('h1, h2').first()).toBeVisible();
+    await expect(page.locator('h3').first()).toBeVisible();
     await expect(page.locator('a[href*="/actors/"]').first()).toBeVisible();
   });
 
