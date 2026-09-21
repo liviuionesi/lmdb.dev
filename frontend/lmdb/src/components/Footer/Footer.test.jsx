@@ -14,9 +14,10 @@ describe('Footer Component', () => {
     vi.restoreAllMocks();
   });
 
-  it('renders standby provider badge and copyright by default', () => {
+  it('renders standby provider badge and copyright by default', async () => {
+    vi.spyOn(apiUrlModule, 'resolveApiUrl').mockResolvedValue(null);
     renderWithProviders(<Footer />);
-    expect(screen.getByText(/^Backend in Standby$/i)).toBeInTheDocument();
+    expect(await screen.findByText('Multi-Cloud Architecture (Standby)')).toBeInTheDocument();
     expect(screen.getByText(/LMDB \(Live Movies Database\) • Multi-Cloud Architecture/i)).toBeInTheDocument();
   });
 
@@ -41,8 +42,10 @@ describe('Footer Component', () => {
     });
   });
 
-  it('renders TMDB attribution and provides link to /about page', () => {
+  it('renders TMDB attribution and provides link to /about page', async () => {
+    vi.spyOn(apiUrlModule, 'resolveApiUrl').mockResolvedValue(null);
     renderWithProviders(<Footer />);
+    expect(await screen.findByText('Multi-Cloud Architecture (Standby)')).toBeInTheDocument(); // wait for effect to finish
     expect(screen.getByText(/Movie data and imagery provided by/i)).toBeInTheDocument();
     expect(screen.getByText(/This product uses the TMDB API but is not endorsed or certified by TMDB/i)).toBeInTheDocument();
 

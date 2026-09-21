@@ -90,8 +90,8 @@ function StatusCard({ title, description, url, secondaryUrl, secondaryLabel }) {
     >
       <CardContent sx={{ p: 2.5, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
         {/* Header with Icon, Title, Port & Action */}
-        <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={1.5}>
-          <Box display="flex" alignItems="center" gap={1.5}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1.5 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
             <Avatar
               sx={{
                 bgcolor: meta.bg,
@@ -104,7 +104,7 @@ function StatusCard({ title, description, url, secondaryUrl, secondaryLabel }) {
               {meta.icon}
             </Avatar>
             <Box>
-              <Box display="flex" alignItems="center" gap={1}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Typography variant="subtitle1" fontWeight={700} sx={{ lineHeight: 1.2 }}>
                   {title}
                 </Typography>
@@ -122,8 +122,8 @@ function StatusCard({ title, description, url, secondaryUrl, secondaryLabel }) {
             </Box>
           </Box>
 
-          <Box display="flex" alignItems="center" gap={1.5}>
-            <Box display="flex" alignItems="center" gap={0.8}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
               <Tooltip title={STATUS_LABEL[status]}>
                 <span className={`${classes.statusDot} ${dotClass}`} aria-label={STATUS_LABEL[status]} />
               </Tooltip>
@@ -141,7 +141,7 @@ function StatusCard({ title, description, url, secondaryUrl, secondaryLabel }) {
               />
             </Box>
 
-            <Box display="flex" gap={1}>
+            <Box sx={{ display: 'flex', gap: 1 }}>
               <Button
                 size="small"
                 variant="outlined"

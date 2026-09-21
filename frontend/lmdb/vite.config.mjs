@@ -4,7 +4,7 @@ import path from 'node:path';
 import { defineConfig, coverageConfigDefaults } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 
-const __dirname = fileURLToPath(new URL('.', import.meta.url));
+const projectDir = fileURLToPath(new URL('.', import.meta.url));
 
 /**
  * Development middleware to handle /api/wakeup requests directly in the Vite dev server.
@@ -20,7 +20,8 @@ function wakeupDevPlugin() {
             'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
             'Access-Control-Allow-Headers': 'Content-Type',
           });
-          return res.end();
+          res.end();
+          return;
         }
 
         let body = '';
@@ -35,23 +36,23 @@ function wakeupDevPlugin() {
             // Ignored
           }
           const cloud = parsed.cloud || 'azure';
-          const repoRoot = path.resolve(__dirname, '../..');
+          const repoRoot = path.resolve(projectDir, '../..');
 
           // Trigger backend start in background
           if (cloud === 'minikube' || cloud === 'tunnel') {
-            spawn('docker', ['compose', '-f', 'infrastructure/docker/docker-compose.yml', 'start'], {
+            spawn('/usr/bin/env', ['docker', 'compose', '-f', 'infrastructure/docker/docker-compose.yml', 'start'], {
               cwd: repoRoot,
               detached: true,
               stdio: 'ignore',
             }).unref();
           } else if (cloud === 'aws') {
-            spawn('bash', ['infrastructure/scripts/start-aws.sh'], {
+            spawn('/bin/bash', ['infrastructure/scripts/start-aws.sh'], {
               cwd: repoRoot,
               detached: true,
               stdio: 'ignore',
             }).unref();
           } else {
-            spawn('bash', ['infrastructure/scripts/start-azure.sh'], {
+            spawn('/bin/bash', ['infrastructure/scripts/start-azure.sh'], {
               cwd: repoRoot,
               detached: true,
               stdio: 'ignore',
@@ -92,6 +93,7 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
+    chunkSizeWarningLimit: 1000,
   },
   test: {
     globals: true,
