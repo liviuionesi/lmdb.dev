@@ -94,7 +94,7 @@ record QueryModifiers(
       return new Integer[] {year - 10, null};
     }
     Integer[] decade = decadeIn(text);
-    if (decade != null) {
+    if (decade.length > 0) {
       return decade;
     }
     if (THIS_YEAR.matcher(text).find()) {
@@ -111,7 +111,7 @@ record QueryModifiers(
    * is the 1900s; from 00 to 20 it is the 2000s.
    *
    * @param text the lower-case query
-   * @return the first and last year of the decade, or {@code null} if the query names none
+   * @return the first and last year of the decade, or an empty array if the query names none
    */
   private static Integer[] decadeIn(String text) {
     Matcher full = FOUR_DIGIT_DECADE.matcher(text);
@@ -125,7 +125,7 @@ record QueryModifiers(
       int first = tens >= 30 ? 1900 + tens : 2000 + tens;
       return new Integer[] {first, first + 9};
     }
-    return null;
+    return new Integer[0];
   }
 
   /**
@@ -139,6 +139,23 @@ record QueryModifiers(
     if (REVENUE.matcher(text).find()) {
       return SearchSort.REVENUE;
     }
+
+    boolean hasDesc = text.contains("descend") || text.matches(".*\\bdesc\\b.*");
+    boolean hasAsc = text.contains("ascend") || text.matches(".*\\basc\\b.*");
+
+    if (hasDesc && text.contains("chronolog")) {
+      return SearchSort.NEWEST;
+    }
+    if (hasAsc && text.contains("chronolog")) {
+      return SearchSort.OLDEST;
+    }
+    if (hasDesc && text.contains("release")) {
+      return SearchSort.NEWEST;
+    }
+    if (hasAsc && text.contains("release")) {
+      return SearchSort.OLDEST;
+    }
+
     if (OLDEST.matcher(text).find()) {
       return SearchSort.OLDEST;
     }

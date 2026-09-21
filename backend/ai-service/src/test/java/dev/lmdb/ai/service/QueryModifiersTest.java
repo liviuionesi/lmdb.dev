@@ -126,6 +126,10 @@ class QueryModifiersTest {
         .isEqualTo(SearchSort.NEWEST);
     assertThat(read("latest Marvel movies").sortBy()).isEqualTo(SearchSort.NEWEST);
     assertThat(read("oldest Bond movies").sortBy()).isEqualTo(SearchSort.OLDEST);
+    assertThat(read("movies sorted by chronological release descending").sortBy())
+        .isEqualTo(SearchSort.NEWEST);
+    assertThat(read("movies sorted by chronological release ascending").sortBy())
+        .isEqualTo(SearchSort.OLDEST);
   }
 
   /** A query with no sort words keeps the source order. */
