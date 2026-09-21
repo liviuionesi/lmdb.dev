@@ -39,6 +39,19 @@ jobs:
           npm install
           npx playwright install --with-deps chromium
 
+      - name: Start Infrastructure (Backend & Frontend)
+        env:
+          TMDB_API_KEY: "dummy_key_for_e2e_tests"
+          JWT_SECRET: "dummy_jwt_secret_for_e2e_tests"
+        run: |
+          ./infrastructure/scripts/start-infrastructure.sh
+          
+          echo "Waiting for API Gateway to be healthy..."
+          timeout 300 bash -c 'while [[ "$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/actuator/health)" != "200" ]]; do sleep 5; done' || (echo "API Gateway failed" && docker compose -f infrastructure/docker/docker-compose.yml logs && exit 1)
+          
+          echo "Waiting for Frontend to be healthy..."
+          timeout 120 bash -c 'while [[ "$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000)" != "200" && "$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000)" != "304" && "$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000)" != "404" ]]; do sleep 5; done' || (echo "Frontend failed" && exit 1)
+
       - name: Execute Playwright E2E Test Suite
         working-directory: e2e
         env:

@@ -100,12 +100,17 @@ public class SecurityConfig {
                     .pathMatchers("/account/**")
                     .permitAll()
 
-                    // Voice control (#68): unlike the rest of ai-service, speech-to-text
-                    // isn't scoped to a user (no conversation/taste-profile data touched)
-                    // — voice button works for anonymous
-                    // visitors too (theme toggle, genre browsing). Must be listed before
-                    // the /api/v1/ai/** rule below, which requires auth for everything else.
+                    // Voice control & natural-language search (#68, #203, #214): speech-to-text,
+                    // voice-command classification, and natural-language query parsing/execution do not
+                    // touch per-user data (no conversation or taste-profile data) — available to
+                    // anonymous visitors too. Must be listed before the /api/v1/ai/** rule below.
                     .pathMatchers(HttpMethod.POST, "/api/v1/ai/speech-to-text")
+                    .permitAll()
+                    .pathMatchers(HttpMethod.POST, "/api/v1/ai/voice-command")
+                    .permitAll()
+                    .pathMatchers(HttpMethod.POST, "/api/v1/ai/search/query")
+                    .permitAll()
+                    .pathMatchers(HttpMethod.POST, "/api/v1/ai/search/execute")
                     .permitAll()
 
                     // AI service (#36): every other feature (chat, recommendations,

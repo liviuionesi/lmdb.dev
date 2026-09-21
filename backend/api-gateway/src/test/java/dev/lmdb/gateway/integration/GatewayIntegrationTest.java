@@ -505,11 +505,26 @@ class GatewayIntegrationTest {
     aiMock.verify(postRequestedFor(urlEqualTo("/api/v1/ai/speech-to-text")));
   }
 
+  @Test
+  @DisplayName("AI voice-command, search query, and search execute routes are public without a token")
+  void aiPublicRoutesAreAccessibleWithoutToken() {
+    aiMock.stubFor(post(urlEqualTo("/api/v1/ai/voice-command")).willReturn(okJson("{\"command\":\"LOGOUT\"}")));
+    aiMock.stubFor(post(urlEqualTo("/api/v1/ai/search/query")).willReturn(okJson("{\"spans\":[]}")));
+    aiMock.stubFor(post(urlEqualTo("/api/v1/ai/search/execute")).willReturn(okJson("{\"results\":[]}")));
+
+    client.post().uri("/api/v1/ai/voice-command").exchange().expectStatus().isOk();
+    client.post().uri("/api/v1/ai/search/query").exchange().expectStatus().isOk();
+    client.post().uri("/api/v1/ai/search/execute").exchange().expectStatus().isOk();
+
+    aiMock.verify(postRequestedFor(urlEqualTo("/api/v1/ai/voice-command")));
+    aiMock.verify(postRequestedFor(urlEqualTo("/api/v1/ai/search/query")));
+    aiMock.verify(postRequestedFor(urlEqualTo("/api/v1/ai/search/execute")));
+  }
+
   /**
-   * The counterpart to the public speech-to-text carve-out: every other ai-service route is
-   * user-scoped (conversations and taste profiles, per ADR-012) and stays behind the {@code
-   * /api/v1/ai/**} authentication rule. Without this, the speech-to-text exception could silently
-   * widen into "all of ai-service is public" and nothing here would catch it.
+   * The counterpart to the public ai-service carve-outs: user-scoped ai-service routes
+   * (conversations and taste profiles, per ADR-012) stay behind the {@code /api/v1/ai/**}
+   * authentication rule.
    */
   @Test
   @DisplayName("Other AI service routes still require authentication")
