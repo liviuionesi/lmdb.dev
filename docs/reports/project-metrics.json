@@ -1,45 +1,45 @@
 {
-  "generated_at": "2026-08-14T21:15:32.257031",
+  "generated_at": "2026-09-21T18:56:04.409336",
   "git": {
-    "commit_count": 445,
-    "first_commit": "2024-03-14 (2 years, 5 months ago)",
-    "latest_commit": "2026-08-14 (18 minutes ago)",
-    "commit_hash": "bb93f30",
+    "commit_count": 761,
+    "first_commit": "2024-03-14 (2 years, 6 months ago)",
+    "latest_commit": "2026-09-21 (52 minutes ago)",
+    "commit_hash": "f0ca1e8",
     "branch": "develop",
-    "insertions": 271907,
-    "deletions": 194148,
-    "total_churn": 466055,
-    "net_growth": 77759,
+    "insertions": 341035,
+    "deletions": 236689,
+    "total_churn": 577724,
+    "net_growth": 104346,
     "authors_count": 6
   },
   "languages": {
     "Java (Spring Boot / gRPC)": {
-      "files": 229,
-      "total": 27382,
-      "blank": 2891,
-      "comment": 8808,
-      "code": 15683
+      "files": 314,
+      "total": 44076,
+      "blank": 4551,
+      "comment": 14048,
+      "code": 25477
     },
     "JavaScript / React (JSX)": {
-      "files": 96,
-      "total": 8158,
-      "blank": 1014,
-      "comment": 611,
-      "code": 6533
+      "files": 113,
+      "total": 11134,
+      "blank": 1384,
+      "comment": 1204,
+      "code": 8546
     },
     "Documentation (Markdown)": {
-      "files": 69,
-      "total": 18419,
-      "blank": 3768,
+      "files": 63,
+      "total": 13310,
+      "blank": 2657,
       "comment": 1,
-      "code": 14650
+      "code": 10652
     },
     "Kubernetes & CI/CD (YAML)": {
-      "files": 83,
-      "total": 5447,
-      "blank": 266,
-      "comment": 693,
-      "code": 4488
+      "files": 82,
+      "total": 5712,
+      "blank": 264,
+      "comment": 809,
+      "code": 4639
     },
     "Terraform & Cloud (HCL)": {
       "files": 28,
@@ -49,11 +49,11 @@
       "code": 835
     },
     "Shell Automation (Bash)": {
-      "files": 30,
-      "total": 2618,
-      "blank": 361,
-      "comment": 386,
-      "code": 1871
+      "files": 37,
+      "total": 3387,
+      "blank": 424,
+      "comment": 614,
+      "code": 2349
     },
     "CSS & Styling": {
       "files": 1,
@@ -63,17 +63,17 @@
       "code": 12
     },
     "Build & Config (Gradle/Properties)": {
-      "files": 17,
-      "total": 1313,
-      "blank": 184,
-      "comment": 46,
-      "code": 1083
+      "files": 18,
+      "total": 1696,
+      "blank": 204,
+      "comment": 50,
+      "code": 1442
     },
     "Protocol Buffers (Proto3)": {
       "files": 1,
-      "total": 45,
+      "total": 42,
       "blank": 8,
-      "comment": 6,
+      "comment": 3,
       "code": 31
     },
     "SQL & DB Migrations": {
@@ -84,122 +84,122 @@
       "code": 145
     },
     "XML & HTML": {
-      "files": 3,
-      "total": 113,
-      "blank": 12,
+      "files": 4,
+      "total": 162,
+      "blank": 20,
       "comment": 6,
-      "code": 95
+      "code": 136
     },
     "JSON Data": {
-      "files": 18,
-      "total": 3665,
+      "files": 24,
+      "total": 7246,
       "blank": 1,
       "comment": 0,
-      "code": 3664
+      "code": 7245
     }
   },
   "modules": {
     "api-gateway (Port 8080)": {
       "files": 44,
-      "total": 7005,
-      "code": 4364,
-      "comment": 1707
+      "total": 7380,
+      "code": 4560,
+      "comment": 1853
     },
     "movie-service (Port 8081)": {
-      "files": 71,
-      "total": 10068,
-      "code": 6424,
-      "comment": 2526
+      "files": 77,
+      "total": 10725,
+      "code": 6692,
+      "comment": 2902
     },
     "actor-service (Port 8083)": {
-      "files": 30,
-      "total": 3328,
-      "code": 1929,
-      "comment": 1070
+      "files": 38,
+      "total": 5414,
+      "code": 3102,
+      "comment": 1773
     },
     "user-service (Port 8082)": {
-      "files": 30,
-      "total": 2753,
-      "code": 1638,
-      "comment": 813
+      "files": 35,
+      "total": 3534,
+      "code": 2101,
+      "comment": 1038
     },
     "ai-service (Port 8084 / gRPC 9090)": {
-      "files": 40,
-      "total": 2775,
-      "code": 1753,
-      "comment": 722
+      "files": 96,
+      "total": 14705,
+      "code": 9201,
+      "comment": 4105
     },
     "media-service (Port 8085)": {
       "files": 17,
-      "total": 1305,
-      "code": 873,
-      "comment": 286
+      "total": 1322,
+      "code": 884,
+      "comment": 291
     },
     "discovery-service (Eureka 8761)": {
-      "files": 8,
-      "total": 671,
-      "code": 374,
-      "comment": 196
+      "files": 10,
+      "total": 867,
+      "code": 486,
+      "comment": 258
     },
     "config-service (Spring Config 8888)": {
-      "files": 19,
-      "total": 1496,
-      "code": 946,
-      "comment": 303
+      "files": 26,
+      "total": 2366,
+      "code": 1396,
+      "comment": 623
     },
     "shared-library (Common DTOs & Mappers)": {
-      "files": 33,
-      "total": 4406,
-      "code": 2343,
-      "comment": 1464
+      "files": 34,
+      "total": 4538,
+      "code": 2375,
+      "comment": 1561
     },
     "frontend (React 19 / MUI 9 / Vite 8)": {
-      "files": 99,
-      "total": 8332,
-      "code": 6724,
-      "comment": 564
+      "files": 116,
+      "total": 11336,
+      "code": 8767,
+      "comment": 1155
     },
     "infrastructure (Terraform, K8s, Scripts)": {
-      "files": 127,
-      "total": 8415,
-      "code": 6726,
-      "comment": 941
+      "files": 139,
+      "total": 12460,
+      "code": 10315,
+      "comment": 1259
     },
     "docs (Architecture, Guides, ADRs)": {
-      "files": 50,
-      "total": 16204,
-      "code": 13590,
-      "comment": 55
+      "files": 43,
+      "total": 10993,
+      "code": 9581,
+      "comment": 1
     },
     "e2e (Postman & Newman Regression)": {
-      "files": 6,
-      "total": 250,
-      "code": 170,
-      "comment": 47
+      "files": 7,
+      "total": 320,
+      "code": 223,
+      "comment": 49
     }
   },
   "architecture": {
-    "classes": 100,
-    "records": 51,
+    "classes": 114,
+    "records": 78,
     "interfaces": 20,
-    "enums": 4,
-    "total_types": 175,
-    "controllers": 16,
-    "services": 22,
+    "enums": 10,
+    "total_types": 222,
+    "controllers": 18,
+    "services": 35,
     "repositories": 10,
-    "entities": 11,
-    "total_endpoints": 60,
-    "get_endpoints": 39,
-    "post_endpoints": 14,
+    "entities": 14,
+    "total_endpoints": 66,
+    "get_endpoints": 42,
+    "post_endpoints": 17,
     "put_endpoints": 2,
     "delete_endpoints": 5,
     "flyway_migrations": 12,
     "contract_tests": 8,
     "proto_files": 1,
-    "react_components": 49,
+    "react_components": 55,
     "redux_slices": 4,
-    "custom_hooks": 6,
-    "adr_count": 19,
+    "custom_hooks": 7,
+    "adr_count": 24,
     "adr_files": [
       "001-microservices-architecture",
       "002-database-per-service",
@@ -219,15 +219,20 @@
       "016-dynamic-backend-resolution",
       "017-full-cloud-service-parity",
       "018-cloud-lifecycle-stop-not-destroy",
-      "019-azure-zero-touch-auto-wake-sleep"
+      "019-azure-zero-touch-auto-wake-sleep",
+      "020-nl-query-cross-service-aggregation",
+      "021-vosk-bilingual-model-selection",
+      "022-config-server-access-control",
+      "023-multi-step-natural-language-search",
+      "024-explicit-docker-compose-volume-naming"
     ]
   },
   "tests": {
-    "backend_tests": 478,
-    "backend_test_files": 82,
-    "frontend_tests": 201,
-    "frontend_test_files": 34,
-    "total_tests": 679,
-    "total_test_files": 116
+    "backend_tests": 855,
+    "backend_test_files": 121,
+    "frontend_tests": 302,
+    "frontend_test_files": 41,
+    "total_tests": 1157,
+    "total_test_files": 162
   }
 }
