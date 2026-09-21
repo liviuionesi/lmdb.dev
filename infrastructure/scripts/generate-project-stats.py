@@ -334,7 +334,7 @@ def generate_markdown_report(git_stats, lang_stats, mod_stats, arch_stats, test_
     lines.append(f"| **Total Automated Tests** | **{test_stats['total_tests']:,} Tests** ({test_stats['backend_tests']} Backend + {test_stats['frontend_tests']} Frontend) | Quality & Reliability | 100% Green Unit, Slice, Contract & Integration suites |")
     lines.append(f"| **Total REST Endpoints** | **{arch_stats['total_endpoints']:,} Endpoints** ({arch_stats['get_endpoints']} GET, {arch_stats['post_endpoints']} POST, {arch_stats['put_endpoints']} PUT, {arch_stats['delete_endpoints']} DELETE) | API Surface | Microservice REST surface exposed via API Gateway |")
     lines.append(f"| **Database Migrations** | **{arch_stats['flyway_migrations']} Flyway SQL Scripts** | Persistence | Versioned, reproducible relational schemas |")
-    lines.append(f"| **Architecture Decisions** | **{arch_stats['adr_count']} ADRs** Documented | Governance | Comprehensive decision records (ADR-001 through ADR-018) |")
+    lines.append(f"| **Architecture Decisions** | **{arch_stats['adr_count']} ADRs** Documented | Governance | Comprehensive decision records (ADR-001 through ADR-{arch_stats['adr_count']:03d}) |")
     lines.append(f"| **Cloud Deployment Targets** | **3 Targets** (Azure AKS, AWS EC2 k3s, Local Minikube) | Multi-Cloud | $0-budget tripwire protected infrastructure |")
     lines.append(f"| **Known Vulnerabilities** | **0 CVEs** | Security | Proactive BOM security overrides in `gradle.properties` |")
     lines.append("")
