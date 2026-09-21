@@ -8,10 +8,9 @@ import { makeStyles } from 'tss-react/mui';
 export default makeStyles()((theme) => ({
   overlay: {
     position: 'absolute',
-    display: 'flex',
-    alignItems: 'center',
     overflow: 'hidden',
-    whiteSpace: 'pre',
+    whiteSpace: 'pre-wrap',
+    wordBreak: 'break-word',
     pointerEvents: 'none',
     fontFamily: 'inherit',
     fontSize: 'inherit',
@@ -21,7 +20,7 @@ export default makeStyles()((theme) => ({
     color: theme.palette.mode === 'light' ? 'black' : theme.palette.common.white,
     filter: theme.palette.mode === 'light' ? 'invert(1)' : undefined,
   },
-  // No whiteSpace here — already 'pre' on the parent .overlay, which every .segment inherits.
+  // No whiteSpace here — already 'pre-wrap' on the parent .overlay, which every .segment inherits.
   segment: {},
   connector: {
     textDecorationLine: 'underline',

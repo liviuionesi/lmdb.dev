@@ -36,6 +36,23 @@ describe('parseVoiceCommand', () => {
     });
   });
 
+  it('includes Authorization header when access_token is present in localStorage', async () => {
+    localStorage.setItem('access_token', 'my-test-token');
+    global.fetch.mockResolvedValue(jsonResponse({ command: null, mode: null, genreOrCategory: null, query: null }));
+
+    await parseVoiceCommand('log out');
+
+    expect(global.fetch).toHaveBeenCalledWith('https://api.lmdb.dev/api/v1/ai/voice-command', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer my-test-token',
+      },
+      body: JSON.stringify({ transcript: 'log out', genreNames: [] }),
+    });
+    localStorage.removeItem('access_token');
+  });
+
   it('defaults genreNames to an empty array when omitted', async () => {
     global.fetch.mockResolvedValue(jsonResponse({ command: null, mode: null, genreOrCategory: null, query: null }));
 

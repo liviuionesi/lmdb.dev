@@ -21,9 +21,15 @@ test.describe('LMDB Core User Journeys', () => {
     if (await menuButton.isVisible()) {
       await menuButton.click();
     }
-    // Select the Action genre item from the sidebar navigation
-    const genreItem = page.locator('div[role="button"]:has-text("Action")').first();
-    await genreItem.click();
+    // Select Drama or Comedy genre item from the left sidebar navigation
+    const dramaItem = page.locator('div[role="button"]:has-text("Drama"), a:has-text("Drama")').first();
+    const comedyItem = page.locator('div[role="button"]:has-text("Comedy"), a:has-text("Comedy")').first();
+    
+    if (await dramaItem.isVisible()) {
+      await dramaItem.click();
+    } else {
+      await comedyItem.click();
+    }
     // Verify URL reflects selected category/genre or movie grid updates cleanly
     await expect(page.locator('.movie-card').first()).toBeVisible();
   });

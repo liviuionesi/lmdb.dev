@@ -14,11 +14,13 @@ import { render } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
+import { ColorModeContext } from '../utils/ToggleColorMode';
 
 export const theme = createTheme();
 
 export const renderWithProviders = (ui, { route = '/', path, store, ...renderOptions } = {}) => {
-  let element = <ThemeProvider theme={theme}>{ui}</ThemeProvider>;
+  const toggleColorMode = () => {};
+  let element = <ColorModeContext.Provider value={{ setMode: () => {}, toggleColorMode }}><ThemeProvider theme={theme}>{ui}</ThemeProvider></ColorModeContext.Provider>;
   element = path ? <Routes><Route path={path} element={element} /></Routes> : element;
   element = <MemoryRouter initialEntries={[route]}>{element}</MemoryRouter>;
   if (store) {

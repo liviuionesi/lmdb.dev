@@ -12,7 +12,7 @@ function Movie({ movie, i, caption }) {
 
   return (
     <Grid
-      className={classes.movie}
+      className={`movie-card ${classes.movie}`}
       size={{
         xs: 12,
         sm: 6,

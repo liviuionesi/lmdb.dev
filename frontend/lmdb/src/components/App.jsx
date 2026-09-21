@@ -4,7 +4,6 @@ import { Route, Routes } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 
 import useStyles from './styles';
-import VoiceControl from './VoiceControl/VoiceControl';
 import { tmdbApi } from '../services/TMDB';
 
 import {
@@ -12,7 +11,6 @@ import {
   Actors,
   AdminDashboard,
   BackendStandbyModal,
-  ChatWidget,
   Footer,
   MovieInformation,
   Movies,
@@ -48,8 +46,6 @@ function App() {
         <Footer />
       </main>
       <BackendStandbyModal onBackendReady={handleBackendReady} />
-      <VoiceControl />
-      <ChatWidget />
     </div>
   );
 }

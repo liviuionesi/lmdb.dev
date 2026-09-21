@@ -1,4 +1,30 @@
 {
+  // ── Task Explorer (Gradle-like sidebar for npm scripts) ──────────────────
+  // Show only npm tasks — the repo has Gradle already covered separately.
+  "taskExplorer.enableNpm": true,
+  "taskExplorer.enableGradle": false,
+  "taskExplorer.enableBash": false,
+  "taskExplorer.enableBatch": false,
+  "taskExplorer.enableMake": false,
+  "taskExplorer.enableGrunt": false,
+  "taskExplorer.enableGulp": false,
+  "taskExplorer.enableAnt": false,
+  "taskExplorer.enablePython": false,
+  "taskExplorer.enableRuby": false,
+  "taskExplorer.enablePowershell": false,
+  "taskExplorer.enableNsis": false,
+  "taskExplorer.enableWorkspace": false,
+  // Scope to the frontend package only so the explorer isn't cluttered.
+  "taskExplorer.pathToPackageJson": [
+    "frontend/lmdb/package.json"
+  ],
+  // Put the panel in the dedicated Task Explorer sidebar (activity bar icon).
+  "taskExplorer.groupWithSeparator": true,
+  "taskExplorer.groupSeparator": ":",
+  "taskExplorer.showRunningTask": true,
+  "taskExplorer.keepTermOnStop": false,
+
+
   "java.test.defaultConfig": "Movie Service Tests",
 
   "java.test.config": [

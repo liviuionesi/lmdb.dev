@@ -15,6 +15,10 @@ import genreOrCategoryReducer from '../../features/currentGenreOrCategory';
 import { aiApi } from '../../services/AI';
 import { renderWithProviders } from '../../test-utils/render';
 
+vi.mock('../../services/TMDB', () => ({
+  useGetGenresQuery: vi.fn(() => ({ data: undefined, isFetching: false })),
+}));
+
 const baseUrl = 'http://localhost:8080/api/v1/ai';
 // Same short-circuit AI.test.js/TMDB.test.js use — createDynamicBaseQuery's async health-check
 // waterfall would otherwise issue its own fetch() before the endpoint request, stealing
@@ -55,7 +59,7 @@ describe('Search integration: component -> dispatched action -> API call shape',
     const store = buildRealStore();
     renderWithProviders(<Search />, { route: '/', store });
 
-    await userEvent.type(screen.getByRole('textbox'), 'fight club{enter}');
+    await userEvent.type(screen.getByRole('textbox'), 'fight club{Shift>}{enter}{/Shift}');
 
     // 1. API call shape: the real aiApi query builder produced this exact request.
     await waitFor(() => expect(global.fetch).toHaveBeenCalled());
@@ -85,7 +89,7 @@ describe('Search integration: component -> dispatched action -> API call shape',
     const store = buildRealStore();
     renderWithProviders(<Search />, { route: '/', store });
 
-    await userEvent.type(screen.getByRole('textbox'), 'batman{enter}');
+    await userEvent.type(screen.getByRole('textbox'), 'batman{Shift>}{enter}{/Shift}');
 
     await waitFor(() => {
       expect(store.getState().currentGenreOrCategory.aiSearchStatus).toBe('failed');

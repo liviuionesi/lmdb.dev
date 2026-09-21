@@ -30,9 +30,15 @@ export const parseVoiceCommand = async (rawText, genreNames = []) => {
   // follows (see VoiceControl.jsx's transcribeAndRun) - a synchronous getApiUrl() could silently
   // hit a dead backend on a cold resolution cache.
   const baseUrl = await resolveApiUrl();
+  const accessToken = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+  const headers = { 'Content-Type': 'application/json' };
+  if (accessToken) {
+    headers.Authorization = `Bearer ${accessToken}`;
+  }
+
   const response = await fetch(`${baseUrl}/api/v1/ai/voice-command`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify({ transcript: text, genreNames }),
   });
 
