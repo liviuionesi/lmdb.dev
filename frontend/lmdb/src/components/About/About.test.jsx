@@ -10,7 +10,7 @@ describe('About Page Component', () => {
 
     expect(screen.getByTestId('about-page')).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 1, name: /Live Movies Database/i })).toBeInTheDocument();
-    expect(screen.getByText(/Architect & Engineering: Liviu Ionesi/i)).toBeInTheDocument();
+    expect(screen.getByText(/Created by Liviu Ionesi/i)).toBeInTheDocument();
 
     // Verify creator links
     const websiteLink = screen.getByTestId('creator-website-link');

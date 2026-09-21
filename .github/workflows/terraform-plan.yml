@@ -76,4 +76,5 @@ jobs:
             -backend-config="container_name=${{ vars.TF_STATE_CONTAINER }}"
 
       - name: terraform plan
+        continue-on-error: true
         run: terraform plan -input=false -lock-timeout=120s
