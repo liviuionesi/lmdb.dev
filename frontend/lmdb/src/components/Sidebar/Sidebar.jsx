@@ -86,7 +86,7 @@ function Sidebar({ setMobileOpen }) {
             <Link className={classes.links} to="/recommendations">
               <ListItemButton onClick={() => setMobileOpen(false)}>
                 <ListItemIcon>
-                  <RecommendIcon color="primary" />
+                  <RecommendIcon sx={{ fontSize: 30, color: (theme) => (theme.palette.mode === 'dark' ? 'white' : 'black') }} />
                 </ListItemIcon>
                 <ListItemText primary="Recommendations" />
               </ListItemButton>
@@ -100,7 +100,7 @@ function Sidebar({ setMobileOpen }) {
         <Link className={classes.links} to="/about">
           <ListItemButton onClick={() => setMobileOpen(false)}>
             <ListItemIcon>
-              <InfoOutlinedIcon color="primary" />
+              <InfoOutlinedIcon sx={{ fontSize: 30, color: (theme) => (theme.palette.mode === 'dark' ? 'white' : 'black') }} />
             </ListItemIcon>
             <ListItemText primary="About & Credits" />
           </ListItemButton>

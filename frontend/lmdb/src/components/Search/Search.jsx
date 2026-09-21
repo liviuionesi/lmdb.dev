@@ -1,9 +1,12 @@
 import React, {
   useState, useRef, useEffect, useLayoutEffect, useCallback,
 } from 'react';
-import { TextField, InputAdornment } from '@mui/material';
+import {
+  TextField, InputAdornment, IconButton, CircularProgress,
+  Tooltip, ToggleButtonGroup, ToggleButton, Snackbar, Alert,
+} from '@mui/material';
 import { useTheme } from '@mui/material/styles';
-import { Search as SearchIcon } from '@mui/icons-material';
+import { Search as SearchIcon, Mic, Stop } from '@mui/icons-material';
 import { useDispatch, useSelector } from 'react-redux';
 import { useLocation } from 'react-router-dom';
 
@@ -20,6 +23,7 @@ import { useExecuteSearchMutation, useParseQueryMutation } from '../../services/
 import QueryHighlightOverlay from './QueryHighlightOverlay';
 import HighlightLegend from './HighlightLegend';
 import useStyles from './styles';
+import { useVoiceControl } from '../VoiceControl/useVoiceControl';
 
 // How long a typing pause must last before a debounced parse-as-you-type call fires (#208 AC1) —
 // short enough to feel live, long enough that a normal typing cadence collapses to one call per
@@ -75,6 +79,13 @@ function Search() {
   const [overlayRect, setOverlayRect] = useState(null);
   const hasQuery = query.length > 0;
 
+  const { status, feedback, language, setDictationLanguage, toggleRecording, clearFeedback } = useVoiceControl();
+
+  const handleLanguageChange = (event, newLanguage) => {
+    if (!newLanguage) return;
+    setDictationLanguage(newLanguage);
+  };
+
   // Measures the real <input>'s box relative to fieldWrapperRef and positions the overlay exactly
   // over it — done by measurement rather than copying CSS padding/width numbers because the
   // startAdornment (search icon) and endAdornment (HighlightLegend, shown only while hasQuery) both
@@ -126,8 +137,11 @@ function Search() {
   // #209 AC2: as the user types past the field's visible width, the native <input> scrolls its own
   // content internally and fires 'scroll' — mirror that onto the overlay so its highlighted text
   // stays aligned with the (invisible) real text underneath instead of drifting out of sync.
-  const handleInputScroll = (event) => {
-    if (overlayRef.current) overlayRef.current.scrollLeft = event.target.scrollLeft;
+  const handleInputScroll = () => {
+    if (overlayRef.current && inputElRef.current) {
+      overlayRef.current.scrollLeft = inputElRef.current.scrollLeft;
+      overlayRef.current.scrollTop = inputElRef.current.scrollTop;
+    }
   };
 
   // Only a pending debounce timer needs cleanup on unmount — parseQuery's own in-flight promise is
@@ -196,23 +210,22 @@ function Search() {
     debounceTimerRef.current = setTimeout(() => runParse(trimmed), QUERY_HIGHLIGHT_DEBOUNCE_MS);
   };
 
-  const handleKeyPress = async (event) => {
-    if (event.key !== 'Enter') return;
-
+  const submitSearch = async () => {
     const trimmed = query.trim();
     if (!trimmed) {
-      // #204 AC4: Enter on an empty box must keep clearing the current search (falls back to
-      // popular movies via Movies.jsx's old query path), not call an endpoint that requires
-      // non-blank input (ai-service's QueryParseRequestDto is @NotBlank) and surface it as an
-      // error.
       latestQueryRef.current = '';
       dispatch(aiSearchCleared());
       return;
     }
-
-    // #204 AC1: resolves through ai-service's natural-language query pipeline (#203) instead of
-    // the old direct movie-service title search.
     await runSearch(trimmed);
+  };
+
+  const handleKeyDown = async (event) => {
+    // Submit on Shift + Enter, allow newlines on Enter
+    if (event.key === 'Enter' && event.shiftKey) {
+      event.preventDefault(); // prevent new line from being added
+      await submitSearch();
+    }
   };
 
   // #199 AC5 / #210: a dictated query (VoiceControl.jsx's "search" command) lands here the same
@@ -253,33 +266,57 @@ function Search() {
     <div className={classes.searchContainer}>
       <div className={classes.fieldWrapper} ref={fieldWrapperRef} data-testid="search-field-wrapper">
         <TextField
-          onKeyPress={handleKeyPress}
+          fullWidth
+          onKeyDown={handleKeyDown}
           value={query}
           onChange={handleQueryChange}
           variant="standard"
+          multiline
+          minRows={1}
+          maxRows={4}
+          placeholder="Search for movies, or dictate a command..."
           inputRef={inputElRef}
           slotProps={{
             input: {
+              disableUnderline: true,
               className: classes.input,
               startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon />
+                <InputAdornment position="start" sx={{ alignSelf: 'flex-start', mt: 1 }}>
+                  <IconButton onClick={submitSearch} edge="start" sx={{ padding: 0 }}>
+                    <SearchIcon />
+                  </IconButton>
                 </InputAdornment>
               ),
-              // #209 AC3: the legend is only meaningful once there's a query to highlight — shown
-              // here (rather than always-on) so it doesn't add a permanent, mostly-irrelevant icon
-              // next to every other page's untouched search field.
-              endAdornment: hasQuery ? (
-                <InputAdornment position="end">
-                  <HighlightLegend />
+              endAdornment: (
+                <InputAdornment position="end" sx={{ alignSelf: 'flex-end', mb: 0.5, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  {hasQuery && <HighlightLegend />}
+                  <ToggleButtonGroup
+                    value={language}
+                    exclusive
+                    size="small"
+                    onChange={handleLanguageChange}
+                    aria-label="Dictation language"
+                    sx={{ height: 24 }}
+                  >
+                    <ToggleButton value="en" aria-label="English" sx={{ px: 1, fontSize: '0.7rem' }}>EN</ToggleButton>
+                    <ToggleButton value="de" aria-label="German" sx={{ px: 1, fontSize: '0.7rem' }}>DE</ToggleButton>
+                  </ToggleButtonGroup>
+                  <Tooltip title={status === 'recording' ? 'Stop recording' : 'Dictate search or command'}>
+                    <IconButton
+                      color={status === 'recording' ? 'secondary' : 'primary'}
+                      onClick={toggleRecording}
+                      disabled={status === 'transcribing'}
+                      size="small"
+                    >
+                      {status === 'transcribing' ? <CircularProgress size={20} color="inherit" /> : null}
+                      {status === 'recording' && <Stop fontSize="small" />}
+                      {status === 'idle' && <Mic fontSize="small" />}
+                    </IconButton>
+                  </Tooltip>
                 </InputAdornment>
-              ) : undefined,
+              ),
             },
-            // Targets the native <input> itself (slotProps.input above targets the icon-including
-            // wrapper around it) — onScroll only exists on the real element, and the transparent-
-            // text trick below must not also hide the start/end icons the wrapper renders. The
-            // caret is kept visible (a fixed color rather than 'currentColor', which would resolve
-            // to this same now-transparent color) so the field still shows where typing will land.
+            // Targets the native <textarea> itself
             htmlInput: {
               onScroll: handleInputScroll,
               style: hasQuery ? {
@@ -303,6 +340,14 @@ function Search() {
           />
         )}
       </div>
+      <Snackbar
+        open={!!feedback}
+        autoHideDuration={4000}
+        onClose={clearFeedback}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        {feedback && <Alert severity={feedback.severity} onClose={clearFeedback}>{feedback.message}</Alert>}
+      </Snackbar>
     </div>
   );
 }
