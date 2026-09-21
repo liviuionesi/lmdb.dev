@@ -101,7 +101,8 @@ public class SecurityConfig {
                     .permitAll()
 
                     // Voice control & natural-language search (#68, #203, #214): speech-to-text,
-                    // voice-command classification, and natural-language query parsing/execution do not
+                    // voice-command classification, and natural-language query parsing/execution do
+                    // not
                     // touch per-user data (no conversation or taste-profile data) — available to
                     // anonymous visitors too. Must be listed before the /api/v1/ai/** rule below.
                     .pathMatchers(HttpMethod.POST, "/api/v1/ai/speech-to-text")

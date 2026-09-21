@@ -506,11 +506,16 @@ class GatewayIntegrationTest {
   }
 
   @Test
-  @DisplayName("AI voice-command, search query, and search execute routes are public without a token")
+  @DisplayName(
+      "AI voice-command, search query, and search execute routes are public without a token")
   void aiPublicRoutesAreAccessibleWithoutToken() {
-    aiMock.stubFor(post(urlEqualTo("/api/v1/ai/voice-command")).willReturn(okJson("{\"command\":\"LOGOUT\"}")));
-    aiMock.stubFor(post(urlEqualTo("/api/v1/ai/search/query")).willReturn(okJson("{\"spans\":[]}")));
-    aiMock.stubFor(post(urlEqualTo("/api/v1/ai/search/execute")).willReturn(okJson("{\"results\":[]}")));
+    aiMock.stubFor(
+        post(urlEqualTo("/api/v1/ai/voice-command"))
+            .willReturn(okJson("{\"command\":\"LOGOUT\"}")));
+    aiMock.stubFor(
+        post(urlEqualTo("/api/v1/ai/search/query")).willReturn(okJson("{\"spans\":[]}")));
+    aiMock.stubFor(
+        post(urlEqualTo("/api/v1/ai/search/execute")).willReturn(okJson("{\"results\":[]}")));
 
     client.post().uri("/api/v1/ai/voice-command").exchange().expectStatus().isOk();
     client.post().uri("/api/v1/ai/search/query").exchange().expectStatus().isOk();
