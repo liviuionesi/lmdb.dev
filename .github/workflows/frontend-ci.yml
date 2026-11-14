@@ -2,19 +2,23 @@ name: Frontend CI
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main]
     paths:
       - 'frontend/**'
       - '.github/workflows/frontend-ci.yml'
-  pull_request:
-    branches: [main, develop]
-    paths:
-      - 'frontend/**'
+      - '!docs/**'
+      - '!**.md'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   lmdb:
     name: LMDB React app
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: frontend/lmdb
