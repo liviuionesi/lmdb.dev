@@ -35,6 +35,7 @@ jobs:
     if: github.event.inputs.cloud == 'azure'
     name: Deploy (azure)
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     environment:
       name: azure-cloud
       url: https://api.lmdb.dev
@@ -160,6 +161,7 @@ jobs:
     if: github.event.inputs.cloud == 'aws'
     name: Deploy (aws)
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     environment:
       name: aws-cloud
       url: https://api.lmdb.dev
