@@ -8,6 +8,12 @@ on:
       - '.github/workflows/frontend-ci.yml'
       - '!docs/**'
       - '!**.md'
+  # Only Dependabot pull requests run the job below; they get no other check.
+  pull_request:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend-ci.yml'
   workflow_dispatch:
 
 concurrency:
@@ -17,6 +23,7 @@ concurrency:
 jobs:
   lmdb:
     name: LMDB React app
+    if: github.event_name != 'pull_request' || github.actor == 'dependabot[bot]'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     defaults:

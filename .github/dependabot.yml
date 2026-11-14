@@ -67,7 +67,7 @@ updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
       day: "monday"
       time: "09:00"
     open-pull-requests-limit: 5
@@ -85,7 +85,7 @@ updates:
   - package-ecosystem: "docker"
     directory: "/infrastructure/docker"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
     open-pull-requests-limit: 5
     target-branch: "main"
     commit-message:
