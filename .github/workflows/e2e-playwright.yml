@@ -1,9 +1,6 @@
 name: Playwright E2E Nightly & Manual Tests
 
 on:
-  schedule:
-    # Run nightly at 02:00 UTC
-    - cron: '0 2 * * *'
   workflow_dispatch:
     inputs:
       debug_trace:
@@ -11,9 +8,14 @@ on:
         required: false
         default: 'false'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 jobs:
   e2e-tests:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v7
