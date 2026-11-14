@@ -31,6 +31,7 @@ jobs:
     if: github.event.inputs.cloud == 'azure'
     name: Destroy (azure)
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: infrastructure/terraform/azure
@@ -92,6 +93,7 @@ jobs:
     if: github.event.inputs.cloud == 'aws'
     name: Destroy (aws)
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: infrastructure/terraform/aws
