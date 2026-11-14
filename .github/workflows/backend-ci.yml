@@ -2,25 +2,26 @@ name: Backend CI
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main]
     paths:
       - 'backend/**'
       - 'build.gradle'
       - 'settings.gradle'
       - 'gradle.properties'
       - '.github/workflows/backend-ci.yml'
-  pull_request:
-    branches: [main, develop]
-    paths:
-      - 'backend/**'
-      - 'build.gradle'
-      - 'settings.gradle'
-      - 'gradle.properties'
+      - '!docs/**'
+      - '!**.md'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   build:
     name: Build & Test
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     # secrets.* can't be referenced directly in a step `if:` (GitHub Actions
     # rejects it — "Unrecognized named-value: 'secrets'"). Job-level `env:`
     # *can* read secrets, so resolve the presence check here once and have
