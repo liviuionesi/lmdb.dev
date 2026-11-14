@@ -11,6 +11,7 @@ permissions:
 jobs:
   update-metrics:
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     if: "!contains(github.event.head_commit.message, '[skip ci]')"
     steps:
       - name: Checkout repository (full history for git stats)
