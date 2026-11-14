@@ -25,6 +25,11 @@ on:
     paths:
       - 'infrastructure/terraform/**'
       - '.github/workflows/terraform-plan.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 permissions:
   id-token: write
@@ -34,6 +39,7 @@ jobs:
   plan:
     name: Plan (azure)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: infrastructure/terraform/azure
