@@ -7,7 +7,7 @@ updates:
       interval: "weekly"
       day: "monday"
       time: "09:00"
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 5
     target-branch: "main"
     commit-message:
       prefix: "chore(deps)"
@@ -27,6 +27,10 @@ updates:
           - "org.junit.jupiter:*"
           - "org.mockito:*"
           - "org.testcontainers:*"
+      routine:
+        update-types:
+          - "minor"
+          - "patch"
 
   # Frontend - LMDB React App (CRA)
   - package-ecosystem: "npm"
@@ -35,7 +39,7 @@ updates:
       interval: "weekly"
       day: "monday"
       time: "09:00"
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 5
     target-branch: "main"
     commit-message:
       prefix: "chore(deps)"
@@ -54,12 +58,16 @@ updates:
         patterns:
           - "eslint*"
           - "@babel/*"
+      routine:
+        update-types:
+          - "minor"
+          - "patch"
 
   # GitHub Actions workflows
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "monthly"
+      interval: "weekly"
       day: "monday"
       time: "09:00"
     open-pull-requests-limit: 5
@@ -67,13 +75,23 @@ updates:
     commit-message:
       prefix: "chore(ci)"
       include: "scope"
+    groups:
+      routine:
+        update-types:
+          - "minor"
+          - "patch"
 
   # Container Dockerfiles
   - package-ecosystem: "docker"
     directory: "/infrastructure/docker"
     schedule:
-      interval: "monthly"
+      interval: "weekly"
     open-pull-requests-limit: 5
     target-branch: "main"
     commit-message:
       prefix: "chore(docker)"
+    groups:
+      routine:
+        update-types:
+          - "minor"
+          - "patch"
