@@ -13,17 +13,21 @@ on:
   issues:
     types: [opened]
 
+permissions:
+  issues: write
+
 jobs:
   auto-assign-issue:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Auto-assign issue to creator
         uses: actions/github-script@v9
         with:
           script: |
-            github.rest.issues.addAssignees({
+            await github.rest.issues.addAssignees({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
-              assignees: [context.actor]
+              assignees: [context.payload.issue.user.login]
             });
