@@ -41,6 +41,7 @@ jobs:
     if: github.event.inputs.cloud == 'azure'
     name: "Azure AKS — ${{ github.event.inputs.action }}"
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: infrastructure/terraform/azure
@@ -158,6 +159,7 @@ jobs:
     if: github.event.inputs.cloud == 'aws'
     name: "AWS k3s — ${{ github.event.inputs.action }}"
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: infrastructure/terraform/aws
