@@ -17,9 +17,10 @@ name: E2E API Smoke (live stack)
 # gateway containers start but facade calls to TMDB fail.
 on:
   workflow_dispatch:
-  schedule:
-    # 03:00 UTC nightly.
-    - cron: '0 3 * * *'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   smoke:
